@@ -5,7 +5,7 @@
  *
  * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
   // Regression coverage for a real bug: `fieldVariantMixin`'s `outline` branch only set `--_bg`,
@@ -102,4 +102,14 @@ test.describe('Layout', () => {
       expect(focused).not.toBe(rest);
     });
   }
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-message-composer placeholder="Ask anything…"></ore-message-composer>');
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
+  });
 });

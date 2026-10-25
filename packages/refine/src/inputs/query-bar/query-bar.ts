@@ -649,13 +649,17 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
           rounded="full"
           aria-haspopup="dialog"
           aria-expanded=${drawerOpen}
-          aria-label=${() => `${label('filters')}${activeCount.value ? ` (${activeCount.value})` : ''}`}
           ?disabled=${() => props.disabled.value || !vocabulary().length}
           ?hidden=${() => !vocabulary().length}
           @click=${openFilters}>
           <ore-icon slot="prefix" name="filter" aria-hidden="true"></ore-icon>
           ${() => label('filters')}
-          <span slot="suffix" class="filter-count" ?hidden=${() => !activeCount.value}>${activeCount}</span>
+          <!-- The count is part of the button's content, so the accessible name
+               is computed from it ("Filters 2"). An aria-label override here
+               would exclude the visible badge from the name (SC 2.5.3). -->
+          <span slot="suffix" class="filter-count" ?hidden=${() => !activeCount.value}>
+            ${activeCount}
+          </span>
         </ore-button>
         <div
           class="quick-filters"

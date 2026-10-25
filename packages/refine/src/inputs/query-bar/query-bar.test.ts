@@ -395,7 +395,8 @@ describe('ore-query-bar', () => {
       fireKeyDown(getInput()!, { key: 'Backspace' });
       await fixture.flush();
       expect(host.state?.tokens).toEqual([{ key: 'fruit', value: 'banana' }]);
-      expect(fixture.query('.filter-button')?.getAttribute('aria-label')).toBe('Filters (1)');
+      // Name comes from content (SC 2.5.3): label text plus the visible badge.
+      expect(fixture.query('.filter-button')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Filters 1');
     });
 
     it('quick toggles add and remove only their exact value', async () => {
@@ -433,7 +434,7 @@ describe('ore-query-bar', () => {
       await click('.filter-actions ore-button:last-child');
       expect(tokenValues(host.state!, 'fruit')).toEqual(['apple', 'banana']);
       expect(change).toHaveBeenCalledTimes(1);
-      expect(fixture.query('.filter-button')?.getAttribute('aria-label')).toBe('Filters (2)');
+      expect(fixture.query('.filter-button')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Filters 2');
 
       await click('.filter-button');
       await click('.filter-group-heading ore-button');

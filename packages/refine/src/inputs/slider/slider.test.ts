@@ -443,19 +443,27 @@ describe('ore-slider accessibility', () => {
   });
 
   describe('Accessibility', () => {
+    it('mirrors the slotted label onto the host aria-label', async () => {
+      // role="slider" forbids name-from-content and an aria-labelledby IDREF
+      // cannot cross the shadow boundary, so the label text is reflected here.
+      fixture = await mount('ore-slider', { html: 'Volume' });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('aria-label')).toBe('Volume');
+    });
+
     it('passes axe checks', async () => {
       const fix = await mount('ore-slider', { attrs: { max: '100', min: '0', value: '50' }, html: 'Volume' });
 
       const results = await axeCheck(fix.element, {
         rules: {
-          'aria-input-field-name': { enabled: false },
           'aria-required-attr': { enabled: false },
           'nested-interactive': { enabled: false },
         },
       });
 
       fix.dispose();
-      expect(results.violations).toHaveLength(0);
+      expect(results.violations).toEqual([]);
     });
   });
 });

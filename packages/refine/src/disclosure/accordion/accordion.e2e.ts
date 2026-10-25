@@ -6,7 +6,7 @@
  *
  * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Interaction', () => {
   test('expands panel on click', async ({ page, refinePage }) => {
@@ -62,5 +62,17 @@ test.describe('Keyboard focus', () => {
     expect(focusStyles.focusVisible).toBe(true);
     expect(focusStyles.detailsOverflow).toBe('visible');
     expect(focusStyles.outline).toContain('solid');
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-accordion><ore-accordion-item expanded><span slot="title">Baggage</span>One carry-on bag is included.</ore-accordion-item></ore-accordion>',
+    );
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

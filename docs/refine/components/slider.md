@@ -96,7 +96,9 @@ document.getElementById('price').addEventListener('change', (e) => {
 
 ## Accessible Labels
 
-Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mode) to give screen readers a readable version of the value: useful when the raw number needs a unit or currency symbol.
+Give the slider a name through its default slot: the slotted text is mirrored onto the host's `aria-label`, because `role="slider"` does not derive an accessible name from slotted content the way a native control does. Keep that label visible so it also satisfies the visible-label requirement (WCAG SC 2.5.3).
+
+Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mode) to give screen readers a readable version of the value: useful when the raw number needs a unit or currency symbol. In range mode each thumb needs its own label, so set `from-value-text` / `to-value-text` (or the thumbs fall back to the shared slot label).
 
 ```html
 <!-- Single mode: announce "75%" instead of "75" -->
@@ -194,7 +196,7 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 
 ## Accessibility
 
-The slider follows WAI-ARIA best practices. Each thumb carries `role="slider"` with `aria-valuenow`, `aria-valuemin`, and `aria-valuemax`. In range mode, each thumb has its own accessible label and independent ARIA attributes. `aria-disabled` is set when `disabled` is active.
+The slider follows WAI-ARIA best practices. Each thumb carries `role="slider"` with `aria-valuenow`, `aria-valuemin`, and `aria-valuemax`. In single mode the default-slot label is mirrored onto the host `aria-label` (an `aria-labelledby` IDREF cannot cross the shadow boundary, and `role="slider"` ignores name-from-content). In range mode, each thumb has its own accessible label and independent ARIA attributes. `aria-disabled` is set when `disabled` is active.
 
 Keyboard navigation is fully supported: `Arrow Right` / `Arrow Up` increases the value by one step, `Arrow Left` / `Arrow Down` decreases it, `Home` jumps to the minimum, and `End` jumps to the maximum. `Tab` focuses the slider; `Shift+Tab` blurs it.
 

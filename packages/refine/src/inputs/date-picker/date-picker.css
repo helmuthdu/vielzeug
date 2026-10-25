@@ -1,8 +1,8 @@
 @layer refine.base {
   :host {
-    --_day-selected-bg: var(--date-picker-day-selected-bg, var(--_theme-focus));
-    --_day-today-color: var(--date-picker-day-today-color, var(--_theme-focus));
-    --_day-outside-opacity: var(--date-picker-day-outside-opacity, 0.35);
+    --_day-selected-bg: var(--date-picker-day-selected-bg, var(--_theme-base));
+    --_day-today-color: var(--date-picker-day-today-color, var(--_theme-base));
+    --_day-outside-color: var(--date-picker-day-outside-color, var(--color-contrast-500));
     --_bg: var(--date-picker-bg, var(--color-canvas));
     --_border-color: var(--date-picker-border-color, var(--color-contrast-200));
     --_radius: var(--date-picker-radius, var(--rounded-xl));
@@ -14,11 +14,6 @@
   :host([fullwidth]) {
     display: block;
     min-width: 0;
-  }
-
-  :host([color='secondary']) {
-    --_day-selected-bg: var(--date-picker-day-selected-bg, var(--_theme-base));
-    --_day-today-color: var(--date-picker-day-today-color, var(--_theme-base));
   }
 
   /* Make the trigger look like a button: ore-input is readonly so pointer changes to text by
@@ -222,12 +217,14 @@
 
   .cal-cell-day[data-selected] {
     font-weight: var(--font-semibold);
-    color: var(--color-white, #fff);
+    color: var(--_theme-content);
     background: var(--_day-selected-bg);
   }
 
+  /* A dimmed ink step, not opacity: opacity also fades the cell's dots and
+     events, and a faded interactive day fails SC 1.4.3. */
   .cal-cell-day[data-outside] {
-    opacity: var(--_day-outside-opacity);
+    color: var(--_day-outside-color);
   }
 
   .cal-cell-day[data-disabled] {
@@ -268,7 +265,7 @@
   .cal-cell-month[data-selected],
   .cal-cell-year[data-selected] {
     font-weight: var(--font-semibold);
-    color: var(--color-white, #fff);
+    color: var(--_theme-content);
     background: var(--_day-selected-bg);
   }
 

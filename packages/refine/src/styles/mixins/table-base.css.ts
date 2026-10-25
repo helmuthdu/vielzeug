@@ -89,6 +89,12 @@ export const tableBaseMixin = (prefix: string) => css`
     :host([sticky]) .scroll-container {
       max-height: var(--${prefix}-sticky-max-height, 24rem);
       overflow-y: auto;
+
+      /* SC 2.4.11 (Focus Not Obscured): scrolling a focused row into view must
+         land it below the sticky header, not underneath it. The default clears
+         one default-density header row; tune it with the token when the header
+         is taller. */
+      scroll-padding-block-start: var(--${prefix}-sticky-header-height, var(--size-9));
     }
   }
 

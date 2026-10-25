@@ -1,4 +1,4 @@
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
   test('keeps the bottom bar out of desktop layout and accessibility', async ({ page, refinePage }) => {
@@ -188,5 +188,17 @@ test.describe('Interaction', () => {
     });
     await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
     await expect(nav).toHaveAttribute('inert', '');
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-sidebar><span slot="header">Voyage</span><ore-sidebar-item>Explore</ore-sidebar-item></ore-sidebar>',
+    );
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

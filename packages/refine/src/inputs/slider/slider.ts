@@ -10,7 +10,6 @@ import {
   prop,
   ref,
   useField,
-  useSlots,
 } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { createErrorHelperState, createSliderControl } from '../../core';
@@ -143,7 +142,6 @@ define<OreSliderProps>(SLIDER_TAG, {
   },
   setup(props) {
     const el = getHost();
-    const slots = useSlots();
 
     // Treat `range` as static: determined at first render
     const isRange = props.range.value;
@@ -156,7 +154,19 @@ define<OreSliderProps>(SLIDER_TAG, {
     // ── Single-value state ────────────────────────────────────────
     const isDragging = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
-    const labelledById = signal<string | undefined>(undefined);
+    // The default slot is the labeling API, but `role="slider"` forbids
+    // name-from-content and an `aria-labelledby` IDREF cannot cross the shadow
+    // boundary to reach the label span. So the slotted label text is mirrored
+    // onto the host's `aria-label`, kept current through `slotchange` (slot
+    // assignment is async in real browsers).
+    const labelText = signal('');
+    const syncLabelText = (slot: HTMLSlotElement): void => {
+      labelText.value = slot
+        .assignedNodes({ flatten: true })
+        .map((node) => node.textContent ?? '')
+        .join('')
+        .trim();
+    };
     const assistiveId = createId('helper');
     const assistive = createErrorHelperState({ error: props.error, helper: props.helper });
     const errorText = computed(() => assistive.value.errorText);
@@ -204,7 +214,7 @@ define<OreSliderProps>(SLIDER_TAG, {
         attr: {
           'aria-describedby': () => ariaDescribedBy.value ?? null,
           'aria-disabled': () => (isDisabled.value ? 'true' : null),
-          'aria-labelledby': () => labelledById.value ?? null,
+          'aria-label': () => labelText.value || null,
           'aria-valuemax': () => sliderControl.max(),
           'aria-valuemin': () => sliderControl.min(),
           'aria-valuenow': () => Number(valueSignal.value || 0),
@@ -277,7 +287,6 @@ define<OreSliderProps>(SLIDER_TAG, {
 
     // ── Refs ──────────────────────────────────────────────────────
     const containerRef = ref<HTMLDivElement>();
-    const labelRef = ref<HTMLSpanElement>();
     const trackRef = ref<HTMLDivElement>();
     const thumbStartRef = ref<HTMLDivElement>();
     const thumbEndRef = ref<HTMLDivElement>();
@@ -513,14 +522,6 @@ define<OreSliderProps>(SLIDER_TAG, {
 
       if (!container || !track) return;
 
-      if (slots.has().value && labelRef.value) {
-        const labelId = createId('slider-label');
-
-        labelRef.value.id = labelId;
-
-        if (!isRange) labelledById.value = labelId;
-      }
-
       if (isRange) setupRangeMode(container, track);
       else setupSingleMode(container, track);
     });
@@ -553,7 +554,9 @@ define<OreSliderProps>(SLIDER_TAG, {
           }
         </div>
       </div>
-      <span class="label" part="label" ref=${labelRef}><slot></slot></span>
+      <span class="label" part="label"
+        ><slot @slotchange=${(event: Event) => syncLabelText(event.target as HTMLSlotElement)}></slot
+      ></span>
       ${renderHelperRegion(assistiveId, errorText, helperText)}
     `;
   },

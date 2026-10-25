@@ -91,7 +91,9 @@
     padding-inline-start: calc(var(--_size) + var(--size-2));
     font-size: var(--text-xs);
     line-height: var(--leading-tight);
-    color: color-mix(in oklch, var(--color-contrast-500) 80%, var(--color-canvas));
+    /* Plain --color-contrast-500: the theme's AA-compliant tertiary text token.
+       A lightening mix here dropped helper text below the 4.5:1 floor (SC 1.4.3). */
+    color: var(--color-contrast-500);
   }
 
   .helper-text[role='alert'] {

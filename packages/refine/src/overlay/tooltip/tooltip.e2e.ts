@@ -5,7 +5,7 @@
  *
  * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Interaction', () => {
   test('shows tooltip above its trigger on hover', async ({ page, refinePage }) => {
@@ -31,5 +31,17 @@ test.describe('Interaction', () => {
         positions.panel!.left + positions.panel!.width / 2 - (positions.trigger!.left + positions.trigger!.width / 2),
       ),
     ).toBeLessThan(2);
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tooltip content="Helpful hint"><ore-button>Hover me</ore-button></ore-tooltip>',
+    );
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

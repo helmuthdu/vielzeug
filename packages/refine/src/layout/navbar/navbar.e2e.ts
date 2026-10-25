@@ -5,7 +5,7 @@
  *
  * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Keyboard recovery', () => {
   test('Escape closes the mobile menu and restores focus to the toggle', async ({ page, refinePage }) => {
@@ -236,5 +236,17 @@ test.describe('Layout', () => {
     expect(bounds.drawer.right).toBeLessThanOrEqual(bounds.shell.right);
     expect(bounds.drawer.top).toBeGreaterThanOrEqual(bounds.shell.top);
     expect(bounds.drawer.bottom).toBeLessThanOrEqual(bounds.shell.bottom);
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-navbar><span slot="logo">Studio</span><ore-navbar-item href="#games">Games</ore-navbar-item></ore-navbar>',
+    );
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

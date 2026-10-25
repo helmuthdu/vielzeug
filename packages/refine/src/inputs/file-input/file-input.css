@@ -83,8 +83,11 @@
     color: var(--color-contrast-700);
   }
 
+  /* The accent focus color is a 3:1 UI-component token and fails 4.5:1 as text
+     on the canvas, so the browse action inherits the title's AAA ink and stays
+     distinct through its underline (which gains the accent color on hover). */
   .dropzone-title u {
-    color: var(--_theme-focus, var(--color-primary));
+    color: inherit;
     text-decoration: underline;
     text-decoration-color: transparent;
     text-underline-offset: 2px;
@@ -99,7 +102,7 @@
   .dropzone-hint {
     font-size: var(--text-xs);
     line-height: var(--leading-tight);
-    color: var(--color-contrast-400);
+    color: var(--color-contrast-500);
   }
 
   /* ========================================
@@ -114,7 +117,9 @@
     padding-inline: 2px;
     font-size: var(--text-xs);
     line-height: var(--leading-tight);
-    color: color-mix(in oklch, var(--color-contrast-500) 80%, var(--color-canvas));
+    /* Plain --color-contrast-500: the theme's AA-compliant tertiary text token.
+       A lightening mix here dropped helper text below the 4.5:1 floor (SC 1.4.3). */
+    color: var(--color-contrast-500);
   }
 
   /* ========================================

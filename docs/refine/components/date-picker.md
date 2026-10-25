@@ -190,9 +190,9 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 | `--date-picker-border-color`        | Calendar panel border                     |
 | `--date-picker-radius`              | Border radius of trigger and calendar     |
 | `--date-picker-shadow`              | Calendar drop shadow                      |
-| `--date-picker-day-selected-bg`     | Background of the selected day cell       |
-| `--date-picker-day-today-color`     | Text color of today's date                |
-| `--date-picker-day-outside-opacity` | Opacity of days outside the visible month |
+| `--date-picker-day-selected-bg`     | Background of the selected day cell (theme base color) |
+| `--date-picker-day-today-color`     | Text color of today's date (theme base color)          |
+| `--date-picker-day-outside-color`   | Colour of day numbers outside the visible month        |
 
 ### Parts
 

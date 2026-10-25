@@ -411,12 +411,19 @@ describe('ore-file-input accessibility', () => {
       expect(fixture.query('[role="button"]')).toBeTruthy();
     });
 
-    it('drop zone has aria-label', async () => {
+    it('drop zone is named from its visible content without a label', async () => {
+      // SC 2.5.3 (Label in Name): no aria-label override — the accessible name
+      // comes from the visible dropzone text via aria-labelledby.
       fixture = await mount('ore-file-input');
 
       const dropzone = fixture.query('[role="button"]');
+      const textId = dropzone?.getAttribute('aria-labelledby');
 
-      expect(dropzone?.getAttribute('aria-label')).toBeTruthy();
+      expect(dropzone?.hasAttribute('aria-label')).toBe(false);
+      expect(textId).toBeTruthy();
+      const named = fixture.query(`#${textId}`)?.textContent?.replace(/\s+/g, ' ').trim();
+
+      expect(named).toContain('Drop files here');
     });
 
     it('file list has role list', async () => {

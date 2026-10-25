@@ -59,6 +59,20 @@ describe('ore-marquee', () => {
     expect(fixture.element.getAttribute('pause-on-hover')).toBe('true');
   });
 
+  it('pauses on hover by default and opts out with pause-on-hover="false"', async () => {
+    // SC 2.2.2: scrolling content pauses for hover/focus unless explicitly disabled.
+    // Boolean props reflect presence-only, so the default renders as a bare attribute.
+    fixture = await mount('ore-marquee', { html: '<span>One</span><span>Two</span>' });
+    await fixture.flush();
+
+    expect(fixture.element.hasAttribute('pause-on-hover')).toBe(true);
+
+    fixture.element.setAttribute('pause-on-hover', 'false');
+    await fixture.flush();
+
+    expect(fixture.element.hasAttribute('pause-on-hover')).toBe(false);
+  });
+
   it('renders navigation controls by default', async () => {
     fixture = await mount('ore-marquee', { html: '<span>One</span><span>Two</span>' });
     await fixture.flush();

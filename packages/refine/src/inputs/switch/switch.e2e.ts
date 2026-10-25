@@ -1,4 +1,4 @@
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Touch layout', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { height: 800, width: 320 } });
@@ -25,5 +25,17 @@ test.describe('Touch layout', () => {
     expect(geometry.host.height).toBeGreaterThanOrEqual(44);
     expect(geometry.track.width).toBe(56);
     expect(geometry.track.height).toBe(28);
+  });
+});
+
+test.describe('Accessibility', () => {
+  // The slot is the labeling API (like ore-checkbox): a `label` attribute renders
+  // nothing, so slot text is what gives the switch its accessible name.
+  test('slot-labelled switch passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-switch>Enable notifications</ore-switch>');
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

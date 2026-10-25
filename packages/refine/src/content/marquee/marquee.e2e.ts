@@ -1,4 +1,4 @@
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
   test('preserves the Carousel marquee viewport and card sizing', async ({ page, refinePage }) => {
@@ -59,5 +59,39 @@ test.describe('Layout', () => {
       .poll(() => track.evaluate((element) => element.style.getPropertyValue('--_marquee-translate')))
       .toMatch(/^-\d+px$/);
     await expect(marquee.locator('[data-marquee-clone]')).not.toHaveCount(0);
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-marquee><div style="background:var(--color-contrast-100);width:200px">Free shipping</div>' +
+        '<div style="background:var(--color-contrast-200);width:200px">New arrivals</div></ore-marquee>',
+    );
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('pauses the animation on hover and keyboard focus by default (SC 2.2.2)', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-marquee><div style="background:var(--color-contrast-100);width:200px">Item A</div>' +
+        '<div style="background:var(--color-contrast-200);width:200px">Item B</div></ore-marquee>',
+    );
+
+    const track = page.locator('ore-marquee div[part="track"]');
+
+    await expect(track).toHaveCSS('animation-play-state', 'running');
+
+    await page.locator('ore-marquee').hover();
+
+    await expect(track).toHaveCSS('animation-play-state', 'paused');
+
+    await page.mouse.move(0, 0);
+
+    await page.locator('ore-marquee .next-btn').focus();
+
+    await expect(track).toHaveCSS('animation-play-state', 'paused');
   });
 });

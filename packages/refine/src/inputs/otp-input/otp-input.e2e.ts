@@ -5,7 +5,7 @@
  *
  * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
   // Regression coverage for a real bug: a focused cell's glow `box-shadow` lived in
@@ -51,4 +51,14 @@ test.describe('Layout', () => {
       expect(focused).not.toBe(rest);
     });
   }
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-otp-input label="Verification code"></ore-otp-input>');
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
+  });
 });

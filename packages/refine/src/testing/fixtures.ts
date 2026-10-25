@@ -135,6 +135,7 @@ export { expect } from '@playwright/test';
 // Page-level rules that produce false positives for component-level axe scans (axe still runs
 // on the full document; these rules target <html>/<head> structure that `.frame` doesn't own).
 const PAGE_LEVEL_RULES: Record<string, { enabled: false }> = {
+  'css-orientation-lock': { enabled: false },
   'document-title': { enabled: false },
   'html-has-lang': { enabled: false },
   'landmark-one-main': { enabled: false },
@@ -144,9 +145,10 @@ const PAGE_LEVEL_RULES: Record<string, { enabled: false }> = {
 
 /**
  * Runs axe against `selector` (default `.frame`, the component container) with the full
- * wcag2a/wcag2aa/best-practice ruleset: including `color-contrast` and `target-size`, which the
- * jsdom-based `axeCheck()` in `vitest.setup.ts` must disable (no CSS layout engine there). Shared
- * by every component's `*.e2e.ts` a11y tests so the rule config lives in exactly one place.
+ * WCAG 2.2 AA ruleset (wcag2a/2aa/21a/21aa/22aa + best-practice): including `color-contrast`
+ * and `target-size` (SC 2.5.8, tagged `wcag22aa`), which the jsdom-based `axeCheck()` in
+ * `vitest.setup.ts` must disable (no CSS layout engine there). Shared by every component's
+ * `*.e2e.ts` a11y tests so the rule config lives in exactly one place.
  */
 export async function axeCheck(
   page: ConstructorParameters<typeof AxeBuilder>[0]['page'],
@@ -154,7 +156,7 @@ export async function axeCheck(
 ): ReturnType<AxeBuilder['analyze']> {
   return new AxeBuilder({ page })
     .include(selector)
-    .withTags(['wcag2a', 'wcag2aa', 'best-practice'])
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])
     .options({
       rules: {
         ...PAGE_LEVEL_RULES,

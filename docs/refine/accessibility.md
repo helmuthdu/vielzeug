@@ -7,7 +7,7 @@ description: WCAG compliance, keyboard support, testing strategy, and per-compon
 
 [[toc]]
 
-Refine targets **WCAG 2.1 AA** compliance across the component library. ARIA roles and states are managed automatically. Keyboard navigation, focus management, and live-region announcements are built into each component.
+Refine targets **WCAG 2.2 AA** compliance across the component library. ARIA roles and states are managed automatically. Keyboard navigation, focus management, and live-region announcements are built into each component.
 
 ## What You're Responsible For
 
@@ -44,9 +44,9 @@ Refine uses a three-layer approach.
 
 Every component has tests verifying correct `role` and `aria-*` attributes at render time, ARIA state changes on attribute mutation, keyboard event handling, focus management for overlays, and live-region announcements.
 
-**2: Axe-core automated audit**
+**2: Axe-core automated audit (jsdom)**
 
-The `axeCheck` helper is available globally in all Refine tests:
+The `axeCheck` helper is available globally in all Refine unit tests:
 
 ```ts
 import { mount } from '@vielzeug/ore/testing';
@@ -58,9 +58,13 @@ it('has no axe violations', async () => {
 });
 ```
 
-Only the `wcag2a`, `wcag2aa`, and `best-practice` rule sets run in CI to keep test suites fast.
+The jsdom scan runs the full WCAG 2.2 AA tag set (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`) plus `best-practice`. Rules that need a real layout engine (`color-contrast`, `target-size`) or document-level CSS (`css-orientation-lock`) are disabled there and covered by the browser scan instead.
 
-**3: Manual checklist (per release)**
+**3: Axe-core in a real browser (Playwright)**
+
+Every component also ships a co-located `*.e2e.ts` accessibility suite that runs axe in Chromium against a mounted component — all 44 component suites, so `color-contrast`, `target-size` (SC 2.5.8), and layout-dependent rules are verified with a real engine, including interaction states (open dialogs, expanded pickers, filled inputs). The shared `axeCheck(page)` helper in `@vielzeug/refine/testing` carries the same WCAG 2.2 AA tag set with page-level rules scoped out, so the rule configuration lives in exactly one place.
+
+**4: Manual checklist (per release)**
 
 Before each minor release:
 
@@ -71,6 +75,7 @@ Before each minor release:
 - [ ] Images and icons have appropriate `alt` or `aria-hidden`
 - [ ] Form labels are connected to their controls
 - [ ] Error states are communicated in text, not color alone
+- [ ] Keyboard focus never lands off-screen behind sticky headers (scroll-padding, SC 2.4.11)
 
 ## Per-Component Coverage
 
@@ -157,6 +162,11 @@ Before each minor release:
 - **Truncated text is recoverable.** Any label clipped by an ellipsis (`ore-text`, `ore-list-item`, `ore-menu-item`, `ore-sidebar-item`) mirrors its full text into a `title` while it is actually clipped, and drops it as soon as there is room. `ore-text` additionally supports `expandable` for a tap-to-reveal disclosure.
 - **Focus rings share one primitive.** Every keyboard focus indicator composes `--focus-ring`, so the increased-contrast path (`prefers-contrast: more` or `html.contrast-more`) thickens all rings at once by re-declaring one token.
 - **Reduced motion and reduced transparency are honored.** `prefers-reduced-motion` zeroes every duration token; an app can force either direction with `setMotionMode('reduced' | 'full')` (see [Theming → Motion Mode](/refine/theming#motion-mode)). `prefers-reduced-transparency` swaps translucent frost fills for opaque ones.
+- **Continuously moving content pauses by default.** `ore-marquee` stops on hover and on keyboard focus (`pause-on-hover` defaults to `true`), giving pointer and keyboard users a pause for the repeating ticker (SC 2.2.2) on top of the reduced-motion stop.
+- **Keyboard focus is never hidden behind sticky chrome.** Sticky `ore-table` / `ore-datagrid` headers set `scroll-padding-block-start`, so a focused row scrolls into clear view below the pinned header rather than underneath it (SC 2.4.11).
+- **Accessible names contain their visible labels.** Controls are named from their own visible text wherever a name can be derived that way — a slider mirrors its default-slot label onto the host `aria-label`, a file drop zone and the query-bar filter button are labelled by their visible content — so a speech-recognition user can activate them by what they read (SC 2.5.3). No `aria-label` overrides a visible label.
+- **Helper and tertiary text uses AA tokens.** Form helper text, drop-zone hints, and out-of-month day numbers use the plain `--color-contrast-500` ink (≥ 4.5:1 on canvas) rather than a lightened `color-mix()`, which dropped below the contrast floor (SC 1.4.3).
+- **Input helpers carry autofill hints.** `ore-input` forwards `autocomplete`, `ore-otp-input` sets `one-time-code`, and the search-style fields (`ore-combobox`, `ore-query-bar`, `ore-command-palette`) set `autocomplete="off"` with `aria-autocomplete="list"` so their listbox behaviour isn't fought by the browser's own autofill (SC 1.3.5).
 
 ## Compliance Contract
 
@@ -164,14 +174,21 @@ Every published component must satisfy:
 
 | Requirement                                        | Standard                            |
 | -------------------------------------------------- | ----------------------------------- |
-| Keyboard navigability                              | WCAG 2.1 AA §2.1                    |
-| Visible focus indicator                            | WCAG 2.1 AA §2.4.7                  |
-| Colour contrast ≥ 4.5:1 (normal text)              | WCAG 2.1 AA §1.4.3                  |
-| Colour contrast ≥ 3:1 (large text / UI components) | WCAG 2.1 AA §1.4.11                 |
-| Accessible name on every interactive control       | WCAG 2.1 AA §4.1.2                  |
-| Correct ARIA roles and states                      | WCAG 2.1 AA §4.1.2                  |
-| Live region announcements for dynamic changes      | WCAG 2.1 AA §4.1.3                  |
-| Touch target ≥ 44×44 CSS px                        | WCAG 2.2 §2.5.8                     |
+| Keyboard navigability                              | WCAG 2.2 AA §2.1                    |
+| Visible focus indicator                            | WCAG 2.2 AA §2.4.7                  |
+| Focus not obscured by sticky content                | WCAG 2.2 §2.4.11                    |
+| Pointer-gesture cancellation (no down-event actuation) | WCAG 2.2 §2.5.2                 |
+| Drag alternatives (single-pointer where draggable)  | WCAG 2.2 §2.5.7                    |
+| Target size ≥ 24×24 (Refine exceeds at 44×44)      | WCAG 2.2 §2.5.8                     |
+| Accessible name contains visible label              | WCAG 2.2 §2.5.3                     |
+| Motion pause (hover / keyboard)                    | WCAG 2.2 §2.2.2                     |
+| Colour contrast ≥ 4.5:1 (normal text)              | WCAG 2.2 AA §1.4.3                  |
+| Colour contrast ≥ 3:1 (large text / UI components) | WCAG 2.2 AA §1.4.11                 |
+| Orientation-independent layout                     | WCAG 2.2 §1.3.4                     |
+| Autofill for personal-data inputs                  | WCAG 2.2 §1.3.5                     |
+| Accessible name on every interactive control       | WCAG 2.2 AA §4.1.2                  |
+| Correct ARIA roles and states (valid, non-duplicate) | WCAG 2.2 AA §4.1.2 / §4.1.4        |
+| Live region announcements for dynamic changes      | WCAG 2.2 AA §4.1.3                  |
 | Forced-colors / Windows High Contrast              | WCAG §1.4.3 enhanced                |
 | Reduced-motion fallback                            | WCAG 2.1 §2.3.3                     |
 

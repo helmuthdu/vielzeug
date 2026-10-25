@@ -268,9 +268,9 @@ The calendar panel maintains a stable size across all three views: day view rese
 | `--calendar-border-color`         | `--color-contrast-200` | Calendar border colour                                 |
 | `--calendar-radius`               | `--rounded-xl`         | Calendar border radius                                 |
 | `--calendar-shadow`               | `--shadow-md`          | Calendar drop shadow                                   |
-| `--calendar-day-selected-bg`      | theme focus color      | Background of the selected day cell                    |
-| `--calendar-day-today-color`      | theme focus color      | Color of today's date number                           |
-| `--calendar-day-outside-opacity`  | `0.35`                 | Opacity of days outside the visible month              |
+| `--calendar-day-selected-bg`      | theme base color     | Background of the selected day cell                   |
+| `--calendar-day-today-color`      | theme base color     | Color of today's date number                          |
+| `--calendar-day-outside-color`    | `--color-contrast-500` | Colour of day numbers outside the visible month       |
 | `--calendar-expanded-cell-height` | `var(--size-28)`       | Minimum height of each day cell in the expanded layout |
 
 ### Parts

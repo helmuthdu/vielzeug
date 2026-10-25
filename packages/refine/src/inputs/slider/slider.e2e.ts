@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 const SIZES = {
   lg: { rail: 16, thumb: 24 },
@@ -143,4 +143,14 @@ test.describe('Touch layout', () => {
       expect(dimensions.trackHeight).toBe(expected.rail);
     });
   }
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-slider value="50">Volume</ore-slider>');
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
+  });
 });

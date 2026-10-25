@@ -1,4 +1,4 @@
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
   test('interactive hover lifts without changing card dimensions', async ({ page, refinePage }) => {
@@ -92,5 +92,17 @@ test.describe('Layout', () => {
     await page.locator('#action').hover();
     await page.waitForTimeout(250);
     expect(await readShadow('action')).not.toBe(actionBefore);
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-card><span slot="header">Trip to Lisbon</span>Seven days of sun, sea, and pastéis de nata.</ore-card>',
+    );
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

@@ -65,7 +65,7 @@ test.describe('Touch targets', () => {
     await input(page).press('Escape');
 
     for (const control of [
-      page.getByRole('button', { exact: true, name: 'Filters (1)' }),
+      page.getByRole('button', { exact: true, name: 'Filters 1' }),
       page.getByRole('button', { exact: true, name: 'Remove Label: Bug' }),
       // The clear button is in the bar's shadow root; pierce it explicitly.
       page.locator('ore-query-bar').locator('css=button[aria-label="Clear search text"]'),
@@ -491,7 +491,7 @@ test.describe('Multiple selection', () => {
       ],
     });
     await expect(bar).toHaveAttribute('data-changes', '1');
-    await expect(page.getByRole('button', { exact: true, name: 'Filters (2)' })).toBeVisible();
+    await expect(page.getByRole('button', { exact: true, name: 'Filters 2' })).toBeVisible();
     await page.getByRole('checkbox', { exact: true, name: 'Apples' }).click();
     await expect(page.getByRole('button', { exact: true, name: 'Remove Fruit: Banana' })).toBeVisible();
     await page.getByRole('checkbox', { exact: true, name: 'Apples' }).click();
@@ -536,7 +536,7 @@ test.describe('Multiple selection', () => {
       ],
     });
     await expect(page.locator('ore-query-bar')).toHaveAttribute('data-changes', '1');
-    await expect(page.getByRole('button', { exact: true, name: 'Filters (1)' })).toBeFocused();
+    await expect(page.getByRole('button', { exact: true, name: 'Filters 1' })).toBeFocused();
   });
 
   test('cancels draft clearing, applies group clearing, and fits mobile enlarged text', async ({
@@ -551,11 +551,11 @@ test.describe('Multiple selection', () => {
     await mountFruits(page, refinePage);
     await input(page).fill('fresh fruit:apple fruit:banana sort:name');
     await input(page).press('Escape');
-    await page.getByRole('button', { exact: true, name: 'Filters (2)' }).click();
+    await page.getByRole('button', { exact: true, name: 'Filters 2' }).click();
     await page.getByRole('button', { exact: true, name: 'Clear Fruit' }).click();
     await expect(page.getByRole('checkbox', { exact: true, name: 'Apple' })).not.toBeChecked();
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { exact: true, name: 'Filters (2)' }).click();
+    await page.getByRole('button', { exact: true, name: 'Filters 2' }).click();
     await expect(page.getByRole('checkbox', { exact: true, name: 'Apple' })).toBeChecked();
     await page.getByRole('button', { exact: true, name: 'Clear Fruit' }).click();
     await page.getByRole('button', { exact: true, name: 'Apply filters' }).click();
@@ -598,7 +598,7 @@ test.describe('Filter drawer', () => {
       ],
     });
     await expect(page.locator('ore-query-bar')).toHaveAttribute('data-changes', '1');
-    const appliedFilters = page.getByRole('button', { exact: true, name: 'Filters (2)' });
+    const appliedFilters = page.getByRole('button', { exact: true, name: 'Filters 2' });
     await expect(appliedFilters).toBeFocused();
   });
 
@@ -701,7 +701,7 @@ test.describe('Filter drawer', () => {
     await expect(mine).not.toBeChecked();
     await mine.click();
     await expect(page.locator('.applied ore-chip')).toHaveCount(1);
-    await page.getByRole('button', { exact: true, name: 'Filters (1)' }).click();
+    await page.getByRole('button', { exact: true, name: 'Filters 1' }).click();
     await expect(page.getByRole('radio', { exact: true, name: 'Alice' })).toBeChecked();
     await page.getByRole('radio', { exact: true, name: 'Bob' }).click();
     await page.getByRole('button', { exact: true, name: 'Apply filters' }).click();
@@ -765,7 +765,7 @@ test.describe('Filter drawer', () => {
       await input(page).fill('author:alice label:enhancement');
       await input(page).press('Escape');
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
-      await page.getByRole('button', { exact: true, name: 'Filters (2)' }).click();
+      await page.getByRole('button', { exact: true, name: 'Filters 2' }).click();
       const dialog = page.getByRole('dialog', { exact: true, name: 'Filters' });
       await expect(dialog).toBeVisible();
       const boxes = [];

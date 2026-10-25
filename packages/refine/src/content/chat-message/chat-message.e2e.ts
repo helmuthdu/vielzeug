@@ -6,7 +6,7 @@
  *
  * Run with: pnpm --filter @vielzeug/refine test:e2e (requires built dist).
  */
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
   test('bubble width hugs content instead of stretching to fill the row', async ({ page, refinePage }) => {
@@ -112,5 +112,15 @@ test.describe('Layout', () => {
     });
 
     expect(mutations).toEqual([]);
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-chat-message>It\u2019s sunny and 22\u00b0C in Lisbon.</ore-chat-message>');
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

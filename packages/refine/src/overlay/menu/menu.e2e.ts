@@ -1,4 +1,4 @@
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Interaction', () => {
   test('opens menu from an ore-button trigger', async ({ page, refinePage }) => {
@@ -109,5 +109,17 @@ test.describe('Layout', () => {
     expect(geometry.panelRight).toBeCloseTo(geometry.triggerRight, 0);
     expect(geometry.panelBottom).toBeGreaterThan(geometry.cardBottom);
     expect(errors).toEqual([]);
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('open menu passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-menu default-open><ore-button slot="trigger">Open menu</ore-button><ore-menu-item value="edit">Edit</ore-menu-item></ore-menu>',
+    );
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

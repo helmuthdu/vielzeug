@@ -131,7 +131,7 @@ export type OreCalendarProps = {
  * @cssprop --calendar-shadow - Calendar drop shadow
  * @cssprop --calendar-day-selected-bg - Background of selected day cell
  * @cssprop --calendar-day-today-color - Colour of today's date number
- * @cssprop --calendar-day-outside-opacity - Opacity of days outside visible month
+ * @cssprop --calendar-day-outside-color - Colour of day numbers outside the visible month
  *
  * @part calendar - The root calendar panel
  * @part header - Calendar header (nav + label)
@@ -374,7 +374,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
             class="cal-label-btn"
             type="button"
             aria-label="${() =>
-              `Switch to ${currentView.value === 'day' ? 'month' : currentView.value === 'month' ? 'year' : 'day'} view`}"
+              `${displayLabel.value} — switch to ${currentView.value === 'day' ? 'month' : currentView.value === 'month' ? 'year' : 'day'} view`}"
             ?disabled="${isDisabled}"
             @click="${handleHeaderClick}">
             <span class="cal-label-month">${displayMonth_}</span>

@@ -17,7 +17,7 @@ export type OreMarqueeProps = {
   direction?: MarqueeDirection;
   /** Duration in seconds for one complete ticker cycle. Defaults to `20`. */
   duration?: number;
-  /** Pause the ticker while it is hovered. Defaults to `false`. */
+  /** Pause the ticker while it is hovered or keyboard-focused. Defaults to `true`; set `pause-on-hover="false"` to keep scrolling. */
   'pause-on-hover'?: boolean;
   /** Show previous/next navigation controls. Defaults to `true`. */
   'show-controls'?: boolean;
@@ -35,7 +35,7 @@ export type OreMarqueeProps = {
  * @attr {string} color - Theme color for the navigation controls.
  * @attr {number} duration - Duration in seconds for one ticker cycle (default: 20)
  * @attr {string} direction - 'left' (default) | 'right'
- * @attr {boolean} pause-on-hover - Pause while hovered (default: false)
+ * @attr {boolean} pause-on-hover - Pause while hovered or focused (default: true; set false to keep scrolling)
  * @attr {boolean} show-controls - Show previous/next controls (default: true)
  *
  * @cssprop --marquee-gap - Gap between ticker items (default: var(--size-4))
@@ -56,7 +56,7 @@ define<OreMarqueeProps>(MARQUEE_TAG, {
     color: prop.oneOf(THEME_COLORS),
     direction: prop.oneOf(MARQUEE_DIRECTIONS, 'left'),
     duration: prop.number(20),
-    'pause-on-hover': prop.bool(false),
+    'pause-on-hover': prop.bool(true),
     'show-controls': prop.bool(true),
   },
   setup(props) {

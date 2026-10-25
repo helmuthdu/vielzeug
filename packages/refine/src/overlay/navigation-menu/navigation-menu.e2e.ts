@@ -1,4 +1,4 @@
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Interaction', () => {
   test('anchors matching panel to selected trigger', async ({ page, refinePage }) => {
@@ -123,5 +123,17 @@ test.describe('Layout', () => {
     expect(state.overflowY).toBe('auto');
     expect(state.maxHeight).toBeLessThan(await page.evaluate(() => window.innerHeight));
     expect(state.scrollHeight).toBeGreaterThan(state.clientHeight);
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-navigation-menu><ore-navigation-menu-item value="products">Products</ore-navigation-menu-item></ore-navigation-menu>',
+    );
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

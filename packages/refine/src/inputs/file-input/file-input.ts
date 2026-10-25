@@ -292,6 +292,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     // ============================================
     const fileInputId = createId('file-input');
     const labelId = `label-${fileInputId}`;
+    const dropzoneTextId = `${fileInputId}-text`;
     const helperId = `helper-${fileInputId}`;
     const errorId = `error-${fileInputId}`;
 
@@ -457,8 +458,8 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
           role="button"
           tabindex="${() => (isDisabled.value ? '-1' : '0')}"
           aria-disabled="${() => String(isDisabled.value)}"
-          aria-label="${() => (!props.label.value ? 'File upload drop zone' : null)}"
-          aria-labelledby="${() => (props.label.value ? labelId : null)}"
+          aria-labelledby="${() =>
+            [props.label.value ? labelId : null, dropzoneTextId].filter((id) => id !== null).join(' ')}"
           aria-describedby="${helperId}">
           <input
             type="file"
@@ -473,7 +474,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
             hidden
             inert
             tabindex="-1" />
-          <div class="dropzone-content">
+          <div class="dropzone-content" id="${dropzoneTextId}">
             <span class="dropzone-icon" aria-hidden="true" data-status="${() => (isInvalid.value ? 'error' : null)}">
               ${() =>
                 isInvalid.value

@@ -16,13 +16,17 @@ import axe from 'axe-core';
 const JSDOM_UNRELIABLE_RULES: Record<string, { enabled: false }> = {
   'color-contrast': { enabled: false },
   'color-contrast-enhanced': { enabled: false },
+  // SC 1.3.4: evaluates document-level CSS media queries, which jsdom neither
+  // parses nor matches; the e2e scan is scoped to `.frame` so it never sees a
+  // page stylesheet to lock orientation with either.
+  'css-orientation-lock': { enabled: false },
   'scrollable-region-focusable': { enabled: false },
   'target-size': { enabled: false },
 };
 
 export async function axeCheck(node: Element, options: axe.RunOptions = {}): Promise<axe.AxeResults> {
   return axe.run(node, {
-    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'best-practice'] },
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
     ...options,
     rules: { ...JSDOM_UNRELIABLE_RULES, ...options.rules },
   });

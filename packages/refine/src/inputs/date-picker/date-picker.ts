@@ -124,7 +124,7 @@ export type OreDatePickerProps = {
  * @cssprop --date-picker-radius - Calendar border radius
  * @cssprop --date-picker-day-selected-bg - Background of selected day
  * @cssprop --date-picker-day-today-color - Color of today's date number
- * @cssprop --date-picker-day-outside-opacity - Opacity of days outside visible month
+ * @cssprop --date-picker-day-outside-color - Color of day numbers outside the visible month
  *
  * @part field - The trigger button/field
  * @part calendar - The floating calendar panel
@@ -508,7 +508,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
             class="cal-label-btn"
             type="button"
             aria-label="${() =>
-              `Switch to ${currentView.value === 'day' ? 'month' : currentView.value === 'month' ? 'year' : 'day'} view`}"
+              `${displayLabel.value} — switch to ${currentView.value === 'day' ? 'month' : currentView.value === 'month' ? 'year' : 'day'} view`}"
             @click="${handleHeaderClick}">
             <span class="cal-label-month">${displayMonth_}</span>
             <span class="cal-label-sep" aria-hidden="true">/</span>

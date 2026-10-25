@@ -1,4 +1,4 @@
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Interaction', () => {
   test('opens inside an allow-scripts-only iframe', async ({ page, refinePage }) => {
@@ -31,5 +31,19 @@ test.describe('Interaction', () => {
     expect(drawer.open).toBe(true);
     expect(drawer.width).toBeGreaterThan(0);
     expect(drawer.height).toBeGreaterThan(0);
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('open drawer passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-drawer default-open label="Preview drawer"><p>Drawer content</p></ore-drawer>',
+    );
+
+    await expect(page.locator('ore-drawer').locator('dialog')).toBeVisible();
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
   test('fills an externally sized card media slot', async ({ page, refinePage }) => {
@@ -62,5 +62,15 @@ test.describe('Layout', () => {
     await expect(skeleton.locator('.stack')).toHaveCSS('position', 'static');
     await expect(skeleton.locator('.bone')).toHaveCount(3);
     await expect(skeleton).not.toHaveCSS('height', '0px');
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-skeleton variant="text" lines="3" width="320px"></ore-skeleton>');
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

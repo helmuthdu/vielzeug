@@ -1,4 +1,4 @@
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
   test('frost variant applies the glass surface treatment', async ({ page, refinePage }) => {
@@ -19,5 +19,23 @@ test.describe('Layout', () => {
 
     expect(styles.backdropFilter).toContain('blur');
     expect(styles.boxShadow).not.toBe('none');
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-chip>Active</ore-chip>');
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('removable chip exposes a named remove button', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-chip mode="removable">Draft</ore-chip>');
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });

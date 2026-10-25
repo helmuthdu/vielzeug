@@ -26,7 +26,7 @@ Use it for supplementary status or promotional content, not information users mu
 
 ## Direction and Pause
 
-The ticker moves left by default. Set `direction="right"` for the reverse motion. Add `pause-on-hover` when readers need to stop a moving announcement with a pointer. Set a height on the marquee and a width on each child card so the loop is predictable.
+The ticker moves left by default. Set `direction="right"` for the reverse motion. The ticker already pauses on hover and keyboard focus; set `pause-on-hover="false"` only when the motion must never stop. Set a height on the marquee and a width on each child card so the loop is predictable.
 
 <ComponentPreview>
 
@@ -52,7 +52,7 @@ The ticker moves left by default. Set `direction="right"` for the reverse motion
 | `color`          | `ThemeColor`        | N/A | Theme color for navigation controls    |
 | `duration`       | `number`            | `20`       | Seconds for one complete ticker cycle  |
 | `direction`      | `'left' \| 'right'` | `'left'`   | Horizontal scroll direction            |
-| `pause-on-hover` | `boolean`           | `false`    | Pauses the animation while hovered     |
+| `pause-on-hover` | `boolean`           | `true`     | Pauses the animation while hovered or keyboard-focused |
 | `show-controls`  | `boolean`           | `true`     | Shows previous and next controls       |
 
 ### CSS Custom Properties
@@ -69,4 +69,4 @@ The ticker moves left by default. Set `direction="right"` for the reverse motion
 
 ## Accessibility
 
-The animation stops automatically for `prefers-reduced-motion: reduce`, and for `data-motion="reduced"` regardless of the OS setting; `data-motion="full"` keeps it scrolling despite the OS preference (see [Motion Mode](/refine/theming#motion-mode)). Add `pause-on-hover` whenever pointer users may need to read the content. Because a ticker repeats continuously, do not use it for essential instructions, time-sensitive actions, or content that needs keyboard interaction.
+The animation stops automatically for `prefers-reduced-motion: reduce`, and for `data-motion="reduced"` regardless of the OS setting; `data-motion="full"` keeps it scrolling despite the OS preference (see [Motion Mode](/refine/theming#motion-mode)). It also pauses while the ticker is hovered or keyboard-focused: `pause-on-hover` defaults to `true`, so every user has a pointer and keyboard pause for the continuously repeating content (WCAG SC 2.2.2); set `pause-on-hover="false"` to opt out. Because a ticker repeats continuously, do not use it for essential instructions, time-sensitive actions, or content that needs keyboard interaction.

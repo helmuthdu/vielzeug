@@ -1,4 +1,4 @@
-import { expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
   test('keeps a label-hidden header control at the trailing edge despite child margin resets', async ({
@@ -41,5 +41,15 @@ test.describe('Layout', () => {
 
     expect(styles.backdropFilter).toContain('blur');
     expect(styles.boxShadow).not.toBe('none');
+  });
+});
+
+test.describe('Accessibility', () => {
+  test('passes axe checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-counter label="Stamina" value="3"></ore-counter>');
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
   });
 });
