@@ -38,8 +38,8 @@
     background: transparent;
     border: none;
     transition:
-      display 200ms allow-discrete,
-      overlay 200ms allow-discrete;
+      display var(--duration-200) allow-discrete,
+      overlay var(--duration-200) allow-discrete;
   }
 
   dialog:not([open]) {
@@ -59,9 +59,9 @@
     opacity: 1;
     backdrop-filter: blur(var(--blur-xs));
     transition:
-      opacity var(--transition-normal),
-      overlay var(--transition-normal) allow-discrete,
-      display var(--transition-normal) allow-discrete;
+      opacity var(--duration-200) var(--ease-in-out),
+      overlay var(--duration-200) allow-discrete,
+      display var(--duration-200) allow-discrete;
 
     @starting-style {
       opacity: 0;
@@ -93,8 +93,8 @@
     backdrop-filter: blur(var(--blur-md));
     transform: scale(1) translateY(0);
     transition:
-      opacity 200ms var(--ease-spring),
-      transform 200ms var(--ease-spring);
+      opacity var(--duration-200) var(--ease-spring),
+      transform var(--duration-200) var(--ease-spring);
 
     @starting-style {
       opacity: 0;
@@ -106,8 +106,8 @@
     opacity: 0;
     transform: scale(var(--overlay-enter-scale-dialog)) translateY(-4px);
     transition:
-      opacity 150ms var(--ease-spring),
-      transform 150ms var(--ease-spring);
+      opacity var(--duration-150) var(--ease-spring),
+      transform var(--duration-150) var(--ease-spring);
   }
 
   @media (width <= 640px) {

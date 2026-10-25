@@ -479,7 +479,7 @@ Horizontal coverflow mirrors layout and Left/Right navigation for `dir="rtl"`. A
 | `--carousel-bg`                  | `var(--color-canvas)`       | Slide area background                                                                                                                            |
 | `--carousel-radius`              | `var(--rounded-xl)`         | Host border radius                                                                                                                               |
 | `--carousel-min-height`          | `240px`                     | Fallback minimum height: set an explicit height for `filmstrip` and `gallery`                                                                   |
-| `--carousel-transition-duration` | `0.35s`                     | Slide transition duration, including coverflow. Auto-set to `0s` under `prefers-reduced-motion` |
+| `--carousel-transition-duration` | `var(--duration-350)`       | Slide transition duration, including coverflow. Zeroes under Motion Mode (see [Theming → Motion Mode](/refine/theming#motion-mode)) |
 | `--carousel-dot-bg`              | `var(--color-contrast-300)` | Inactive indicator dot color                                                                                                                     |
 | `--carousel-dot-active-bg`       | `var(--color-contrast-700)` | Active indicator fill color                                                                                                                      |
 | `--carousel-filmstrip-inactive`  | `var(--size-16)`            | Collapsed width (horizontal) or height (vertical) of inactive filmstrip slides                                                                   |
@@ -530,7 +530,7 @@ The host carries `role="region"` and `aria-roledescription="carousel"`. Each `<o
 
 When `autoplay` is on, the timer stops on `focusin` or `pointerenter` so keyboard and pointer users can read slide content uninterrupted, and restarts on `focusout` or `pointerleave`.
 
-The carousel responds to `prefers-reduced-motion: reduce` automatically: `--carousel-transition-duration` is set to `0s`, eliminating slide translation and fade transitions.
+Slide motion follows Motion Mode: `--carousel-transition-duration` defaults to `var(--duration-350)`, which zeroes under `prefers-reduced-motion` and under `data-motion="reduced"` (slides change instantly), and stays 350ms when the app opts back in with `data-motion="full"`.
 
 ::: tip Always set `label`
 The `label` attribute becomes the `aria-label` of the `role="region"` landmark. Without it, the region is announced as `"Carousel"`: too generic when a page has multiple carousels.

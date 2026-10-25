@@ -363,12 +363,6 @@
     opacity: 1;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .dg-search-input {
-      transition: none;
-    }
-  }
-
   /* ── ore-popover: action popover wrapper ─────────────────────────────────── */
 
   .dg-action-popover {

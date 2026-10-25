@@ -61,7 +61,7 @@ spotlight.rect = null; // dim the whole page
 | `--spotlight-dim`    | Dim color (default `--color-scrim`) |
 | `--spotlight-ring`   | Ring drawn around the cutout (default: `none`)  |
 | `--spotlight-radius` | Cutout corner radius                            |
-| `--spotlight-transition` | Geometry transition (default: 240ms spring) |
+| `--spotlight-transition` | Geometry transition (default: `var(--duration-250) var(--ease-spring)`) |
 
 ### Parts
 

@@ -36,10 +36,10 @@
     transform: translateY(var(--overlay-enter-translate-y)) scale(var(--overlay-enter-scale));
     transform-origin: top left;
     transition:
-      opacity 100ms var(--ease-spring),
-      transform 100ms var(--ease-spring),
-      display 100ms allow-discrete,
-      overlay 100ms allow-discrete;
+      opacity var(--duration-100) var(--ease-spring),
+      transform var(--duration-100) var(--ease-spring),
+      display var(--duration-100) allow-discrete,
+      overlay var(--duration-100) allow-discrete;
   }
 
   .menu-panel[data-placement='top-start'],
@@ -59,10 +59,10 @@
     opacity: 1;
     transform: translateY(0) scale(1);
     transition:
-      opacity 150ms var(--ease-spring),
-      transform 150ms var(--ease-spring),
-      display 150ms allow-discrete,
-      overlay 150ms allow-discrete;
+      opacity var(--duration-150) var(--ease-spring),
+      transform var(--duration-150) var(--ease-spring),
+      display var(--duration-150) allow-discrete,
+      overlay var(--duration-150) allow-discrete;
 
     @starting-style {
       opacity: 0;

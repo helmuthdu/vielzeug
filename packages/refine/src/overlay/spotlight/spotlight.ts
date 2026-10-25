@@ -41,7 +41,7 @@ export type OreSpotlightProps = {
  * @cssprop --spotlight-dim - Dim color (default: var(--color-scrim))
  * @cssprop --spotlight-ring - Ring drawn around the cutout (default: none)
  * @cssprop --spotlight-radius - Cutout corner radius
- * @cssprop --spotlight-transition - Geometry transition (default: 240ms ease)
+ * @cssprop --spotlight-transition - Geometry transition (default: var(--duration-250) var(--ease-spring))
  *
  * @part overlay - The fixed dim layer.
  * @part cutout - The highlighted rectangle.

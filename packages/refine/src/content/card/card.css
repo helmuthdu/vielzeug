@@ -156,7 +156,7 @@
 
   :host([loading]) .loading-bar {
     display: block;
-    animation: var(--_motion-animation, loading-bar 1.4s linear infinite);
+    animation: var(--_motion-animation, loading-bar var(--duration-1400) linear infinite);
   }
 
   /* In RTL the loading bar sweeps right-to-left */
@@ -218,7 +218,11 @@
   ) .card {
     box-shadow: var(--_shadow);
     transform: translateY(0) scale(0.99);
-    transition: var(--_motion-transition, box-shadow var(--transition-fast), transform 120ms var(--ease-spring));
+    transition: var(
+      --_motion-transition,
+      box-shadow var(--transition-fast),
+      transform var(--duration-100) var(--ease-spring)
+    );
   }
 
   :host([interactive]:focus-visible) .card {

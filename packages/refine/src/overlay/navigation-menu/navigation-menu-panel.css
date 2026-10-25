@@ -15,20 +15,22 @@
     border-radius: var(--navigation-menu-radius, var(--rounded-lg));
     box-shadow: var(--navigation-menu-shadow, var(--shadow-xl));
 
-    /* Closed state doubles as the exit target. Literal durations throughout:
-       --transition-* resolves to 'none' under reduced motion, and one 'none'
-       member invalidates the entire transition shorthand, which would drop the
-       display/overlay allow-discrete hold and teleport the panel out of the
-       top layer mid-exit (same trap dialog.css documents). Ease tokens are
-       never zeroed, so they stay token-driven. */
+    /* Closed state doubles as the exit target. Durations must be --duration-*
+       tokens, never --transition-*: those resolve to 'none' under reduced
+       motion, and one 'none' member invalidates the entire transition
+       shorthand, which would drop the display/overlay allow-discrete hold and
+       teleport the panel out of the top layer mid-exit (same trap dialog.css
+       documents). A zeroed --duration-* stays a valid 0ms member, so the hold
+       survives and the cross-fade becomes instant. Ease tokens are never
+       zeroed. */
     opacity: 0;
     backdrop-filter: blur(var(--navigation-menu-backdrop-blur, var(--blur-xl))) saturate(180%);
     transform: translateY(var(--overlay-enter-translate-y)) scale(var(--overlay-enter-scale));
     transition:
-      opacity 200ms var(--ease-spring),
-      transform 200ms var(--ease-spring),
-      display 200ms allow-discrete,
-      overlay 200ms allow-discrete;
+      opacity var(--duration-200) var(--ease-spring),
+      transform var(--duration-200) var(--ease-spring),
+      display var(--duration-200) allow-discrete,
+      overlay var(--duration-200) allow-discrete;
   }
 
   :host([hidden]) {

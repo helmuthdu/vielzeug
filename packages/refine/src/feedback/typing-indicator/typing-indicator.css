@@ -18,7 +18,7 @@
     height: var(--_size);
     background: var(--_dot-color);
     border-radius: 50%;
-    animation: var(--_motion-animation, typing-indicator-bounce 1.2s ease-in-out infinite);
+    animation: var(--_motion-animation, typing-indicator-bounce var(--duration-1200) var(--ease-in-out) infinite);
   }
 
   .dot:nth-child(2) {

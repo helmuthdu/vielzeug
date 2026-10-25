@@ -127,7 +127,12 @@ export const rainbowEffectMixin = (selector: string) => {
 
       opacity: var(--rainbow-border-opacity, 0.7);
       pointer-events: none;
-      animation: rainbow-rotate 4s linear infinite;
+      /* The root --_motion-animation hatch (theme.css) stops the rotation for
+         the OS preference AND data-motion='reduced', and honors
+         data-motion='full'; a component-local media query would ignore the
+         mode. The 4s cycle is the effect's own speed, not a UI duration, so it
+         stays a literal. */
+      animation: var(--_motion-animation, rainbow-rotate 4s linear infinite);
     }
 
     /* Turn one pseudo layer into glow halo */
@@ -143,12 +148,6 @@ export const rainbowEffectMixin = (selector: string) => {
     @keyframes rainbow-rotate {
       to {
         --rainbow-angle: 1turn;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      :host([effect='rainbow']) ${selector}::before, :host([effect='rainbow']) ${selector}::after {
-        animation: none;
       }
     }
   `;
@@ -219,7 +218,7 @@ export const shineEffectMixin = (selector: string) => {
         conic-gradient(red 0 0) padding-box;
 
       pointer-events: none;
-      animation: shine-rotate 2.5s linear infinite;
+      animation: var(--_motion-animation, shine-rotate 2.5s linear infinite);
     }
 
     /* ========================================
@@ -229,12 +228,6 @@ export const shineEffectMixin = (selector: string) => {
     @keyframes shine-rotate {
       to {
         --shine-angle: 1turn;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      :host([effect='shine']) ${selector}::before {
-        animation: none;
       }
     }
   `;

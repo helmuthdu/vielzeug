@@ -6,7 +6,7 @@
        var() switches that nothing defines. */
     --_dim: var(--spotlight-dim, var(--color-scrim));
     --_ring: var(--spotlight-ring, none);
-    --_geometry-transition: var(--spotlight-transition, 240ms var(--ease-spring));
+    --_geometry-transition: var(--spotlight-transition, var(--duration-250) var(--ease-spring));
 
     /* Sits under top-layer overlays (dialogs, popovers) but above page content. */
     position: fixed;

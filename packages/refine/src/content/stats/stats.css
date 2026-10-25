@@ -166,7 +166,7 @@
 @layer refine.overrides {
   :host([loading]) .loading {
     display: block;
-    animation: var(--_motion-animation, stats-loading 1.4s linear infinite);
+    animation: var(--_motion-animation, stats-loading var(--duration-1400) linear infinite);
   }
 
   :host([loading]) .header,

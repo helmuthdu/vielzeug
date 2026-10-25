@@ -320,11 +320,14 @@
     --duration-100: 100ms;
     --duration-150: 150ms;
     --duration-200: 200ms;
+    --duration-250: 250ms;
     --duration-300: 300ms;
+    --duration-350: 350ms;
     --duration-500: 500ms;
     --duration-600: 600ms;
     --duration-700: 700ms;
     --duration-1000: 1000ms;
+    --duration-1200: 1200ms; /* Looping indicator cycle */
     --duration-1400: 1400ms; /* Looping indicator cycle */
     --duration-1500: 1500ms; /* Looping indicator cycle */
 
@@ -481,8 +484,8 @@
 
     /* ── Halo shadows: branded glow per color family ───────────────────────── */
     --halo-shadow-neutral:
-      inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(0 0 0 / 15%)),
-      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(0 0 0 / 20%)) inset,
+      inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), transparent),
+      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), transparent) inset,
       0 var(--size-2) var(--size-6) color-mix(in oklch, var(--color-neutral) var(--shade-halo-glow), transparent),
       0 var(--size-1) var(--size-3) color-mix(in oklch, var(--color-neutral) var(--shade-halo-glow-soft), transparent);
     --halo-shadow-primary:
@@ -805,11 +808,14 @@
       --duration-100: 0ms;
       --duration-150: 0ms;
       --duration-200: 0ms;
+      --duration-250: 0ms;
       --duration-300: 0ms;
+      --duration-350: 0ms;
       --duration-500: 0ms;
       --duration-600: 0ms;
       --duration-700: 0ms;
       --duration-1000: 0ms;
+      --duration-1200: 0ms;
       --duration-1400: 0ms;
       --duration-1500: 0ms;
       --transition-fast: none;
@@ -829,11 +835,14 @@
     --duration-100: 0ms;
     --duration-150: 0ms;
     --duration-200: 0ms;
+    --duration-250: 0ms;
     --duration-300: 0ms;
+    --duration-350: 0ms;
     --duration-500: 0ms;
     --duration-600: 0ms;
     --duration-700: 0ms;
     --duration-1000: 0ms;
+    --duration-1200: 0ms;
     --duration-1400: 0ms;
     --duration-1500: 0ms;
     --transition-fast: none;

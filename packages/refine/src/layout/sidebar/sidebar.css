@@ -367,10 +367,14 @@
     margin-inline-start: 0;
   }
 
-  .toggle-btn:hover {
-    color: var(--sidebar-toggle-hover-color, var(--color-contrast-900));
-    background: var(--sidebar-toggle-hover-bg, var(--color-contrast-100));
-    box-shadow: var(--shadow-md);
+  /* The whole hover treatment is a pointer affordance: on touch, :hover sticks
+     after a tap and the toggle would stay raised/tinted. */
+  @media (hover: hover) {
+    .toggle-btn:hover {
+      color: var(--sidebar-toggle-hover-color, var(--color-contrast-900));
+      background: var(--sidebar-toggle-hover-bg, var(--color-contrast-100));
+      box-shadow: var(--shadow-md);
+    }
   }
 
   .toggle-btn:focus-visible {

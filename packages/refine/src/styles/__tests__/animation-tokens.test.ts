@@ -138,4 +138,53 @@ describe('component animation contract', () => {
       }
     }
   });
+
+  // A literal duration in a `transition:`/`animation:` shorthand is invisible to
+  // the motion system: the Reduced Motion blocks zero --duration-* and
+  // --transition-*, but a hardcoded `200ms` keeps playing under
+  // prefers-reduced-motion and under data-motion='reduced', and it can silently
+  // invalidate an `allow-discrete` top-layer hold when a sibling token zeroes.
+  // Every timing must therefore come from a duration/easing/transition token.
+  // var()/calc() contents are stripped first so a token *fallback*
+  // (`var(--x, var(--duration-200))`) and the carousel's calc()-driven autoplay
+  // fill are not flagged; a bare literal left after stripping is a violation.
+  it('no component hardcodes a transition/animation duration', () => {
+    for (const file of componentCss) {
+      const source = readFileSync(file, 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
+
+      // (?<![-\w]) keeps a custom property named `--x-transition` from matching.
+      for (const match of source.matchAll(/(?<![-\w])(?:transition|animation)\s*:\s*([^;]+);/g)) {
+        const value = match[1].replace(/\s+/g, ' ');
+        // Replace nested var()/calc() bodies (one level deep is enough: tokens
+        // never nest deeper) so only bare literals remain.
+        const stripped = value.replace(/var\([^()]*\)/g, 'V').replace(/calc\([^)]*\)/g, 'C');
+
+        expect(
+          /[0-9]+(?:\.[0-9]+)?m?s/.test(stripped),
+          `${file.slice(srcDir.length + 1)} hardcodes a duration: "${value}"`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  // Component CSS must never write its own @media (prefers-reduced-motion)
+  // block: such a block ignores the data-motion='full' opt-out, so a user who
+  // explicitly asked for full motion still loses the effect. Reduced motion is
+  // owned by theme.css (the two root blocks + the --_motion-* hatches) and, for
+  // JS-spawned motion, by shared/motion-reduced.ts. theme.css is exempt — it is
+  // the mechanism, not a consumer.
+  it('no component re-declares prefers-reduced-motion', () => {
+    for (const file of componentCss) {
+      // theme.css owns the two root reduced-motion blocks — the mechanism every
+      // other guard here depends on. It is not a consumer, so skip it.
+      if (join(file) === join(stylesDir, 'theme.css')) continue;
+
+      const source = readFileSync(file, 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
+
+      expect(
+        /@media[^{]*\bprefers-reduced-motion\b/.test(source),
+        `${file.slice(srcDir.length + 1)} declares its own prefers-reduced-motion block; route through the motion tokens / motionReduced() instead`,
+      ).toBe(false);
+    }
+  });
 });

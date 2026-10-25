@@ -107,7 +107,7 @@
     border-radius: var(--_radius);
     transition:
       background var(--transition-fast),
-      transform 120ms var(--ease-spring);
+      transform var(--duration-100) var(--ease-spring);
   }
 
   .btn:hover:not(:disabled) {
@@ -192,7 +192,7 @@
   }
 
   :host([data-bump]) .value {
-    animation: var(--_motion-animation, counter-bump 200ms var(--ease-spring));
+    animation: var(--_motion-animation, counter-bump var(--duration-200) var(--ease-spring));
   }
 
   @keyframes counter-bump {

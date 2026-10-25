@@ -46,10 +46,10 @@
     backdrop-filter: blur(var(--blur-sm));
     transform: var(--_tooltip-closed-transform);
     transition:
-      opacity var(--transition-fast),
-      transform var(--transition-fast),
-      display var(--transition-fast) allow-discrete,
-      overlay var(--transition-fast) allow-discrete;
+      opacity var(--duration-150) var(--ease-in-out),
+      transform var(--duration-150) var(--ease-in-out),
+      display var(--duration-150) allow-discrete,
+      overlay var(--duration-150) allow-discrete;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -91,10 +91,10 @@
     opacity: 1;
     transform: translate(0, 0) scale(1);
     transition:
-      opacity var(--transition-normal),
-      transform var(--transition-spring),
-      display var(--transition-normal) allow-discrete,
-      overlay var(--transition-normal) allow-discrete;
+      opacity var(--duration-200) var(--ease-in-out),
+      transform var(--duration-300) var(--ease-spring),
+      display var(--duration-200) allow-discrete,
+      overlay var(--duration-200) allow-discrete;
     will-change: opacity, transform;
 
     @starting-style {

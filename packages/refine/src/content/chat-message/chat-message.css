@@ -105,7 +105,7 @@
     margin-inline-start: var(--size-0-5);
     vertical-align: text-bottom;
     background: currentcolor;
-    animation: var(--_motion-animation, chat-message-blink 1s step-end infinite);
+    animation: var(--_motion-animation, chat-message-blink var(--duration-1000) step-end infinite);
   }
 
   .cursor[hidden] {

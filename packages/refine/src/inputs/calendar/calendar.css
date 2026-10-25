@@ -462,14 +462,4 @@
     pointer-events: none;
     opacity: 0.6;
   }
-
-  /* ── Reduced motion ──────────────────────────────────────────────────────── */
-
-  @media (prefers-reduced-motion: reduce) {
-    .nav-btn,
-    .cal-label-btn,
-    .cal-cell {
-      transition: none;
-    }
-  }
 }

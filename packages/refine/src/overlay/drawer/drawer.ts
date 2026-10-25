@@ -15,6 +15,7 @@ import {
 import { signal } from '@vielzeug/ripple';
 
 import { type OverlayOpenChangeDetail, parseOptionalBool } from '../../core';
+import { motionReduced } from '../../shared/motion-reduced';
 
 import { forcedColorsMixin, touchTargetMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
@@ -253,7 +254,15 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
       // Commit the current drag position first so the magnetic snap continues
       // from the finger instead of jumping back to rest.
-      panel.style.transition = 'transform 180ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 180ms ease-out';
+      //
+      // The inline transition below bypasses the token layer, so the motion
+      // mode has to be asked directly: under reduction the panel is placed at
+      // its exit position with no transition, and the duration-derived fallback
+      // timer (0s + 50ms) finalizes the close. Dragging itself stays live: it
+      // is direct manipulation, not animation.
+      const snap = motionReduced() ? 'none' : 'transform 180ms var(--ease-move), opacity 180ms ease-out';
+
+      panel.style.transition = snap;
       void panel.offsetWidth;
 
       const onExitTransitionEnd = (ev: TransitionEvent) => {

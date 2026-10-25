@@ -2,6 +2,7 @@ import { bind, createId, define, getHost, html, prop, useField } from '@vielzeug
 import { computed, signal } from '@vielzeug/ripple';
 import { createErrorHelperState, createSliderControl } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
+import { motionReduced } from '../../shared/motion-reduced';
 import { colorThemeMixin, sizeVariantMixin, touchTargetMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
@@ -134,6 +135,11 @@ define<OreRatingProps>(RATING_TAG, {
     });
 
     function spawnSparkles(star: number) {
+      // The burst is spawned from JavaScript, so the CSS hatch cannot suppress
+      // it: a zero-duration animation would still create ten nodes per click.
+      // Ask the motion mode instead.
+      if (motionReduced()) return;
+
       const layer = el.shadowRoot?.querySelector<HTMLElement>('.sparkle-layer');
       const btn = el.shadowRoot?.querySelector<HTMLElement>(`[data-star="${star}"]`);
 

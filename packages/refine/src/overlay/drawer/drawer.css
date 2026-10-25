@@ -24,8 +24,8 @@
     max-height: 100%;
     pointer-events: none;
     transition:
-      display 200ms allow-discrete,
-      overlay 200ms allow-discrete;
+      display var(--duration-200) allow-discrete,
+      overlay var(--duration-200) allow-discrete;
   }
 
   dialog:not([open]) {
@@ -46,10 +46,10 @@
     opacity: 1;
     backdrop-filter: var(--_backdrop-filter);
     transition:
-      display 200ms allow-discrete,
-      overlay 200ms allow-discrete,
-      opacity var(--transition-normal),
-      backdrop-filter var(--transition-normal);
+      display var(--duration-200) allow-discrete,
+      overlay var(--duration-200) allow-discrete,
+      opacity var(--duration-200) var(--ease-in-out),
+      backdrop-filter var(--duration-200) var(--ease-in-out);
 
     @starting-style {
       opacity: 0;
@@ -61,10 +61,10 @@
     opacity: 0;
     backdrop-filter: blur(0);
     transition:
-      opacity 300ms var(--ease-in-out),
-      backdrop-filter 300ms var(--ease-in-out),
-      overlay 300ms allow-discrete,
-      display 300ms allow-discrete;
+      opacity var(--duration-300) var(--ease-in-out),
+      backdrop-filter var(--duration-300) var(--ease-in-out),
+      overlay var(--duration-300) allow-discrete,
+      display var(--duration-300) allow-discrete;
   }
 
   .panel {
@@ -80,8 +80,8 @@
     backdrop-filter: blur(var(--_panel-blur));
     transform: translate3d(0, 0, 0);
     transition:
-      opacity var(--transition-normal),
-      transform 300ms var(--ease-move);
+      opacity var(--duration-200) var(--ease-in-out),
+      transform var(--duration-300) var(--ease-move);
 
     @starting-style {
       opacity: 0;
@@ -353,10 +353,14 @@
     height: 5px;
   }
 
-  .drag-handle:hover::before {
-    background: var(--color-contrast-600);
-    opacity: 0.9;
-    transform: scale(1.15);
+  /* The handle swell is a pointer affordance: on touch, :hover sticks after a
+     tap and the handle would stay swollen. */
+  @media (hover: hover) {
+    .drag-handle:hover::before {
+      background: var(--color-contrast-600);
+      opacity: 0.9;
+      transform: scale(1.15);
+    }
   }
 
   .close-btn:focus-visible {

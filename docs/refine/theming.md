@@ -429,13 +429,16 @@ One shared, monotonic stacking scale for an entire page: sticky headers, dropdow
 | `--duration-100`  | 100ms  | Yes                         |
 | `--duration-150`  | 150ms  | Yes                         |
 | `--duration-200`  | 200ms  | Yes                         |
+| `--duration-250`  | 250ms  | Yes                         |
 | `--duration-300`  | 300ms  | Yes                         |
+| `--duration-350`  | 350ms  | Yes                         |
 | `--duration-500`  | 500ms  | Yes                         |
-| `--duration-600`  | 600ms  | No: spinner rotation       |
+| `--duration-600`  | 600ms  | Yes (spinner also stops via the `--_motion-animation` hatch) |
 | `--duration-700`  | 700ms  | Yes                         |
 | `--duration-1000` | 1000ms | Yes                         |
-| `--duration-1400` | 1400ms | No: looping indicator      |
-| `--duration-1500` | 1500ms | No: looping indicator      |
+| `--duration-1200` | 1200ms | Yes (looping indicator stops via the hatch) |
+| `--duration-1400` | 1400ms | Yes (looping indicator stops via the hatch) |
+| `--duration-1500` | 1500ms | Yes (looping indicator stops via the hatch) |
 
 **Easing:**
 
@@ -523,7 +526,7 @@ The mode drives the token layer: every `--duration-*`/`--transition-*` token zer
 The components that move their content programmatically — DataGrid row sorting, command-palette result filtering, and the toast stack — read their timing from the same tokens at animation time, so a zeroed `--duration-200` skips the reflow entirely rather than playing it instantly. Override `--duration-200` on one component to retune (or `0` to silence) just its reflow.
 
 ::: tip
-Overlay enter/exit transitions use literal durations on purpose in a few places (dialog, navigation-menu panel): a `none` member invalidates an entire `transition` shorthand, which would drop the `display allow-discrete` hold that keeps the element in the top layer during exit. Those transitions still reduce, because the eased properties collapse to their zero-duration siblings' behavior under the mode.
+Overlay enter/exit transitions that carry a `display`/`overlay` `allow-discrete` hold (dialog, drawer, tooltip, popover, menu, navigation-menu panel, tour) time themselves with `--duration-*` tokens, never `--transition-*`. A `--transition-*` token zeroes to `none`, and a single `none` member invalidates the entire `transition` shorthand — which would drop the `allow-discrete` hold and teleport the element out of the top layer mid-exit. A zeroed `--duration-*` stays a valid `0ms` member, so the hold survives and the cross-fade simply becomes instant.
 :::
 
 ### All Token Categories

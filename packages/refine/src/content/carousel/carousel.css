@@ -5,6 +5,13 @@
     --_dot-bg: var(--carousel-dot-bg, var(--color-contrast-300));
     --_dot-active-bg: var(--carousel-dot-active-bg, var(--color-contrast-700));
 
+    /* Token-driven so Motion Mode governs slide motion: --duration-350 zeroes
+       under the OS preference and data-motion='reduced' (instant slide) and
+       stays 350ms under data-motion='full'. A component-local
+       @media (prefers-reduced-motion) block used to force 0s here and ignored
+       the opt-out. */
+    --carousel-transition-duration: var(--duration-350);
+
     position: relative;
     display: flex;
     flex-direction: column;
@@ -263,12 +270,6 @@
   :host([variant='coverflow'][orientation='vertical']) > .controls {
     grid-area: 1 / 1;
     align-self: center;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :host {
-    --carousel-transition-duration: 0s;
   }
 }
 

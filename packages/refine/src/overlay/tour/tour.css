@@ -186,12 +186,13 @@
     border: none;
 
     /* display + overlay allow-discrete hold the element in the top layer during exit
-       and let @starting-style fire on entry via showModal().
-       Use fixed 200ms: --transition-normal resolves to 'none' under reduced-motion
-       which makes the entire declaration syntactically invalid if used here. */
+       and let @starting-style fire on entry via showModal(). Durations must be
+       --duration-* tokens, never --transition-*: those resolve to 'none' under
+       reduced motion, which makes the entire declaration syntactically invalid
+       if used here. A zeroed --duration-* stays a valid 0ms member. */
     transition:
-      display 200ms allow-discrete,
-      overlay 200ms allow-discrete;
+      display var(--duration-200) allow-discrete,
+      overlay var(--duration-200) allow-discrete;
   }
 
   /* all:unset removes the UA stylesheet's dialog:not([open]){display:none}: restore it */
@@ -207,9 +208,9 @@
     background: color-mix(in oklch, var(--color-canvas) 40%, transparent);
     opacity: 1;
     transition:
-      opacity var(--transition-normal),
-      overlay var(--transition-normal) allow-discrete,
-      display var(--transition-normal) allow-discrete;
+      opacity var(--duration-200) var(--ease-in-out),
+      overlay var(--duration-200) allow-discrete,
+      display var(--duration-200) allow-discrete;
 
     @starting-style {
       opacity: 0;
@@ -219,9 +220,9 @@
   dialog.closing::backdrop {
     opacity: 0;
     transition:
-      opacity 150ms var(--ease-in-out),
-      overlay 150ms allow-discrete,
-      display 150ms allow-discrete;
+      opacity var(--duration-150) var(--ease-in-out),
+      overlay var(--duration-150) allow-discrete,
+      display var(--duration-150) allow-discrete;
   }
 
   .panel {
@@ -232,8 +233,8 @@
     opacity: 1;
     transform: scale(1) translateY(0);
     transition:
-      opacity 200ms var(--ease-spring),
-      transform 200ms var(--ease-spring);
+      opacity var(--duration-200) var(--ease-spring),
+      transform var(--duration-200) var(--ease-spring);
 
     @starting-style {
       opacity: 0;
@@ -252,14 +253,14 @@
 
   dialog.closing .panel {
     opacity: 0;
-    transition: opacity 150ms var(--ease-in-out);
+    transition: opacity var(--duration-150) var(--ease-in-out);
   }
 
   dialog.closing .panel[data-presentation='modal'] {
     transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
     transition:
-      opacity 150ms var(--ease-spring),
-      transform 150ms var(--ease-spring);
+      opacity var(--duration-150) var(--ease-spring),
+      transform var(--duration-150) var(--ease-spring);
   }
 
   /* Bottom sheet: docked to the bottom edge, full width, square top corners. */
@@ -282,8 +283,8 @@
   dialog.closing .panel[data-presentation='bottom-sheet'] {
     transform: translateY(100%);
     transition:
-      opacity 150ms var(--ease-in-out),
-      transform 200ms var(--ease-in-out);
+      opacity var(--duration-150) var(--ease-in-out),
+      transform var(--duration-200) var(--ease-in-out);
   }
 
   .panel[data-presentation='bottom-sheet'] .card {
@@ -328,10 +329,10 @@
     opacity: 0;
     transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
     transition:
-      opacity var(--transition-fast),
-      transform 200ms var(--ease-spring),
-      display var(--transition-fast) allow-discrete,
-      overlay var(--transition-fast) allow-discrete;
+      opacity var(--duration-150) var(--ease-in-out),
+      transform var(--duration-200) var(--ease-spring),
+      display var(--duration-150) allow-discrete,
+      overlay var(--duration-150) allow-discrete;
   }
 
   .float[data-open] {

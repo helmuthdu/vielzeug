@@ -7,8 +7,8 @@
     --accordion-details-radius: var(--rounded-lg);
     --accordion-item-transition: var(--transition-normal);
     --accordion-item-expand-easing: var(--ease-spring);
-    --accordion-item-row-duration: 200ms;
-    --accordion-item-fade-duration: 200ms;
+    --accordion-item-row-duration: var(--duration-200);
+    --accordion-item-fade-duration: var(--duration-200);
     --accordion-item-fade-delay: 60ms;
     --accordion-item-collapse-delay: 120ms;
     display: block;
@@ -114,8 +114,8 @@
     opacity: 0;
     transform: translateY(-4px);
     transition:
-      opacity 150ms var(--ease-spring),
-      transform 150ms var(--ease-spring);
+      opacity var(--duration-150) var(--ease-spring),
+      transform var(--duration-150) var(--ease-spring);
   }
 
   /* Keep row expanded while closing animation plays */

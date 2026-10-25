@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refine: motion system hardening - every transition/animation timing now token-driven, component-local prefers-reduced-motion blocks replaced by the root motion-mode hatches (data-motion='full' now opts back in everywhere), hover-move affordances guarded behind @media (hover: hover), new --duration-250/350/1200 tokens",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}
