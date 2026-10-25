@@ -239,3 +239,33 @@ describe('shadow tokens (--shadow-*, --inset-shadow-*)', () => {
     expect(offenders, `light-dark() called with a non-color argument: ${JSON.stringify(offenders)}`).toHaveLength(0);
   });
 });
+
+// Every --halo-shadow-* paints its depth with an inset top edge, and in dark mode that
+// edge has to be light or absent. Neutral used to paint `rgb(0 0 0 / 15%)` + a
+// `rgb(0 0 0 / 20%)` inset there (theme-tokens.mjs's `halo: 'flat'`), which reads as a
+// dirty seam rather than depth: neutral is the one family whose `base` inverts with the
+// scheme (bordered/outline/ghost/text and badge/chip paint `base` directly as
+// text/border on the canvas, so it must stay dark in light mode), which means its dark
+// mode fill is a LIGHT gray. A dark inner edge on a light fill is the artifact users
+// reported on the neutral solid button's top edge on hover.
+describe('halo tokens (--halo-shadow-*)', () => {
+  it('never paints a dark inset edge in dark mode', () => {
+    const blocks = [...themeCss.matchAll(/--halo-shadow-[\w-]+:\s*([^;]+);/g)];
+
+    expect(blocks.length).toBeGreaterThan(0);
+
+    const offenders: string[] = [];
+
+    for (const [, value] of blocks) {
+      for (const layer of value.split(',\n').map((l) => l.trim())) {
+        if (!layer.includes('inset')) continue;
+        // The dark-mode branch is light-dark()'s second argument.
+        const darkBranch = layer.match(/light-dark\([^,]+,\s*([^)]+)\)/)?.[1]?.trim();
+
+        if (darkBranch && /^rgb\(0 0 0/.test(darkBranch)) offenders.push(`${layer} -> ${darkBranch}`);
+      }
+    }
+
+    expect(offenders, `dark inset edge in dark mode: ${JSON.stringify(offenders)}`).toEqual([]);
+  });
+});

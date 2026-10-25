@@ -295,9 +295,17 @@ function familyBlock({ name, base, baseRaw, hueKnob, content, contrast, descript
 
 function haloShadowLine(name, halo) {
   const colorVar = `var(--color-${name})`;
+  // 'flat' (neutral) must paint NOTHING in dark mode, not a dark inset. Neutral's
+  // `base` inverts with the scheme (it is the one family that does: bordered/outline/
+  // ghost/text and badge/chip paint `base` directly as text/border on the canvas, which
+  // is why it stays dark in light mode), so in dark mode the fill is a LIGHT gray.
+  // A dark inner top edge on a light fill does not read as depth the way it does on the
+  // dark fill in light mode : it reads as a dirty seam along the top of the component.
+  // The branded families keep a light inset highlight because their fill stays dark in
+  // both schemes.
   const insetHighlight =
     halo === 'flat'
-      ? 'inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(0 0 0 / 15%)),\n      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(0 0 0 / 20%)) inset,'
+      ? 'inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), transparent),\n      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), transparent) inset,'
       : 'inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),\n      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,';
 
   return [

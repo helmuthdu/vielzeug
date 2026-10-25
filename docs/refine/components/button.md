@@ -147,6 +147,38 @@ The `rounded` attribute sets the border radius from the theme scale. Used withou
 
 </ComponentPreview>
 
+## Elevation
+
+By default a button sits flat on the page: depth is a hierarchy signal, so it is opt-in.
+`elevation` takes the same `0`-`5` scale as the rest of the system and lifts a button off
+the surface. Depth is *composed*, not assigned, so it survives every interactive state:
+hovering, pressing, and keyboard focus all keep the elevation the button was given.
+
+<ComponentPreview center>
+
+```html
+<ore-button elevation="0">0</ore-button>
+<ore-button elevation="1">1</ore-button>
+<ore-button elevation="2">2</ore-button>
+<ore-button elevation="3" color="primary">3</ore-button>
+<ore-button elevation="4" color="primary">4</ore-button>
+<ore-button elevation="5" color="primary">5</ore-button>
+```
+
+</ComponentPreview>
+
+Elevation works on the deliberately decoration-free `ghost` and `text` variants too, where it
+is the only depth available to them.
+
+<ComponentPreview center>
+
+```html
+<ore-button variant="ghost" elevation="2">Ghost elevated</ore-button>
+<ore-button variant="text" elevation="3">Text elevated</ore-button>
+```
+
+</ComponentPreview>
+
 ## Full Width
 
 <ComponentPreview center vertical>
@@ -326,6 +358,7 @@ Removes spacing and connects buttons with shared borders: use for segmented cont
 | `fullwidth` | `boolean`                                                                       | `false`    | Expands to full container width                                             |
 | `fullheight` | `boolean`                                                                      | `false`    | Expands to full container height (see [List's swipe actions](./list.md))    |
 | `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`          | N/A | Border radius; omit value or use `'full'` for pill shape                    |
+| `elevation` | `0 \| 1 \| 2 \| 3 \| 4 \| 5`                                                | N/A | Resting depth; omitted keeps the button flat (see [Elevation](#elevation))  |
 | `href`      | `string`                                                                        | N/A | Renders a native, focusable `<a>` internally                                 |
 | `target`    | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | N/A | Link target (requires `href`)                                               |
 | `rel`       | `string`                                                                        | N/A | Link `rel` attribute (requires `href`)                                      |
@@ -399,6 +432,8 @@ Removes spacing and connects buttons with shared borders: use for segmented cont
 | `--button-min-height`                | Minimum height floor                                         | `44px` touch target |
 | `--button-frost-active-bg`           | Background when hovered/pressed in frost variant             | Variant-dependent   |
 | `--button-frost-active-border-color` | Border color when hovered/pressed in frost variant           | Variant-dependent   |
+| `--button-shadow`                    | Elevated drop shadow (used when `elevation` is set)          | `var(--_shadow)`    |
+| `--button-shadow-contact`            | Tight shadow where the button meets the surface              | `var(--shadow-2xs)` |
 
 **`ore-button-group`**
 

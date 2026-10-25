@@ -200,6 +200,43 @@ test.describe('Interaction', () => {
 });
 
 test.describe('Layout', () => {
+  test('gives mobile footer actions even edge padding and honours the safe area', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await refinePage.mountComponent(
+      '<ore-dialog open label="Test dialog" padding="sm">' +
+        '<p>Dialog content</p>' +
+        '<button slot="footer">Close</button>' +
+        '</ore-dialog>',
+    );
+
+    const dialog = page.locator('ore-dialog');
+    const footerPadding = () =>
+      dialog.evaluate((element) => {
+        const root = (element as HTMLElement & { shadowRoot: ShadowRoot }).shadowRoot;
+        const style = getComputedStyle(root.querySelector<HTMLElement>('[part="footer"]')!);
+
+        return {
+          blockEnd: Number.parseFloat(style.paddingBlockEnd),
+          inlineEnd: Number.parseFloat(style.paddingInlineEnd),
+        };
+      });
+
+    // At rest the bottom edge must match the sides: the actions get even breathing
+    // room, not a bottom-heavy gap. (A flat max(--size-6, ...) floor used to force
+    // 24px here on every device, which read as the footer being "too tall".)
+    const rest = await footerPadding();
+
+    expect(rest.blockEnd).toBe(rest.inlineEnd);
+
+    // A home-indicator inset is added on top of the resting padding, so a
+    // full-height dialog lifts its actions clear of the safe area.
+    await page.evaluate(() => document.documentElement.style.setProperty('--safe-area-inset-block-end', '32px'));
+
+    const inset = await footerPadding();
+
+    expect(inset.blockEnd).toBe(rest.inlineEnd + 32);
+  });
+
   test('dialog does not overflow viewport vertically', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-dialog open label="Test dialog">' + '<p>Dialog content</p>' + '</ore-dialog>',

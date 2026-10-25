@@ -17,6 +17,22 @@
     --_line-height: var(--leading-normal);
     --_icon-size: var(--leading-6);
 
+    /* Resting depth, composed rather than replaced: every interactive state below
+       prepends this to its own shadow so pressing or focusing a button never
+       erases the elevation it was given (or its focus ring). `--shadow-none`
+       (`0 0 transparent`) rather than `none`, because `none` is only valid as a
+       box-shadow's sole value and would invalidate the whole composed list. */
+    --_resting-shadow: var(--shadow-none);
+
+    /* The focus ring, carried as a token for the same reason: the variant press
+       rules live in `refine.variants`, which outranks the `refine.overrides` layer
+       that owns the ring (inside a shadow tree, @layer order is declaration order:
+       base < overrides < variants). A press that assigned `box-shadow` outright
+       therefore dropped the ring, so keyboard activation hid the focus indicator
+       for the length of the keypress (WCAG 2.4.7). Every composed list below
+       includes this, and the focus rule in the overrides layer fills it in. */
+    --_focus-shadow: var(--shadow-none);
+
     display: inline-flex;
     align-items: center;
     justify-content: var(--button-justify, center);
@@ -60,13 +76,16 @@
     border-inline-start-width: var(--button-border-start, var(--button-border, var(--border)));
     border-inline-end-width: var(--button-border-end, var(--button-border, var(--border)));
     border-radius: var(--_radius);
+    /* Declared here so every variant carries its resting depth; variants that add
+       their own inset bevel below prepend it rather than dropping it. */
+    box-shadow: var(--_resting-shadow), var(--_focus-shadow);
     transition: var(
       --_motion-transition,
       background var(--transition-normal),
       border-color var(--transition-normal),
       box-shadow var(--transition-normal),
       color var(--transition-normal),
-      transform 120ms var(--ease-spring)
+      transform var(--duration-100) var(--ease-spring)
     );
   }
 
@@ -182,15 +201,19 @@
   }
 
   :host([variant='flat']) [part='button'] {
-    box-shadow: var(--inset-shadow-2xs);
+    box-shadow: var(--_resting-shadow), var(--_focus-shadow), var(--inset-shadow-2xs);
   }
 
-  :host([variant='flat']) [part='button']:hover {
-    box-shadow: var(--inset-shadow-xs);
+  /* The bevel is a pointer affordance: on touch, :hover sticks after a tap and
+     the button would stay beveled until the user taps elsewhere. */
+  @media (hover: hover) {
+    :host([variant='flat']) [part='button']:hover {
+      box-shadow: var(--_resting-shadow), var(--_focus-shadow), var(--inset-shadow-xs);
+    }
   }
 
   :host([variant='flat']) [part='button']:active {
-    box-shadow: var(--inset-shadow-sm);
+    box-shadow: var(--_resting-shadow), var(--_focus-shadow), var(--inset-shadow-sm);
   }
 
   /* Bordered */
@@ -206,15 +229,17 @@
   }
 
   :host([variant='bordered']) [part='button'] {
-    box-shadow: var(--inset-shadow-xs);
+    box-shadow: var(--_resting-shadow), var(--_focus-shadow), var(--inset-shadow-xs);
   }
 
-  :host([variant='bordered']) [part='button']:hover {
-    box-shadow: var(--inset-shadow-xs);
+  @media (hover: hover) {
+    :host([variant='bordered']) [part='button']:hover {
+      box-shadow: var(--_resting-shadow), var(--_focus-shadow), var(--inset-shadow-xs);
+    }
   }
 
   :host([variant='bordered']) [part='button']:active {
-    box-shadow: var(--inset-shadow-sm);
+    box-shadow: var(--_resting-shadow), var(--_focus-shadow), var(--inset-shadow-sm);
   }
 
   /* Outline */
@@ -253,6 +278,29 @@
 
   :host([variant='text']) [part='button'] {
     border-width: 0;
+  }
+
+  /* ── Resting elevation ─────────────────────────────────────────────────────
+     Flat at rest is the default on purpose: depth is a hierarchy signal, and a
+     toolbar where every button carries a 24px glow signals nothing. `elevation`
+     lifts one button off the page. Composed into
+     --_resting-shadow (not written straight to box-shadow) so hover, press, and
+     focus keep it. --button-shadow-contact is the neutral shadow where the button
+     meets the page; --button-shadow is the coloured depth above it.
+     ─────────────────────────────────────────────────────────────────────── */
+  :host([elevation]) {
+    --_resting-shadow:
+      var(--button-shadow-contact, var(--shadow-2xs)), var(--button-shadow, var(--_shadow, var(--_theme-halo)));
+  }
+
+  /* elevationMixin maps level 0 to the bare keyword `none`, which is only valid as
+     a box-shadow's whole value: substituted into the composed list above it would
+     invalidate --_resting-shadow, and with it the flat/bordered variants' inset
+     bevel. More specific than the rule above; it overrides --_resting-shadow rather
+     than the mixin's own --_shadow, because unlayered mixin CSS cannot be beaten
+     from inside a layer. */
+  :host([elevation='0']) {
+    --_resting-shadow: var(--shadow-none);
   }
 
   /* Frost: sets its own interactive tokens so the shared rules below apply uniformly */
@@ -297,29 +345,56 @@
     color: var(--_active-color, var(--_color));
     background: var(--_active-bg, var(--_bg));
     border-color: var(--_active-border-color, var(--_border-color));
-    box-shadow: var(--inset-shadow-2xs);
+    box-shadow: var(--_resting-shadow), var(--_focus-shadow), var(--inset-shadow-2xs);
   }
 }
 
 @layer refine.overrides {
-  /* Focus ring: keyboard navigation only; combines focus shadow + halo to avoid shadow pop */
-  [part='button']:focus-visible {
+  /* Focus ring: keyboard navigation only; combines focus shadow + halo to avoid shadow pop.
+
+     The ring is delivered by filling in --_focus-shadow rather than by assigning
+     box-shadow. That is deliberate: the variant press rules live in `refine.variants`,
+     which outranks this layer inside a shadow tree (@layer order there is declaration
+     order — base < overrides < variants), so an assigned box-shadow here lost every
+     press and the focus indicator vanished for the length of a keypress. As a token it
+     is composed by every list in the file instead of competing with them.
+
+     Two selectors, because the focusable element differs by mode: button mode keeps
+     focus on the host (`delegatesFocus: false`) and its visible part is deliberately a
+     non-semantic <span>, so `[part='button']:focus-visible` can never match there —
+     only the host-scoped selector paints the ring. Link mode hands focus to the native
+     anchor, which the first selector covers. Verified live in button.e2e.ts: with the
+     part-scoped selector alone the ring was absent and the host fell back to the
+     browser's own `outline: auto`. */
+  [part='button']:focus-visible,
+  :host(:focus-visible) [part='button'] {
+    --_focus-shadow: var(--_theme-shadow), var(--_theme-halo);
+  }
+
+  /* The themed ring replaces the browser's own outline, which would otherwise draw a
+     second 1px box around the host. Safe only because the ring is proven to render:
+     'shows the themed focus ring on keyboard focus' in button.e2e.ts fails if this ever
+     hides the last remaining indicator. forcedColorsFocusMixin puts a system-colour
+     outline back in forced-colors mode, where box-shadow paint is discarded. */
+  :host(:focus-visible) {
     outline: none;
-    box-shadow: var(--_theme-shadow), var(--_theme-halo);
   }
 
   /* Hover depth: halo border effect matching ore-input focus style */
   [part='button']:hover,
   [part='button']:active {
     border-color: var(--_hover-border-color, var(--_theme-focus));
-    box-shadow: var(--_theme-shadow), var(--_theme-halo);
+    box-shadow: var(--_resting-shadow), var(--_focus-shadow), var(--_theme-shadow), var(--_theme-halo);
   }
 
-  /* Ghost + Text variants: no border/shadow decoration on hover */
+  /* Ghost + Text variants: no border/shadow decoration on hover. `--_resting-shadow`
+     and `--_focus-shadow` rather than `none`, so opting into elevation still works on
+     these variants and a keyboard-focused one keeps its ring, while the defaults (both a
+     transparent `--shadow-none`) stay decoration-free. */
   :host([variant='ghost']) [part='button']:hover,
   :host([variant='text']) [part='button']:hover {
     border-color: transparent;
-    box-shadow: none;
+    box-shadow: var(--_resting-shadow), var(--_focus-shadow);
     transform: none;
   }
 
@@ -329,7 +404,7 @@
   :host([variant='ghost']) [part='button']:active,
   :host([variant='text']) [part='button']:active {
     border-color: transparent;
-    box-shadow: none;
+    box-shadow: var(--_resting-shadow), var(--_focus-shadow);
   }
 
   /* Physical press feedback */

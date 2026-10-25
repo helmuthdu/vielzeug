@@ -4,6 +4,8 @@ import { commonProps } from '../../shared';
 import {
   colorThemeMixin,
   disabledLoadingMixin,
+  elevationMixin,
+  forcedColorsFocusMixin,
   forcedColorsMixin,
   frostVariantMixin,
   rainbowEffectMixin,
@@ -15,6 +17,8 @@ import {
 import {
   type ButtonType,
   type ComponentSize,
+  ELEVATION_LEVELS,
+  type ElevationLevel,
   LINK_TARGETS,
   type LinkTarget,
   type RoundedSize,
@@ -61,6 +65,12 @@ export type OreButtonProps = {
   disabled?: boolean;
   /** Animated border effect: 'shine' (color-aware neon sweep) or 'rainbow' */
   effect?: ButtonEffect;
+  /**
+   * Resting shadow depth (0-5), reusing the shared elevation scale. A button is
+   * flat at rest by default so that depth stays a hierarchy signal; `elevation`
+   * lifts it off the surface.
+   */
+  elevation?: ElevationLevel;
   /**
    * Semantic role of the action: 'normal' | 'primary' | 'cancel' | 'destructive'.
    * Picks the color/variant treatment for the role; an explicit `color`/`variant`
@@ -113,6 +123,7 @@ export type OreButtonProps = {
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} effect - Animated border effect: 'shine' | 'rainbow'
  * @attr {string} emphasis - Semantic role: 'normal' | 'primary' | 'cancel' | 'destructive' (explicit color/variant wins)
+ * @attr {number} elevation - Resting shadow depth: 0-5 (flat at rest when omitted)
  * @attr {boolean} icon-only - Icon-only mode (square aspect ratio, no padding)
  * @attr {boolean} fullwidth - Full width button (100% of container)
  * @attr {boolean} fullheight - Full height button (100% of container)
@@ -138,6 +149,8 @@ export type OreButtonProps = {
  * @cssprop --button-min-height - Minimum height override (defaults to the 44px touch target)
  * @cssprop --button-frost-active-bg - Background when pressed (frost variant)
  * @cssprop --button-frost-active-border-color - Border color when pressed (frost variant)
+ * @cssprop --button-shadow - Resting shadow for an elevated button (default: the color family's halo)
+ * @cssprop --button-shadow-contact - Neutral contact shadow layered under --button-shadow
  *
  * @example
  * ```html
@@ -145,6 +158,7 @@ export type OreButtonProps = {
  * <ore-button loading color="success">Processing...</ore-button>
  * <ore-button effect="shine" color="primary">Shine</ore-button>
  * <ore-button effect="rainbow" variant="frost">Rainbow</ore-button>
+ * <ore-button elevation="1" emphasis="primary">CTA</ore-button>
  * ```
  */
 export const BUTTON_TAG = 'ore-button' as const;
@@ -153,6 +167,7 @@ define<OreButtonProps>(BUTTON_TAG, {
   props: {
     ...commonProps,
     effect: prop.oneOf(BUTTON_EFFECTS),
+    elevation: prop.oneOf(ELEVATION_LEVELS),
     emphasis: prop.oneOf(BUTTON_EMPHASIS),
     fullheight: prop.bool(false),
     fullwidth: prop.bool(false),
@@ -303,7 +318,13 @@ define<OreButtonProps>(BUTTON_TAG, {
     colorThemeMixin,
     touchTargetMixin,
     roundedVariantMixin,
+    elevationMixin,
     forcedColorsMixin,
+    // The themed focus ring is a box-shadow and button mode focuses the host, so this
+    // has to target `:host`: forced-colors mode discards box-shadow paint and the
+    // stylesheet suppresses the browser's own outline, which together would leave a
+    // keyboard-focused button with no indicator at all.
+    forcedColorsFocusMixin(':host'),
     sizeVariantMixin({
       lg: {
         fontSize: 'var(--text-base)',

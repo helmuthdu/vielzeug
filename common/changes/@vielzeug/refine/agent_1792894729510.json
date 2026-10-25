@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "ore-dialog: give mobile footer actions edge padding that matches their sides and adds the home-indicator inset on top",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

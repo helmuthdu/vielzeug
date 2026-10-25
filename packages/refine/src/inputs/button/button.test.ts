@@ -122,6 +122,176 @@ describe('ore-button', () => {
     });
   });
 
+  // Resting elevation is composed through a --_resting-shadow variable rather than
+  // written into each state's box-shadow, because the states already own theirs: a
+  // rule that assigned `box-shadow` outright would erase either the elevation (on
+  // hover/focus) or the focus ring (on :active). Same failure class as the halo test
+  // above, one level up.
+  describe('Resting elevation', () => {
+    it('defaults --_resting-shadow to a valid transparent shadow on the host', () => {
+      const hostBlock = buttonCss.match(/:host\s*{([^}]*)}/)?.[1] ?? '';
+
+      // Must be --shadow-none (0 0 transparent), never the bare keyword `none`:
+      // `none` is only valid as a box-shadow's entire value, so substituting it
+      // into a composed list invalidates the whole declaration.
+      expect(hostBlock).toContain('--_resting-shadow: var(--shadow-none)');
+      expect(hostBlock).not.toMatch(/--_resting-shadow:\s*none/);
+    });
+
+    it('[elevation] exposes --button-shadow and --button-shadow-contact', () => {
+      const match = buttonCss.match(/:host\(\[elevation\]\)\s*{([^}]*)}/);
+
+      expect(match).not.toBeNull();
+      expect(match?.[1]).toContain('var(--button-shadow-contact, var(--shadow-2xs))');
+      expect(match?.[1]).toContain('var(--button-shadow, var(--_shadow, var(--_theme-halo)))');
+    });
+
+    it('elevation="0" neutralises the resting shadow', () => {
+      // elevationMixin emits `--_shadow: none` for level 0; without this override
+      // that `none` would land inside the composed list above and invalidate it,
+      // silently dropping the flat/bordered variants' inset bevel too.
+      const match = buttonCss.match(/:host\(\[elevation='0'\]\)\s*{([^}]*)}/);
+
+      expect(match).not.toBeNull();
+      expect(match?.[1]).toContain('--_resting-shadow: var(--shadow-none)');
+    });
+
+    it('focus-visible fills the ring token and hover/active compose it', () => {
+      // The base layer carries its own `[part='button']:focus-visible { outline: none }`,
+      // so match within the overrides layer that actually owns the ring.
+      const overrides = buttonCss.slice(buttonCss.lastIndexOf('@layer refine.overrides'));
+      const focus = overrides.match(
+        /\[part='button'\]:focus-visible,\s*\n\s*:host\(:focus-visible\) \[part='button'\]\s*{([^}]*)}/,
+      );
+      const hover = overrides.match(/\[part='button'\]:hover,\s*\n\s*\[part='button'\]:active\s*{([^}]*)}/);
+
+      // The ring is a token value, not an assigned box-shadow: see 'Focus ring'.
+      expect(focus?.[1]).toContain('--_focus-shadow: var(--_theme-shadow), var(--_theme-halo)');
+      expect(hover?.[1]).toContain(
+        'var(--_resting-shadow), var(--_focus-shadow), var(--_theme-shadow), var(--_theme-halo)',
+      );
+    });
+
+    it('the shared :active press keeps resting and focus shadows instead of replacing them', () => {
+      // Anchored to the start of a line so the variant-scoped
+      // `:host([variant='bordered']) [part='button']:active` rule can't match first.
+      const match = buttonCss.match(/^ {2}\[part='button'\]:active\s*{([^}]*)}/m);
+
+      expect(match?.[1]).toContain('box-shadow: var(--_resting-shadow), var(--_focus-shadow), var(--inset-shadow-2xs)');
+    });
+
+    it('ghost/text cancel decoration without discarding elevation', () => {
+      // These variants are deliberately decoration-free, but `box-shadow: none`
+      // would also make `elevation` a no-op on them. --_resting-shadow is
+      // transparent by default, so the default look is unchanged.
+      const cancelled = [...buttonCss.matchAll(/box-shadow:\s*([^;]*);/g)].map((m) => m[1].trim());
+
+      expect(cancelled).not.toContain('none');
+    });
+
+    it('reflects the elevation prop to a host attribute', async () => {
+      fixture = await mount('ore-button', { attrs: { elevation: '2' } });
+
+      expect(fixture.element.getAttribute('elevation')).toBe('2');
+    });
+  });
+
+  // The focus indicator had two independent defects, both found by driving a real
+  // keyboard rather than reading the stylesheet, and both invisible to jsdom:
+  //
+  //   1. The ring rule matched `[part='button']:focus-visible` only. Button mode keeps
+  //      focus on the host (`shadow: { delegatesFocus: false }`) and paints its visual
+  //      surface with a deliberately non-semantic <span>, so that selector can never
+  //      match: the themed ring was dead CSS and the host fell back to the browser's
+  //      own `outline: auto`.
+  //   2. The ring was assigned as `box-shadow` in `refine.overrides`, but the variant
+  //      press rules live in `refine.variants`, which outranks it inside a shadow tree
+  //      (@layer order there is first-declaration order: base < overrides < variants).
+  //      So holding Space/Enter dropped the ring for the length of the press.
+  //
+  // Fix for both: the ring is a token (--_focus-shadow) that every composed list
+  // includes, and the rule also matches `:host(:focus-visible) [part='button']`.
+  describe('Focus ring', () => {
+    const overridesLayer = () => buttonCss.slice(buttonCss.lastIndexOf('@layer refine.overrides'));
+
+    it('matches the host, because button mode focuses the host not the part', () => {
+      // A regression here silently reverts to the browser default outline: the rule
+      // still parses, so only a real-browser assertion (button.e2e.ts) catches it.
+      expect(overridesLayer()).toMatch(/:host\(:focus-visible\) \[part='button'\]/);
+    });
+
+    it('delivers the ring as a token so a press cannot overwrite it', () => {
+      const focus = overridesLayer().match(/:host\(:focus-visible\) \[part='button'\]\s*{([^}]*)}/);
+
+      expect(focus?.[1]).toContain('--_focus-shadow:');
+      // Assigning box-shadow here would lose to the variants layer on :active.
+      expect(focus?.[1]).not.toContain('box-shadow');
+    });
+
+    it('every composed box-shadow list includes the focus token', () => {
+      // A list that omits it re-creates defect 2 for that variant: the press paints
+      // over the ring. Assert on all of them rather than sampling.
+      const lists = [...buttonCss.matchAll(/box-shadow:\s*([^;]*);/g)].map((m) => m[1].trim());
+
+      expect(lists.length).toBeGreaterThan(0);
+      const missing = lists.filter((list) => !list.includes('var(--_focus-shadow)'));
+
+      expect(missing).toEqual([]);
+    });
+
+    it('defaults --_focus-shadow to a valid transparent shadow on the host', () => {
+      const hostBlock = buttonCss.match(/:host\s*{([^}]*)}/)?.[1] ?? '';
+
+      expect(hostBlock).toContain('--_focus-shadow: var(--shadow-none)');
+      expect(hostBlock).not.toMatch(/--_focus-shadow:\s*none/);
+    });
+
+    it('replaces the UA outline only where the themed ring is guaranteed to paint', () => {
+      // Suppressing the host outline is only safe because the ring renders; pairing the
+      // two in one test keeps a future edit from removing the ring and keeping the
+      // suppression, which would leave focused buttons with no indicator at all.
+      expect(overridesLayer()).toMatch(/:host\(:focus-visible\)\s*{[^}]*outline:\s*none/);
+      expect(overridesLayer()).toMatch(/--_focus-shadow:\s*var\(--_theme-shadow\),\s*var\(--_theme-halo\)/);
+    });
+
+    it('restores a system outline in forced-colors mode', async () => {
+      // forced-colors discards box-shadow paint, so the themed ring disappears there
+      // and the stylesheet's own `outline: none` would leave nothing behind.
+      // forcedColorsFocusMixin nests its rule inside @media, which ruleSelectorsFor
+      // (top-level rules only) cannot see, so walk the group rules too.
+      fixture = await mount('ore-button');
+
+      const selectors: string[] = [];
+
+      const walk = (rules: CSSRuleList) => {
+        for (const rule of Array.from(rules)) {
+          if (rule instanceof CSSStyleRule) selectors.push(rule.selectorText);
+          else if ('cssRules' in rule) walk((rule as CSSGroupingRule).cssRules);
+        }
+      };
+
+      for (const sheet of fixture.element.shadowRoot?.adoptedStyleSheets ?? []) walk(sheet.cssRules);
+
+      expect(selectors.filter((s) => s.includes(':host') && s.includes(':focus-visible'))).not.toEqual([]);
+    });
+  });
+
+  // Not about gradients: a file-wide guard. The build runs lightningcss over
+  // component CSS, and its light-dark() downgrade rewrites a custom property's value
+  // into `var(--lightningcss-light, A) var(--lightningcss-dark, B)` - two
+  // space-separated colours, which makes an enclosing linear-gradient() invalid at
+  // computed-value time. Those substitution vars are only emitted for selectors
+  // lightningcss itself rewrote, so inside a custom property the substitution resolves
+  // to nothing and the declaration silently renders as nothing at all. jsdom cannot see
+  // this, so it is asserted against the raw source.
+  describe('Custom property values', () => {
+    it('never wraps a custom property value in light-dark()', () => {
+      const declarations = [...buttonCss.matchAll(/^\s*--[\w-]+:\s*([^;]*);/gm)].map((m) => m[1]);
+
+      expect(declarations.filter((value) => value.includes('light-dark('))).toEqual([]);
+    });
+  });
+
   describe('Layout', () => {
     it('reflects fullheight as a host attribute', async () => {
       fixture = await mount('ore-button', { attrs: { fullheight: '' } });

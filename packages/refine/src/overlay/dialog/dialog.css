@@ -38,12 +38,15 @@
     border: none;
 
     /* display + overlay allow-discrete hold the element in the top layer during exit
-       and let @starting-style fire on entry via showModal().
-       Use fixed 200ms: --transition-normal resolves to 'none' under reduced-motion
-       which makes the entire declaration syntactically invalid if used here. */
+       and let @starting-style fire on entry via showModal(). The durations must
+       be --duration-* tokens, never --transition-*: those resolve to `none`
+       under reduced motion, which makes the entire declaration syntactically
+       invalid and teleports the dialog out of the top layer mid-exit. A
+       zeroed --duration-* stays a valid `0ms` member, so the hold survives and
+       the exit simply becomes instant - which is the point. */
     transition:
-      display 200ms allow-discrete,
-      overlay 200ms allow-discrete;
+      display var(--duration-200) allow-discrete,
+      overlay var(--duration-200) allow-discrete;
   }
 
   /* all:unset removes the UA stylesheet's dialog:not([open]){display:none}: restore it */
@@ -64,9 +67,9 @@
     opacity: 1;
     backdrop-filter: var(--_backdrop-filter);
     transition:
-      opacity var(--transition-normal),
-      overlay var(--transition-normal) allow-discrete,
-      display var(--transition-normal) allow-discrete;
+      opacity var(--duration-200) var(--ease-in-out),
+      overlay var(--duration-200) allow-discrete,
+      display var(--duration-200) allow-discrete;
 
     @starting-style {
       opacity: 0;
@@ -76,9 +79,9 @@
   dialog.closing::backdrop {
     opacity: 0;
     transition:
-      opacity 150ms var(--ease-in-out),
-      overlay 150ms allow-discrete,
-      display 150ms allow-discrete;
+      opacity var(--duration-150) var(--ease-in-out),
+      overlay var(--duration-150) allow-discrete,
+      display var(--duration-150) allow-discrete;
   }
 
   /* =====================
@@ -102,8 +105,8 @@
     backdrop-filter: blur(var(--_panel-blur));
     transform: scale(1) translateY(0);
     transition:
-      opacity 200ms var(--ease-spring),
-      transform 200ms var(--ease-spring);
+      opacity var(--duration-200) var(--ease-spring),
+      transform var(--duration-200) var(--ease-spring);
 
     @starting-style {
       opacity: 0;
@@ -115,8 +118,8 @@
     opacity: 0;
     transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
     transition:
-      opacity 150ms var(--ease-spring),
-      transform 150ms var(--ease-spring);
+      opacity var(--duration-150) var(--ease-spring),
+      transform var(--duration-150) var(--ease-spring);
   }
 
   /* =====================
@@ -269,7 +272,13 @@
     }
 
     .footer {
-      padding-block-end: calc(var(--_padding) + var(--safe-area-inset-block-end));
+      /* Match the footer's own side padding so the actions get even breathing
+         room on their start, end, and bottom edges. The home-indicator inset
+         is added on top of that resting value, so a full-height dialog keeps
+         its actions clear of the safe area without inflating a centred one.
+         A flat floor here (an earlier max(--size-6, ...) attempt) left a
+         visible gap under the buttons on every device, notch or not. */
+      padding-block-end: calc(var(--size-3) + var(--safe-area-inset-block-end));
     }
   }
 }
