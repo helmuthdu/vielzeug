@@ -13,6 +13,7 @@
     "test": "pnpm --dir ../.. vitest run --config demos/voyage/vitest.config.ts"
   },
   "dependencies": {
+    "@vielzeug/beacon": "workspace:*",
     "@vielzeug/coins": "workspace:*",
     "@vielzeug/illusionist": "workspace:*",
     "@vielzeug/ore": "workspace:*",

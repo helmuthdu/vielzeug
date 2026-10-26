@@ -185,6 +185,7 @@ define('explore-view', {
       </section>
       <ore-navbar
         class="search-navbar"
+        data-tour="search-bar"
         ref=${searchNavbar}
         label="Travel search"
         variant="frost"
@@ -203,6 +204,7 @@ define('explore-view', {
         </div>
         <form
           class="search-panel search-panel--desktop"
+          data-tour="search"
           role="search"
           aria-label="Search travel"
           @submit=${submitSearch}>
@@ -229,7 +231,7 @@ define('explore-view', {
             cols-lg="6"
             gap="lg"
             fullwidth>
-            ${destinations.map((destination, index) => destinationCard(destination, index < 2))}
+            ${destinations.map((destination, index) => destinationCard(destination, index < 2, index === 0))}
           </ore-grid>
         </section>
         <section class="content-section content-section--tint" aria-labelledby="experiences-title">

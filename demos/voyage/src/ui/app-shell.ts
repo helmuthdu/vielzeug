@@ -5,6 +5,7 @@ import { define, html, ref } from '@vielzeug/ore';
 import { effect } from '@vielzeug/ripple';
 import { travelerProfile } from '../core/preferences';
 import { activeRoute, type RouteName, router } from '../core/router';
+import './components/onboarding';
 import { navigateDynamic, routeHref } from './navigation';
 
 if (sessionStorage.getItem('voyage-support-chat-open') === 'true') void import('./components/travel-support-chat');
@@ -107,6 +108,7 @@ define('voyage-shell', {
         <ore-sidebar
           id="voyage-sidebar"
           class="sidebar"
+          data-tour="sidebar"
           label="Voyage navigation"
           close-on-select
           bottom-nav-at="(max-width: 680px)">
@@ -125,8 +127,10 @@ define('voyage-shell', {
           ${navItem({ icon: 'settings-2', label: 'Settings', route: 'settings' }, true, true)}
 
           <div class="sidebar__lower" slot="footer">
+            <voyage-onboarding></voyage-onboarding>
             <a
               class="sidebar__next-trip"
+              data-tour="next-trip"
               href=${routeHref('trip', { id: 'japan-october' })}
               aria-label="View Japan itinerary, 12 to 19 October"
               aria-current=${() => (activeRoute.value === 'trip' ? 'page' : null)}
@@ -165,6 +169,7 @@ define('voyage-shell', {
         </ore-sidebar>
         <main class="app-main" id="main-content" ref=${main}></main>
       </ore-grid>
+      <voyage-onboarding-tour></voyage-onboarding-tour>
       <travel-support-chat></travel-support-chat>
     `;
   },

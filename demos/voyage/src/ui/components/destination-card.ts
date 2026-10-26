@@ -6,10 +6,11 @@ import { html } from '@vielzeug/ore';
 import type { Destination } from '../../core/types';
 import { navigate } from '../navigation';
 
-export function destinationCard(destination: Destination, featured = false) {
+export function destinationCard(destination: Destination, featured = false, tourAnchor = false) {
   return html`
     <ore-card
       class=${featured ? 'destination-card destination-card--featured' : 'destination-card'}
+      data-tour=${tourAnchor ? 'destination-card' : null}
       interactive
       padding="none"
       elevation="1"

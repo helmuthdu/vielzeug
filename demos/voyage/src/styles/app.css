@@ -116,13 +116,13 @@ ore-date-picker {
 }
 
 .app-layout {
-  --grid-cols: var(--size-56) minmax(0, 1fr);
+  --grid-cols: var(--size-60) minmax(0, 1fr);
 
   min-height: 100dvh;
 }
 
 .sidebar {
-  --sidebar-width: var(--size-56);
+  --sidebar-width: var(--size-60);
   --sidebar-bg: color-mix(in oklch, var(--voyage-surface) 94%, transparent);
   --sidebar-border-color: var(--voyage-line);
   --sidebar-header-padding: var(--size-6) var(--size-5);
@@ -134,9 +134,9 @@ ore-date-picker {
 .sidebar:not([data-bottom-nav]) {
   position: sticky;
   top: 0;
-  width: var(--size-56);
-  min-width: var(--size-56);
-  max-width: var(--size-56);
+  width: var(--size-60);
+  min-width: var(--size-60);
+  max-width: var(--size-60);
   height: 100dvh;
 }
 
@@ -172,6 +172,62 @@ ore-date-picker {
 .sidebar__lower {
   display: grid;
   gap: var(--size-3);
+}
+
+.onboarding {
+  display: grid;
+  gap: var(--size-2);
+  padding: var(--size-2-5);
+  background: var(--color-surface);
+  border: var(--size-px) solid var(--color-contrast-200);
+  border-radius: var(--rounded-xl);
+}
+
+.onboarding__actions {
+  display: flex;
+  gap: var(--size-1-5);
+}
+
+.onboarding__start {
+  flex: 1;
+  min-width: 0;
+}
+
+.onboarding__keys-title {
+  margin: 0;
+  font-size: var(--text-2xs);
+  font-weight: var(--font-extrabold);
+  color: var(--color-contrast-500);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.onboarding__keys {
+  display: grid;
+  gap: var(--size-1);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.onboarding__key {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.onboarding__key-keys {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: var(--size-1);
+  align-items: center;
+}
+
+.onboarding__key-text {
+  overflow: hidden;
+  font-size: var(--text-xs);
+  color: var(--color-contrast-600);
 }
 
 .sidebar__next-trip {
