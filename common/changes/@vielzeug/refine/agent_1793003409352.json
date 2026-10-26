@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix tour popover anchoring when the step target changes",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

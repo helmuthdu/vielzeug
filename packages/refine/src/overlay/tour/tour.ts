@@ -456,13 +456,33 @@ define<OreTourProps>(TOUR_TAG, {
       emit('open-change', { open: false, reason: 'programmatic' });
     };
 
+    // (Re)establish popover anchoring against the current anchor: the docked
+    // banner <-> anchored-card switch, plus the auto-update that keeps the card
+    // glued to its target. Runs at open AND whenever the anchor changes,
+    // because a tour's first step is often unanchored (a centered welcome) and
+    // only later steps carry a rect — anchoring must not be frozen at open time,
+    // or the card stays docked-and-centered while the positioner anchors it.
+    const applyAnchoring = (): void => {
+      const panel = floatRef.value;
+
+      if (!panel) return;
+
+      const reference = toReference(props.anchor.value);
+
+      panel.toggleAttribute('data-anchored', reference !== null);
+      stopAutoUpdate?.();
+      stopAutoUpdate = null;
+      positioner.update();
+
+      if (reference) stopAutoUpdate = autoUpdate(reference, panel, () => positioner.update());
+    };
+
     const openPopover = (): boolean => {
       const panel = floatRef.value;
 
       if (!panel) return false;
 
       panel.dataset.open = '';
-      panel.toggleAttribute('data-anchored', toReference(props.anchor.value) !== null);
 
       if ('showPopover' in panel) {
         try {
@@ -472,11 +492,7 @@ define<OreTourProps>(TOUR_TAG, {
         }
       }
 
-      positioner.update();
-
-      const reference = toReference(props.anchor.value);
-
-      stopAutoUpdate = reference ? autoUpdate(reference, panel, () => positioner.update()) : null;
+      applyAnchoring();
 
       restoreFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       panel.focus();
@@ -514,7 +530,7 @@ define<OreTourProps>(TOUR_TAG, {
     watch(
       () => props.anchor.value,
       () => {
-        if (popoverWasOpen) positioner.update();
+        if (popoverWasOpen) applyAnchoring();
 
         refreshSpotlight();
       },

@@ -673,6 +673,43 @@ describe('ore-tour', () => {
     });
   });
 
+  // ─── Anchoring ───────────────────────────────────────────────────────────────
+
+  describe('Anchoring', () => {
+    const rect = { height: 40, width: 100, x: 8, y: 16 };
+
+    it('marks the popover anchored when the anchor arrives after open', async () => {
+      // Regression: a tour opens on an unanchored welcome step, and only later
+      // steps carry a rect. `data-anchored` used to be decided once at open,
+      // so anchored steps kept the docked-banner CSS (margin-inline: auto),
+      // which centered the card over the page instead of parking it beside
+      // its target.
+      fixture = await mountCard({ open: '' });
+
+      expect(fixture.query('.float')?.hasAttribute('data-anchored')).toBe(false);
+
+      const card = fixture.element as OreTourElement;
+
+      await fixture.act(() => {
+        card.anchor = rect;
+      });
+
+      expect(fixture.query('.float')?.hasAttribute('data-anchored')).toBe(true);
+
+      await fixture.act(() => {
+        card.anchor = null;
+      });
+
+      expect(fixture.query('.float')?.hasAttribute('data-anchored')).toBe(false);
+    });
+
+    it('marks the popover anchored when it opens with an anchor already set', async () => {
+      fixture = await mountCard({ open: '' }, { anchor: rect });
+
+      expect(fixture.query('.float')?.hasAttribute('data-anchored')).toBe(true);
+    });
+  });
+
   // ─── Styles ──────────────────────────────────────────────────────────────────
 
   describe('Styles', () => {
