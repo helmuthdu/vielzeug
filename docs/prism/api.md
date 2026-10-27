@@ -17,6 +17,7 @@ All chart factories, scale utilities, theme helpers, and error classes are synch
 | `createBarChart()` | Render categorical bars | Sync | Negative values in stacked variants are clamped to zero |
 | `createPieChart()` | Render pie, donut, or semi-circle slices | Sync | `variant` is fixed at creation; `update()` replaces slices |
 | `createRadarChart()` | Compare series across fixed axes | Sync | Requires at least three axes to draw |
+| `createHeatmapChart()` | Render a row/column matrix of colored cells | Sync | Cells whose `row`/`column` match no label are skipped; unknown labels warn in development |
 | `createSparkline()` | Render a compact line, area, bar, or stack | Sync | Has no axes, legend, or keyboard navigation |
 | `linearScale()` | Create a numeric scale | Sync | `nice` defaults to `true`; set `nice: false` to preserve the domain |
 | `timeScale()` | Create a date scale | Sync | `nice` defaults to `true` |
@@ -249,6 +250,47 @@ chart.dispose();
 
 Radar defaults are a solid fill, linear curves, visible points, a four-level polygon grid with bands, no grid labels, and a first-axis angle of zero degrees. Grid labels render only when all axes share a domain.
 
+### `createHeatmapChart()`
+
+```ts
+function createHeatmapChart(
+  container: HTMLElement,
+  config: HeatmapChartConfig,
+): ChartHandle<HeatmapData>;
+```
+
+Renders one colored cell per row/column pair: rows down the left, columns across the top. The color ramp is continuous by default; `bins` turns it into discrete steps and shows a swatch legend. Cells show their formatted value when they are large enough, choosing dark or light text against the fill. `rowSummary` adds a right-hand column of pre-formatted per-row texts (e.g. a win rate the cells alone cannot show). `update()` replaces cells and may replace `rows`, `columns`, `domain`, and `rowSummary`; other configuration is fixed at creation.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `container` | `HTMLElement` | Host that receives the chart SVG and optional overlays |
+| `config` | `HeatmapChartConfig` | Rows, columns, cells, ramp, bins, appearance, and interaction settings |
+
+**Returns:** `ChartHandle<HeatmapData>`.
+
+```ts
+import { createHeatmapChart } from '@vielzeug/prism';
+
+const host = document.createElement('div');
+host.style.cssText = 'width:400px;height:320px';
+document.body.append(host);
+
+const chart = createHeatmapChart(host, {
+  a11y: { ariaLabel: 'Win rate by hero and region' },
+  cells: [
+    { column: 'Forest', row: 'Aria', value: 90 },
+    { column: 'Swamp', row: 'Aria', value: 40 },
+    { column: 'Forest', row: 'Brom', value: 20 },
+    { column: 'Swamp', row: 'Brom', value: 75 },
+  ],
+  columns: ['Forest', 'Swamp'],
+  rows: ['Aria', 'Brom'],
+});
+chart.dispose();
+```
+
+Heatmap defaults are a light-to-deep blue ramp over the data's `[min, max]` domain, a 2 px cell gap, in-cell values, and no legend. Column headers rotate -45° when they do not fit their column. Keyboard: arrows move the active cell, Enter/Space fires `onCellClick`, Escape deactivates; the tooltip (or `.prism-live` without one) describes the active cell.
+
 ### `createSparkline()`
 
 ```ts
@@ -436,7 +478,7 @@ seriesColor(1, '#2563eb'); // '#2563eb'
 
 `[Symbol.dispose]()` delegates to `dispose()`, allowing explicit resource management where supported.
 
-All chart handles expose the same lifecycle members; interactive cartesian and pie/radar charts use a `.prism-live` status region when no tooltip is enabled. A tooltip is itself a polite status region. Sparklines have neither a tooltip nor a live value announcer.
+All chart handles expose the same lifecycle members; interactive cartesian, pie, radar, and heatmap charts use a `.prism-live` status region when no tooltip is enabled. A tooltip is itself a polite status region. Sparklines have neither a tooltip nor a live value announcer.
 
 | Method or property | Contract |
 | --- | --- |
@@ -580,7 +622,7 @@ export interface SeriesValue {
 | Line | Applies to the segment from this datum to the next | Applies to that segment and its point marker |
 | Area | Applies to the top-line segment from this datum to the next | Applies to that segment |
 | Scatter | Ignored | Applies to that point |
-| Pie, radar, sparkline | Ignored | Ignored |
+| Pie, radar, heatmap, sparkline | Ignored | Ignored |
 
 For line and area charts, the last datum has no following segment, so its `dash` value is ignored. The chart factories group adjacent segments with the same presentation values into path runs.
 
@@ -737,6 +779,10 @@ export type BarVariant = 'grouped' | 'grouped-horizontal' | 'stacked' | 'stacked
 
 export interface BarChartConfig extends BaseChartConfig {
   series: BarSeriesConfig[];
+  /** Paints each bar's value at its end; stacked variants label the stack total. */
+  showValues?: boolean;
+  /** Formats the value labels. Defaults to `String`. */
+  valueFormat?: (value: number) => string;
   variant?: BarVariant;
 }
 
@@ -805,6 +851,47 @@ export interface RadarChartConfig extends Omit<BaseChartConfig, 'margin' | 'onCl
   showPoints?: boolean;
   showValues?: boolean;
   startAngle?: number;
+}
+
+export interface HeatmapCell {
+  column: string;
+  row: string;
+  value: number | null;
+}
+
+export interface HeatmapEvent {
+  cell: HeatmapCell | undefined;
+  column: string;
+  originalEvent: Event;
+  row: string;
+}
+
+export interface HeatmapData {
+  cells: HeatmapCell[];
+  columns?: string[];
+  domain?: [number, number];
+  rows?: string[];
+  rowSummary?: HeatmapChartConfig['rowSummary'];
+}
+
+export interface HeatmapChartConfig
+  extends Omit<BaseChartConfig, 'legend' | 'onClick' | 'onHover' | 'transition' | 'xAxis' | 'yAxis'> {
+  binLabel?: (from: number | null, to: number | null) => string;
+  bins?: number[];
+  cells: HeatmapCell[];
+  colorRange?: string[];
+  columns: string[];
+  domain?: [number, number];
+  emptyColor?: string;
+  emptyLabel?: string;
+  gap?: number;
+  legend?: boolean;
+  onCellClick?: (event: HeatmapEvent) => void;
+  onCellHover?: (event: HeatmapEvent | null) => void;
+  rows: string[];
+  rowSummary?: { header?: string; values: (string | null)[] };
+  showValues?: boolean;
+  valueFormat?: (value: number) => string;
 }
 
 export type SparklineVariant = 'area' | 'bar' | 'line' | 'stack';

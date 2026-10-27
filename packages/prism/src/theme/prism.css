@@ -138,6 +138,14 @@
     --prism-radar-value-size: var(--prism-font-size-label);
     --prism-radar-dim-opacity: var(--prism-dim-opacity);
 
+    /* Label/highlight colors intentionally have no :root alias: the rules
+       below fall back to --prism-text-color at point of use, so a scoped
+       --prism-text-color override (an app theming one subtree) reaches them.
+       A :root alias would resolve once at :root and freeze the wrong theme's
+       text color into every descendant. */
+    --prism-heatmap-label-size: var(--prism-font-size-label);
+    --prism-heatmap-value-size: var(--prism-font-size-label);
+
     /* ========================================
        Transitions & Animation
        Respects prefers-reduced-motion
@@ -342,6 +350,19 @@
     opacity: var(--prism-bar-dim-opacity);
   }
 
+  .prism-bar-value {
+    font-size: var(--prism-font-size-label);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    fill: var(--prism-text-color-secondary);
+  }
+
+  /* Inside a bar: the renderer sets an explicit contrasting fill per bar
+     color; this is the fallback when the fill cannot be measured. */
+  .prism-bar-value--inside {
+    fill: var(--prism-text-color);
+  }
+
   .prism-bar-band {
     opacity: var(--prism-bar-band-opacity);
     fill: var(--prism-bar-band-fill);
@@ -447,6 +468,32 @@
     font-weight: var(--prism-font-weight-title);
     font-variant-numeric: tabular-nums;
     fill: var(--prism-radar-value-color);
+  }
+
+  /* Heatmap chart */
+  .prism-heatmap-row-label,
+  .prism-heatmap-column-label {
+    font-size: var(--prism-heatmap-label-size);
+    fill: var(--prism-heatmap-label-color, var(--prism-text-color));
+  }
+
+  .prism-heatmap-value {
+    font-size: var(--prism-heatmap-value-size);
+    font-weight: var(--prism-font-weight-title);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prism-heatmap-summary,
+  .prism-heatmap-summary-header {
+    font-size: var(--prism-heatmap-label-size);
+    font-variant-numeric: tabular-nums;
+    fill: var(--prism-heatmap-label-color, var(--prism-text-color));
+  }
+
+  .prism-heatmap-highlight {
+    fill: none;
+    stroke: var(--prism-heatmap-highlight-color, var(--prism-text-color));
+    stroke-width: 2;
   }
 
   /* Pie chart */

@@ -305,6 +305,14 @@ export type BarVariant = 'grouped' | 'grouped-horizontal' | 'stacked' | 'stacked
 
 export interface BarChartConfig extends BaseChartConfig {
   series: BarSeriesConfig[];
+  /**
+   * Paint each bar's value at its end so the chart reads without hover.
+   * Stacked variants label the stack total at the top of the stack. Labels
+   * that would overflow the plot flip inside the bar with a contrasting fill.
+   */
+  showValues?: boolean;
+  /** Formats the value labels. Defaults to `String`. */
+  valueFormat?: (value: number) => string;
   variant?: BarVariant;
 }
 
@@ -416,6 +424,77 @@ export interface RadarChartConfig extends Omit<BaseChartConfig, 'margin' | 'onCl
   showValues?: boolean;
   /** Degrees clockwise from 12 o'clock for the first axis. Defaults to `0`. */
   startAngle?: number;
+}
+
+// ─── Heatmap Types ────────────────────────────────────────────────────────────
+
+export interface HeatmapCell {
+  /** The column label this cell belongs to; must match one of the config's `columns`. */
+  column: string;
+  /** The row label this cell belongs to; must match one of the config's `rows`. */
+  row: string;
+  /** A `null` value renders as a missing cell (`emptyColor`, no in-cell text). */
+  value: number | null;
+}
+
+export interface HeatmapEvent {
+  /** The cell as given in the data; `undefined` for a cell the data never carried. */
+  cell: HeatmapCell | undefined;
+  column: string;
+  originalEvent: Event;
+  row: string;
+}
+
+/** The payload accepted by a heatmap chart handle's `update()`. */
+export interface HeatmapData {
+  cells: HeatmapCell[];
+  columns?: string[];
+  domain?: [number, number];
+  rowSummary?: HeatmapChartConfig['rowSummary'];
+  rows?: string[];
+}
+
+export interface HeatmapChartConfig
+  extends Omit<BaseChartConfig, 'legend' | 'onClick' | 'onHover' | 'transition' | 'xAxis' | 'yAxis'> {
+  /** Labels the bin swatches (default: `'<60'`, `'60–70'`, `'≥90'` style from the thresholds). */
+  binLabel?: (from: number | null, to: number | null) => string;
+  /**
+   * Ascending thresholds that turn the ramp into discrete steps (e.g. `[60, 70, 80, 90]`):
+   * a value falls in the first bin whose threshold exceeds it. With bins set, the chart
+   * shows a swatch legend by default; without them the ramp is continuous.
+   */
+  bins?: number[];
+  cells: HeatmapCell[];
+  /**
+   * Ramp colors low → high (default a light-to-deep blue). Parseable colors
+   * (`#hex`/`rgb()`) interpolate continuously; CSS vars and named colors select
+   * the nearest step instead.
+   */
+  colorRange?: string[];
+  columns: string[];
+  /** Value range the ramp spans. Defaults to `[min, max]` of the finite cell values. */
+  domain?: [number, number];
+  /** Fill for missing (`null`-valued or absent) cells. Defaults to the theme's grid color. */
+  emptyColor?: string;
+  /** Label for the missing-cell swatch in the legend; the swatch is hidden when omitted. */
+  emptyLabel?: string;
+  /** Gap between cells in px. Defaults to `2`. */
+  gap?: number;
+  /** Swatch legend. Defaults to on with `bins`, off without. */
+  legend?: boolean;
+  onCellClick?: (event: HeatmapEvent) => void;
+  onCellHover?: (event: HeatmapEvent | null) => void;
+  /**
+   * A summary column painted right of the grid, one pre-formatted text per row
+   * (aligned with `rows`; `null` renders as a dash). Useful for a per-row rate
+   * the cells alone don't show, since floor-omitted cells hide their denominator.
+   */
+  rowSummary?: { header?: string; values: (string | null)[] };
+  rows: string[];
+  /** Show each cell's formatted value inside it. Defaults to `true`. */
+  showValues?: boolean;
+  /** Formats in-cell values, tooltip values, and bin labels. Defaults to `String`. */
+  valueFormat?: (value: number) => string;
 }
 
 // ─── Sparkline Types ──────────────────────────────────────────────────────────

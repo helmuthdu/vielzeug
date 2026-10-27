@@ -4,6 +4,7 @@ export type { EasingFn, EasingName } from './animation/easing';
 // Chart factories
 export { createAreaChart } from './charts/area';
 export { createBarChart } from './charts/bar';
+export { createHeatmapChart } from './charts/heatmap';
 export { createLineChart } from './charts/line';
 export { createPieChart } from './charts/pie';
 export { createRadarChart } from './charts/radar';
@@ -37,6 +38,10 @@ export type {
   CrosshairConfig,
   Datum,
   GridConfig,
+  HeatmapCell,
+  HeatmapChartConfig,
+  HeatmapData,
+  HeatmapEvent,
   HorizontalAxisPosition,
   LegendConfig,
   LegendPosition,

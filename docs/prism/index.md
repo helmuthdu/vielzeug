@@ -1,9 +1,9 @@
 ---
 title: 'Prism: Responsive SVG data visualization'
-description: 'Responsive SVG charts with explicit updates: line, bar, area, scatter, pie, radar, sparkline'
+description: 'Responsive SVG charts with explicit updates: line, bar, area, scatter, pie, radar, heatmap, sparkline'
 package: prism
 category: ui
-keywords: [chart, svg, visualization, responsive, line-chart, bar-chart, area-chart, scatter-chart, pie-chart, radar-chart, sparkline, accessibility, typescript]
+keywords: [chart, svg, visualization, responsive, line-chart, bar-chart, area-chart, scatter-chart, pie-chart, radar-chart, heatmap-chart, sparkline, accessibility, typescript]
 related: [refine, orbit]
 exports: [createLineChart, createBarChart, createPieChart, ChartHandle]
 environments: [browser]
@@ -130,6 +130,7 @@ chart.dispose();
 - **`createScatterChart()`**: plot independent numeric `(x, y)` points
 - **`createPieChart()`**: render pie, donut, or semi-circle slices
 - **`createRadarChart()`**: compare series across fixed, labelled axes
+- **`createHeatmapChart()`**: render a row/column matrix of colored cells with a continuous or binned ramp
 - **`createSparkline()`**: render compact line, area, bar, or stacked values without axes
 - **`ChartHandle.update(data)`**: replace chart data without handing state ownership to Prism
 - **`ChartHandle.dispose()` / `Symbol.dispose`**: release the SVG, observer, overlays, and chart-owned animation

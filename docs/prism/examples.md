@@ -9,6 +9,7 @@ description: Focused recipes for creating, updating, interacting with, and themi
 - [Compare categories with a bar chart](./examples/bar-chart.md)
 - [Render compact charts](./examples/compact-charts.md)
 - [Compare hero stats with a radar chart](./examples/radar-chart.md)
+- [Show a win-rate matrix with a heatmap](./examples/heatmap-chart.md)
 - [Update chart data](./examples/update-data.md)
 - [Sync a details panel with hover](./examples/hover-details.md)
 - [Render a custom tooltip](./examples/custom-tooltip.md)

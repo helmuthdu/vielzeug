@@ -26,6 +26,7 @@ import type {
 import { findCatIdx, findSeriesIdx } from './bar-hit-test';
 import { renderBars } from './bar-renderer';
 import type { BarScaleContext } from './bar-scale-context';
+import { type BarValueLabel, renderBarValueLabels } from './bar-value-labels';
 
 function variantFlags(variant: BarVariant): { horizontal: boolean; stacked: boolean } {
   return {
@@ -39,6 +40,7 @@ function variantFlags(variant: BarVariant): { horizontal: boolean; stacked: bool
 export function createBarChart(container: HTMLElement, config: BarChartConfig): ChartHandle<BarSeriesConfig[]> {
   let seriesList = config.series;
   let band: SVGRectElement | null = null;
+  let valueLabelsGroup: SVGGElement | null = null;
 
   return createChartScaffold(
     container,
@@ -68,6 +70,8 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
         clearCartesianDom(groups, legend, tooltip);
         band?.remove();
         band = null;
+        valueLabelsGroup?.remove();
+        valueLabelsGroup = null;
 
         return;
       }
@@ -243,6 +247,65 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
       tooltip?.hide();
       groups.series.classList.toggle('prism-bars-stacked', stacked);
+
+      // Value labels: one per bar (stacked variants label the stack total at
+      // the stack's top), painted once per render into a dedicated aria-hidden
+      // group so series updates never disturb them.
+      if (config.showValues) {
+        if (!valueLabelsGroup || !ctx.chartArea.contains(valueLabelsGroup)) {
+          valueLabelsGroup = createSvgElement('g', { 'aria-hidden': 'true', class: 'prism-bar-values' });
+          ctx.chartArea.appendChild(valueLabelsGroup);
+        }
+
+        const formatValue = config.valueFormat ?? String;
+        const labels: BarValueLabel[] = [];
+
+        if (stacked) {
+          for (let c = 0; c < categories.length; c++) {
+            const total = allData.reduce((sum, seriesData) => sum + Math.max(0, seriesData[c]?.value ?? 0), 0);
+
+            if (total <= 0) continue;
+
+            labels.push({
+              bandSize: catScale.bandwidth(),
+              barLength: Math.abs(valScale.map(total) - valScale.map(0)),
+              center: catScale.map(categories[c]!) + catScale.bandwidth() / 2,
+              dir: 1,
+              text: formatValue(total),
+              valueEdge: valScale.map(total),
+            });
+          }
+        } else {
+          for (let i = 0; i < seriesList.length; i++) {
+            const barBand = catScale.bandwidth() / seriesList.length;
+
+            for (let c = 0; c < categories.length; c++) {
+              const datum = allData[i]?.[c];
+
+              if (!datum) continue;
+
+              labels.push({
+                bandSize: Math.max(0, barBand - 1),
+                barLength: Math.abs(valScale.map(datum.value) - valScale.map(0)),
+                center: catScale.map(categories[c]!) + barBand * i + barBand / 2,
+                dir: datum.value < 0 ? -1 : 1,
+                text: formatValue(datum.value),
+                valueEdge: valScale.map(datum.value),
+              });
+            }
+          }
+        }
+
+        renderBarValueLabels(valueLabelsGroup, labels, {
+          areaExtent: horizontal ? area.width : area.height,
+          disposalSignal: ctx.disposalSignal,
+          horizontal,
+          transition: reason === 'resize' ? false : config.transition,
+        });
+      } else {
+        valueLabelsGroup?.remove();
+        valueLabelsGroup = null;
+      }
 
       if (!band || !ctx.chartArea.contains(band)) {
         band = createSvgElement('rect', { 'aria-hidden': 'true', class: 'prism-bar-band', 'pointer-events': 'none' });

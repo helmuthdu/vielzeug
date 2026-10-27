@@ -55,7 +55,7 @@ chart.update(series);
 chart.dispose();
 ```
 
-`update()` accepts the type shown by that factory's handle: a complete series array for line, area, scatter, bar, and radar charts; a slice array for pie charts; and a number or stack-segment array for sparklines. Chart options such as axes, variant, callbacks, and accessibility are set at creation. For example, radar axes and a pie chart's variant do not change through `update()`.
+`update()` accepts the type shown by that factory's handle: a complete series array for line, area, scatter, bar, and radar charts; a slice array for pie charts; a `HeatmapData` object for heatmap charts; and a number or stack-segment array for sparklines. Chart options such as axes, variant, callbacks, and accessibility are set at creation. For example, radar axes and a pie chart's variant do not change through `update()`.
 
 ## Line Charts
 
@@ -183,6 +183,8 @@ chart.dispose();
 Choose `grouped`, `stacked`, `grouped-horizontal`, or `stacked-horizontal` in `variant`. Negative values in a stacked chart are clamped to zero and produce a development warning. Bars in stacked variants remain square; `borderRadius` applies to grouped bars.
 
 Axes render by default, with grid lines on the value axis. For horizontal variants, `xAxis` is the value axis and `yAxis` is the category axis. Configure `grid` on the value axis.
+
+Set `showValues: true` to paint each bar's value at its end so the chart reads without hover; `valueFormat` shapes the label text. Stacked variants label the stack total at the top of the stack, and labels that would overflow the plot flip inside the bar with a contrasting fill. The labels are decorative (`aria-hidden`) — the accessible read stays with the chart's data table.
 
 ## Area Charts
 
@@ -327,6 +329,37 @@ chart.dispose();
 
 The default shared domain starts at zero and uses a nice maximum; set `domain` to compare series on a fixed range. Per-axis `min` and `max` override the chart domain for that axis. Grid rings, bands, curves, fills, vertex dots, and values are configurable; see `RadarChartConfig` and `RadarGridConfig` in the API reference.
 
+## Heatmaps
+
+Define `rows`, `columns`, and `cells`; each cell names its `row` and `column` labels. A cell with `value: null` (or no matching cell at all) renders in `emptyColor` without in-cell text. `rowSummary` adds a right-hand column of pre-formatted per-row texts (aligned with `rows`, with an optional header) — useful for a per-row rate the cells cannot show. `update()` replaces cells and may replace `rows`, `columns`, `domain`, and `rowSummary`.
+
+```ts
+import { createHeatmapChart } from '@vielzeug/prism';
+
+const container = document.createElement('div');
+container.style.cssText = 'width:400px;height:320px';
+document.body.append(container);
+
+const chart = createHeatmapChart(container, {
+  a11y: { ariaLabel: 'Win rate by hero and region' },
+  bins: [50, 75],
+  cells: [
+    { column: 'Forest', row: 'Aria', value: 90 },
+    { column: 'Swamp', row: 'Aria', value: 40 },
+    { column: 'Forest', row: 'Brom', value: 20 },
+    { column: 'Swamp', row: 'Brom', value: 75 },
+  ],
+  columns: ['Forest', 'Swamp'],
+  rows: ['Aria', 'Brom'],
+  tooltip: true,
+  valueFormat: (value) => `${value}%`,
+});
+
+chart.dispose();
+```
+
+Without `bins` the ramp is continuous over the data's `[min, max]` domain (or an explicit `domain`); with `bins` each value maps to a discrete step and a swatch legend appears. `colorRange` sets the ramp low → high, `valueFormat` shapes in-cell values, tooltip values, and bin labels, and `showValues: false` hides the in-cell text.
+
 ## Sparklines
 
 Sparklines omit axes, margins, and legends. Choose `line`, `area`, or `bar` for numeric arrays, and `stack` for an array of `StackSegment` objects.
@@ -383,7 +416,7 @@ chart.dispose();
 
 Set `a11y: { ariaLabel }` on an informative chart. Prism gives the SVG `role="img"`, an accessible name, and keyboard focus. Arrow keys move among chart data; `Home` and `End` move to the first and last item where supported; `Enter` or `Space` activates an item when an `onClick` callback is configured; `Escape` clears the active selection. Sparklines do not support keyboard navigation.
 
-When `a11y` is omitted, or set to `{ decorative: true }`, the SVG is marked `aria-hidden="true"` and does not enter the keyboard tab order. Only mark charts decorative when their information is available elsewhere. Interactive cartesian and pie/radar charts use the tooltip as a polite live region when enabled; otherwise they announce active values in `.prism-live`. Sparklines have no live value announcements, so provide an equivalent visible value or summary.
+When `a11y` is omitted, or set to `{ decorative: true }`, the SVG is marked `aria-hidden="true"` and does not enter the keyboard tab order. Only mark charts decorative when their information is available elsewhere. Interactive cartesian, pie, radar, and heatmap charts use the tooltip as a polite live region when enabled; otherwise they announce active values in `.prism-live`. Sparklines have no live value announcements, so provide an equivalent visible value or summary.
 
 ## Animation
 
@@ -483,6 +516,7 @@ The stylesheet defines defaults for the following token groups. Pie-label color 
 | Interaction | `--prism-dim-opacity`, `--prism-active-point-radius`, `--prism-point-ring`, `--prism-focus-color` |
 | Sparklines | `--prism-spark-fill-opacity`, `--prism-spark-gradient-start`, `--prism-spark-gradient-end` |
 | Radar | `--prism-radar-grid-color`, `--prism-radar-grid-opacity`, `--prism-radar-band-fill`, `--prism-radar-band-opacity`, `--prism-radar-spoke-color`, `--prism-radar-fill-opacity`, `--prism-radar-stroke-width`, `--prism-radar-point-radius`, `--prism-radar-point-radius-active`, `--prism-radar-label-color`, `--prism-radar-label-size`, `--prism-radar-value-color`, `--prism-radar-value-size`, `--prism-radar-dim-opacity` |
+| Heatmap | `--prism-heatmap-label-color`, `--prism-heatmap-label-size`, `--prism-heatmap-value-size`, `--prism-heatmap-highlight-color` |
 | Motion | `--prism-duration-fast`, `--prism-duration`, `--prism-duration-slow`, `--prism-ease`, `--prism-ease-spring`, `--prism-transition`, `--prism-transition-fast` |
 | Legend and pie labels | `--prism-legend-gap`, `--prism-legend-dot-size`, `--prism-legend-font-size`, `--prism-pie-label-color`, `--prism-pie-label-size` |
 

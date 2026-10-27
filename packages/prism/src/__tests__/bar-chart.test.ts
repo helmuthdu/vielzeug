@@ -459,6 +459,90 @@ describe('createBarChart', () => {
     chart.dispose();
   });
 
+  describe('showValues', () => {
+    it('paints one label per bar with the formatted value', () => {
+      const chart = createBarChart(container, {
+        series: [
+          {
+            data: [
+              { key: 'A', value: 10 },
+              { key: 'B', value: 20 },
+            ],
+            name: 'Test',
+          },
+        ],
+        showValues: true,
+        valueFormat: (v) => `${v}!`,
+      });
+
+      const labels = [...chart.el.querySelectorAll('.prism-bar-value')];
+
+      expect(labels.map((t) => t.textContent)).toEqual(['10!', '20!']);
+      chart.dispose();
+    });
+
+    it('labels the stack total once per category when stacked', () => {
+      const chart = createBarChart(container, {
+        series: [
+          { data: [{ key: 'A', value: 10 }], name: 'S1' },
+          { data: [{ key: 'A', value: 5 }], name: 'S2' },
+        ],
+        showValues: true,
+        variant: 'stacked',
+      });
+
+      const labels = [...chart.el.querySelectorAll('.prism-bar-value')];
+
+      expect(labels.map((t) => t.textContent)).toEqual(['15']);
+      chart.dispose();
+    });
+
+    it('updates labels with the data', () => {
+      const chart = createBarChart(container, {
+        series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
+        showValues: true,
+      });
+
+      expect(chart.el.querySelectorAll('.prism-bar-value')).toHaveLength(1);
+
+      chart.update([{ data: [{ key: 'A', value: 42 }], name: 'Test' }]);
+      expect(chart.el.querySelector('.prism-bar-value')?.textContent).toBe('42');
+
+      chart.dispose();
+    });
+
+    it('hides labels for empty data', () => {
+      const chart = createBarChart(container, {
+        series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
+        showValues: true,
+      });
+
+      chart.update([{ data: [], name: 'Test' }]);
+      expect(chart.el.querySelector('.prism-bar-value')).toBeNull();
+      chart.dispose();
+    });
+
+    it('places horizontal labels past the bar end', () => {
+      const chart = createBarChart(container, {
+        series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
+        showValues: true,
+        variant: 'grouped-horizontal',
+      });
+
+      const label = chart.el.querySelector('.prism-bar-value') as SVGTextElement;
+      const bar = chart.el.querySelector('.prism-bar') as SVGRectElement;
+
+      // The label sits at the bar end; when the bar reaches the plot edge the
+      // label is clamped back inside so it stays fully visible.
+      const barEnd = Number(bar.getAttribute('x')) + Number(bar.getAttribute('width'));
+      const labelX = Number(label.getAttribute('x'));
+
+      expect(labelX).toBeGreaterThanOrEqual(barEnd - 40);
+      expect(labelX).toBeLessThanOrEqual(barEnd + 10);
+      chart.dispose();
+    });
+  });
+
   it('cancels an in-flight bar transition on dispose (B9)', async () => {
     const chart = createBarChart(container, {
       series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
