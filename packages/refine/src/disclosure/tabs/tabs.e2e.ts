@@ -5,6 +5,7 @@
  *
  * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
+import type { Page } from '@playwright/test';
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Accessibility', () => {
@@ -30,6 +31,19 @@ test.describe('Accessibility', () => {
   );
 });
 
+/** jsdom has no CSS box model, so density/size sizing is read from the real engine. */
+const tabMetrics = (page: Page, selector: string) =>
+  page.evaluate((sel) => {
+    const button = document.querySelector(sel)!.shadowRoot!.querySelector('button')!;
+    const style = getComputedStyle(button);
+
+    return {
+      font: style.fontSize,
+      height: button.getBoundingClientRect().height,
+      padX: Number.parseFloat(style.paddingLeft),
+    };
+  }, selector);
+
 test.describe('Layout', () => {
   test('compact density renders a smaller modern tab control', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
@@ -47,11 +61,74 @@ test.describe('Layout', () => {
     const compactTab = page.locator('#compact ore-tab-item').first();
     const [standardBox, compactBox] = await Promise.all([standardTab.boundingBox(), compactTab.boundingBox()]);
 
-    expect(compactBox!.height).toBe(24);
     expect(compactBox!.height).toBeLessThan(standardBox!.height);
     expect(compactBox!.height).toBeGreaterThanOrEqual(24);
     await page.locator('#compact ore-tab-item[value="two"]').click();
     await expect(page.locator('#compact')).toHaveAttribute('value', 'two');
+  });
+
+  test('compact density keeps the size font-size and tightens the tab', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="lg" value="one" variant="ghost" size="lg">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>' +
+        '<ore-tabs id="lg-compact" value="one" variant="ghost" size="lg" density="compact">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>',
+    );
+
+    const standard = await tabMetrics(page, '#lg ore-tab-item');
+    const compact = await tabMetrics(page, '#lg-compact ore-tab-item');
+
+    // Same type size in both densities: compact must not downshift the font.
+    expect(compact.font).toBe(standard.font);
+    expect(compact.font).toBe('16px');
+    // Compact is the tighter of the two in height and horizontal padding.
+    expect(compact.height).toBeLessThan(standard.height);
+    expect(compact.padX).toBeLessThan(standard.padX);
+  });
+
+  test('default density keeps the documented 44px target on a fine pointer', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="default" value="one" variant="ghost">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>',
+    );
+
+    const metrics = await tabMetrics(page, '#default ore-tab-item');
+
+    expect(metrics.height).toBeGreaterThanOrEqual(44);
+  });
+
+  test('rounded drives corner radius; density no longer changes it', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="plain" value="one" variant="solid">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>' +
+        '<ore-tabs id="dense" value="one" variant="solid" density="compact">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>' +
+        '<ore-tabs id="pill" value="one" variant="solid" rounded="full">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>',
+    );
+
+    const radii = await page.evaluate(() => {
+      const read = (id: string) => {
+        const tabs = document.getElementById(id)!;
+        const tablist = getComputedStyle(tabs.shadowRoot!.querySelector('[role="tablist"]')!);
+        const item = getComputedStyle(tabs.querySelector('ore-tab-item')!.shadowRoot!.querySelector('button')!);
+
+        return { item: item.borderRadius, tablist: tablist.borderRadius };
+      };
+
+      return { dense: read('dense'), pill: read('pill'), plain: read('plain') };
+    });
+
+    // Compact leaves the radius alone now that `rounded` owns it.
+    expect(radii.dense).toEqual(radii.plain);
+    expect(radii.pill.item).not.toBe(radii.plain.item);
+    expect(radii.pill.tablist).toBe('9999px');
   });
 
   test('navigation-only tabs do not reserve panel space', async ({ page, refinePage }) => {
@@ -127,6 +204,41 @@ test.describe('Layout', () => {
     }));
 
     expect(widths.host).toBeCloseTo(widths.frame, 0);
+  });
+});
+
+test.describe('Touch layout', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
+
+  test('keeps a 44px tap target under compact density on coarse pointers', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="dense" value="one" variant="ghost" density="compact">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>',
+    );
+
+    const metrics = await tabMetrics(page, '#dense ore-tab-item');
+
+    // Compact is a visual-density choice; WCAG 2.2 §2.5.8 still owns the target on touch.
+    expect(metrics.height).toBeGreaterThanOrEqual(44);
+  });
+
+  test('promotes an unset size exactly like an explicit md on coarse pointers', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="unset" value="one" variant="ghost">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>' +
+        '<ore-tabs id="md" value="one" variant="ghost" size="md">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>',
+    );
+
+    const unset = await tabMetrics(page, '#unset ore-tab-item');
+    const md = await tabMetrics(page, '#md ore-tab-item');
+
+    expect(unset).toEqual(md);
+    // One tier up from the fine-pointer default (14px / 6px 16px).
+    expect(unset.font).toBe('16px');
   });
 });
 

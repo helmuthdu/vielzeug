@@ -198,7 +198,7 @@ Set `color` on `ore-tabs` to apply a theme color: it propagates automatically to
 
 ## Compact Density
 
-Use `density="compact"` for dense toolbars, filters, table controls, and secondary navigation. It renders a 24px tab target with tighter 4px/8px spacing and a smaller radius while preserving selection, focus, keyboard navigation, colors, and visual variants. Standard density remains the default for primary content navigation.
+Use `density="compact"` for dense toolbars, filters, table controls, and secondary navigation. It uses tighter 8px/12px padding, a single-line line-height, and a 24px minimum height while preserving selection, focus, keyboard navigation, colors, and visual variants. Density only tightens spacing: the label keeps the size your `size` prop asks for, and the corner radius is untouched — set [`rounded`](#rounded) when you want a different shape. Standard density remains the default for primary content navigation. On a coarse pointer the target stays 44px even in compact density, because WCAG 2.2 §2.5.8 is a pointer requirement rather than a density preference.
 
 <ComponentPreview>
 
@@ -211,6 +211,31 @@ Use `density="compact"` for dense toolbars, filters, table controls, and seconda
   <ore-tab-panel value="all"><p>All issues.</p></ore-tab-panel>
   <ore-tab-panel value="open"><p>Open issues.</p></ore-tab-panel>
   <ore-tab-panel value="closed"><p>Closed issues.</p></ore-tab-panel>
+</ore-tabs>
+```
+
+</ComponentPreview>
+
+## Rounded
+
+`rounded` sets the corner radius of the tablist container and every tab item from the theme scale. Use `rounded="full"` (or a bare `rounded`) for a pill shape. Density deliberately does not touch radius, so a compact tab bar can still be square-cornered or fully round.
+
+<ComponentPreview vertical>
+
+```html
+<ore-tabs value="tab1" variant="solid" rounded="none">
+  <ore-tab-item slot="tabs" value="tab1">Overview</ore-tab-item>
+  <ore-tab-item slot="tabs" value="tab2">Settings</ore-tab-item>
+</ore-tabs>
+
+<ore-tabs value="tab1" variant="solid" rounded="full">
+  <ore-tab-item slot="tabs" value="tab1">Overview</ore-tab-item>
+  <ore-tab-item slot="tabs" value="tab2">Settings</ore-tab-item>
+</ore-tabs>
+
+<ore-tabs value="tab1" variant="solid" density="compact" rounded="full">
+  <ore-tab-item slot="tabs" value="tab1">Overview</ore-tab-item>
+  <ore-tab-item slot="tabs" value="tab2">Settings</ore-tab-item>
 </ore-tabs>
 ```
 
@@ -367,7 +392,8 @@ Disabled tabs are skipped during keyboard navigation.
 | `value`       | `string`                                                                  | N/A | Value of the currently selected tab                                   |
 | `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'frost'`        | `'solid'`      | Visual style of the tab bar                                           |
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Size applied to all tab items                                         |
-| `density`     | `'default' \| 'compact'`                                                    | `'default'`    | Spatial density; compact renders a 24px tab control                   |
+| `density`     | `'default' \| 'compact'`                                                    | `'default'`    | Spatial density; compact tightens padding (24px minimum height, 44px on coarse pointers) |
+| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`         | `'lg'`         | Corner radius of the tablist and every tab item                       |
 | `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color propagated to all tab items                               |
 | `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Tab list layout direction                                             |
 | `activation`  | `'auto' \| 'manual'`                                                      | `'auto'`       | `auto`: arrow keys select immediately; `manual`: Enter/Space confirms |
@@ -393,6 +419,7 @@ Disabled tabs are skipped during keyboard navigation.
 | `active`   | `boolean`                                                                 | `false`   | Whether this tab is selected (managed by `ore-tabs`)             |
 | `disabled` | `boolean`                                                                 | `false`   | Prevents the tab from being selected                            |
 | `density`  | `'default' \| 'compact'`                                                   | inherited | Inherited from parent `ore-tabs`                                |
+| `rounded`  | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`         | inherited | Inherited from parent `ore-tabs`                                 |
 | `size`     | `'sm' \| 'md' \| 'lg'`                                                    | inherited | Inherited from parent `ore-tabs`                                 |
 | `variant`  | `string`                                                                  | inherited | Inherited from parent `ore-tabs`                                 |
 | `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | inherited | Inherited from parent `ore-tabs`                                 |
@@ -424,7 +451,9 @@ Disabled tabs are skipped during keyboard navigation.
 | `--tabs-tablist-bg`           | Theme-dependent            | Tablist container background (solid/frost variants) |
 | `--tabs-tablist-border-color` | Theme-dependent            | Tablist container border color                            |
 | `--tab-panel-padding`         | `var(--size-4)`            | Padding inside each tab panel                             |
-| `--tab-item-radius`           | Theme-dependent            | Tab button border radius                                  |
+| `--tab-item-radius`           | `var(--rounded-lg)`        | Tab button border radius (follows `rounded`)              |
+| `--tab-item-padding`          | size-dependent             | Tab button padding                                        |
+| `--tab-item-font-size`        | size-dependent             | Tab button font size (owned by `size`, never by density)  |
 | `--tab-item-color`            | Theme-dependent            | Default tab text color                                    |
 | `--tab-item-hover-bg`         | Theme-dependent            | Tab background on hover                                   |
 | `--tab-item-active-bg`        | Theme-dependent            | Tab background when active/selected                       |

@@ -14,15 +14,20 @@ import {
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 import { createInteraction, createListControl, elementDirection, lifecycleSignal } from '../../core';
 import { sizableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin } from '../../styles';
-import { type ComponentSize, type ThemeColor, VISUAL_VARIANTS, type VisualVariant } from '../../types';
+import { colorThemeMixin, roundedVariantMixin } from '../../styles';
+import { type ComponentSize, ROUNDED_SIZES, type ThemeColor, VISUAL_VARIANTS, type VisualVariant } from '../../types';
 import styles from './tabs.css?inline';
+
+/** `''` is the bare `rounded` attribute, which `roundedVariantMixin` renders as `full`. */
+export const TAB_ROUNDED = ['', ...ROUNDED_SIZES] as const;
+export type TabRounded = (typeof TAB_ROUNDED)[number];
 
 /** Context provided by ore-tabs to its ore-tab-item and ore-tab-panel children. */
 export type TabsContext = {
   color: Readable<ThemeColor | undefined>;
   density: Readable<'compact' | 'default'>;
   orientation: Readable<'horizontal' | 'vertical'>;
+  rounded: Readable<TabRounded | undefined>;
   size: Readable<ComponentSize | undefined>;
   value: Readable<string | undefined>;
   variant: Readable<VisualVariant | undefined>;
@@ -43,12 +48,14 @@ export type OreTabsProps = {
   activation?: 'auto' | 'manual';
   /** Theme color */
   color?: ThemeColor;
-  /** Spatial density; compact renders a 24px tab control for dense interfaces. */
+  /** Spatial density; compact tightens padding (24px minimum height, 44px on coarse pointers) without changing font-size or radius. */
   density?: 'compact' | 'default';
   /** Accessible label for the tablist (passed as aria-label). Use when there is no visible heading labelling the tabs. */
   label?: string;
-  /** Tab list orientation */
+  /** Orientation of the tab list */
   orientation?: 'horizontal' | 'vertical';
+  /** Corner radius for the tablist and every tab item; defaults to `lg`, a bare attribute means `full`. */
+  rounded?: TabRounded;
   /** Component size */
   size?: ComponentSize;
   /** Currently selected tab value */
@@ -68,6 +75,7 @@ export type OreTabsProps = {
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'ghost' | 'frost'
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
  * @attr {string} density - Spatial density: 'default' | 'compact'
+ * @attr {string} rounded - Corner radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' (bare attribute is 'full')
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  *
  * @fires change - Emitted when the active tab changes with detail: { value: string }
@@ -103,6 +111,7 @@ define<OreTabsProps>(TABS_TAG, {
     density: prop.oneOf(['compact', 'default'] as const, 'default'),
     label: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
+    rounded: prop.oneOf(TAB_ROUNDED),
     value: prop.string(),
     variant: prop.oneOf(VISUAL_VARIANTS),
   },
@@ -201,6 +210,7 @@ define<OreTabsProps>(TABS_TAG, {
       color: props.color,
       density: computed(() => props.density.value ?? 'default'),
       orientation: computed(() => props.orientation.value ?? 'horizontal'),
+      rounded: props.rounded,
       size: props.size,
       value: selectedValue,
       variant: props.variant,
@@ -359,5 +369,5 @@ define<OreTabsProps>(TABS_TAG, {
       </div>
     `;
   },
-  styles: [colorThemeMixin, styles],
+  styles: [colorThemeMixin, roundedVariantMixin, styles],
 });

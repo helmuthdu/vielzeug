@@ -1,7 +1,10 @@
 @layer refine.base {
   :host {
     --tab-item-transition: var(--transition-normal);
-    --tab-item-radius: var(--rounded-lg);
+
+    /* Host-level default so an ancestor's inherited `--_radius` cannot leak in. */
+    --_radius: var(--rounded-lg);
+    --tab-item-radius: var(--_radius);
     display: inline-flex;
     outline: none;
   }
@@ -120,7 +123,8 @@
 
   /* ─── coarse pointer: promote one size tier for proportional scaling ─── */
   @media (pointer: coarse) {
-    :host,
+    /* Bare `:host` would lose to the (0,2,0) default block above and skip promotion. */
+    :host(:not([size])),
     :host([size='md']) {
       --tab-item-font-size: var(--text-base);
       --tab-item-padding: var(--size-2) var(--size-5);
@@ -155,14 +159,21 @@
 }
 
 @layer refine.density {
+  /* Density trades vertical space only; `size` owns font-size and `rounded` owns radius. */
   :host([density='compact']) {
-    --tab-item-radius: var(--rounded-md);
-    --tab-item-font-size: var(--text-xs);
-    --tab-item-padding: var(--size-1) var(--size-2);
+    --tab-item-padding: var(--size-2) var(--size-3);
   }
 
   :host([density='compact']) button {
     gap: var(--size-1);
     min-height: var(--size-6);
+    line-height: var(--leading-none);
+  }
+
+  /* The 44px touch target is a pointer requirement, not a density preference. */
+  @media (pointer: coarse) {
+    :host([density='compact']) button {
+      min-height: var(--_touch-target);
+    }
   }
 }

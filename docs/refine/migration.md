@@ -1,6 +1,6 @@
 ---
 title: Migration
-description: Migrate toast statuses, the human-interface-guideline adoption, surface variants, DataGrid sources, and framework type declarations to Refine.
+description: Migrate toast statuses, the human-interface-guideline adoption, surface variants, tabs density, DataGrid sources, and framework type declarations to Refine.
 ---
 
 # Migration
@@ -275,6 +275,20 @@ The `glass` variant was removed because its browser-dependent SVG refraction was
 ```
 
 Remove overrides for `--glass-blur`, `--glass-saturation`, `--glass-refraction-opacity`, and `--glass-highlight`.
+
+## Tabs density and radius
+
+`density="compact"` on `ore-tabs` no longer sets a 12px font or a `md` corner radius. Compact now trades vertical space only: `size` owns the font size, and the new `rounded` attribute owns the radius.
+
+```html
+<!-- Before: compact forced 12px text and a md radius -->
+<ore-tabs density="compact">...</ore-tabs>
+
+<!-- After: pin the old look explicitly -->
+<ore-tabs density="compact" size="sm" rounded="md">...</ore-tabs>
+```
+
+Compact tabs also keep a 44px target on coarse pointers, so touch layouts grow taller than the compact desktop height. An unset `size` now promotes like `size="md"` on coarse pointers.
 
 ## Update DataGrid source state
 

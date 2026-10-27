@@ -2,7 +2,7 @@ import { bind, define, getHost, html, inject, onMounted, prop, ref, watchEffect 
 import { computed } from '@vielzeug/ripple';
 import { setAriaReflection } from '../../core';
 import { disablableBundle } from '../../shared';
-import { colorThemeMixin, forcedColorsFocusMixin, touchTargetMixin } from '../../styles';
+import { colorThemeMixin, forcedColorsFocusMixin, roundedVariantMixin, touchTargetMixin } from '../../styles';
 import {
   COMPONENT_SIZES,
   type ComponentSize,
@@ -11,7 +11,7 @@ import {
   VISUAL_VARIANTS,
   type VisualVariant,
 } from '../../types';
-import { TABS_CTX } from '../tabs/tabs';
+import { TAB_ROUNDED, TABS_CTX, type TabRounded } from '../tabs/tabs';
 import styles from './tab-item.css?inline';
 
 export type OreTabItemProps = {
@@ -23,6 +23,8 @@ export type OreTabItemProps = {
   disabled?: boolean;
   /** Spatial density (inherited from ore-tabs) */
   density?: 'compact' | 'default';
+  /** Corner radius (inherited from ore-tabs); a bare attribute means `full` */
+  rounded?: TabRounded;
   /** Size (inherited from ore-tabs) */
   size?: ComponentSize;
   /** Unique value identifier: must match a ore-tab-panel value */
@@ -40,6 +42,7 @@ export type OreTabItemProps = {
  * @attr {boolean} active - Set by the parent ore-tabs when this tab is selected
  * @attr {boolean} disabled - Prevents selection
  * @attr {string} density - Inherited spatial density: 'default' | 'compact'
+ * @attr {string} rounded - Inherited corner radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' (bare attribute is 'full')
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} variant - Inherited from ore-tabs: 'solid' | 'flat' | 'bordered' | 'ghost' | 'frost'
  * @attr {string} color - Inherited from ore-tabs: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
@@ -71,6 +74,7 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
     active: prop.bool(false),
     color: prop.oneOf(THEME_COLORS),
     density: prop.oneOf(['compact', 'default'] as const, 'default'),
+    rounded: prop.oneOf(TAB_ROUNDED),
     size: prop.oneOf(COMPONENT_SIZES),
     value: prop.string(''),
     variant: prop.oneOf(VISUAL_VARIANTS),
@@ -85,12 +89,15 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
       watch(() => {
         const color = tabsCtx.color.value;
         const density = tabsCtx.density.value;
+        const rounded = tabsCtx.rounded.value;
         const size = tabsCtx.size.value;
         const variant = tabsCtx.variant.value;
 
         if (color !== undefined) el.setAttribute('color', color);
 
         el.setAttribute('density', density);
+
+        if (rounded !== undefined) el.setAttribute('rounded', rounded);
 
         if (size !== undefined) el.setAttribute('size', size);
 
@@ -162,5 +169,5 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
       </button>
     `;
   },
-  styles: [colorThemeMixin, forcedColorsFocusMixin('button'), touchTargetMixin, styles],
+  styles: [colorThemeMixin, forcedColorsFocusMixin('button'), roundedVariantMixin, touchTargetMixin, styles],
 });

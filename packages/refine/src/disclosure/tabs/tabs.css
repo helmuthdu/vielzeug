@@ -1,7 +1,10 @@
 @layer refine.base {
   :host {
     --tabs-transition: var(--transition-normal);
-    --tabs-radius: var(--rounded-lg);
+
+    /* Host-level default so an ancestor's inherited `--_radius` cannot leak in. */
+    --_radius: var(--rounded-lg);
+    --tabs-radius: var(--_radius);
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -213,8 +216,6 @@
 
 @layer refine.density {
   :host([density='compact']) {
-    --tabs-radius: var(--rounded-md);
-
     height: auto;
   }
 

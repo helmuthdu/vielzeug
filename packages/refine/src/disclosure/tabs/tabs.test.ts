@@ -58,6 +58,33 @@ describe('ore-tabs', () => {
       ).toBe(true);
     });
 
+    it('propagates rounded to tab items', async () => {
+      fixture = await mount('ore-tabs', { attrs: { rounded: 'full', value: 'overview' }, html: htmlTabs });
+      await fixture.flush();
+
+      expect(
+        [...fixture.element.querySelectorAll('ore-tab-item')].every((tab) => tab.getAttribute('rounded') === 'full'),
+      ).toBe(true);
+    });
+
+    it('propagates a bare rounded attribute so items match the full tablist', async () => {
+      fixture = await mount('ore-tabs', { attrs: { rounded: '', value: 'overview' }, html: htmlTabs });
+      await fixture.flush();
+
+      expect(
+        [...fixture.element.querySelectorAll('ore-tab-item')].every((tab) => tab.getAttribute('rounded') === ''),
+      ).toBe(true);
+    });
+
+    it('leaves rounded unset so items keep the default radius', async () => {
+      fixture = await mount('ore-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
+      await fixture.flush();
+
+      expect([...fixture.element.querySelectorAll('ore-tab-item')].every((tab) => !tab.hasAttribute('rounded'))).toBe(
+        true,
+      );
+    });
+
     it('emits change when a different tab is clicked', async () => {
       fixture = await mount('ore-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
 

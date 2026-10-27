@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "ore-tabs: compact density keeps the size font-size and no longer changes radius; new rounded prop; unset size now promotes like md on coarse pointers",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}
