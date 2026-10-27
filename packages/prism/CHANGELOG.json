@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "add createHeatmapChart with binned/continuous ramps, legend, row summary, and keyboard cell navigation; add bar chart showValues/valueFormat end labels",
+            "commit": "55f5cc7d2acb91b844bd383d7132a3e58a50ec17"
+          }
+        ]
+      },
+      "date": "Tue, 27 Oct 2026 08:39:39 GMT",
+      "tag": "@vielzeug/prism_v26.10.21",
+      "version": "26.10.21"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

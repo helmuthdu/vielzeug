@@ -5,6 +5,27 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "ore-tabs: compact density keeps the size font-size and no longer changes radius; new rounded prop; unset size now promotes like md on coarse pointers",
+            "commit": "55f5cc7d2acb91b844bd383d7132a3e58a50ec17"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Fix tour popover anchoring when the step target changes",
+            "commit": "55f5cc7d2acb91b844bd383d7132a3e58a50ec17"
+          }
+        ]
+      },
+      "date": "Tue, 27 Oct 2026 08:39:39 GMT",
+      "tag": "@vielzeug/refine_v26.10.21",
+      "version": "26.10.21"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "ore-button: add opt-in resting elevation; fix keyboard focus ring never painting and being erased while pressed; fix dark-mode neutral halo painting a dark seam on the top edge",
             "commit": "41ac9f4325716aea2e1c8c132f7018f2fe6d61e6"
           },

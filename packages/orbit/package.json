@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/orbit",
-  "version": "26.10.20",
+  "version": "26.10.21",
   "description": "Floating UI positioning with lifecycle-owned geometry and middleware",
   "repository": {
     "type": "git",

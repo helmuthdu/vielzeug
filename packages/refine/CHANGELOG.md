@@ -1,7 +1,17 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Sun, 25 Oct 2026 05:13:02 GMT and should not be manually modified.
+This log was last generated on Tue, 27 Oct 2026 08:39:39 GMT and should not be manually modified.
 
+## 26.10.21
+Tue, 27 Oct 2026 08:39:39 GMT
+
+### Minor changes
+
+- ore-tabs: compact density keeps the size font-size and no longer changes radius; new rounded prop; unset size now promotes like md on coarse pointers
+
+### Patches
+
+- Fix tour popover anchoring when the step target changes
 ## 26.10.20
 Sun, 25 Oct 2026 05:13:02 GMT
 

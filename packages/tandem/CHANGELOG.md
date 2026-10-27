@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/tandem
 
-This log was last generated on Sun, 25 Oct 2026 05:13:02 GMT and should not be manually modified.
+This log was last generated on Tue, 27 Oct 2026 08:39:39 GMT and should not be manually modified.
 
+## 26.10.21
+Tue, 27 Oct 2026 08:39:39 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.20
 Sun, 25 Oct 2026 05:13:02 GMT
 
