@@ -366,11 +366,13 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
   shadow: { delegatesFocus: true },
   styles: [
     colorThemeMixin,
-    touchTargetMixin,
     disabledLoadingMixin,
     forcedColorsMixin,
     forcedColorsFocusMixin('.field'),
     sizeVariantMixin(MESSAGE_COMPOSER_SIZE_PRESET),
+    // Must come after `sizeVariantMixin`: see `ore-input`'s identical ordering note for why the
+    // coarse-pointer promotion is otherwise overridden by the size preset's own declarations.
+    touchTargetMixin,
     componentStyles,
     // Must come after `componentStyles`: see `ore-input`'s identical ordering note for why
     // (`@layer` precedence is fixed by which layer name is *first* referenced across this whole

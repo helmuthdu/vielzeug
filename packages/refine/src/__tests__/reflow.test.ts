@@ -8,7 +8,7 @@
 import { installFakeAnimations } from '@vielzeug/necromancer/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createLayoutMotion } from '../layout-motion';
+import { animateReflow } from '../reflow';
 
 type Moveable = HTMLElement & { y: number };
 
@@ -69,7 +69,7 @@ function mockRects(): void {
 const firstTranslate = (call: { keyframes: Keyframe[] | PropertyIndexedKeyframes }): string =>
   ((call.keyframes as Keyframe[])[0]?.translate as string) ?? '';
 
-describe('createLayoutMotion', () => {
+describe('animateReflow', () => {
   let controller: AbortController;
 
   beforeEach(() => {
@@ -90,7 +90,7 @@ describe('createLayoutMotion', () => {
     const host = hostWithItems(0, true);
     const mutate = vi.fn();
 
-    createLayoutMotion(host, controller.signal, options(host)).run(mutate);
+    animateReflow(host, controller.signal, options(host)).run(mutate);
     expect(mutate).toHaveBeenCalledTimes(1);
   });
 
@@ -98,7 +98,7 @@ describe('createLayoutMotion', () => {
     const host = hostWithItems(3, false);
     const mutate = vi.fn();
 
-    createLayoutMotion(host, controller.signal, options(host)).run(mutate);
+    animateReflow(host, controller.signal, options(host)).run(mutate);
     expect(mutate).toHaveBeenCalledTimes(1);
   });
 
@@ -108,7 +108,7 @@ describe('createLayoutMotion', () => {
     vi.spyOn(window, 'getComputedStyle').mockReturnValue(computedReturning({ '--duration-200': '0ms' }));
     const mutate = vi.fn();
 
-    createLayoutMotion(host, controller.signal, options(host)).run(mutate);
+    animateReflow(host, controller.signal, options(host)).run(mutate);
     expect(mutate).toHaveBeenCalledTimes(1);
   });
 
@@ -119,7 +119,7 @@ describe('createLayoutMotion', () => {
     vi.spyOn(window, 'getComputedStyle').mockImplementation(getComputedStyle);
     const mutate = vi.fn();
 
-    createLayoutMotion(host, controller.signal, {
+    animateReflow(host, controller.signal, {
       ...options(host),
       durationToken: '--duration-500',
     }).run(mutate);
@@ -142,7 +142,7 @@ describe('createLayoutMotion', () => {
 
     // No Element.prototype.animate in jsdom: captureLayout's animate() throws
     // NecromancerUnsupportedError inside the frame, and the helper must swallow it.
-    expect(() => createLayoutMotion(host, controller.signal, options(host)).run(mutate)).not.toThrow();
+    expect(() => animateReflow(host, controller.signal, options(host)).run(mutate)).not.toThrow();
     expect(mutate).toHaveBeenCalledTimes(1);
   });
 
@@ -153,7 +153,7 @@ describe('createLayoutMotion', () => {
     vi.spyOn(window, 'getComputedStyle').mockReturnValue(computedReturning({ '--duration-200': '200ms' }));
     mockRects();
     const mutate = vi.fn();
-    const motion = createLayoutMotion(host, controller.signal, options(host));
+    const motion = animateReflow(host, controller.signal, options(host));
 
     controller.abort();
     motion.run(mutate);
@@ -183,7 +183,7 @@ describe('createLayoutMotion', () => {
 
     it('animates moved elements from their old positions', () => {
       const host = hostWithItems(3, true);
-      const motion = createLayoutMotion(host, controller.signal, options(host));
+      const motion = animateReflow(host, controller.signal, options(host));
 
       motion.run(shiftAll(host, 40));
       expect(animations.calls).toHaveLength(3);
@@ -199,7 +199,7 @@ describe('createLayoutMotion', () => {
 
     it('leaves unmoved elements alone', () => {
       const host = hostWithItems(3, true);
-      const motion = createLayoutMotion(host, controller.signal, options(host));
+      const motion = animateReflow(host, controller.signal, options(host));
 
       motion.run(() => {});
       expect(animations.calls).toHaveLength(0);
@@ -207,7 +207,7 @@ describe('createLayoutMotion', () => {
 
     it('supersedes an in-flight reflow instead of stacking it', () => {
       const host = hostWithItems(2, true);
-      const motion = createLayoutMotion(host, controller.signal, options(host));
+      const motion = animateReflow(host, controller.signal, options(host));
 
       motion.run(shiftAll(host, 40));
       expect(animations.calls).toHaveLength(2);
@@ -225,7 +225,7 @@ describe('createLayoutMotion', () => {
     it('runs the mutation exactly once across repeated runs', () => {
       const host = hostWithItems(3, true);
       const mutate = vi.fn();
-      const motion = createLayoutMotion(host, controller.signal, options(host));
+      const motion = animateReflow(host, controller.signal, options(host));
 
       motion.run(mutate);
       motion.run(mutate);

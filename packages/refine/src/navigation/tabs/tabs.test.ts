@@ -22,6 +22,22 @@ describe('ore-tabs', () => {
   `;
 
   describe('Core Functionality', () => {
+    it('reflects the fullwidth property and supports toggling it', async () => {
+      fixture = await mount('ore-tabs', { html: htmlTabs });
+
+      expect(fixture.element.hasAttribute('fullwidth')).toBe(false);
+
+      const tabs = fixture.element as HTMLElementTagNameMap['ore-tabs'];
+
+      tabs.fullwidth = true;
+      await fixture.flush();
+      expect(tabs.hasAttribute('fullwidth')).toBe(true);
+
+      tabs.fullwidth = false;
+      await fixture.flush();
+      expect(tabs.hasAttribute('fullwidth')).toBe(false);
+    });
+
     it('renders tablist and panel container', async () => {
       fixture = await mount('ore-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
 

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "command-palette: group names are searchable, groups render as ARIA role=group clusters labelled by their heading, and headings stick while their group scrolls",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -316,7 +316,6 @@ define<OreButtonProps>(BUTTON_TAG, {
   shadow: { delegatesFocus: false },
   styles: [
     colorThemeMixin,
-    touchTargetMixin,
     roundedVariantMixin,
     elevationMixin,
     forcedColorsMixin,
@@ -343,6 +342,9 @@ define<OreButtonProps>(BUTTON_TAG, {
         padding: 'var(--size-1-5) var(--size-3)',
       },
     }),
+    // Must come after `sizeVariantMixin`: see `ore-input`'s identical ordering note for why the
+    // coarse-pointer promotion is otherwise overridden by the size preset's own declarations.
+    touchTargetMixin,
     frostVariantMixin('[part="button"]'),
     rainbowEffectMixin('[part="button"]'),
     shineEffectMixin('[part="button"]'),

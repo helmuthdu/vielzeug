@@ -1,4 +1,5 @@
 import { captureFocus, type FocusRestorer } from '@vielzeug/focus';
+import { createPanGesture, type PanGesture } from '@vielzeug/gesture';
 import {
   bind,
   createContext,
@@ -30,6 +31,8 @@ export { ICON_TAG } from '../../content/icon/icon';
 
 const SIDEBAR_VARIANTS = ['floating', 'inset'] as const;
 type SidebarVariant = (typeof SIDEBAR_VARIANTS)[number];
+const SIDEBAR_BACKDROPS = ['opaque', 'blur', 'transparent'] as const;
+type SidebarBackdrop = (typeof SIDEBAR_BACKDROPS)[number];
 type SidebarCollapseSource = 'api' | 'responsive' | 'toggle';
 type DrawerSource = 'api' | 'responsive' | 'toggle';
 type SidebarMode = 'bottom-nav' | 'collapsed' | 'default';
@@ -85,8 +88,11 @@ export type OreSidebarGroupEvents = {
 };
 
 export type OreSidebarProps = {
+  /** Backdrop style behind the open drawer: 'opaque' (default) | 'blur' | 'transparent' */
+  backdrop?: SidebarBackdrop;
   /** CSS media query that switches the sidebar to bottom navigation + drawer mode */
   'bottom-nav-at'?: string;
+  /** Close the drawer after a navigation item is activated (default: true) */
   'close-on-select'?: boolean;
   /** Controlled collapsed state */
   collapsed?: boolean;
@@ -97,9 +103,9 @@ export type OreSidebarProps = {
   'container-breakpoints'?: boolean;
   /** Initial collapsed state in uncontrolled mode */
   'default-collapsed'?: boolean;
-  /** Drawer-only mode: no inline panel and no bottom bar, just the navbar/API-driven drawer. */
+  /** Drawer-only mode: the sidebar exists solely as the overlay drawer (no inline panel, no bottom bar). */
   drawer?: boolean;
-  /** Accessible label for the backdrop close control. */
+  /** Accessible label for the drawer close button. */
   'drawer-close-label'?: string;
   'expand-label'?: string;
   /**
@@ -128,7 +134,9 @@ export type OreSidebarProps = {
  * @attr {boolean} collapsed - Controlled collapsed state
  * @attr {boolean} default-collapsed - Initial collapsed state for uncontrolled sidebars
  * @attr {boolean} collapsible - Show the collapse toggle button
- * @attr {boolean} drawer - Drawer-only mode: no inline panel and no bottom bar, just the navbar/API-driven drawer
+ * @attr {boolean} drawer - Drawer-only mode: the sidebar exists solely as the overlay drawer
+ * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
+ * @attr {boolean} close-on-select - Close the drawer after item activation (default: true)
  * @attr {string} variant - Visual variant: 'floating' | 'inset'
  * @attr {string} label - Accessible aria-label for the nav landmark
  *
@@ -142,10 +150,14 @@ export type OreSidebarProps = {
  * @cssprop --sidebar-width - Expanded sidebar width (default: 16rem)
  * @cssprop --sidebar-collapsed-width - Collapsed sidebar width (default: 3.5rem)
  * @cssprop --sidebar-drawer-width - Drawer panel width (default: min(--sidebar-width, 85vw))
+ * @cssprop --sidebar-drawer-backdrop-bg - Backdrop color behind the open drawer (default: var(--overlay-veil))
+ * @cssprop --sidebar-drawer-shadow - Shadow on the open drawer panel (default: shadow-xl)
  * @cssprop --sidebar-bg - Sidebar background color
  * @cssprop --sidebar-border-color - Border color
  *
- * @part drawer-backdrop - Backdrop shown behind the open drawer.
+ * @part drawer-backdrop - Backdrop veil behind the open drawer (click closes it).
+ * @part drawer-close-btn - Close button shown in the header while the drawer is open.
+ * @part swipe-handle - Grabber nub on the drawer edge that drag-closes it (touch/mouse pan).
  * @part nav - Navigation container.
  * @part header - Header container.
  * @part toggle-btn - Shadow part for the `toggle-btn` element.
@@ -178,8 +190,9 @@ export type OreSidebarProps = {
 export const SIDEBAR_TAG = 'ore-sidebar' as const;
 define<OreSidebarProps>(SIDEBAR_TAG, {
   props: {
+    backdrop: prop.oneOf(SIDEBAR_BACKDROPS),
     'bottom-nav-at': prop.string(),
-    'close-on-select': prop.bool(false),
+    'close-on-select': prop.bool(true),
     'collapse-label': prop.string('Collapse sidebar'),
     collapsed: prop.bool(false),
     collapsible: prop.bool(false),
@@ -236,11 +249,13 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       // If the drawer is currently open, stay in bottom-nav mode
       // regardless of the responsive match. This prevents the drawer from
       // disappearing mid-animation or if forced open via the API on desktop.
+      // Drawer-only mode keeps the overlay presentation permanently: the panel
+      // rests off-screen instead of falling back to a visible inline block.
       if (!isDrawerOpen.value) {
-        isBottomNav.value = bottomMatched;
+        isBottomNav.value = bottomMatched || Boolean(props.drawer.value);
       }
 
-      if (!bottomMatched && !isDrawerOpen.value) {
+      if (!bottomMatched && !isDrawerOpen.value && !props.drawer.value) {
         setDrawerOpen(false, 'responsive');
       }
 
@@ -309,9 +324,9 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     const setDrawerOpen = (next: boolean, source: DrawerSource) => {
       const open = Boolean(next);
 
-      // Outside drawer-only mode, opening the drawer forces the sidebar out of its inline
-      // panel into the overlay presentation until the drawer closes again.
-      if (open && !isBottomNav.value && !props.drawer.value) {
+      // Opening the drawer forces the sidebar out of its inline panel into the
+      // overlay presentation until the drawer closes again.
+      if (open && !isBottomNav.value) {
         isBottomNav.value = true;
       }
 
@@ -402,6 +417,67 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         setDrawerOpen(false, 'toggle');
       };
       el.addEventListener('keydown', closeOnEscape);
+
+      // Swipe-to-dismiss: the grabber nub on the drawer's trailing edge pans the
+      // panel toward its off-screen rest position; releasing past the threshold
+      // closes it. Clearing the inline styles lets the CSS transition animate the
+      // commit (or the snap-back) from the dragged position without a jump.
+      const swipeHandle = el.shadowRoot?.querySelector<HTMLElement>('.swipe-handle');
+      let swipe: PanGesture | undefined;
+
+      if (swipeHandle) {
+        const isRtl = () => getComputedStyle(el).direction === 'rtl';
+        const closingDistance = (distance: number) => (isRtl() ? Math.max(0, distance) : Math.max(0, -distance));
+        const snapThreshold = (panel: HTMLElement) => Math.min(96, Math.max(36, panel.offsetWidth * 0.18));
+        const dragTranslate = (distance: number) =>
+          `translateX(${isRtl() ? Math.max(0, distance) : Math.min(0, distance)}px)`;
+
+        swipe = createPanGesture(swipeHandle, {
+          axis: 'x',
+          disabled: () => !isDrawerOpen.value,
+          onEnd: ({ distance, reason }) => {
+            const panel = el.shadowRoot?.querySelector<HTMLElement>('nav');
+
+            if (!panel) return;
+
+            if (reason === 'release' && closingDistance(distance) >= snapThreshold(panel)) {
+              // Continue from the dragged position instead of snapping back to
+              // rest: park the panel at its off-screen position (no transition),
+              // close, then hand back to CSS once the closed attribute has
+              // flushed — its closed transform matches, so the handover is invisible.
+              const panelSize = panel.offsetWidth;
+
+              panel.style.transition = 'none';
+              panel.style.transform = dragTranslate(isRtl() ? panelSize : -panelSize);
+              panel.style.opacity = '0';
+              void panel.offsetWidth;
+              setDrawerOpen(false, 'toggle');
+              queueMicrotask(() => {
+                panel.style.transition = '';
+                panel.style.transform = '';
+                panel.style.opacity = '';
+              });
+
+              return;
+            }
+
+            panel.style.transition = '';
+            panel.style.transform = '';
+            panel.style.opacity = '';
+          },
+          onMove: ({ distance }) => {
+            const panel = el.shadowRoot?.querySelector<HTMLElement>('nav');
+
+            if (!panel) return;
+
+            const progress = Math.min(closingDistance(distance) / snapThreshold(panel), 1);
+
+            panel.style.transition = 'none';
+            panel.style.transform = dragTranslate(distance);
+            panel.style.opacity = String(1 - progress * 0.4);
+          },
+        });
+      }
 
       // Focus containment: createBackgroundLock inertes background siblings, but apps that wrap
       // the whole page in one root element (so nothing can be inerted) still let Tab walk out of
@@ -642,6 +718,8 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       nestedItemsObserver.observe(el, { childList: true, subtree: true });
 
       return () => {
+        swipe?.dispose();
+        swipe = undefined;
         observer.disconnect();
         nestedItemsObserver.disconnect();
         el.removeEventListener('keydown', closeOnEscape);
@@ -660,26 +738,37 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     });
 
     return html`
-      <button
+      <div
         class="drawer-backdrop"
         part="drawer-backdrop"
-        type="button"
-        aria-label="${props['drawer-close-label']}"
-        ?hidden=${() => !isDrawerOpen.value}
-        @click=${() => setDrawerOpen(false, 'toggle')}></button>
+        aria-hidden="true"
+        @click=${() => setDrawerOpen(false, 'toggle')}></div>
       <nav
         aria-label="${props.label}"
         aria-hidden=${() => ((isBottomNav.value || props.drawer.value) && !isDrawerOpen.value ? 'true' : null)}
         part="nav"
         tabindex="-1"
         ?inert=${() => (isBottomNav.value || props.drawer.value) && !isDrawerOpen.value}>
-        <div class="sidebar-header" part="header" ?hidden=${() => !hasHeader() && !props.collapsible.value}>
+        <div class="swipe-handle" part="swipe-handle" aria-hidden="true"></div>
+        <div
+          class="sidebar-header"
+          part="header"
+          ?hidden=${() => !hasHeader() && !props.collapsible.value && !isDrawerOpen.value}>
           <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
             <slot name="logo"></slot>
           </span>
           <span class="sidebar-header-content">
             <slot name="header"></slot>
           </span>
+          <button
+            class="drawer-close-btn"
+            part="drawer-close-btn"
+            type="button"
+            aria-label="${props['drawer-close-label']}"
+            ?hidden=${() => !isDrawerOpen.value}
+            @click=${() => setDrawerOpen(false, 'toggle')}>
+            <ore-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></ore-icon>
+          </button>
           <button
             class="toggle-btn"
             part="toggle-btn"
@@ -704,7 +793,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         </div>
       </nav>
 
-      <div class="bottom-bar" part="bottom-bar" ?hidden=${() => !isBottomNav.value}>
+      <div class="bottom-bar" part="bottom-bar" ?hidden=${() => !isBottomNav.value || props.drawer.value}>
         ${() =>
           bottomNavItems.value.map((item) => {
             const className = `bottom-tab${item.active ? ' bottom-tab-active' : ''}`;
@@ -795,6 +884,7 @@ define<OreSidebarGroupProps>(SIDEBAR_GROUP_TAG, {
   },
   setup(props) {
     const slots = useSlots();
+    const emit = useEmit<OreSidebarGroupEvents>();
 
     const hasIcon = () => slots.has('icon').value;
     const sidebarCtx = inject(SIDEBAR_CTX);
@@ -823,20 +913,39 @@ define<OreSidebarGroupProps>(SIDEBAR_GROUP_TAG, {
       openState.value = value;
     });
 
+    // Reflect to data-open, never the open attribute: the open attribute is the
+    // controlled prop's source, so writing it back would make every uncontrolled
+    // open group read itself as controlled and reject its own toggles.
     bind({
       attr: {
-        open: () => (isOpen.value ? true : undefined),
+        'data-open': () => (isOpen.value ? true : undefined),
       },
     });
 
+    // Native <details> toggling must flow through the component state: the
+    // toggle handler syncs the signal (so the host [open] attribute, the
+    // chevron, and aria-expanded stay in step with the panel) and emits the
+    // documented open-change event. Controlled groups veto native toggling so
+    // the open prop stays the single source of truth.
+    const handleToggle = (event: Event) => {
+      if (!props.collapsible.value || isControlled()) return;
+
+      const next = (event.currentTarget as HTMLDetailsElement).open;
+
+      if (openState.value === next) return;
+
+      openState.value = next;
+      emit('open-change', { open: next });
+    };
+
     return html`
-      <details class="group" part="group" ?open=${isOpen}>
+      <details class="group" part="group" ?open=${isOpen} @toggle=${handleToggle}>
         <summary
           class="group-header"
           part="group-header"
-          aria-expanded="${() => (props.collapsible.value ? String(props.open.value) : null)}"
+          aria-expanded="${() => (props.collapsible.value ? String(isOpen.value) : null)}"
           @click=${(e: MouseEvent) => {
-            if (!props.collapsible.value) {
+            if (!props.collapsible.value || isControlled()) {
               e.preventDefault();
             }
           }}>
@@ -905,7 +1014,6 @@ export type OreSidebarItemProps = {
  * @cssprop --sidebar-item-hover-color - Hover text color
  * @cssprop --sidebar-item-active-bg - Active background
  * @cssprop --sidebar-item-active-color - Active text color
- * @cssprop --sidebar-item-indicator - Active indicator bar color
  *
  * @part item - The inner anchor or button element
  * @part item-icon - The icon wrapper

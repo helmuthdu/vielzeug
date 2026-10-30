@@ -4,7 +4,7 @@ import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 import type { OreAvatarProps } from '../../content/avatar/avatar';
 import { lifecycleSignal } from '../../core';
 import type { ButtonEmphasis, ButtonVariant } from '../../inputs/button/button';
-import { createLayoutMotion } from '../../shared/layout-motion';
+import { animateReflow } from '../../reflow';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './toast.css?inline';
 
@@ -521,7 +521,7 @@ define<OreToastProps>(TOAST_TAG, {
     // skipped by the key match (it has no captured slot) and keeps its own CSS
     // enter transition; a dismissed toast holds its slot until finalized, so the
     // stack moves once, when it actually leaves.
-    const stackMotion = createLayoutMotion(el, lifecycleSignal(onCleanup), {
+    const stackMotion = animateReflow(el, lifecycleSignal(onCleanup), {
       elements: () => [...(el.shadowRoot?.querySelectorAll<HTMLElement>('.toast-wrapper[data-toast-id]') ?? [])],
       getKey: (wrapper) => wrapper.dataset.toastId || undefined,
     });
@@ -547,7 +547,7 @@ define<OreToastProps>(TOAST_TAG, {
      * fade is instant and the duration is 0; otherwise it is the themed
      * `--toast-exit-duration`. The token is authored in milliseconds
      * (`--duration-200: 200ms`), so parseFloat of the computed value is already
-     * ms - the same convention `createLayoutMotion` reads. An unparseable value
+     * ms - the same convention `animateReflow` reads. An unparseable value
      * (jsdom resolves no custom properties) falls back to the store's default.
      */
     const readExitDuration = (inner: HTMLElement): number => {

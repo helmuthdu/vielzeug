@@ -134,7 +134,7 @@
   }
 
   /* Collapsible group closed: hide items */
-  :host([collapsible]:not([open])) .group-items {
+  :host([collapsible]:not([data-open])) .group-items {
     display: none;
   }
 }

@@ -2,13 +2,13 @@
 
 A fixed consent banner for cookie and tracker opt-in: a short policy text (default slot, links included), optional per-category opt-in checkboxes, and **Accept all** / **Reject non-essential** / **Save choices** actions.
 
-The banner owns presentation only. **It never stores anything**: listen for `decide`, persist the emitted consent record yourself (`localStorage`, a CMP, your backend), and gate third-party embeds: analytics, video, music: on the stored choice. Call `show()` again to let the user revise their decision from a "Cookie settings" link.
+The banner owns presentation only. **It never stores anything**: listen for `decide`, persist the emitted consent record yourself (`localStorage`, a CMP, your backend), and gate third-party embeds: analytics, video, music: on the stored choice. The banner hides itself once a decision is made; set `hide-on-decide="false"` to keep it open. Call `show()` again to let the user revise their decision from a "Cookie settings" link.
 
 ## Basic Usage
 
 Place the banner in the document with your policy text as content. Without `categories` it renders the text and the two unconditional decisions.
 
-<ComponentPreview vertical>
+<ComponentPreview vertical height="360px">
 
 ```html
 <ore-cookie-banner>
@@ -22,8 +22,8 @@ Place the banner in the document with your policy text as content. Without `cate
   const banner = document.querySelector('ore-cookie-banner');
 
   banner.addEventListener('decide', (event) => {
+    // The banner hides itself after `decide`; persist the record yourself.
     console.log('consent:', event.detail.consent);
-    banner.hide();
   });
 </script>
 ```
@@ -32,9 +32,9 @@ Place the banner in the document with your policy text as content. Without `cate
 
 ## Consent Categories
 
-Pass `categories` to offer granular opt-in. Each category renders as a checkbox; an **Essential** row is always shown, checked and disabled, because essential storage is not a choice. `decide` always emits every category id plus `essential: true`, so the stored record has one uniform shape.
+Pass `categories` to offer granular opt-in. Each category renders as a checkbox; an **Essential** row is always shown, checked and disabled, because essential storage is not a choice. Give a category a `description` to render helper text below its label (also linked to the control via `aria-describedby`). `decide` always emits every category id plus `essential: true`, so the stored record has one uniform shape.
 
-<ComponentPreview vertical>
+<ComponentPreview vertical height="480px">
 
 ```html
 <ore-cookie-banner id="granular">
@@ -48,8 +48,8 @@ Pass `categories` to offer granular opt-in. Each category renders as a checkbox;
   const banner = document.getElementById('granular');
 
   banner.categories = [
-    { id: 'music', label: 'Music embeds (YouTube)' },
-    { id: 'stats', label: 'Anonymous statistics' },
+    { id: 'music', label: 'Music embeds', description: 'Embed music from YouTube' },
+    { id: 'stats', label: 'Statistics', description: 'Anonymous usage analytics' },
   ];
 
   banner.addEventListener('decide', (event) => {
@@ -63,17 +63,18 @@ Pass `categories` to offer granular opt-in. Each category renders as a checkbox;
 
 ## Revisiting the Decision
 
-Seed `consent` with the stored record and call `show()`: the checkboxes start from the saved state. `decide` never hides the banner itself, so your code decides when it has been persisted.
+Seed `consent` with the stored record and call `show()`: the checkboxes start from the saved state. The banner hides itself after `decide`; pass `hide-on-decide="false"` to keep it open (to show a confirmation, for example) and call `hide()` yourself.
 
 ```js
 banner.consent = JSON.parse(localStorage.getItem('consent') ?? '{}');
-banner.categories = [{ id: 'music', label: 'Music embeds (YouTube)' }];
+banner.categories = [{ id: 'music', label: 'Music embeds', description: 'Embed music from YouTube' }];
 
+// Re-open the saved choices from a "Cookie settings" link.
 document.getElementById('cookie-settings').addEventListener('click', () => banner.show());
 
 banner.addEventListener('decide', (event) => {
+  // Replace (do not merge) the stored record so removed categories drop stale keys.
   localStorage.setItem('consent', JSON.stringify(event.detail.consent));
-  banner.hide();
 });
 ```
 
@@ -107,19 +108,21 @@ banner.labels = {
 
 ### Attributes
 
-| Attribute  | Type                  | Default    | Description                        |
-| ---------- | --------------------- | ---------- | ---------------------------------- |
-| `position` | `'bottom' \| 'top'` | `'bottom'` | Viewport edge the banner docks to. |
+| Attribute        | Type                  | Default    | Description                                   |
+| ---------------- | --------------------- | ---------- | --------------------------------------------- |
+| `position`       | `'bottom' \| 'top'` | `'bottom'` | Viewport edge the banner docks to.            |
+| `hide-on-decide` | `boolean`             | `true`     | Hide the banner automatically after `decide`. |
 
 `categories` and `labels` are JavaScript properties (not attributes): assign arrays/objects directly.
 
 ### Properties
 
-| Property     | Type                            | Default | Description                                                              |
-| ------------ | ------------------------------- | ------- | ------------------------------------------------------------------------ |
-| `categories` | `OreCookieBannerCategory[]`     | `[]`    | Opt-in categories rendered as checkboxes.                                |
-| `consent`    | `Record<string, boolean>`       | `{}`    | Stored consent record used to seed the checkboxes.                       |
-| `labels`     | `Partial<OreCookieBannerLabels>` | `{}`    | Overrides for the rendered labels.                                       |
+| Property       | Type                             | Default | Description                                                |
+| -------------- | -------------------------------- | ------- | ---------------------------------------------------------- |
+| `categories`   | `OreCookieBannerCategory[]`      | `[]`    | Opt-in categories rendered as checkboxes.                  |
+| `consent`      | `Record<string, boolean>`        | `{}`    | Stored consent record used to seed the checkboxes.         |
+| `hideOnDecide` | `boolean`                        | `true`  | Hides the banner automatically after `decide`.             |
+| `labels`       | `Partial<OreCookieBannerLabels>` | `{}`    | Overrides for the rendered labels.                         |
 
 A category is `{ id: string; label: string; description?: string }`.
 
@@ -134,7 +137,7 @@ A category is `{ id: string; label: string; description?: string }`.
 
 | Event     | Detail                             | Description                                                                     |
 | --------- | ---------------------------------- | ------------------------------------------------------------------------------- |
-| `decide`  | `{ consent: Record<string, boolean> }` | A decision was made. Every category id plus `essential: true`. Persist and `hide()`. |
+| `decide`  | `{ consent: Record<string, boolean> }` | A decision was made. Every category id plus `essential: true`. Persist it; the banner hides itself unless `hide-on-decide` is false. |
 
 ### Slots
 
@@ -146,9 +149,10 @@ A category is `{ id: string; label: string; description?: string }`.
 
 | Property                   | Description                        | Default                              |
 | -------------------------- | ---------------------------------- | ------------------------------------ |
-| `--cookie-banner-width`    | Maximum width of the banner card   | `min(960px, calc(100vw - var(--size-8)))` |
+| `--cookie-banner-width`    | Maximum width of the banner card   | `min(560px, calc(100vw - var(--size-8)))` |
 | `--cookie-banner-inset`    | Distance from the viewport edges   | `var(--size-4)`                      |
-| `--cookie-banner-z-index`  | Stacking order                     | `var(--z-modal)`                     |
+| `--cookie-banner-z-index`  | Stacking order                     | `var(--z-modal)`                      |
+| `--cookie-banner-categories-max-height` | Scroll threshold for the category panel | `16rem` |
 
 ### Parts
 
@@ -156,7 +160,7 @@ A category is `{ id: string; label: string; description?: string }`.
 
 ## Accessibility
 
-The banner is a labelled `role="region"` (named by the heading label), not a modal dialog: it never traps focus, so keyboard users reach the checkboxes and actions in normal tab order. The Essential checkbox is `disabled` and checked, communicating that it is not a choice. The entrance animation is suppressed under `prefers-reduced-motion`.
+The banner is a non-modal `role="dialog"` (`aria-modal="false"`) named by the heading label: it announces itself when shown but never traps focus, so keyboard users reach the checkboxes and actions in normal tab order. On `show()` focus moves to the banner card itself: a neutral target that preselects no action: and `hide()` returns it to the previously focused element. A banner present at page load (never opened via `show()`) does not steal focus. The Essential checkbox is `disabled` and checked, communicating that it is not a choice, and its note is linked via `aria-describedby`. The entrance animation is suppressed under `prefers-reduced-motion`.
 
 ::: tip Consent before loading
 Under the EU ePrivacy rules (and Germany's TTDSG §25 in particular), third-party scripts that set non-essential cookies must not load **before** the user opts in. Gate the embed's script injection on the stored record: render the banner first, load the tracker only on `decide` with that category true. "Reject" must be a same-rank, one-click option, which the default action row provides.

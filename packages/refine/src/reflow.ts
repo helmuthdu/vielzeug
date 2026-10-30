@@ -3,7 +3,8 @@ import { captureLayout, type LayoutTransition } from '@vielzeug/necromancer';
 
 /**
  * FLIP reflow motion shared by the components whose lists move: the datagrid's
- * sorted rows, the command palette's filtered results, the toast stack.
+ * sorted rows, the command palette's filtered results, the toast stack. It is
+ * also the public entry for an app's own keyed lists.
  *
  * The FLIP recipe (capture, mutate, animate the delta) is necromancer's
  * `captureLayout`; this module owns only the house rules around it:
@@ -17,12 +18,25 @@ import { captureLayout, type LayoutTransition } from '@vielzeug/necromancer';
  * - Motion is an enhancement: every path that cannot animate (no elements, no
  *   stable keys, zeroed tokens, a disposed lifecycle, a browser without the
  *   Web Animations API) still runs the mutation exactly once and never throws.
+ *
+ * @example
+ * ```ts
+ * import { animateReflow } from '@vielzeug/refine';
+ *
+ * const reflow = animateReflow(list, signal, {
+ *   elements: () => [...list.querySelectorAll('li')],
+ *   getKey: (item) => item.dataset.id,
+ * });
+ *
+ * // Capture, mutate, animate the delta in one call.
+ * reflow.run(() => renderItems(nextItems));
+ * ```
  */
 
 /** Elements move, they do not scale: a subtle overshoot reads as a slip. */
 const DEFAULT_MOVE_EASING = 'cubic-bezier(0.25, 1, 0.5, 1)';
 
-export interface LayoutMotionOptions {
+export interface ReflowOptions {
   /** Duration token to honor; defaults to `--duration-200`. */
   durationToken?: string;
   /** Easing token to honor; defaults to `--ease-move`. */
@@ -38,7 +52,7 @@ export interface LayoutMotionOptions {
   stagger?: number;
 }
 
-export interface LayoutMotion {
+export interface Reflow {
   /**
    * Captures the current layout, runs `mutate`, then animates the tracked
    * elements into their new positions. Returns nothing: the animation is
@@ -75,7 +89,7 @@ function readEasing(host: Element, token: string): string {
  *   (usually the component host; its shadow root holds the tracked elements).
  * @param signal - Lifecycle signal: disposing it cancels in-flight animations.
  */
-export function createLayoutMotion(host: HTMLElement, signal: AbortSignal, options: LayoutMotionOptions): LayoutMotion {
+export function animateReflow(host: HTMLElement, signal: AbortSignal, options: ReflowOptions): Reflow {
   const { elements, getKey, durationToken = '--duration-200', easingToken = '--ease-move', stagger = 0 } = options;
 
   // The in-flight reflow, if any. Rapid mutations (typing into a filter, a

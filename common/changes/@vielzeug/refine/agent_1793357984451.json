@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "command-palette: drill-down categories (nested items open on ArrowRight/Enter with global search still flattening leaves), category-open event, back row, and an optional onEscape hook in useDialogControl",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -1,6 +1,6 @@
 ---
 title: 'Refine: Theming & Customization'
-description: Design tokens, dark mode, CSS custom properties, and theme variants for Refine.
+description: Design tokens, dark mode, CSS custom properties, and theme variants for Refine. Animation and motion tokens are covered on the Animation & Motion page.
 ---
 
 # Theming & Customization
@@ -302,6 +302,7 @@ Refine uses an 11-step contrast scale driven by `light-dark()`. Values flip auto
 | `--color-divider`  | `color-mix(in oklch, var(--color-contrast-300) 85%, transparent)`  | Separator lines and borders       |
 | `--color-contrast` | `color-mix(in oklch, var(--color-contrast-900) 85%, transparent)`  | Maximum-contrast text/icon color  |
 | `--color-scrim`    | `light-dark(rgb(0 0 0 / 55%), rgb(0 0 0 / 72%))`                      | Overlay dim veil (never inverts)  |
+| `--overlay-veil`   | `color-mix(in oklch, var(--color-scrim) 70%, transparent)`             | The dimming backdrop behind every overlay (dialog, drawer, command palette, tour, sidebar drawer) |
 
 ### Semantic Text Colors
 
@@ -421,113 +422,7 @@ One shared, monotonic stacking scale for an entire page: sticky headers, dropdow
 
 ### Transitions & Animation
 
-**Duration scale:**
-
-| Token             | Value  | Zeroed under reduced-motion |
-| ----------------- | ------ | --------------------------- |
-| `--duration-75`   | 75ms   | Yes                         |
-| `--duration-100`  | 100ms  | Yes                         |
-| `--duration-150`  | 150ms  | Yes                         |
-| `--duration-200`  | 200ms  | Yes                         |
-| `--duration-250`  | 250ms  | Yes                         |
-| `--duration-300`  | 300ms  | Yes                         |
-| `--duration-350`  | 350ms  | Yes                         |
-| `--duration-500`  | 500ms  | Yes                         |
-| `--duration-600`  | 600ms  | Yes (spinner also stops via the `--_motion-animation` hatch) |
-| `--duration-700`  | 700ms  | Yes                         |
-| `--duration-1000` | 1000ms | Yes                         |
-| `--duration-1200` | 1200ms | Yes (looping indicator stops via the hatch) |
-| `--duration-1400` | 1400ms | Yes (looping indicator stops via the hatch) |
-| `--duration-1500` | 1500ms | Yes (looping indicator stops via the hatch) |
-
-**Easing:**
-
-| Token              | Value                             | Use                            |
-| ------------------ | --------------------------------- | ------------------------------ |
-| `--ease-linear`    | `linear`                          |                                |
-| `--ease-in`        | `cubic-bezier(0.4, 0, 1, 1)`     |                                |
-| `--ease-out`       | `cubic-bezier(0, 0, 0.2, 1)`     |                                |
-| `--ease-in-out`    | `cubic-bezier(0.4, 0, 0.2, 1)`   | Default for most transitions   |
-| `--ease-spring`    | `cubic-bezier(0.22, 1, 0.36, 1)` | Fast start, soft landing       |
-| `--ease-move`      | `cubic-bezier(0.25, 1, 0.5, 1)`  | Drawers, panels, carousels     |
-| `--ease-overshoot` | `cubic-bezier(0.34, 1.1, 0.64, 1)` | Toasts, popups               |
-
-**Pre-built transitions:**
-
-| Token                 | Value                          | Use                              |
-| --------------------- | ------------------------------ | -------------------------------- |
-| `--transition-none`   | `none`                         |                                  |
-| `--transition-fast`   | `150ms var(--ease-in-out)`     | Hover states, toggles            |
-| `--transition-normal` | `200ms var(--ease-in-out)`     | Default                          |
-| `--transition-slow`   | `300ms var(--ease-in-out)`     | Panels, accordions               |
-| `--transition-slower` | `500ms var(--ease-in-out)`     |                                  |
-| `--transition-spring` | `300ms var(--ease-spring)`     | Bouncy interactions              |
-| `--transition-exit`   | `300ms var(--ease-out)`        | Overlay dismiss, alert collapse  |
-| `--transition-loader` | `600ms linear`                 | Spinner constant rotation        |
-
-::: warning
-`--transition-all` does not exist in Refine. Use explicit property transitions to avoid forcing layout recalculation on every style change:
-```css
-transition: color var(--transition-fast), background var(--transition-fast);
-```
-:::
-
-**Named animations:**
-
-Keyframe + house timing as one token, composed from the duration/easing scale above so reduced motion governs every one of them. The keyframes ship in `@vielzeug/refine/styles/animation.css`.
-
-| Token                        | Keyframe            | Timing                          |
-| ---------------------------- | ------------------- | ------------------------------- |
-| `--animate-fade-in`          | `fade-in`           | `150ms ease-out both`           |
-| `--animate-fade-out`         | `fade-out`          | `150ms ease-in both`            |
-| `--animate-fade-in-up`       | `fade-in-up`        | `300ms ease-move both`          |
-| `--animate-scale-in`         | `scale-in`          | `200ms ease-overshoot both`     |
-| `--animate-slide-in-from-top`| `slide-in-from-top` | `300ms ease-move both`          |
-| `--animate-slide-in-from-bottom` | `slide-in-from-bottom` | `300ms ease-move both`   |
-| `--animate-slide-in-from-left` | `slide-in-from-left` | `300ms ease-move both`       |
-| `--animate-slide-in-from-right` | `slide-in-from-right` | `300ms ease-move both`      |
-| `--animate-spin`             | `spin`              | loader duration, linear, infinite |
-| `--animate-ping`             | `ping`              | `1000ms ease-out infinite`      |
-| `--animate-pulse`            | `pulse`             | `1000ms ease-in-out infinite`   |
-| `--animate-bounce`           | `bounce`            | `1000ms ease-in-out infinite`   |
-| `--animate-progress-bar`     | `progress-bar`      | `1400ms ease-in-out infinite`   |
-
-Consume them anywhere — inside a component's shadow DOM they inherit through the boundary like any custom property:
-
-```css
-.banner {
-  animation: var(--animate-fade-in-up);
-}
-```
-
-Inside a Refine component stylesheet, wrap with the escape hatch so motion mode can switch the declaration off: `animation: var(--_motion-animation, var(--animate-fade-in-up));`
-
-## Motion Mode
-
-Reduced motion has three states, mirroring `@vielzeug/necromancer`'s `MotionMode`:
-
-| State | How | Effect |
-| --- | --- | --- |
-| System (default) | no `data-motion` attribute | Follows `prefers-reduced-motion` |
-| Reduced | `data-motion="reduced"` on `<html>` | Forces reduction regardless of the OS |
-| Full | `data-motion="full"` on `<html>` | Opts back in despite an OS-level reduction |
-
-Set it from JavaScript with `setMotionMode()` (or read the current state with `getMotionMode()`):
-
-```ts
-import { getMotionMode, setMotionMode } from '@vielzeug/refine';
-
-setMotionMode('reduced'); // an app "reduce motion" setting forces reduction
-setMotionMode('system'); // back to following the OS preference
-```
-
-The mode drives the token layer: every `--duration-*`/`--transition-*` token zeroes and the `--_motion-*` escape hatches switch to `none`, which reaches every CSS animation and transition in the library — including inside shadow DOMs, because custom properties inherit through the boundary. Programmatic motion built on necromancer honors the same preference through its own `motion` option.
-
-The components that move their content programmatically — DataGrid row sorting, command-palette result filtering, and the toast stack — read their timing from the same tokens at animation time, so a zeroed `--duration-200` skips the reflow entirely rather than playing it instantly. Override `--duration-200` on one component to retune (or `0` to silence) just its reflow.
-
-::: tip
-Overlay enter/exit transitions that carry a `display`/`overlay` `allow-discrete` hold (dialog, drawer, tooltip, popover, menu, navigation-menu panel, tour) time themselves with `--duration-*` tokens, never `--transition-*`. A `--transition-*` token zeroes to `none`, and a single `none` member invalidates the entire `transition` shorthand — which would drop the `allow-discrete` hold and teleport the element out of the top layer mid-exit. A zeroed `--duration-*` stays a valid `0ms` member, so the hold survives and the cross-fade simply becomes instant.
-:::
+Duration, easing, pre-built transitions, named animations, and Motion Mode moved to their own page: see [Animation & Motion](./animation).
 
 ### All Token Categories
 
@@ -560,7 +455,7 @@ Overlay enter/exit transitions that carry a `display`/`overlay` `allow-discrete`
 | **Shade Ramp**              | `--shade-*`                                 | Shared lighter/light/dark/darker derivation recipe |
 | **Contrast Scale**         | `--color-contrast-{50–900}`                 | 11-step light/dark adaptive palette                |
 | **Section Spacing**        | `--section-spacing`                         | Default block section gap (2rem)                   |
-| **Named Animations**       | `--animate-*`                               | Keyframe + house timing as one token               |
+| **Named Animations**       | `--animate-*`                               | Keyframe + house timing as one token (see [Animation & Motion](./animation)) |
 | **Overlay Enter**          | `--overlay-enter-*`                         | Shared enter displacement/scale for overlays       |
 
 ::: details View theme.css

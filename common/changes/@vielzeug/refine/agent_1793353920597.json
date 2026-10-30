@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "reorganize component categories: retire Disclosure (Tabs is its own ARIA pattern, leaving one family), add Navigation for breadcrumb/pagination/stepper/tabs/navigation-menu, move accordion into Content and separator into Layout; src/ directories now follow the same taxonomy",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

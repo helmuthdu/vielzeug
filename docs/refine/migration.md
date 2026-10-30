@@ -1,9 +1,104 @@
 ---
 title: Migration
-description: Migrate toast statuses, the human-interface-guideline adoption, surface variants, tabs density, DataGrid sources, and framework type declarations to Refine.
+description: Migrate command palette categories and the item type, the mobile input font-size floor, the standardized overlay backdrop, toast statuses, the human-interface-guideline adoption, surface variants, tabs density, the tabs active pill, the sidebar drawer overlay, DataGrid sources, and framework type declarations to Refine.
 ---
 
 # Migration
+
+## Command palette categories and searchable group headings
+
+`ore-command-palette` gained drill-down categories: an item with nested items (a `children` array
+in `items`, or nested `<ore-command-palette-item>` elements) renders as one category row that opens
+on `ArrowRight`/`Enter`/click instead of selecting. Search stays global from the root, so a query
+flattens category leaves into one result list.
+
+- **`CommandPaletteItem` now carries a required `children` field.** The normalized item type gained
+  `children: CommandPaletteItem[]`, always `[]` on a leaf. Code that builds a `CommandPaletteItem`
+  literal by hand must add `children: []`; code that reads one from a `select` or `active-change`
+  detail is unaffected, and `CommandPaletteItemInput` needs no change (`children` is optional).
+- **Entering a category emits `category-open`, not `select`.** `{ value, label, count }` fires when
+  a category row opens; `select` still only ever carries a command, so existing command handlers
+  need no guard.
+- **Group headings are now searchable and pinned.** A query that matches a `group` name keeps that
+  group's items, and each heading sticks to the top of the list while its own group scrolls. Each
+  named group is also a `role="group"` container labelled by its heading, which changes the
+  accessibility tree for screen readers without changing any attribute consumers read.
+
+## Touch inputs no longer trigger the iOS page zoom
+
+iOS Safari zooms the whole page when a focused text control's computed font-size is below 16px.
+Refine's coarse-pointer font promotion existed for this but was dead code: `touchTargetMixin` sat
+before `sizeVariantMixin` in every field's `styles` array, and both sheets are unlayered, so the
+size preset's own `--_font-size` declarations overrode the whole `@media (pointer: coarse)` block.
+The ordering is fixed (`ore-input`, `ore-textarea`, `ore-message-composer`, `ore-file-input`,
+`ore-button`, `ore-checkbox`, `ore-radio`), which means under a coarse pointer the promotion now
+actually applies:
+
+- **Fields render one size tier larger on touch devices.** A default/`md` `ore-input` now renders at
+  the lg tier (16px text, taller field, wider padding); `sm` renders at the md tier's box. This is
+  the documented promotion finally taking effect, not a new design.
+- **Field text floors at 16px at every size on touch.** `size="sm"` text used to promote to 14px
+  (still under the iOS threshold); it now promotes to 16px like every other size, so no focused
+  field zooms the page. Pointer (desktop) rendering is unchanged at every size.
+
+## One backdrop across every overlay
+
+Dialog, drawer, command palette, tour, and the sidebar drawer now share one veil: the new
+`--overlay-veil` token (`color-mix(in oklch, var(--color-scrim) 70%, transparent)`). Dialog, drawer,
+command palette, and tour washed the page with `color-mix(in oklch, var(--color-canvas) 40%, transparent)`;
+`--color-canvas` is near-white in light mode, so the "dim" brightened the page instead of darkening it.
+Every overlay backdrop now dims in both schemes.
+
+The `backdrop="opaque | blur | transparent"` prop (opaque = plain veil, the default everywhere;
+blur = veil + `blur(var(--blur-xs))`; transparent = no veil, click-to-close still works) now covers
+all five surfaces. Two behavior changes follow from the alignment:
+
+- **`ore-command-palette` no longer always blurs.** Its backdrop used to hardcode a blur with no way
+  to change it. The default is now the plain veil like everywhere else; set `backdrop="blur"` to
+  restore the old look.
+- **`ore-tour` gained `backdrop` and `--tour-backdrop-bg`.** Its veil was hardcoded.
+
+CSS custom properties renamed to the `--<component>-backdrop-bg` convention:
+
+| Old                             | New                                 |
+| ------------------------------- | ----------------------------------- |
+| `--dialog-backdrop`             | `--dialog-backdrop-bg`              |
+| `--command-palette-backdrop`    | `--command-palette-backdrop-bg`     |
+
+`--drawer-backdrop-bg`, `--sidebar-drawer-backdrop-bg`, and `--spotlight-dim` keep their names; all
+of them now default to the shared veil (`--spotlight-dim` to `--color-scrim` directly, since the
+spotlight ring is the full-strength dim rather than the lighter backdrop wash).
+
+## Sidebar drawer becomes a dismissible overlay
+
+The mobile/overlay drawer of `ore-sidebar` now behaves like `ore-drawer`: a dimming scrim veil, a visible close
+button in the header, swipe-to-dismiss from the trailing-edge grabber, panel elevation, and a fade instead of a
+pop. Three contracts changed:
+
+- **`close-on-select` defaults to `true`.** Selecting an item inside an open drawer now closes it, which is what
+  mobile navigation expects. Pass `close-on-select="false"` to keep the drawer open after activation.
+- **`drawer` mode is a real overlay.** Previously a drawer-only sidebar rendered its panel as a visible inline
+  block (inert while closed) and opened without a scrim or close button. It now uses the same off-canvas panel,
+  scrim, close button, and swipe behavior as the bottom-nav drawer, with no bottom bar.
+- **`ore-sidebar-group` emits `open-change`.** The documented group event never fired, and the native `toggle`
+  event does not cross the shadow boundary. Toggling an uncontrolled collapsible group now emits
+  `open-change` with `{ open }`, and `aria-expanded` reflects the real state (it previously read the controlled
+  prop, which is `undefined` for uncontrolled groups). The host no longer mirrors the `open` attribute in
+  uncontrolled mode (that reflection is what made every group read itself as controlled); style against
+  `data-open` instead.
+
+```js
+// Before: never fired
+group.addEventListener('toggle', (e) => console.log(e.detail?.open));
+
+// After
+group.addEventListener('open-change', (e) => console.log(e.detail.open));
+```
+
+The backdrop color moved from the text-contrast ramp (which inverted to a bright fog in dark mode) to the
+theme's scrim veil (`--overlay-veil`), exposed as `--sidebar-drawer-backdrop-bg`, with `backdrop="opaque | blur |
+transparent"` matching `ore-drawer`. The documented-but-dead `--sidebar-item-indicator` property was removed;
+`--sidebar-drawer-width` now actually controls the drawer panel width.
 
 ## Toast statuses replace color and variant
 
@@ -289,6 +384,29 @@ Remove overrides for `--glass-blur`, `--glass-saturation`, `--glass-refraction-o
 ```
 
 Compact tabs also keep a 44px target on coarse pointers, so touch layouts grow taller than the compact desktop height. An unset `size` now promotes like `size="md"` on coarse pointers.
+
+## Tabs active surface becomes a sliding pill
+
+`ore-tabs` now marks the selected tab with one pill (`::part(indicator)`) that slides between tabs, instead of each `ore-tab-item` painting its own static active background. The pill's fill matches what each variant's active item used to paint, so the default look is the same surface in the same place: it only travels now.
+
+Because the item no longer paints the active fill, `--tab-item-active-bg` and `--tab-item-active-shadow` default to nothing. Set them on `ore-tab-item` only when you want the item to paint its own active surface instead of the pill:
+
+```css
+/* Before: the item's active fill was always painted */
+ore-tab-item {
+  --tab-item-active-bg: var(--color-contrast-100);
+  --tab-item-active-shadow: inset 0 0 0 1px var(--color-divider);
+}
+
+/* After: the same declarations still opt the item into painting its own
+   active surface; unset, the sliding pill is the active surface */
+ore-tab-item {
+  --tab-item-active-bg: var(--color-contrast-100);
+  --tab-item-active-shadow: inset 0 0 0 1px var(--color-divider);
+}
+```
+
+Style the pill itself through `::part(indicator)` and `--tabs-indicator-color`. The old 2px underline geometry is gone: the pill covers the active tab's box in both orientations.
 
 ## Update DataGrid source state
 

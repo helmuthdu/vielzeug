@@ -43,6 +43,9 @@ export { SPOTLIGHT_TAG } from '../spotlight/spotlight';
 export const TOUR_PRESENTATIONS = ['auto', 'bottom-sheet', 'modal', 'popover'] as const;
 export type TourPresentation = (typeof TOUR_PRESENTATIONS)[number];
 
+const TOUR_BACKDROPS = ['opaque', 'blur', 'transparent'] as const;
+type TourBackdrop = (typeof TOUR_BACKDROPS)[number];
+
 /**
  * What the card anchors to: a real element, an Orbit virtual reference, or a
  * plain viewport-space rectangle (the shape `@vielzeug/beacon` publishes).
@@ -144,6 +147,8 @@ export interface OreTourElement extends HTMLElement {
 export type OreTourProps = {
   /** What the card anchors to in popover mode: an element, a virtual reference, or a viewport-space rect. Omit to dock the card at the bottom center. */
   anchor?: TourAnchor | null;
+  /** Backdrop style in dialog presentations: 'opaque' (default): dimming veil only; 'blur': dimming veil + blur; 'transparent': no overlay. */
+  backdrop?: TourBackdrop;
   /** Body text; the default slot replaces it with custom content. */
   description?: string;
   /** Show a close (×) button in the header. Defaults to true. */
@@ -223,6 +228,7 @@ function toReference(anchor: TourAnchor | null | undefined): ReferenceElement | 
  *   card and route the card's actions back into it. Returns an unsubscribe.
  *
  * @attr {object} anchor - Anchor element, virtual reference, or viewport-space rect (popover mode)
+ * @attr {string} backdrop - Backdrop style in dialog presentations: 'opaque' (default) | 'blur' | 'transparent'
  * @attr {string} description - Body text (replaced by the default slot)
  * @attr {boolean} dismissible - Show a close (×) button (default true)
  * @attr {string} initial-focus - Selector for the element to focus on open (dialog presentations)
@@ -249,6 +255,7 @@ function toReference(anchor: TourAnchor | null | undefined): ReferenceElement | 
  * @slot footer - Custom footer actions (replaces Skip/Back/Next)
  *
  * @cssprop --tour-bg - Card background color
+ * @cssprop --tour-backdrop-bg - Backdrop veil color in dialog presentations (default: var(--overlay-veil))
  * @cssprop --tour-border-color - Card border color
  * @cssprop --tour-max-width - Card max width (default 22rem)
  * @cssprop --tour-media-max-height - Media ceiling (default min(38dvh, 16rem); bottom-sheet min(26dvh, 12rem))
@@ -284,6 +291,7 @@ export const TOUR_TAG = 'ore-tour' as const;
 define<OreTourProps>(TOUR_TAG, {
   props: {
     anchor: prop.data<TourAnchor | null>(null),
+    backdrop: prop.oneOf(TOUR_BACKDROPS),
     description: prop.string(),
     dismissible: prop.bool(true),
     'initial-focus': prop.string(),

@@ -378,10 +378,14 @@ define<OreInputProps>(INPUT_TAG, {
   shadow: { delegatesFocus: true },
   styles: [
     colorThemeMixin,
-    touchTargetMixin,
     roundedVariantMixin,
     disabledLoadingMixin,
     sizeVariantMixin(FIELD_SIZE_PRESET),
+    // Must come after `sizeVariantMixin`: both sheets are unlayered, so on an equal-specificity
+    // `:host` tie the later sheet wins. Placed before it, `sizeVariantMixin`'s own unlayered
+    // per-size `--_font-size`/`--_gap`/`--_height` block silently overrides this mixin's whole
+    // `@media (pointer: coarse)` promotion and the coarse-pointer tier becomes dead code.
+    touchTargetMixin,
     forcedColorsFocusMixin('input'),
     componentStyles,
     // Must come after `componentStyles`: `@layer` precedence is fixed by which layer name is

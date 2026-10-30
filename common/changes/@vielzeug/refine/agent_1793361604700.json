@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "command-palette: search-debounce attribute and search re-emit on drill navigation",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

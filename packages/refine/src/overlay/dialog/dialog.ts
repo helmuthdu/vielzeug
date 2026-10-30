@@ -24,7 +24,7 @@ export type OreDialogEvents = {
 };
 
 export type OreDialogProps = {
-  /** Backdrop style: 'blur' (default): dark overlay + blur; 'opaque': dark overlay only; 'transparent': no overlay */
+  /** Backdrop style: 'opaque' (default): dimming veil only; 'blur': dimming veil + blur; 'transparent': no overlay */
   backdrop?: DialogBackdrop;
   /** Initial uncontrolled open state. Ignored when `open` is set. */
   'default-open'?: boolean;
@@ -87,7 +87,7 @@ export type OreDialogProps = {
  * @cssprop --dialog-shadow - Panel drop shadow
  * @cssprop --dialog-padding - Padding for header, body, and footer sections
  * @cssprop --dialog-gap - Gap between footer action buttons
- * @cssprop --dialog-backdrop - Backdrop overlay color
+ * @cssprop --dialog-backdrop-bg - Backdrop veil color (default: var(--overlay-veil))
  * @cssprop --dialog-max-width - Maximum panel width (overridden by size prop)
  *
  * @part dialog - Dialog root container.

@@ -158,3 +158,32 @@ test.describe('Layout', () => {
     expect(heights[0]).toBe(heights[1]);
   });
 });
+
+test.describe('Touch layout', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
+
+  // iOS Safari zooms the whole page when a focused text control's computed font-size is
+  // below 16 px (SC 1.4.4), so under a coarse pointer every size must render at the 16 px
+  // floor. Regression coverage for the promotion being dead code: `touchTargetMixin` sat
+  // *before* `sizeVariantMixin` in `styles`, and both sheets are unlayered, so the later
+  // per-size block overrode the whole `@media (pointer: coarse)` promotion (jsdom drops
+  // `@media` cascade effects, so only a real browser catches this).
+  for (const size of ['default', 'sm', 'md', 'lg'] as const) {
+    test(`${size} keeps the inner input at the 16px iOS zoom floor`, async ({ page, refinePage }) => {
+      const attr = size === 'default' ? '' : ` size="${size}"`;
+      await refinePage.mountComponent(`<ore-input id="${size}"${attr} label="Email"></ore-input>`);
+
+      const coarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
+      expect(coarse).toBe(true);
+
+      const fontSize = await page.evaluate((id) => {
+        const el = document.getElementById(id) as HTMLElement & { shadowRoot: ShadowRoot };
+        const input = el.shadowRoot.querySelector('input') as HTMLInputElement;
+
+        return parseFloat(getComputedStyle(input).fontSize);
+      }, size);
+
+      expect(fontSize).toBeGreaterThanOrEqual(16);
+    });
+  }
+});

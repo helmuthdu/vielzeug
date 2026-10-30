@@ -4,11 +4,19 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
 
 import { announce, createListControl, lifecycleSignal, parseOptionalBool } from '../../core';
-import { createLayoutMotion } from '../../shared/layout-motion';
+import { animateReflow } from '../../reflow';
 import { useDialogControl } from '../shared/use-dialog';
 import componentStyles from './command-palette.css?inline';
 import type { CommandPaletteItem, OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
-import { buildRows, filterItems, normalizeItem, parseSlottedItems, splitShortcutKeys } from './command-palette-items';
+import {
+  buildGroups,
+  filterItems,
+  isCategory,
+  normalizeItem,
+  parseSlottedItems,
+  searchItems,
+  splitShortcutKeys,
+} from './command-palette-items';
 
 export { ICON_TAG } from '../../content/icon/icon';
 export { KEYBOARD_SHORTCUT_TAG } from '../../content/keyboard-key/keyboard-key';
@@ -25,6 +33,10 @@ export type { OreCommandPaletteEvents, OreCommandPaletteProps } from './command-
  * @attr {string} group - Group heading the item is clustered under
  * @attr {string} shortcut - Display-only keyboard hint rendered at the end of the row, one `<kbd>` per `+`-separated key (e.g. `"⌘+S"` renders two keycaps; a literal `+` key isn't representable: spell it out, e.g. `"Ctrl+Plus"`)
  * @attr {boolean} disabled - Excludes the item from keyboard navigation and selection
+ *
+ * Nested `<ore-command-palette-item>` elements turn this item into a category row that opens
+ * on `ArrowRight`/`Enter` instead of selecting; nesting is one level only (deeper items are
+ * ignored with a dev warning).
  *
  * @slot icon - Optional leading icon content
  *
@@ -46,11 +58,18 @@ define(COMMAND_PALETTE_ITEM_TAG, {
  * native `<dialog>` element (focus trap, top-layer stacking, `Escape`-to-close)
  * and `@vielzeug/keymap` for the global shortcut that opens it.
  *
+ * Items with nested items become category rows: one row with a chevron and a leaf
+ * count that opens on `ArrowRight`/`Enter`/click, keeping the root list short.
+ * Search stays global from the root: a typed query flattens category leaves into
+ * one result list, so no command hides behind a category. Categories nest one level.
+ *
  * @element ore-command-palette
  * @element ore-command-palette-item - Slotted command definition (place in default slot)
  *
  * @attr {boolean} open - Controls the open state of the palette
  * @attr {boolean} default-open - Initial uncontrolled open state
+ * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
+ * @attr {string} back-text - Label of the back row shown above an opened category (default: "All commands")
  * @attr {string} label - Accessible label for the dialog (screen-reader-only heading)
  * @attr {string} placeholder - Placeholder text for the search input
  * @attr {string} shortcut - Global keyboard shortcut (keymap syntax) that toggles the palette. Default `"mod+k"`; set to `""` to disable
@@ -58,10 +77,12 @@ define(COMMAND_PALETTE_ITEM_TAG, {
  * @attr {boolean} loading - Shows a loading row below the search input
  * @attr {string} empty-text - Message shown when no item matches the query
  * @attr {boolean} keep-open-on-select - Keep the palette open after an item is selected
+ * @attr {number} search-debounce - Milliseconds a typed query waits before filtering the list and emitting `search` (default `0`: every keystroke)
  *
  * @fires active-change - Fired when the focused row changes (keyboard, hover, typing, open, close). detail: `{ value, label, item }`; `item` is `undefined` and `value` empty when no row is active
+ * @fires category-open - Fired when a category row is opened (`ArrowRight`/`Enter`/click). detail: `{ value, label, count }`. Entering a category is navigation: `select` never carries a category value
  * @fires open-change - Fired when the palette state changes. detail: `{ open, reason }`
- * @fires search - Fired on every keystroke in the search input. detail: `{ query }`
+ * @fires search - Fired when the query reaches the list: on every keystroke, or after `search-debounce` settles it. detail: `{ query }`
  * @fires select - Fired when a command is chosen (click or `Enter`). detail: `{ value, label, item }`
  *
  * @slot - `<ore-command-palette-item>` elements (alternative/supplement to the `items` prop)
@@ -72,9 +93,10 @@ define(COMMAND_PALETTE_ITEM_TAG, {
  * @cssprop --command-palette-radius - Panel border radius
  * @cssprop --command-palette-shadow - Panel drop shadow
  * @cssprop --command-palette-max-width - Maximum panel width
- * @cssprop --command-palette-backdrop - Backdrop overlay color
+ * @cssprop --command-palette-backdrop-bg - Backdrop veil color (default: var(--overlay-veil))
  * @cssprop --command-palette-option-hover-bg - Item background on hover
  * @cssprop --command-palette-option-focus-bg - Item background when keyboard-focused
+ * @cssprop --command-palette-group-sticky-bg - Background of the pinned group heading while it sticks (default: near-opaque var(--surface-overlay))
  * @cssprop --command-palette-preview-width - Preview panel width when the `preview` slot has content
  *
  * @part dialog - Dialog root container
@@ -93,8 +115,13 @@ define(COMMAND_PALETTE_ITEM_TAG, {
  * ```
  */
 export const COMMAND_PALETTE_TAG = 'ore-command-palette' as const;
+
+const COMMAND_PALETTE_BACKDROPS = ['opaque', 'blur', 'transparent'] as const;
+
 define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
   props: {
+    'back-text': prop.string('All commands'),
+    backdrop: prop.oneOf(COMMAND_PALETTE_BACKDROPS),
     'default-open': prop.bool(false),
     'empty-text': prop.string('No results found.'),
     items: prop.data<OreCommandPaletteProps['items']>(),
@@ -104,6 +131,7 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
     'no-filter': prop.bool(false),
     open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     placeholder: prop.string('Type a command or search…'),
+    'search-debounce': prop.number(0),
     shortcut: prop.string('mod+k'),
   },
   setup(props) {
@@ -117,7 +145,14 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
 
     let listboxEl: HTMLElement | null = null;
 
+    // `query` is what the player has typed: it drives the input's own value and the
+    // caret-ownership guards, and is never delayed, because a lagging copy would
+    // rewrite the text under the caret. `appliedQuery` is the query the list and the
+    // `search` event see, which can trail it by `search-debounce` milliseconds so a
+    // fast typist settles on one result set instead of reflowing the list (and a
+    // `no-filter` consumer's catalogue rebuild) on every keystroke.
     const query = signal('');
+    const appliedQuery = signal('');
 
     // ── Items: slotted <ore-command-palette-item> elements, merged with the `items` prop ──
     // Items are pure data nodes (see `ore-command-palette-item`'s own doc comment): they're
@@ -147,8 +182,34 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
       return Array.isArray(explicit) ? explicit.map(normalizeItem) : slottedItems.value;
     });
 
-    const filteredItems = computed(() => filterItems(allItems.value, query.value, Boolean(props['no-filter'].value)));
-    const rows = computed(() => buildRows(filteredItems.value));
+    // ── Drill-down view ──
+    // Categories nest one level, so the "stack" is a single value, held by `value`
+    // rather than object identity: an `items` rewrite or a light-DOM reparse replaces
+    // every item object, and a vanished category falls back to the root view instead
+    // of stranding the palette on a stale row set.
+    const activeCategoryValue = signal<string | null>(null);
+    const activeCategory = computed(() => {
+      const value = activeCategoryValue.value;
+
+      if (value === null) return null;
+
+      return allItems.value.find((item) => item.value === value && isCategory(item)) ?? null;
+    });
+
+    // Search is always global from the root: a typed query flattens category leaves
+    // into one result list (searchItems), so no command hides behind a menu level.
+    // The unqueried root shows category rows; inside a category, the query narrows
+    // that category's own children. `no-filter` disables search, not browsing.
+    const filteredItems = computed(() => {
+      const category = activeCategory.value;
+
+      if (category) return filterItems(category.children, appliedQuery.value, Boolean(props['no-filter'].value));
+
+      if (props['no-filter'].value || !appliedQuery.value.trim()) return allItems.value;
+
+      return searchItems(allItems.value, appliedQuery.value);
+    });
+    const groups = computed(() => buildGroups(filteredItems.value));
 
     // ── Result reflow motion ──
     // Filtering rewrites the list under the caret, and an instant swap makes the
@@ -158,7 +219,7 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
     // the one that carried it before — necromancer's key matching animates the
     // value from its old slot to its new one either way. No stagger: rows
     // arrive and leave every keystroke, a cascade would read as lag.
-    const resultMotion = createLayoutMotion(el, abortSignal, {
+    const resultMotion = animateReflow(el, abortSignal, {
       elements: () => [...(el.shadowRoot?.querySelectorAll<HTMLElement>('.item[data-value]') ?? [])],
       getKey: (item) => item.dataset.value || undefined,
     });
@@ -191,10 +252,72 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
     // uses it keeps the plain single-column layout.
     const hasPreview = signal(false);
 
+    // ── Debounced query application ──
+    // `search-debounce` trades instant filtering for a settled result set: typed text
+    // waits this many milliseconds before it reaches the list, the announce region and
+    // the `search` event, so a fast typist reflows the list once instead of on every
+    // keystroke (and a `no-filter` consumer rebuilds its catalogue once). The timer is
+    // owned here rather than wrapped in a helper because the transitions that must land
+    // at once — drill-in, back, close — cancel a pending apply.
+    //
+    // The visible list stays the contract for every "choose" action: `Enter` and a click
+    // act on the row on screen even while a newer query is still waiting, exactly as they
+    // would with instant filtering, so a keystroke can never select an unseen row.
+    let appliedTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const cancelAppliedQuery = (): void => {
+      if (appliedTimer === undefined) return;
+
+      clearTimeout(appliedTimer);
+      appliedTimer = undefined;
+    };
+
+    onCleanup(cancelAppliedQuery);
+
+    /** Publishes the typed query to the list and the host: the one place typing reflows the list. */
+    function applyQuery(): void {
+      cancelAppliedQuery();
+
+      const value = query.value;
+
+      resultMotion.run(() => {
+        appliedQuery.value = value;
+        list.navigate('first');
+      });
+      emit('search', { query: value });
+
+      const count = filteredItems.value.length;
+
+      announce(count === 0 ? props['empty-text'].value! : `${count} result${count === 1 ? '' : 's'} found`, {
+        document: el.ownerDocument,
+      });
+    }
+
+    /** Routes a freshly typed query straight to `applyQuery`, or holds it for the debounce window. */
+    function publishQuery(): void {
+      cancelAppliedQuery();
+
+      const delay = Math.max(0, props['search-debounce'].value ?? 0);
+
+      if (delay === 0) {
+        applyQuery();
+
+        return;
+      }
+
+      appliedTimer = setTimeout(() => {
+        appliedTimer = undefined;
+        applyQuery();
+      }, delay);
+    }
+
     // ── Dialog chrome: native <dialog>, focus trap, Escape, backdrop click ──
     const resetSearch = (): void => {
+      cancelAppliedQuery();
       resultMotion.run(() => {
+        activeCategoryValue.value = null;
         query.value = '';
+        appliedQuery.value = '';
         list.reset();
       });
     };
@@ -207,6 +330,7 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
       initialFocus: computed(() => '.search-input'),
       isPersistent: () => false,
       onCleanup,
+      onEscape: () => popCategory(),
       onEvent,
       onNativeClose: (reason) => {
         emit('open-change', { open: false, reason });
@@ -272,36 +396,113 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
       }
     }
 
-    function handleInput(e: Event): void {
-      const value = (e.target as HTMLInputElement).value;
+    // ── Drill-down navigation ──
+    // Entering a category is navigation, never `select`: a consumer's command handler
+    // must never see a category value.
+    //
+    // Both transitions clear the query, and a cleared query is a search transition
+    // like typing: `no-filter` consumers mirror the search text to build their own
+    // catalogue, so without the re-emit they would keep supplying rows filtered
+    // against the old text, and a category whose leaves those rows dropped would
+    // vanish the moment it opened. The event fires only when text was actually
+    // cleared, so a plain push/pop stays quiet.
+    function pushCategory(item: CommandPaletteItem): void {
+      if (!isCategory(item) || item.disabled) return;
 
+      const clearedQuery = Boolean(query.value);
+      cancelAppliedQuery();
       resultMotion.run(() => {
-        query.value = value;
+        activeCategoryValue.value = item.value;
+        query.value = '';
+        appliedQuery.value = '';
         list.navigate('first');
       });
-      emit('search', { query: value });
-
-      const count = filteredItems.value.length;
-
-      announce(count === 0 ? props['empty-text'].value! : `${count} result${count === 1 ? '' : 's'} found`, {
+      if (clearedQuery) emit('search', { query: '' });
+      emit('category-open', { count: item.children.length, label: item.label, value: item.value });
+      announce(`${item.label}: ${item.children.length} ${item.children.length === 1 ? 'command' : 'commands'}`, {
         document: el.ownerDocument,
       });
     }
 
+    /** Returns to the root view, or `false` when already there (so Escape can close). */
+    function popCategory(): boolean {
+      if (activeCategory.value === null) return false;
+
+      const clearedQuery = Boolean(query.value);
+      cancelAppliedQuery();
+      resultMotion.run(() => {
+        activeCategoryValue.value = null;
+        query.value = '';
+        appliedQuery.value = '';
+        list.navigate('first');
+      });
+      if (clearedQuery) emit('search', { query: '' });
+      // The back row is a real button, so a pointer click leaves focus on it: it unmounts
+      // with the category view, and focus would fall to <body> outside the trap.
+      searchInputRef.value?.focus();
+      announce(`${props['back-text'].value}: ${filteredItems.value.length} shown`, { document: el.ownerDocument });
+
+      return true;
+    }
+
+    function handleInput(e: Event): void {
+      // Only the typed signal moves here: the list, the announce and `search` follow
+      // through `publishQuery`, which may hold them for the debounce window.
+      query.value = (e.target as HTMLInputElement).value;
+      publishQuery();
+    }
+
     function handleKeydown(e: KeyboardEvent): void {
+      const active = list.getActiveItem();
+
+      // `ArrowRight` opens the focused category. The list control is configured
+      // vertical-only, so it never claims the horizontal arrows and this handler sees them.
+      if (e.key === 'ArrowRight' && active && isCategory(active)) {
+        e.preventDefault();
+        pushCategory(active);
+
+        return;
+      }
+
+      // `ArrowLeft` pops, but only with an empty query: with text in the input the key
+      // belongs to caret movement, and stealing it would make the query uneditable.
+      if (e.key === 'ArrowLeft' && activeCategory.value !== null && !query.value) {
+        e.preventDefault();
+        popCategory();
+
+        return;
+      }
+
+      // Same file-manager convention as `ArrowLeft`: backspace on an empty query steps out.
+      if (e.key === 'Backspace' && activeCategory.value !== null && !query.value) {
+        e.preventDefault();
+        popCategory();
+
+        return;
+      }
+
       if (list.handleKeydown(e)) return;
 
       if (e.key === 'Enter') {
+        // `Enter` commits what the player typed, so a query still inside the debounce
+        // window is applied first: choosing the best match for the text in the input
+        // beats choosing the best match for the text that happened to settle last.
+        // A click keeps the opposite contract (the row under the pointer is the row
+        // that was seen), which is why the flush lives here and not in `selectItem`.
+        if (appliedTimer !== undefined) applyQuery();
+
         // `list.navigate('first')` (called on open and on every keystroke) already keeps
         // the focused row off a disabled item, so this fallback is only ever reached when
         // nothing has been focused yet, but it mirrors `selectItem`'s own disabled guard
         // rather than blindly grabbing index 0, in case that navigate-on-open wiring ever
         // changes.
-        const active = list.getActiveItem() ?? filteredItems.value.find((item) => !item.disabled);
+        const entered = list.getActiveItem() ?? filteredItems.value.find((item) => !item.disabled);
 
-        if (active) {
+        if (entered) {
           e.preventDefault();
-          selectItem(active);
+
+          if (isCategory(entered)) pushCategory(entered);
+          else selectItem(entered);
         }
       }
     }
@@ -329,69 +530,102 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
               @keydown="${handleKeydown}" />
             <span class="search-loader" ?hidden="${() => !props.loading.value}" aria-hidden="true"></span>
           </div>
+          ${() =>
+            activeCategory.value
+              ? html`
+                  <button type="button" class="back-row" @click="${popCategory}">
+                    <span class="item-icon" aria-hidden="true"><ore-icon name="arrow-left" size="16"></ore-icon></span>
+                    ${props['back-text'].value}
+                  </button>
+                `
+              : ''}
           <div class="body">
           <div
             class="listbox"
             part="listbox"
             role="listbox"
             id="${listboxId}"
-            aria-label="Commands"
+            aria-label="${() => (activeCategory.value ? `${activeCategory.value.label} commands` : 'Commands')}"
             ref="${(listEl: HTMLElement) => {
               listboxEl = listEl;
             }}">
-            <div class="empty" role="presentation" ?hidden="${() => props.loading.value || rows.value.length > 0}">
+            <div class="empty" role="presentation" ?hidden="${() => props.loading.value || groups.value.length > 0}">
               ${() => props['empty-text'].value}
             </div>
             ${() =>
-              rows.value.map((row) =>
-                row.type === 'group'
-                  ? html`
-                      <div class="group-heading" role="presentation">${row.group}</div>
-                    `
-                  : html`
-                      <div
-                        class="item"
-                        part="item"
-                        role="option"
-                        data-value="${row.item.value}"
-                        id="${`${listboxId}-opt-${row.idx}`}"
-                        aria-selected="${() => String(focusedIndex.value === row.idx)}"
-                        aria-disabled="${() => String(row.item.disabled)}"
-                        ?data-focused="${() => focusedIndex.value === row.idx}"
-                        ?data-disabled="${() => row.item.disabled}"
-                        @click="${(e: MouseEvent) => {
-                          e.stopPropagation();
-                          selectItem(row.item);
-                        }}"
-                        @pointerenter="${() => {
-                          list.set(row.idx);
-                        }}">
-                        ${
-                          row.item.icon
-                            ? html`
-                                <span class="item-icon" aria-hidden="true">
-                                  <ore-icon name="${row.item.icon}" size="16"></ore-icon>
-                                </span>
-                              `
-                            : ''
-                        }
-                        <span class="item-label">${row.item.label}</span>
-                        ${
-                          row.item.shortcut
-                            ? html`
-                                <span class="item-shortcut">
-                                  ${splitShortcutKeys(row.item.shortcut).map(
-                                    (key) => html`
-                                      <ore-keyboard-key>${key}</ore-keyboard-key>
-                                    `,
-                                  )}
-                                </span>
-                              `
-                            : ''
-                        }
-                      </div>
-                    `,
-              )}
+              groups.value.flatMap((cluster, clusterIdx) => {
+                const headingId = `${listboxId}-group-${clusterIdx}`;
+
+                const rows = cluster.rows.map((row) => {
+                  return html`
+                    <div
+                      class="item"
+                      part="item"
+                      role="option"
+                      data-value="${row.item.value}"
+                      id="${`${listboxId}-opt-${row.idx}`}"
+                      aria-selected="${() => String(focusedIndex.value === row.idx)}"
+                      aria-disabled="${() => String(row.item.disabled)}"
+                      ?data-focused="${() => focusedIndex.value === row.idx}"
+                      ?data-disabled="${() => row.item.disabled}"
+                      ?data-category="${isCategory(row.item)}"
+                      @click="${(e: MouseEvent) => {
+                        e.stopPropagation();
+
+                        if (isCategory(row.item)) pushCategory(row.item);
+                        else selectItem(row.item);
+                      }}"
+                      @pointerenter="${() => {
+                        list.set(row.idx);
+                      }}">
+                      ${
+                        row.item.icon
+                          ? html`
+                              <span class="item-icon" aria-hidden="true">
+                                <ore-icon name="${row.item.icon}" size="16"></ore-icon>
+                              </span>
+                            `
+                          : ''
+                      }
+                      <span class="item-label">${row.item.label}</span>
+                      ${
+                        isCategory(row.item)
+                          ? html`
+                              <span class="item-count">${row.item.children.length}</span>
+                              <span class="item-chevron" aria-hidden="true">
+                                <ore-icon name="chevron-right" size="14"></ore-icon>
+                              </span>
+                            `
+                          : ''
+                      }
+                      ${
+                        row.item.shortcut
+                          ? html`
+                              <span class="item-shortcut">
+                                ${splitShortcutKeys(row.item.shortcut).map(
+                                  (key) => html`
+                                    <ore-keyboard-key>${key}</ore-keyboard-key>
+                                  `,
+                                )}
+                              </span>
+                            `
+                          : ''
+                      }
+                    </div>
+                  `;
+                });
+
+                // Ungrouped items render bare: a `role="group"` wrapper with no
+                // accessible name would only add nesting to the listbox.
+                if (cluster.group === undefined) return rows;
+
+                return html`
+                  <div class="group" role="group" aria-labelledby="${headingId}">
+                    <div class="group-heading" id="${headingId}" role="presentation">${cluster.group}</div>
+                    ${rows}
+                  </div>
+                `;
+              })}
           </div>
           <div class="preview" part="preview" role="region" aria-label="Preview" ?hidden="${() => !hasPreview.value}">
             <slot
@@ -414,7 +648,7 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
             </span>
             <span class="footer-hint">
               <ore-keyboard-key>Esc</ore-keyboard-key>
-              Close
+              ${() => (activeCategory.value ? 'Back' : 'Close')}
             </span>
           </div>
         </div>

@@ -189,6 +189,84 @@ test.describe('Interaction', () => {
     await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
     await expect(nav).toHaveAttribute('inert', '');
   });
+
+  test('drawer backdrop dims the page and closes on click or close button', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="position:relative;width:360px;height:460px;overflow:hidden;">
+        <ore-sidebar id="sidebar" container-breakpoints bottom-nav-at="(max-width: 640px)">
+          <span slot="header">Workspace</span>
+          <ore-sidebar-item bottom-nav>Pipeline</ore-sidebar-item>
+        </ore-sidebar>
+      </div>
+    `);
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-bottom-nav'));
+
+    const sidebar = page.locator('#sidebar');
+    const backdrop = sidebar.locator('[part="drawer-backdrop"]');
+    const closeBtn = sidebar.locator('[part="drawer-close-btn"]');
+
+    await expect(backdrop).toBeHidden();
+    await expect(closeBtn).toBeHidden();
+
+    await sidebar.evaluate((el) => (el as { openDrawer(): void }).openDrawer());
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
+
+    // The veil must darken: paint the resolved background over white on a canvas
+    // and read the pixel back. This is format-independent (color-mix may compute
+    // to oklab) and proves a dark, semi-transparent fill rather than a bright fog.
+    const veil = await backdrop.evaluate((el) => {
+      const bg = getComputedStyle(el).backgroundColor;
+      const canvas = document.createElement('canvas');
+
+      canvas.width = 1;
+      canvas.height = 1;
+
+      const ctx = canvas.getContext('2d')!;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 1, 1);
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, 1, 1);
+
+      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+
+      return { bg, rgb: [r, g, b] as number[] };
+    });
+
+    // Composited over white, a darkening veil pulls every channel well below 255.
+    for (const channel of veil.rgb) {
+      expect(channel).toBeLessThan(230);
+    }
+
+    await expect(closeBtn).toBeVisible();
+    await closeBtn.click();
+    await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
+
+    await sidebar.evaluate((el) => (el as { openDrawer(): void }).openDrawer());
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
+    await backdrop.click({ position: { x: 300, y: 20 } });
+    await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
+  });
+
+  test('drawer panel width honors the sidebar-drawer-width token', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="position:relative;width:360px;height:460px;overflow:hidden;">
+        <ore-sidebar id="sidebar" container-breakpoints bottom-nav-at="(max-width: 640px)" style="--sidebar-drawer-width: 20rem;">
+          <ore-sidebar-item bottom-nav>Pipeline</ore-sidebar-item>
+        </ore-sidebar>
+      </div>
+    `);
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-bottom-nav'));
+
+    const width = await page.locator('#sidebar').evaluate((sidebar) => {
+      const nav = sidebar.shadowRoot?.querySelector('nav');
+
+      return nav ? nav.getBoundingClientRect().width : 0;
+    });
+
+    // 20rem = 320px, below the 85vw cap at this container width.
+    expect(Math.round(width)).toBe(320);
+  });
 });
 
 test.describe('Accessibility', () => {

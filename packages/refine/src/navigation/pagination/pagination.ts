@@ -6,8 +6,8 @@ import { colorThemeMixin, sizeVariantMixin, touchTargetMixin } from '../../style
 import { type ComponentSize, type ThemeColor, VISUAL_VARIANTS, type VisualVariant } from '../../types';
 import componentStyles from './pagination.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
 export { BUTTON_TAG } from '../../inputs/button/button';
-export { ICON_TAG } from '../icon/icon';
 export type OrePaginationEvents = {
   change: { page: number };
 };

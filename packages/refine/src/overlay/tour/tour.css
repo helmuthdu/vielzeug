@@ -8,6 +8,8 @@
     --_card-shadow: var(--tour-shadow, var(--shadow-xl));
     --_card-padding: var(--size-4);
     --_card-gap: var(--size-3);
+    --_backdrop-bg: var(--tour-backdrop-bg, var(--overlay-veil));
+    --_backdrop-filter: none;
 
     /* The card hosts three surfaces (dialog, popover panel, spotlight); none of
        them is laid out by the host itself, so the host takes no box. */
@@ -205,8 +207,9 @@
   }
 
   dialog::backdrop {
-    background: color-mix(in oklch, var(--color-canvas) 40%, transparent);
+    background: var(--_backdrop-bg);
     opacity: 1;
+    backdrop-filter: var(--_backdrop-filter);
     transition:
       opacity var(--duration-200) var(--ease-in-out),
       overlay var(--duration-200) allow-discrete,
@@ -357,5 +360,15 @@
       opacity: 0;
       transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
     }
+  }
+}
+
+@layer refine.config {
+  :host([backdrop='blur']) {
+    --_backdrop-filter: blur(var(--blur-xs));
+  }
+
+  :host([backdrop='transparent']) {
+    --_backdrop-bg: transparent;
   }
 }

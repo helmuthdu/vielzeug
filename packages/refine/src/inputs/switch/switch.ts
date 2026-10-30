@@ -84,7 +84,9 @@ const switchTouchTargetMixin = css`
     }
 
     :host([size='sm']) {
-      --_font-size: var(--text-sm);
+      /* 16 px floor, not the md tier: iOS Safari page-zooms a focused control under
+         16 px font-size (same rule as touchTargetMixin's sm block). */
+      --_font-size: var(--text-base);
       --_gap: var(--size-2);
       --_height: var(--size-5);
       --_thumb-size: var(--size-4);

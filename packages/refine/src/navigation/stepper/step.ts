@@ -6,7 +6,7 @@ import { isStepNavigable } from './_is-step-navigable';
 import stepStyles from './step.css?inline';
 import { STEPPER_CTX } from './stepper';
 
-export { ICON_TAG } from '../icon/icon';
+export { ICON_TAG } from '../../content/icon/icon';
 export type OreStepProps = {
   /**
    * Theme color. Inherited from the parent `ore-stepper` when nested inside one (overrides

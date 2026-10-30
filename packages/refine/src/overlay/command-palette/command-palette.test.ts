@@ -79,6 +79,12 @@ describe('ore-command-palette', () => {
       expect(fixture.query('dialog[open]')).toBeTruthy();
     });
 
+    it('reflects the backdrop attribute on the host', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { backdrop: 'blur' }, html: itemsHtml });
+
+      expect(fixture.element.getAttribute('backdrop')).toBe('blur');
+    });
+
     it('renders items from the `items` prop', async () => {
       fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
 
@@ -132,6 +138,34 @@ describe('ore-command-palette', () => {
       const headings = fixture.queryAll<HTMLElement>('.group-heading').map((el) => el.textContent);
 
       expect(headings).toEqual(['File', 'View']);
+    });
+
+    it('wraps each named group in a role="group" container labelled by its heading', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
+
+      const clusters = fixture.queryAll<HTMLElement>('[role="group"]');
+
+      expect(clusters).toHaveLength(2);
+      expect(clusters.map((cluster) => cluster.querySelectorAll('.item').length)).toEqual([3, 1]);
+
+      // aria-labelledby must resolve to the heading inside the same cluster.
+      for (const cluster of clusters) {
+        const labelledBy = cluster.getAttribute('aria-labelledby');
+
+        expect(labelledBy).toBeTruthy();
+        expect(cluster.querySelector(`#${labelledBy}`)?.classList.contains('group-heading')).toBe(true);
+      }
+    });
+
+    it('matches a query against the group name, keeping the whole group', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
+
+      getInput()!.value += 'view';
+      fireInput(getInput()!);
+
+      // "view" appears in no label, value, or keyword: only the "View" group
+      // heading matches, and its item stays while the File items drop.
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['toggle-theme']);
     });
 
     it('renders one kbd per key in a shortcut hint', async () => {
@@ -188,6 +222,116 @@ describe('ore-command-palette', () => {
 
       expect(onSearch).toHaveBeenCalled();
       expect((onSearch.mock.calls.at(-1)?.[0] as CustomEvent).detail.query).toBe('new');
+    });
+
+    describe('search-debounce', () => {
+      // Only the debounce timer is faked: `fixture.flush()` drains a real
+      // requestAnimationFrame, and a faked one would never resolve. Enabled after
+      // mount for the same reason: ore's own scheduling stays on real timers.
+      const useDebounceTimers = (): void => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      };
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      const type = async (text: string): Promise<void> => {
+        getInput()!.value += text;
+        fireInput(getInput()!);
+        await fixture.flush();
+      };
+
+      const debounceAttrs = (): Record<string, string> => ({ open: '', 'search-debounce': '120' });
+
+      it('holds the list and the search event until the window settles', async () => {
+        fixture = await mount('ore-command-palette', { attrs: debounceAttrs(), props: { items } });
+        useDebounceTimers();
+
+        const onSearch = vi.fn();
+
+        fixture.element.addEventListener('search', onSearch);
+
+        await type('new');
+
+        // The input carries the text at once, but the list still shows every command
+        // and the host has heard nothing: this is the flicker the attribute removes.
+        expect(getInput()!.value).toBe('new');
+        expect(getRows()).toHaveLength(4);
+        expect(onSearch).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(120);
+        await fixture.flush();
+
+        expect(onSearch).toHaveBeenCalledTimes(1);
+        expect((onSearch.mock.calls.at(-1)?.[0] as CustomEvent).detail.query).toBe('new');
+        expect(getRows().map((row) => row.dataset.value)).toEqual(['new-file']);
+      });
+
+      it('collapses a burst of keystrokes into one settled result set', async () => {
+        fixture = await mount('ore-command-palette', { attrs: debounceAttrs(), props: { items } });
+        useDebounceTimers();
+
+        const onSearch = vi.fn();
+
+        fixture.element.addEventListener('search', onSearch);
+
+        for (const step of ['n', 'ne', 'new']) {
+          getInput()!.value = step;
+          fireInput(getInput()!);
+          await fixture.flush();
+          vi.advanceTimersByTime(60);
+        }
+
+        expect(onSearch).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(120);
+        await fixture.flush();
+
+        // One apply, carrying the final text: the intermediate lists never rendered.
+        expect(onSearch).toHaveBeenCalledTimes(1);
+        expect((onSearch.mock.calls.at(-1)?.[0] as CustomEvent).detail.query).toBe('new');
+      });
+
+      it('commits the typed query when Enter arrives mid-window', async () => {
+        fixture = await mount('ore-command-palette', { attrs: debounceAttrs(), props: { items } });
+        useDebounceTimers();
+
+        const onSelect = vi.fn();
+
+        fixture.element.addEventListener('select', onSelect);
+
+        // The list still shows the unfiltered commands, so the row on screen is not the
+        // best match for the text: Enter commits the text rather than the stale list.
+        await type('toggle');
+        expect(getRows()).toHaveLength(4);
+
+        fireKeyDown(getInput()!, { key: 'Enter' });
+        await fixture.flush();
+
+        const detail = (onSelect.mock.calls.at(-1)?.[0] as CustomEvent<{ value: string }>).detail;
+
+        expect(detail.value).toBe('toggle-theme');
+      });
+
+      it('drops a pending query when the palette closes', async () => {
+        fixture = await mount('ore-command-palette', { attrs: debounceAttrs(), props: { items } });
+        useDebounceTimers();
+
+        const onSearch = vi.fn();
+
+        fixture.element.addEventListener('search', onSearch);
+
+        await type('new');
+        await fixture.attr('open', false);
+
+        vi.advanceTimersByTime(200);
+        await fixture.flush();
+
+        // A cancelled search would otherwise arrive after close and leave a
+        // `no-filter` consumer's mirrored query out of step with the cleared input.
+        expect(onSearch).not.toHaveBeenCalled();
+      });
     });
 
     it('`no-filter` disables built-in filtering', async () => {
@@ -593,6 +737,385 @@ describe('ore-command-palette', () => {
       await fixture.flush();
 
       expect(fixture.query('dialog[open]')).toBeNull();
+    });
+  });
+
+  describe('Drill-down Categories', () => {
+    const nestedItems: CommandPaletteItemInput[] = [
+      {
+        children: [
+          { label: 'New File', value: 'new-file' },
+          { label: 'Open File', value: 'open-file' },
+        ],
+        label: 'File',
+        value: 'cat-file',
+      },
+      {
+        children: [{ keywords: ['dark'], label: 'Toggle Theme', value: 'toggle-theme' }],
+        label: 'View',
+        value: 'cat-view',
+      },
+      { label: 'Help', value: 'help' },
+    ];
+
+    const nestedHtml = `
+      <ore-command-palette-item value="cat-file" label="File">
+        <ore-command-palette-item value="new-file">New File</ore-command-palette-item>
+        <ore-command-palette-item value="open-file">Open File</ore-command-palette-item>
+      </ore-command-palette-item>
+      <ore-command-palette-item value="help">Help</ore-command-palette-item>
+    `;
+
+    const getBackRow = () => fixture.query<HTMLButtonElement>('.back-row');
+
+    // Hovering is the only deterministic way to focus a specific row: the list control is
+    // index-addressed against the visible list, and open/keystroke wiring re-focuses row 0.
+    const hoverRow = async (value: string): Promise<void> => {
+      getRows()
+        .find((row) => row.dataset.value === value)
+        ?.dispatchEvent(new Event('pointerenter'));
+      await fixture.flush();
+    };
+
+    const openCategory = async (value: string): Promise<void> => {
+      await hoverRow(value);
+      fireKeyDown(getInput()!, { key: 'ArrowRight' });
+      await fixture.flush();
+    };
+
+    it('renders a category as one row carrying its leaf count', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      const rows = getRows();
+
+      expect(rows.map((row) => row.dataset.value)).toEqual(['cat-file', 'cat-view', 'help']);
+      expect(rows[0]?.hasAttribute('data-category')).toBe(true);
+      expect(rows[0]?.textContent).toContain('2');
+      expect(rows[2]?.hasAttribute('data-category')).toBe(false);
+    });
+
+    it('opens a category on ArrowRight and emits category-open', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      const onCategoryOpen = vi.fn();
+
+      fixture.element.addEventListener('category-open', onCategoryOpen);
+
+      await openCategory('cat-file');
+
+      expect((onCategoryOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({
+        count: 2,
+        label: 'File',
+        value: 'cat-file',
+      });
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['new-file', 'open-file']);
+      expect(getBackRow()).toBeTruthy();
+    });
+
+    it('opens a category on Enter without emitting select', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      const onSelect = vi.fn();
+
+      fixture.element.addEventListener('select', onSelect);
+
+      await hoverRow('cat-view');
+      fireKeyDown(getInput()!, { key: 'Enter' });
+      await fixture.flush();
+
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['toggle-theme']);
+    });
+
+    it('emits select only for a leaf inside an opened category', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      const onSelect = vi.fn();
+
+      fixture.element.addEventListener('select', onSelect);
+
+      await openCategory('cat-file');
+      await hoverRow('open-file');
+      fireKeyDown(getInput()!, { key: 'Enter' });
+      await fixture.flush();
+
+      const detail = (onSelect.mock.calls.at(-1)?.[0] as CustomEvent<{ value: string }>).detail;
+
+      expect(detail.value).toBe('open-file');
+    });
+
+    it('mirrors a focused category row through active-change', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      const onActiveChange = vi.fn();
+
+      fixture.element.addEventListener('active-change', onActiveChange);
+
+      // Row 0 already holds focus from open, so move to a different category row.
+      await hoverRow('cat-view');
+
+      const detail = (onActiveChange.mock.calls.at(-1)?.[0] as CustomEvent<{ value: string }>).detail;
+
+      expect(detail.value).toBe('cat-view');
+    });
+
+    it('searches category leaves globally from the root', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      getInput()!.value += 'theme';
+      fireInput(getInput()!);
+      await fixture.flush();
+
+      // "theme" lives only inside the View category: the result is the leaf itself,
+      // not a category row the user would have to open.
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['toggle-theme']);
+    });
+
+    it('keeps every child of a category whose own name matches', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      getInput()!.value += 'file';
+      fireInput(getInput()!);
+      await fixture.flush();
+
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['new-file', 'open-file']);
+    });
+
+    it('narrows only the opened category while a query is typed inside it', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      await openCategory('cat-file');
+
+      getInput()!.value += 'open';
+      fireInput(getInput()!);
+      await fixture.flush();
+
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['open-file']);
+    });
+
+    it('re-emits an empty search when a drill-in clears a typed query', async () => {
+      // Only `no-filter` keeps category rows visible while a query is typed
+      // (the default view flattens leaves instead), which is exactly the mode
+      // whose consumers mirror the search text.
+      fixture = await mount('ore-command-palette', {
+        attrs: { 'no-filter': '', open: '' },
+        props: { items: nestedItems },
+      });
+
+      const onSearch = vi.fn();
+
+      fixture.element.addEventListener('search', onSearch);
+
+      getInput()!.value += 'file';
+      fireInput(getInput()!);
+      await fixture.flush();
+
+      await openCategory('cat-file');
+
+      // The drill-in cleared the input, and a cleared query is a search transition:
+      // a `no-filter` consumer mirroring the text must learn the catalogue is empty
+      // again, not keep serving rows filtered against "file".
+      const detail = (onSearch.mock.calls.at(-1)?.[0] as CustomEvent<{ query: string }>).detail;
+
+      expect(detail.query).toBe('');
+    });
+
+    it('re-emits an empty search when a pop clears a typed query', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      const onSearch = vi.fn();
+
+      fixture.element.addEventListener('search', onSearch);
+
+      await openCategory('cat-file');
+      getInput()!.value += 'open';
+      fireInput(getInput()!);
+      await fixture.flush();
+
+      // The keyboard back keys belong to the caret while text is present, so the
+      // pop-with-query transition arrives through the back row.
+      getBackRow()!.click();
+      await fixture.flush();
+
+      const detail = (onSearch.mock.calls.at(-1)?.[0] as CustomEvent<{ query: string }>).detail;
+
+      expect(detail.query).toBe('');
+    });
+
+    it('stays quiet on push and pop that clear no query', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      const onSearch = vi.fn();
+
+      fixture.element.addEventListener('search', onSearch);
+
+      await openCategory('cat-file');
+      fireKeyDown(getInput()!, { key: 'ArrowLeft' });
+      await fixture.flush();
+
+      expect(onSearch).not.toHaveBeenCalled();
+    });
+
+    it('pops on ArrowLeft only when the query is empty', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      await openCategory('cat-file');
+
+      getInput()!.value += 'new';
+      fireInput(getInput()!);
+      await fixture.flush();
+
+      fireKeyDown(getInput()!, { key: 'ArrowLeft' });
+      await fixture.flush();
+
+      // The caret owns the key while the input has text: still inside the category.
+      expect(getBackRow()).toBeTruthy();
+
+      getInput()!.value = '';
+      fireInput(getInput()!);
+      await fixture.flush();
+
+      fireKeyDown(getInput()!, { key: 'ArrowLeft' });
+      await fixture.flush();
+
+      expect(getBackRow()).toBeNull();
+      expect(getRows()).toHaveLength(3);
+    });
+
+    it('pops on Backspace over an empty query', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      await openCategory('cat-view');
+
+      fireKeyDown(getInput()!, { key: 'Backspace' });
+      await fixture.flush();
+
+      expect(getBackRow()).toBeNull();
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['cat-file', 'cat-view', 'help']);
+    });
+
+    it('pops on Escape before closing the palette', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      const onOpenChange = vi.fn();
+
+      fixture.element.addEventListener('open-change', onOpenChange);
+
+      await openCategory('cat-file');
+
+      const dialog = fixture.query('dialog')!;
+
+      dialog.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+      expect(getBackRow()).toBeNull();
+
+      dialog.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeNull();
+      expect((onOpenChange.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'escape' });
+    });
+
+    it('returns to the root when the back row is clicked', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      await openCategory('cat-file');
+
+      fireClick(getBackRow()!);
+      await fixture.flush();
+
+      expect(getBackRow()).toBeNull();
+      expect(getRows()).toHaveLength(3);
+    });
+
+    it('resets the query and the opened category when the palette closes', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      await openCategory('cat-file');
+      getInput()!.value += 'new';
+      fireInput(getInput()!);
+      await fixture.flush();
+
+      await fixture.attr('open', false);
+      await fixture.attr('open', true);
+
+      expect(getInput()?.value).toBe('');
+      expect(getBackRow()).toBeNull();
+      expect(getRows()).toHaveLength(3);
+    });
+
+    it('reads nested categories from slotted items', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, html: nestedHtml });
+
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['cat-file', 'help']);
+
+      await openCategory('cat-file');
+
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['new-file', 'open-file']);
+    });
+
+    it('ignores a third nesting level with a warning instead of an unopenable row', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      fixture = await mount('ore-command-palette', {
+        attrs: { open: '' },
+        props: {
+          items: [
+            {
+              children: [{ children: [{ label: 'Deep', value: 'deep' }], label: 'Mid', value: 'mid' }],
+              label: 'Top',
+              value: 'top',
+            },
+          ],
+        },
+      });
+
+      expect(warnSpy).toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+
+      // "mid" is a leaf, so it opens as a plain row rather than a category that could never open.
+      await openCategory('top');
+
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['mid']);
+      expect(getRows()[0]?.hasAttribute('data-category')).toBe(false);
+    });
+
+    it('keeps categories browsable with `no-filter`', async () => {
+      fixture = await mount('ore-command-palette', {
+        attrs: { 'no-filter': '', open: '' },
+        props: { items: nestedItems },
+      });
+
+      await openCategory('cat-file');
+
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['new-file', 'open-file']);
+    });
+
+    it('falls back to the root when the opened category disappears from `items`', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items: nestedItems } });
+
+      await openCategory('cat-file');
+
+      await fixture.act(() => {
+        fixture.element.items = [{ label: 'Help', value: 'help' }];
+      });
+
+      expect(getBackRow()).toBeNull();
+      expect(getRows().map((row) => row.dataset.value)).toEqual(['help']);
+    });
+
+    it('uses `back-text` for the back row label', async () => {
+      fixture = await mount('ore-command-palette', {
+        attrs: { 'back-text': 'Back', open: '' },
+        props: { items: nestedItems },
+      });
+
+      await openCategory('cat-view');
+
+      expect(getBackRow()?.textContent?.trim()).toBe('Back');
     });
   });
 });

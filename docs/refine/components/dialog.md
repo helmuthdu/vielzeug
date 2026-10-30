@@ -121,10 +121,10 @@ Control the backdrop appearance with the `backdrop` attribute.
 <ore-button id="open-backdrop-transparent">transparent</ore-button>
 
 <ore-dialog id="dialog-backdrop-opaque" label="opaque" backdrop="opaque" dismissible
-  ><p>Dark overlay, no blur.</p></ore-dialog
+  ><p>Dimming veil, no blur (the default).</p></ore-dialog
 >
 <ore-dialog id="dialog-backdrop-blur" label="blur" backdrop="blur" dismissible
-  ><p>Dark overlay with 4 px blur: the default.</p></ore-dialog
+  ><p>Dimming veil with a blur behind the panel.</p></ore-dialog
 >
 <ore-dialog id="dialog-backdrop-transparent" label="transparent" backdrop="transparent" dismissible
   ><p>No overlay and no blur.</p></ore-dialog
@@ -310,7 +310,7 @@ dialog.addEventListener('close-request', (e) => {
 | `dismissible` | `boolean`                                         | `false`    | Show a close (×) button in the header                            |
 | `persistent`  | `boolean`                                         | `false`    | Prevent backdrop-click from closing the dialog                   |
 | `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| ... \| 'full'` | N/A | Override the panel border radius                                 |
-| `backdrop`    | `'blur' \| 'opaque' \| 'transparent'`             | `'opaque'` | Backdrop style: blur overlay, opaque (default) overlay, or none |
+| `backdrop`    | `'blur' \| 'opaque' \| 'transparent'`             | `'opaque'` | Backdrop style: dimming veil + blur, dimming veil only (default), or no overlay |
 | `elevation`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`     | Panel drop shadow depth                                          |
 | `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`          | `'md'`     | Padding for header, body, and footer                             |
 
@@ -339,7 +339,7 @@ dialog.addEventListener('close-request', (e) => {
 | `--dialog-shadow`       | Panel drop shadow                             | `var(--shadow-xl)`          |
 | `--dialog-padding`      | Padding for header, body, and footer sections | `var(--size-6)`             |
 | `--dialog-gap`          | Gap between footer action buttons             | `var(--size-4)`             |
-| `--dialog-backdrop`     | Backdrop overlay colour                       | `rgba(0, 0, 0, 0.5)`        |
+| `--dialog-backdrop-bg`  | Backdrop veil color                         | `var(--overlay-veil)`       |
 | `--dialog-max-width`    | Maximum panel width (overridden by `size`)    | `32rem`                     |
 
 ## Accessibility

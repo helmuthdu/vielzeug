@@ -154,15 +154,71 @@
 }
 
 @layer refine.utilities {
-  /* Light-DOM utilities: consume the named-animation tokens directly. Inside a
-     component's shadow root a token cannot work (its keyframes would have to be
-     duplicated per shadow root), which is why components use the keyframes with
-     a local @keyframes and the --_motion-animation escape hatch instead. */
+  /* Light-DOM utilities: one class per --animate-* token, so the token table in
+     the docs is directly usable as markup. Inside a component's shadow root a
+     token cannot work at all (its keyframes would have to be duplicated per
+     shadow root), which is why components use the keyframes with a local
+     @keyframes and the hatch instead.
+
+     The finite (non-looping) ones consume the token directly: reduced motion
+     zeroes the duration, so the animation still runs, settles on its `both`
+     end state, and fires `animationend`, which "animate out, then remove" code
+     depends on.
+
+     The looping ones wrap the --_motion-animation hatch instead: a zeroed
+     duration does not stop a loop (it settles on the LAST keyframe, which for
+     `ping` means invisible at scale 2), and `spin` composes --transition-loader,
+     which zeroes to `none` and would invalidate the whole shorthand. Only the
+     hatch's `animation: none` keeps them genuinely static. */
+  .animate-fade-in {
+    animation: var(--animate-fade-in);
+  }
+
+  .animate-fade-out {
+    animation: var(--animate-fade-out);
+  }
+
   .animate-fade-in-up {
     animation: var(--animate-fade-in-up);
   }
 
   .animate-scale-in {
     animation: var(--animate-scale-in);
+  }
+
+  .animate-slide-in-from-top {
+    animation: var(--animate-slide-in-from-top);
+  }
+
+  .animate-slide-in-from-bottom {
+    animation: var(--animate-slide-in-from-bottom);
+  }
+
+  .animate-slide-in-from-left {
+    animation: var(--animate-slide-in-from-left);
+  }
+
+  .animate-slide-in-from-right {
+    animation: var(--animate-slide-in-from-right);
+  }
+
+  .animate-spin {
+    animation: var(--_motion-animation, var(--animate-spin));
+  }
+
+  .animate-ping {
+    animation: var(--_motion-animation, var(--animate-ping));
+  }
+
+  .animate-pulse {
+    animation: var(--_motion-animation, var(--animate-pulse));
+  }
+
+  .animate-bounce {
+    animation: var(--_motion-animation, var(--animate-bounce));
+  }
+
+  .animate-progress-bar {
+    animation: var(--_motion-animation, var(--animate-progress-bar));
   }
 }

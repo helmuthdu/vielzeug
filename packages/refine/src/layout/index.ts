@@ -12,6 +12,8 @@ export type {
   OreNavbarProps,
 } from './navbar/navbar';
 export { NAVBAR_CTX, NAVBAR_ITEM_TAG, NAVBAR_TAG } from './navbar/navbar';
+export type { OreSeparatorProps } from './separator/separator';
+export { SEPARATOR_TAG } from './separator/separator';
 export type {
   OreSidebarEvents,
   OreSidebarGroupEvents,

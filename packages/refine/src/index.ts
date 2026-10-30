@@ -10,3 +10,5 @@ export type { IconAttributes, IconDefinition, IconElement } from './icons';
 export { registerIcons } from './icons';
 export { eventFieldChecked, eventFieldValue } from './inputs/shared/native-field-event';
 export { getMotionMode, MOTION_MODES, type MotionMode, setMotionMode } from './motion';
+export type { Reflow, ReflowOptions } from './reflow';
+export { animateReflow } from './reflow';

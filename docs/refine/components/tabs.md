@@ -1,6 +1,6 @@
 # Tabs
 
-A flexible tabs component for organizing content into switchable panels. Keyboard accessible, animation-ready, and available in five visual styles.
+A flexible tabs component for organizing content into switchable panels. Keyboard accessible, with a sliding active pill, and available in five visual styles.
 
 ## Variants
 
@@ -196,6 +196,22 @@ Set `color` on `ore-tabs` to apply a theme color: it propagates automatically to
 
 </ComponentPreview>
 
+## Full Width
+
+Add `fullwidth` to fill the parent container and distribute horizontal tabs evenly. It works with every variant, with or without panels. Without it, navigation-only tabs keep their content width. In vertical orientation, the host fills the container while the tab list keeps its content width.
+
+<ComponentPreview>
+
+```html
+<ore-tabs fullwidth value="overview" label="Account sections">
+  <ore-tab-item slot="tabs" value="overview">Overview</ore-tab-item>
+  <ore-tab-item slot="tabs" value="settings">Settings</ore-tab-item>
+  <ore-tab-item slot="tabs" value="billing">Billing</ore-tab-item>
+</ore-tabs>
+```
+
+</ComponentPreview>
+
 ## Compact Density
 
 Use `density="compact"` for dense toolbars, filters, table controls, and secondary navigation. It uses tighter 8px/12px padding, a single-line line-height, and a 24px minimum height while preserving selection, focus, keyboard navigation, colors, and visual variants. Density only tightens spacing: the label keeps the size your `size` prop asks for, and the corner radius is untouched — set [`rounded`](#rounded) when you want a different shape. Standard density remains the default for primary content navigation. On a coarse pointer the target stays 44px even in compact density, because WCAG 2.2 §2.5.8 is a pointer requirement rather than a density preference.
@@ -321,6 +337,10 @@ Use the `prefix` and `suffix` slots on `ore-tab-item` to add icons or notificati
 
 </ComponentPreview>
 
+## Selection Animation
+
+The selected tab is marked by a single pill that slides from the old tab to the new one, carrying the variant's active surface with it. The travel uses `--tabs-transition`; set it to `none` (or honor `prefers-reduced-motion`, which Refine already applies) to make selection instant. Style the pill through `::part(indicator)` and `--tabs-indicator-color`. Because the pill paints the active surface, `ore-tab-item` no longer paints its own active background by default: set `--tab-item-active-bg` on an item only when you want it to paint its own fill instead of the pill.
+
 ## States
 
 ### Navigation-only Tabs
@@ -393,6 +413,7 @@ Disabled tabs are skipped during keyboard navigation.
 | `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'frost'`        | `'solid'`      | Visual style of the tab bar                                           |
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Size applied to all tab items                                         |
 | `density`     | `'default' \| 'compact'`                                                    | `'default'`    | Spatial density; compact tightens padding (24px minimum height, 44px on coarse pointers) |
+| `fullwidth`   | `boolean`                                                               | `false`        | Fill the container width and distribute horizontal tabs evenly          |
 | `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`         | `'lg'`         | Corner radius of the tablist and every tab item                       |
 | `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color propagated to all tab items                               |
 | `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Tab list layout direction                                             |
@@ -445,8 +466,8 @@ Disabled tabs are skipped during keyboard navigation.
 | Property                      | Default                    | Description                                               |
 | ----------------------------- | -------------------------- | --------------------------------------------------------- |
 | `--tabs-radius`               | `var(--rounded-lg)`        | Border radius of the tablist container and panels         |
-| `--tabs-transition`           | `var(--transition-normal)` | Transition duration/easing for the active indicator       |
-| `--tabs-indicator-color`      | Theme color                | Color of the sliding active indicator line                |
+| `--tabs-transition`           | `var(--transition-normal)` | Transition duration/easing for the sliding active pill    |
+| `--tabs-indicator-color`      | Variant-dependent          | Background of the sliding active pill                     |
 | `--tabs-bg`                   | Theme-dependent            | Background of the host element (flat variant)             |
 | `--tabs-tablist-bg`           | Theme-dependent            | Tablist container background (solid/frost variants) |
 | `--tabs-tablist-border-color` | Theme-dependent            | Tablist container border color                            |
@@ -456,9 +477,9 @@ Disabled tabs are skipped during keyboard navigation.
 | `--tab-item-font-size`        | size-dependent             | Tab button font size (owned by `size`, never by density)  |
 | `--tab-item-color`            | Theme-dependent            | Default tab text color                                    |
 | `--tab-item-hover-bg`         | Theme-dependent            | Tab background on hover                                   |
-| `--tab-item-active-bg`        | Theme-dependent            | Tab background when active/selected                       |
+| `--tab-item-active-bg`        | Unset (pill paints it)     | Opt-in item fill when active; unset lets the sliding pill show |
 | `--tab-item-active-color`     | Theme-dependent            | Tab text color when active/selected                       |
-| `--tab-item-active-shadow`    | Theme-dependent            | Box shadow when active/selected                           |
+| `--tab-item-active-shadow`    | Unset (pill paints it)     | Opt-in item shadow when active; unset lets the pill carry elevation |
 
 ## Accessibility
 

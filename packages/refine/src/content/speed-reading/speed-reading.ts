@@ -6,12 +6,12 @@ import { srOnlyMixin } from '../../styles';
 import { type ReadingWord, readingWords } from './_text';
 import styles from './speed-reading.css?inline';
 
-export { ACCORDION_ITEM_TAG } from '../../disclosure/accordion-item/accordion-item';
 export { BUTTON_TAG } from '../../inputs/button/button';
 export { SELECT_TAG } from '../../inputs/select/select';
 export { SLIDER_TAG } from '../../inputs/slider/slider';
 export { POPOVER_TAG } from '../../overlay/popover/popover';
 export { TOOLTIP_TAG } from '../../overlay/tooltip/tooltip';
+export { ACCORDION_ITEM_TAG } from '../accordion-item/accordion-item';
 export { ICON_TAG } from '../icon/icon';
 
 export type SpeedReadingState = 'idle' | 'playing' | 'paused' | 'ended';

@@ -3,7 +3,8 @@
     --_radius: var(--command-palette-radius, var(--rounded-lg));
     --_max-width: var(--command-palette-max-width, 40rem);
     --_preview-width: var(--command-palette-preview-width, 18rem);
-    --_backdrop-bg: var(--command-palette-backdrop, color-mix(in oklch, var(--color-canvas) 40%, transparent));
+    --_backdrop-bg: var(--command-palette-backdrop-bg, var(--overlay-veil));
+    --_backdrop-filter: none;
     --_panel-bg: var(--command-palette-bg, color-mix(in oklch, var(--surface-overlay) 85%, transparent));
     --_panel-border-color: var(--command-palette-border-color, var(--color-divider));
     --_option-hover-bg: var(--command-palette-option-hover-bg, var(--color-contrast-100));
@@ -57,7 +58,7 @@
   dialog::backdrop {
     background: var(--_backdrop-bg);
     opacity: 1;
-    backdrop-filter: blur(var(--blur-xs));
+    backdrop-filter: var(--_backdrop-filter);
     transition:
       opacity var(--duration-200) var(--ease-in-out),
       overlay var(--duration-200) allow-discrete,
@@ -239,12 +240,20 @@
   }
 
   .group-heading {
+    /* Sticky inside the scrolling listbox: the heading stays pinned while its own
+       group scrolls beneath it, then the next group's heading pushes it out (the
+       .group wrapper is its containing block). Near-opaque background so rows
+       don't ghost through — same ratio the sticky table header uses. */
+    position: sticky;
+    top: 0;
+    z-index: 1;
     padding: var(--size-2) var(--size-2-5) var(--size-1);
     font-size: var(--text-xs);
     font-weight: var(--font-semibold);
     color: var(--color-contrast-500);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wide, 0.05em);
+    background: var(--command-palette-group-sticky-bg, color-mix(in oklch, var(--surface-overlay) 94%, transparent));
   }
 
   .item {
@@ -295,6 +304,55 @@
     gap: var(--size-1);
   }
 
+  /* Category rows carry a leaf count and a chevron instead of a shortcut hint;
+     the chevron points into the reading direction. */
+  .item-count {
+    flex-shrink: 0;
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-contrast-400);
+  }
+
+  .item-chevron {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    color: var(--color-contrast-400);
+  }
+
+  :host([dir='rtl']) .item-chevron,
+  :host(:dir(rtl)) .item-chevron {
+    transform: scaleX(-1);
+  }
+
+  /* Back row above the drilled-in list: a real button so pointer and Tab reach it
+     without joining the listbox's data-indexed option rows. */
+  .back-row {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-2-5);
+    align-items: center;
+    padding: var(--size-2) var(--size-3);
+    font: inherit;
+    font-size: var(--text-sm);
+    color: var(--color-contrast-600);
+    text-align: start;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-block-end: var(--border) solid var(--color-divider);
+  }
+
+  .back-row:hover {
+    color: var(--color-contrast-900);
+    background: var(--_option-hover-bg);
+  }
+
+  .back-row:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: calc(var(--focus-ring-offset) * -1);
+  }
+
   /* =====================
        Footer hints
        ===================== */
@@ -324,5 +382,15 @@
   /* Slotted item elements are pure data nodes: never rendered directly. */
   ::slotted(ore-command-palette-item) {
     display: none;
+  }
+}
+
+@layer refine.config {
+  :host([backdrop='blur']) {
+    --_backdrop-filter: blur(var(--blur-xs));
+  }
+
+  :host([backdrop='transparent']) {
+    --_backdrop-bg: transparent;
   }
 }

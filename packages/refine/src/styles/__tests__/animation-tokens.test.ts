@@ -44,6 +44,39 @@ describe('--animate-* tokens', () => {
       expect(animated.has(keyframe), `no --animate-* token wraps ${keyframe}`).toBe(true);
     }
   });
+
+  // The token table is only usable as markup if every token has a matching
+  // `.animate-*` utility class. A token shipped without one forces consumers to
+  // hand-write `animation: var(--animate-…)`, which is the half-shipped state
+  // this guard prevents. The wrapping is not uniform on purpose: a looping
+  // animation must carry the --_motion-animation hatch (a zeroed duration does
+  // not stop a loop, it settles on the last keyframe), while a finite one must
+  // consume the token directly so it still runs at 0ms and fires `animationend`
+  // for "animate out, then remove" code.
+  it('each have a .animate-* utility class wrapped for its motion kind', () => {
+    const classes = new Map(
+      [...animationCss.matchAll(/\.animate-([a-z-]+)\s*\{\s*animation:\s*([^;]+);/g)].map((m) => [m[1], m[2]]),
+    );
+
+    const looping = ['spin', 'ping', 'pulse', 'bounce', 'progress-bar'];
+
+    for (const [, token] of animateTokens) {
+      const name = token.replace(/^--animate-/, '');
+      const declaration = classes.get(name);
+
+      expect(declaration, `--animate-${name} has no .animate-${name} utility class`).toBeDefined();
+
+      if (looping.includes(name)) {
+        expect(declaration, `.animate-${name} loops and must carry the hatch`).toBe(
+          `var(--_motion-animation, var(--animate-${name}))`,
+        );
+      } else {
+        expect(declaration, `.animate-${name} is finite and must consume the token directly`).toBe(
+          `var(--animate-${name})`,
+        );
+      }
+    }
+  });
 });
 
 describe('reduced motion', () => {

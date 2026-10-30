@@ -1,6 +1,6 @@
 @layer refine.base {
   :host {
-    --_backdrop-bg: var(--drawer-backdrop-bg, color-mix(in oklch, var(--color-canvas) 40%, transparent));
+    --_backdrop-bg: var(--drawer-backdrop-bg, var(--overlay-veil));
     --_backdrop-filter: none;
     --_panel-bg: var(--drawer-bg, color-mix(in oklch, var(--surface-overlay) 85%, transparent));
     --_panel-blur: var(--drawer-panel-blur, var(--blur-md));

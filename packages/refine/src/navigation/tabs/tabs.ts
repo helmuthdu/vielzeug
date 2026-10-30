@@ -50,6 +50,8 @@ export type OreTabsProps = {
   color?: ThemeColor;
   /** Spatial density; compact tightens padding (24px minimum height, 44px on coarse pointers) without changing font-size or radius. */
   density?: 'compact' | 'default';
+  /** Fill the container width and distribute horizontal tabs evenly. */
+  fullwidth?: boolean;
   /** Accessible label for the tablist (passed as aria-label). Use when there is no visible heading labelling the tabs. */
   label?: string;
   /** Orientation of the tab list */
@@ -75,6 +77,7 @@ export type OreTabsProps = {
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'ghost' | 'frost'
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
  * @attr {string} density - Spatial density: 'default' | 'compact'
+ * @attr {boolean} fullwidth - Fill the container width and distribute horizontal tabs evenly
  * @attr {string} rounded - Corner radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' (bare attribute is 'full')
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  *
@@ -84,13 +87,13 @@ export type OreTabsProps = {
  * @slot - Place `ore-tab-panel` elements here
  *
  * @cssprop --tabs-radius - Border radius of the tablist container and panels
- * @cssprop --tabs-transition - Transition duration/easing for the active indicator
- * @cssprop --tabs-indicator-color - Color of the sliding active indicator line
+ * @cssprop --tabs-transition - Transition duration/easing for the sliding active pill
+ * @cssprop --tabs-indicator-color - Background of the sliding active pill (raised surface, or the theme color on `ghost`)
  * @cssprop --tabs-bg - Background of the host element (flat variant)
  * @cssprop --tabs-tablist-bg - Tablist container background (solid/frost variants)
  * @cssprop --tabs-tablist-border-color - Tablist container border color
  * @part tablist - Container that holds the slotted tab items
- * @part indicator - Active tab indicator element
+ * @part indicator - Sliding pill that marks the active tab
  * @part panels - Container that holds tab panel content
  * @example
  * ```html
@@ -109,6 +112,7 @@ define<OreTabsProps>(TABS_TAG, {
     ...sizableBundle,
     activation: prop.oneOf(['auto', 'manual'] as const, 'auto'),
     density: prop.oneOf(['compact', 'default'] as const, 'default'),
+    fullwidth: prop.bool(false),
     label: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
     rounded: prop.oneOf(TAB_ROUNDED),
@@ -216,52 +220,67 @@ define<OreTabsProps>(TABS_TAG, {
       variant: props.variant,
     });
 
-    const moveIndicator = (activeTab: HTMLElement | undefined) => {
+    // The pill is a child of the scrollable tablist, so it scrolls with the tab content:
+    // its untransformed box sits at the tablist padding-box origin minus the scroll
+    // offset. To land it on the active tab, take the tab's viewport delta from the
+    // tablist border box, subtract the border widths (padding-box origin), and add the
+    // scroll offset back. One geometry model serves both orientations; `animate`
+    // distinguishes a selection change (morph the pill to its new tab) from a reflow
+    // (snap it onto the unmoved tab).
+    const placeIndicator = (activeTab: HTMLElement, animate: boolean) => {
       const indicator = indicatorRef.value;
       const tablist = tablistRef.value;
 
-      if (!indicator || !tablist || !activeTab) return;
+      if (!indicator || !tablist) return;
 
       const tabRect = activeTab.getBoundingClientRect();
       const listRect = tablist.getBoundingClientRect();
+      const x = tabRect.left - listRect.left - tablist.clientLeft + tablist.scrollLeft;
+      const y = tabRect.top - listRect.top - tablist.clientTop + tablist.scrollTop;
 
-      if (isVertical()) {
-        const y = tabRect.top - listRect.top + tablist.scrollTop;
+      if (!animate) indicator.style.transition = 'none';
 
-        indicator.style.transition = 'none';
-        indicator.style.height = `${tabRect.height}px`;
-        indicator.style.width = '';
-        indicator.style.left = '0';
-        indicator.style.top = '0';
+      indicator.style.width = `${tabRect.width}px`;
+      indicator.style.height = `${tabRect.height}px`;
+      indicator.style.transform = `translate(${x}px, ${y}px)`;
+
+      if (!animate) {
+        // Flush the un-animated placement before the transition comes back on.
         void indicator.offsetWidth;
         indicator.style.transition = '';
-        indicator.style.transform = `translateY(${y}px)`;
-      } else {
-        const x = tabRect.left - listRect.left + tablist.scrollLeft;
-
-        indicator.style.transition = 'none';
-        indicator.style.width = `${tabRect.width}px`;
-        indicator.style.height = '';
-        indicator.style.top = '';
-        indicator.style.left = '0';
-        void indicator.offsetWidth;
-        indicator.style.transition = '';
-        indicator.style.transform = `translateX(${x}px)`;
       }
     };
 
-    const updateIndicator = () => {
+    // Selection changes are not the only thing that moves the pill's target box: container
+    // resizes, `fullwidth` toggles, and late slot bindings all change the active tab's
+    // geometry while selection stays put. A ResizeObserver on the tablist and every tab
+    // item re-places the pill for all of them (CSS anchor positioning cannot: the tab's
+    // button lives in the ore-tab-item shadow tree, and anchor names do not cross shadow
+    // boundaries). Items are (re)observed on slot change, never on selection: observe()
+    // fires an initial callback, which would snap the pill mid-slide. jsdom stubs
+    // ResizeObserver as a no-op, so jsdom tests keep their geometry-free behavior.
+    let indicatorObserver: ResizeObserver | undefined;
+
+    const observeTabGeometry = () => {
+      if (!indicatorObserver) return;
+
+      indicatorObserver.disconnect();
+      if (tablistRef.value) indicatorObserver.observe(tablistRef.value);
+      for (const tab of getTabs()) indicatorObserver.observe(tab);
+    };
+
+    const updateIndicator = (animate = false) => {
       const value = selectedValue.value;
 
       if (!value) return;
 
       const activeTab = getTabs().find((t) => t.getAttribute('value') === value);
 
-      moveIndicator(activeTab);
+      if (activeTab) placeIndicator(activeTab, animate);
     };
 
     watch(selectedValue, () => {
-      requestAnimationFrame(updateIndicator);
+      requestAnimationFrame(() => updateIndicator(true));
     });
 
     // ────────────────────────────────────────────────────────────────
@@ -334,9 +353,14 @@ define<OreTabsProps>(TABS_TAG, {
     onMounted(() => {
       const tabsSlot = shadowRoot?.querySelector<HTMLSlotElement>('slot[name="tabs"]');
       const panelsSlot = shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+
+      indicatorObserver =
+        typeof ResizeObserver === 'function' ? new ResizeObserver(() => updateIndicator()) : undefined;
+
       const sync = () => {
         ensureSelection();
         hasPanels.value = panelsSlot?.assignedElements().some((child) => child.localName === 'ore-tab-panel') ?? false;
+        observeTabGeometry();
         updateIndicator();
       };
 
@@ -349,6 +373,8 @@ define<OreTabsProps>(TABS_TAG, {
       return () => {
         tabsSlot?.removeEventListener('slotchange', sync);
         panelsSlot?.removeEventListener('slotchange', sync);
+        indicatorObserver?.disconnect();
+        indicatorObserver = undefined;
       };
     });
 
@@ -360,9 +386,9 @@ define<OreTabsProps>(TABS_TAG, {
           part="tablist"
           aria-orientation="${props.orientation}"
           aria-label="${props.label}">
+          <div class="indicator" ref="${indicatorRef}" part="indicator" aria-hidden="true"></div>
           <slot name="tabs"></slot>
         </div>
-        <div class="indicator" ref="${indicatorRef}" part="indicator"></div>
       </div>
       <div class="panels" part="panels" ?hidden="${() => !hasPanels.value}">
         <slot></slot>

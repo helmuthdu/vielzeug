@@ -225,23 +225,25 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 
 ### Components
 
-**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-keyboard-key`, `ore-keyboard-shortcut`, `ore-list`, `ore-list-item`, `ore-marquee`, `ore-pagination`, `ore-qr-code`, `ore-separator`, `ore-speed-reading`, `ore-stats`, `ore-step`, `ore-stepper`, `ore-table`, `ore-text`
+Each entry below is a component with its own documentation page and registration subpath. Sub-element tags (`ore-accordion-item`, `ore-tab-item`, `ore-avatar-group`, and the rest) are documented on their parent's page and registered with it.
 
-**Disclosure:** `ore-accordion`, `ore-accordion-item`, `ore-tabs`, `ore-tab-item`, `ore-tab-panel`
+**Content:** `ore-accordion`, `ore-avatar`, `ore-card`, `ore-carousel`, `ore-chat-message`, `ore-chat-panel`, `ore-code-window`, `ore-copy-command`, `ore-icon`, `ore-keyboard-key`, `ore-list`, `ore-marquee`, `ore-qr-code`, `ore-rank-list`, `ore-speech-player`, `ore-speed-reading`, `ore-stats`, `ore-table`, `ore-text`
 
 **Feedback:** `ore-alert`, `ore-async`, `ore-badge`, `ore-chip`, `ore-cookie-banner`, `ore-password-strength`, `ore-progress`, `ore-skeleton`, `ore-toast`, `ore-typing-indicator`
 
-**Inputs:** `ore-button`, `ore-button-group`, `ore-calendar`, `ore-checkbox`, `ore-checkbox-group`, `ore-column`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-query-bar`, `ore-radio`, `ore-radio-group`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
+**Inputs:** `ore-button`, `ore-calendar`, `ore-checkbox`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-query-bar`, `ore-radio`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
 
-**Layout:** `ore-box`, `ore-grid`, `ore-grid-item`, `ore-navbar`, `ore-sidebar`
+**Layout:** `ore-box`, `ore-grid`, `ore-navbar`, `ore-separator`, `ore-sidebar`
 
-**Overlay:** `ore-command-palette`, `ore-command-palette-item`, `ore-dialog`, `ore-drawer`, `ore-menu`, `ore-popover`, `ore-spotlight`, `ore-tooltip`, `ore-tour`
+**Navigation:** `ore-breadcrumb`, `ore-navigation-menu`, `ore-pagination`, `ore-stepper`, `ore-tabs`
+
+**Overlay:** `ore-command-palette`, `ore-dialog`, `ore-drawer`, `ore-menu`, `ore-popover`, `ore-spotlight`, `ore-tooltip`, `ore-tour`
 
 ## Component portfolio
 
 Refine keeps one public package and classifies components by composition level rather than stability. All listed components remain supported and tested.
 
-- **Foundations**: buttons, inputs, selection controls, disclosure, dialogs, menus, tooltips, layout primitives, and feedback indicators. Start here when building an application-specific interface.
+- **Foundations**: buttons, inputs, selection controls, accordions, dialogs, menus, tooltips, layout primitives, and feedback indicators. Start here when building an application-specific interface.
 - **Composed patterns**: data grids, command palettes, navigation menus, steppers, calendars, date/time pickers, file inputs, and message composers. These package recurring accessibility and interaction behavior that is costly to rebuild correctly.
 - **Presentation patterns**: cards, chat messages, code windows, stats, marquees, avatars, badges, and skeletons. Use these when their product vocabulary matches the application; prefer foundations when it does not.
 
@@ -253,9 +255,10 @@ Classification guides discovery and bundle selection. It is not a reason to remo
 
 - **Accessible**: keyboard navigation, ARIA wiring, and focus management across interactive components
 - **Themeable**: global tokens plus component-level CSS custom properties
+- **Motion-safe**: every animation routes through duration tokens and honors Motion Mode (`setMotionMode`) with a reduced-motion floor
 - **Framework agnostic**: works anywhere HTML can be rendered
 - **Tree-shakeable**: import only the component entry points you register
-- **Comprehensive surface**: inputs, content, disclosure, feedback, layout, and overlay primitives
+- **Comprehensive surface**: inputs, content, navigation, feedback, layout, and overlay primitives
 - **Native form integration**: form-associated controls submit values, validate supported required constraints, and reset with their form
 - **Typed framework declarations**: DOM, React, and Vue tags derive from the component property contracts
 
@@ -273,6 +276,7 @@ Classification guides discovery and bundle selection. It is not a reason to remo
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
+- [Animation & Motion](./animation.md)
 - [Migration Guide](./migration.md)
 
 </div>

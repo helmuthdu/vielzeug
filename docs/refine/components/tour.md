@@ -130,6 +130,7 @@ if (media) {
 
 | Attribute       | Type                                                                       | Default    | Description                                          |
 | --------------- | -------------------------------------------------------------------------- | ---------- | ---------------------------------------------------- |
+| `backdrop`      | `'opaque' \| 'blur' \| 'transparent'`                                       | `'opaque'` | Backdrop style in dialog presentations: veil only (default), veil + blur, or no overlay |
 | `description`   | `string`                                                                    | N/A        | Body text (replaced by the default slot)             |
 | `dismissible`   | `boolean`                                                                   | `true`     | Show a close (×) button                              |
 | `initial-focus` | `string`                                                                    | N/A        | Selector to focus on open (dialog presentations)     |
@@ -178,6 +179,7 @@ A controller is anything with `current: Readable<TourStepSnapshot>` plus `dismis
 | Property                | Description                          |
 | ----------------------- | ------------------------------------ |
 | `--tour-bg`             | Card background color                |
+| `--tour-backdrop-bg`    | Backdrop veil color (default `--overlay-veil`) |
 | `--tour-border-color`   | Card border color                    |
 | `--tour-max-width`      | Card max width (default 22rem)       |
 | `--tour-media-max-height` | Media ceiling (default `min(38dvh, 16rem)`; bottom sheet `min(26dvh, 12rem)`) |

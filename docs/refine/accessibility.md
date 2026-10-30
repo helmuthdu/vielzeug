@@ -111,12 +111,29 @@ Before each minor release:
 | `ore-badge`          | None               | N/A | `aria-label` if meaningful                |
 | `ore-chip`           | `button` (interactive) | Enter         | `aria-pressed`, `aria-label`              |
 
-### Disclosure
+### Content
 
-| Component      | Role                           | Keyboard              | Key ARIA attrs                                      |
-| -------------- | ------------------------------ | --------------------- | --------------------------------------------------- |
-| `ore-accordion` | `button` + region              | Enter / Space         | `aria-expanded`, `aria-controls`                    |
-| `ore-tabs`      | `tablist` + `tab` + `tabpanel` | Arrow keys            | `aria-selected`, `aria-controls`, `aria-labelledby` |
+| Component       | Role                      | Keyboard      | Key ARIA attrs               |
+| --------------- | ------------------------- | ------------- | ---------------------------- |
+| `ore-accordion`  | `button` + region         | Enter / Space | `aria-expanded`, `aria-controls` |
+| `ore-card`       | `button` (interactive)    | Enter / Space | `aria-disabled`, `aria-busy` |
+| `ore-stats` | `article`                 | N/A | `aria-disabled`, `aria-busy` |
+| `ore-chat-message` | `article` (on the bubble) | N/A | `aria-label` describing sender; failed sends also announced via an assertive live region |
+| `ore-list`       | `list` or `listbox` (`selectable`) | Arrow / Home / End / Enter / Space (`selectable` only) | `aria-disabled`; needs `aria-label`/`aria-labelledby` in listbox mode | Manual activation: arrow keys move focus, Enter/Space commits selection |
+| `ore-list-item`  | `listitem` or `option` (`selectable`) | Enter / Space (activation); Tab reaches slotted `actions-left`/`actions-right` content | `aria-selected`, `aria-disabled` | Swipe-revealed action panels stay reachable via `:focus-within`, independent of the gesture |
+| `ore-table`      | `table` (native)          | Standard      | `aria-label`, `aria-busy`    |
+| `ore-text`       | heading (`as="h1"`–`h6`) or `button` (`expandable`) | Enter / Space (`expandable`) | `role="heading"` + `aria-level`; `role="button"` + `aria-expanded` when `expandable` | Clipped text mirrors its full content into `title` while truncated |
+| `ore-avatar`     | None                      | N/A | `alt` or `aria-label`        |
+
+### Navigation
+
+| Component              | Role                           | Keyboard                          | Key ARIA attrs                                      |
+| ---------------------- | ------------------------------ | --------------------------------- | --------------------------------------------------- |
+| `ore-tabs`             | `tablist` + `tab` + `tabpanel` | Arrow keys                        | `aria-selected`, `aria-controls`, `aria-labelledby` |
+| `ore-stepper`          | `navigation` + `list`          | Arrow / Home / End (when `clickable`) | `aria-current="step"`, `aria-disabled`         | Roving `tabindex` over navigable steps; message region uses `role="status"` + `aria-live="polite"` |
+| `ore-pagination`       | `navigation`                   | Standard                          | `aria-label`, `aria-current`                        |
+| `ore-breadcrumb`       | `navigation`                   | Standard                          | `aria-label`, `aria-current`                        |
+| `ore-navigation-menu`  | `navigation` + disclosure      | Arrow / Enter / Escape            | `aria-expanded`, `aria-controls`, `aria-haspopup`   | Panel opens on hover/focus and closes on Escape or outside pointer |
 
 ### Overlay
 
@@ -131,22 +148,6 @@ Before each minor release:
 | `ore-tour`    | `dialog`          | Escape, ArrowLeft / ArrowRight | `aria-modal` (dialog modes), `aria-valuetext` on progress | Popover mode: focus on open, restored on close; dialog modes: native focus trap + background lock |
 | `ore-spotlight` | decorative      | N/A                        | `aria-hidden` on overlay          | Never captures pointer events |
 
-### Content
-
-| Component       | Role                      | Keyboard      | Key ARIA attrs               |
-| --------------- | ------------------------- | ------------- | ---------------------------- |
-| `ore-card`       | `button` (interactive)    | Enter / Space | `aria-disabled`, `aria-busy` |
-| `ore-stats` | `article`                 | N/A | `aria-disabled`, `aria-busy` |
-| `ore-chat-message` | `article` (on the bubble) | N/A | `aria-label` describing sender; failed sends also announced via an assertive live region |
-| `ore-list`       | `list` or `listbox` (`selectable`) | Arrow / Home / End / Enter / Space (`selectable` only) | `aria-disabled`; needs `aria-label`/`aria-labelledby` in listbox mode | Manual activation: arrow keys move focus, Enter/Space commits selection |
-| `ore-stepper`    | `navigation` + `list`     | Arrow / Home / End (when `clickable`) | `aria-current="step"`, `aria-disabled` | Roving `tabindex` over navigable steps; message region uses `role="status"` + `aria-live="polite"` |
-| `ore-list-item`  | `listitem` or `option` (`selectable`) | Enter / Space (activation); Tab reaches slotted `actions-left`/`actions-right` content | `aria-selected`, `aria-disabled` | Swipe-revealed action panels stay reachable via `:focus-within`, independent of the gesture |
-| `ore-table`      | `table` (native)          | Standard      | `aria-label`, `aria-busy`    |
-| `ore-text`       | heading (`as="h1"`–`h6`) or `button` (`expandable`) | Enter / Space (`expandable`) | `role="heading"` + `aria-level`; `role="button"` + `aria-expanded` when `expandable` | Clipped text mirrors its full content into `title` while truncated |
-| `ore-pagination` | `navigation`              | Standard      | `aria-label`, `aria-current` |
-| `ore-breadcrumb` | `navigation`              | Standard      | `aria-label`, `aria-current` |
-| `ore-avatar`     | None                      | N/A | `alt` or `aria-label`        |
-
 ### Layout
 
 | Component    | Notes                                                          |
@@ -159,9 +160,10 @@ Before each minor release:
 ## Built-in Guarantees
 
 - **Touch targets are 44×44 on every pointer.** Interactive components set a 44px minimum target unconditionally, not only under a coarse pointer: a mouse user gets the same hit area as a touch user. Under a coarse pointer the whole component also promotes one size tier, so padding and icons grow with the target.
+- **Text controls never trigger the iOS focus zoom.** iOS Safari zooms the whole page when a focused text control's font-size is below 16px. Under a coarse pointer, field text (`ore-input`, `ore-textarea`, `ore-message-composer`, and every composite built on them) floors at 16px at every `size`, including `size="sm"` (SC 1.4.4).
 - **Truncated text is recoverable.** Any label clipped by an ellipsis (`ore-text`, `ore-list-item`, `ore-menu-item`, `ore-sidebar-item`) mirrors its full text into a `title` while it is actually clipped, and drops it as soon as there is room. `ore-text` additionally supports `expandable` for a tap-to-reveal disclosure.
 - **Focus rings share one primitive.** Every keyboard focus indicator composes `--focus-ring`, so the increased-contrast path (`prefers-contrast: more` or `html.contrast-more`) thickens all rings at once by re-declaring one token.
-- **Reduced motion and reduced transparency are honored.** `prefers-reduced-motion` zeroes every duration token; an app can force either direction with `setMotionMode('reduced' | 'full')` (see [Theming → Motion Mode](/refine/theming#motion-mode)). `prefers-reduced-transparency` swaps translucent frost fills for opaque ones.
+- **Reduced motion and reduced transparency are honored.** `prefers-reduced-motion` zeroes every duration token; an app can force either direction with `setMotionMode('reduced' | 'full')` (see [Animation & Motion → Motion Mode](/refine/animation#motion-mode)). `prefers-reduced-transparency` swaps translucent frost fills for opaque ones.
 - **Continuously moving content pauses by default.** `ore-marquee` stops on hover and on keyboard focus (`pause-on-hover` defaults to `true`), giving pointer and keyboard users a pause for the repeating ticker (SC 2.2.2) on top of the reduced-motion stop.
 - **Keyboard focus is never hidden behind sticky chrome.** Sticky `ore-table` / `ore-datagrid` headers set `scroll-padding-block-start`, so a focused row scrolls into clear view below the pinned header rather than underneath it (SC 2.4.11).
 - **Accessible names contain their visible labels.** Controls are named from their own visible text wherever a name can be derived that way — a slider mirrors its default-slot label onto the host `aria-label`, a file drop zone and the query-bar filter button are labelled by their visible content — so a speech-recognition user can activate them by what they read (SC 2.5.3). No `aria-label` overrides a visible label.

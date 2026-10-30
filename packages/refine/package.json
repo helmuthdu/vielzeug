@@ -114,12 +114,12 @@
     "./accordion": {
       "import": "./dist/accordion.js",
       "require": "./dist/accordion.cjs",
-      "types": "./dist/disclosure/accordion/accordion.d.ts"
+      "types": "./dist/content/accordion/accordion.d.ts"
     },
     "./accordion-item": {
       "import": "./dist/accordion-item.js",
       "require": "./dist/accordion-item.cjs",
-      "types": "./dist/disclosure/accordion-item/accordion-item.d.ts"
+      "types": "./dist/content/accordion-item/accordion-item.d.ts"
     },
     "./alert": {
       "import": "./dist/alert.js",
@@ -154,7 +154,7 @@
     "./breadcrumb": {
       "import": "./dist/breadcrumb.js",
       "require": "./dist/breadcrumb.cjs",
-      "types": "./dist/content/breadcrumb/breadcrumb.d.ts"
+      "types": "./dist/navigation/breadcrumb/breadcrumb.d.ts"
     },
     "./button": {
       "import": "./dist/button.js",
@@ -319,7 +319,7 @@
     "./navigation-menu": {
       "import": "./dist/navigation-menu.js",
       "require": "./dist/navigation-menu.cjs",
-      "types": "./dist/overlay/navigation-menu/navigation-menu.d.ts"
+      "types": "./dist/navigation/navigation-menu/navigation-menu.d.ts"
     },
     "./number-input": {
       "import": "./dist/number-input.js",
@@ -334,7 +334,7 @@
     "./pagination": {
       "import": "./dist/pagination.js",
       "require": "./dist/pagination.cjs",
-      "types": "./dist/content/pagination/pagination.d.ts"
+      "types": "./dist/navigation/pagination/pagination.d.ts"
     },
     "./password-strength": {
       "import": "./dist/password-strength.js",
@@ -399,7 +399,7 @@
     "./separator": {
       "import": "./dist/separator.js",
       "require": "./dist/separator.cjs",
-      "types": "./dist/content/separator/separator.d.ts"
+      "types": "./dist/layout/separator/separator.d.ts"
     },
     "./sidebar": {
       "import": "./dist/sidebar.js",
@@ -439,12 +439,12 @@
     "./step": {
       "import": "./dist/step.js",
       "require": "./dist/step.cjs",
-      "types": "./dist/content/stepper/step.d.ts"
+      "types": "./dist/navigation/stepper/step.d.ts"
     },
     "./stepper": {
       "import": "./dist/stepper.js",
       "require": "./dist/stepper.cjs",
-      "types": "./dist/content/stepper/stepper.d.ts"
+      "types": "./dist/navigation/stepper/stepper.d.ts"
     },
     "./switch": {
       "import": "./dist/switch.js",
@@ -454,12 +454,12 @@
     "./tab-item": {
       "import": "./dist/tab-item.js",
       "require": "./dist/tab-item.cjs",
-      "types": "./dist/disclosure/tab-item/tab-item.d.ts"
+      "types": "./dist/navigation/tab-item/tab-item.d.ts"
     },
     "./tab-panel": {
       "import": "./dist/tab-panel.js",
       "require": "./dist/tab-panel.cjs",
-      "types": "./dist/disclosure/tab-panel/tab-panel.d.ts"
+      "types": "./dist/navigation/tab-panel/tab-panel.d.ts"
     },
     "./table": {
       "import": "./dist/table.js",
@@ -469,7 +469,7 @@
     "./tabs": {
       "import": "./dist/tabs.js",
       "require": "./dist/tabs.cjs",
-      "types": "./dist/disclosure/tabs/tabs.d.ts"
+      "types": "./dist/navigation/tabs/tabs.d.ts"
     },
     "./text": {
       "import": "./dist/text.js",
@@ -543,10 +543,10 @@
         "dist/frameworks/vue.d.ts"
       ],
       "accordion": [
-        "dist/disclosure/accordion/accordion.d.ts"
+        "dist/content/accordion/accordion.d.ts"
       ],
       "accordion-item": [
-        "dist/disclosure/accordion-item/accordion-item.d.ts"
+        "dist/content/accordion-item/accordion-item.d.ts"
       ],
       "alert": [
         "dist/feedback/alert/alert.d.ts"
@@ -567,7 +567,7 @@
         "dist/layout/box/box.d.ts"
       ],
       "breadcrumb": [
-        "dist/content/breadcrumb/breadcrumb.d.ts"
+        "dist/navigation/breadcrumb/breadcrumb.d.ts"
       ],
       "button": [
         "dist/inputs/button/button.d.ts"
@@ -666,7 +666,7 @@
         "dist/layout/navbar/navbar.d.ts"
       ],
       "navigation-menu": [
-        "dist/overlay/navigation-menu/navigation-menu.d.ts"
+        "dist/navigation/navigation-menu/navigation-menu.d.ts"
       ],
       "number-input": [
         "dist/inputs/number-input/number-input.d.ts"
@@ -675,7 +675,7 @@
         "dist/inputs/otp-input/otp-input.d.ts"
       ],
       "pagination": [
-        "dist/content/pagination/pagination.d.ts"
+        "dist/navigation/pagination/pagination.d.ts"
       ],
       "password-strength": [
         "dist/feedback/password-strength/password-strength.d.ts"
@@ -714,7 +714,7 @@
         "dist/inputs/select/select.d.ts"
       ],
       "separator": [
-        "dist/content/separator/separator.d.ts"
+        "dist/layout/separator/separator.d.ts"
       ],
       "sidebar": [
         "dist/layout/sidebar/sidebar.d.ts"
@@ -738,25 +738,25 @@
         "dist/content/stats/stats.d.ts"
       ],
       "step": [
-        "dist/content/stepper/step.d.ts"
+        "dist/navigation/stepper/step.d.ts"
       ],
       "stepper": [
-        "dist/content/stepper/stepper.d.ts"
+        "dist/navigation/stepper/stepper.d.ts"
       ],
       "switch": [
         "dist/inputs/switch/switch.d.ts"
       ],
       "tab-item": [
-        "dist/disclosure/tab-item/tab-item.d.ts"
+        "dist/navigation/tab-item/tab-item.d.ts"
       ],
       "tab-panel": [
-        "dist/disclosure/tab-panel/tab-panel.d.ts"
+        "dist/navigation/tab-panel/tab-panel.d.ts"
       ],
       "table": [
         "dist/content/table/table.d.ts"
       ],
       "tabs": [
-        "dist/disclosure/tabs/tabs.d.ts"
+        "dist/navigation/tabs/tabs.d.ts"
       ],
       "text": [
         "dist/content/text/text.d.ts"
@@ -793,9 +793,10 @@
   ],
   "scripts": {
     "analyze": "custom-elements-manifest analyze --config scripts/refine-manifest.mjs",
-    "build": "pnpm --silent run check:theme && pnpm --silent run check:manifest && pnpm --silent run check:css-contract && vite build && pnpm --silent run check:cross-entry && pnpm --silent run build:bundle && cp -r src/styles/*.css dist/styles && pnpm --silent run build:types && pnpm --silent run analyze && pnpm --silent run gen:framework-types && pnpm --silent run check:packed-icons",
+    "build": "pnpm --silent run check:theme && pnpm --silent run check:manifest && pnpm --silent run check:css-contract && vite build && pnpm --silent run check:cross-entry && (pnpm --silent run build:types & p1=$!; pnpm --silent run analyze & p2=$!; pnpm --silent run gen:framework-types & p3=$!; wait $p1 && wait $p2 && wait $p3) && pnpm --silent run build:bundle && cp -r src/styles/*.css dist/styles",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:bundle:watch": "vite build --watch --config vite.bundle.config.ts",
+    "build:e2e": "pnpm --silent run build:bundle && cp -r src/styles/*.css dist/styles",
     "build:types": "tsc -p tsconfig.declarations.json",
     "check:css-contract": "node ./scripts/check-css-contract.mjs",
     "check:cross-entry": "node ./scripts/refine-manifest.mjs check-cross-entry",

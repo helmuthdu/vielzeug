@@ -1,0 +1,56 @@
+{
+  "changes": [
+    {
+      "comment": "ore-tabs: new fullwidth prop fills the container and distributes horizontal tabs evenly",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    },
+    {
+      "comment": "ore-tabs: the selected tab is now marked by a single sliding pill (::part(indicator)) that travels between tabs; ore-tab-item no longer paints its own active background by default (set --tab-item-active-bg to opt back in)",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    },
+    {
+      "comment": "ore-sidebar: the drawer now dims the page with a theme scrim veil (never a bright fog in dark mode), fades with the panel, gains a header close button, swipe-to-dismiss, and panel elevation; new backdrop prop and --sidebar-drawer-backdrop-bg/--sidebar-drawer-shadow tokens; --sidebar-drawer-width now takes effect",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    },
+    {
+      "comment": "ore-sidebar: close-on-select defaults to true (pass false to keep the drawer open after selecting); drawer-only mode now uses the same overlay presentation as the bottom-nav drawer",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    },
+    {
+      "comment": "ore-sidebar-group: toggling an uncontrolled collapsible group now emits the documented open-change event and aria-expanded reflects the real state; the dead --sidebar-item-indicator property was removed",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    },
+    {
+      "comment": "overlay backdrops standardized on the new --overlay-veil token (a darkening scrim veil): dialog, drawer, command palette, and tour no longer wash the page pale in light mode with the canvas color",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    },
+    {
+      "comment": "ore-command-palette and ore-tour gained the backdrop=\"opaque | blur | transparent\" prop shared by dialog/drawer/sidebar; command palette no longer blurs its backdrop unconditionally (use backdrop=\"blur\"), and tour gained --tour-backdrop-bg",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    },
+    {
+      "comment": "backdrop CSS custom properties renamed to the --<component>-backdrop-bg convention: --dialog-backdrop is now --dialog-backdrop-bg, --command-palette-backdrop is now --command-palette-backdrop-bg",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    },
+    {
+      "comment": "inputs no longer trigger the iOS Safari page zoom: the coarse-pointer size promotion in touchTargetMixin was dead code (it sat before sizeVariantMixin, whose unlayered per-size declarations overrode it); it now applies, so on touch devices fields render one size tier larger and field text floors at 16px at every size including sm",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    },
+    {
+      "comment": "touchTargetMixin ordering contract: consumers must place it after sizeVariantMixin in the styles array (see the mixin's doc comment); ore-button, ore-checkbox, and ore-radio labels also render at the 16px touch floor at every size",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -729,6 +729,14 @@ describe('ore-tour', () => {
       expect(tourCss).toMatch(/max-height:\s*var\(--tour-media-max-height,\s*min\(38dvh/);
       expect(tourCss).toMatch(/max-height:\s*var\(--tour-media-max-height,\s*min\(26dvh/);
     });
+
+    it('dims the dialog backdrop with the shared overlay veil', () => {
+      // The veil must come from --overlay-veil (always darkens), never the
+      // canvas wash that inverts to a bright fog in light mode.
+      expect(tourCss).toMatch(/--_backdrop-bg:\s*var\(--tour-backdrop-bg,\s*var\(--overlay-veil\)\)/);
+      expect(tourCss).toMatch(/:host\(\[backdrop='blur'\]\)\s*\{[^}]*--_backdrop-filter:\s*blur\(/);
+      expect(tourCss).toMatch(/:host\(\[backdrop='transparent'\]\)\s*\{[^}]*--_backdrop-bg:\s*transparent/);
+    });
   });
 
   // ─── Accessibility ───────────────────────────────────────────────────────────

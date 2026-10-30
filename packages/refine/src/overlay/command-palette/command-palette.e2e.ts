@@ -5,6 +5,14 @@ const itemsHtml = `
   <ore-command-palette-item value="beta" group="Group">Beta</ore-command-palette-item>
 `;
 
+const nestedHtml = `
+  <ore-command-palette-item value="cat-file" label="File">
+    <ore-command-palette-item value="new-file">New File</ore-command-palette-item>
+    <ore-command-palette-item value="open-file">Open File</ore-command-palette-item>
+  </ore-command-palette-item>
+  <ore-command-palette-item value="help">Help</ore-command-palette-item>
+`;
+
 test.describe('Interaction', () => {
   test('emits active-change as the focused row moves', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`<ore-command-palette open label="Palette">${itemsHtml}</ore-command-palette>`);
@@ -88,6 +96,35 @@ test.describe('Layout', () => {
 
     expect(hidden).toBe(true);
   });
+
+  test('pins the group heading while its group scrolls', async ({ page, refinePage }) => {
+    const many = Array.from(
+      { length: 20 },
+      (_, i) => `<ore-command-palette-item value="i-${i}" group="Many">Item ${i}</ore-command-palette-item>`,
+    ).join('');
+
+    await refinePage.mountComponent(`<ore-command-palette open label="Palette">${many}</ore-command-palette>`);
+
+    const pinned = await page.locator('ore-command-palette').evaluate((palette) => {
+      const shadow = palette.shadowRoot!;
+      const list = shadow.querySelector<HTMLElement>('.listbox')!;
+      const heading = shadow.querySelector<HTMLElement>('.group-heading')!;
+
+      const topBefore = heading.getBoundingClientRect().top;
+
+      list.scrollTop = list.scrollHeight;
+
+      return {
+        position: getComputedStyle(heading).position,
+        scrolled: list.scrollTop > 0,
+        staysAtTop: Math.abs(heading.getBoundingClientRect().top - topBefore) < 2,
+      };
+    });
+
+    expect(pinned.position).toBe('sticky');
+    expect(pinned.scrolled).toBe(true);
+    expect(pinned.staysAtTop).toBe(true);
+  });
 });
 
 test.describe('Accessibility', () => {
@@ -102,5 +139,72 @@ test.describe('Accessibility', () => {
     const results = await axeCheck(page);
 
     expect(results.violations).toEqual([]);
+  });
+
+  test('passes axe checks on the root list and inside an opened category', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`<ore-command-palette open label="Palette">${nestedHtml}</ore-command-palette>`);
+
+    expect((await axeCheck(page)).violations).toEqual([]);
+
+    await page
+      .locator('ore-command-palette')
+      .evaluate((palette) => palette.shadowRoot!.querySelector<HTMLElement>('.item[data-category]')!.click());
+
+    expect((await axeCheck(page)).violations).toEqual([]);
+  });
+});
+
+test.describe('Drill-down Categories', () => {
+  const shadowValues = (page: import('@playwright/test').Page, selector: string) =>
+    page
+      .locator('ore-command-palette')
+      .evaluate(
+        (palette, sel) =>
+          [...palette.shadowRoot!.querySelectorAll<HTMLElement>(sel)].map((el) => el.dataset.value ?? ''),
+        selector,
+      );
+
+  test('clicking a category row opens its children and shows the back row', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`<ore-command-palette open label="Palette">${nestedHtml}</ore-command-palette>`);
+
+    await page
+      .locator('ore-command-palette')
+      .evaluate((palette) => palette.shadowRoot!.querySelector<HTMLElement>('.item[data-category]')!.click());
+
+    expect(await shadowValues(page, '.item')).toEqual(['new-file', 'open-file']);
+    await expect(page.locator('ore-command-palette').locator('.back-row')).toBeVisible();
+
+    await page.locator('ore-command-palette').locator('.back-row').click();
+
+    expect(await shadowValues(page, '.item')).toEqual(['cat-file', 'help']);
+    await expect(page.locator('ore-command-palette').locator('.back-row')).toHaveCount(0);
+  });
+
+  test('keeps focus inside the panel after the back row is clicked', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`<ore-command-palette open label="Palette">${nestedHtml}</ore-command-palette>`);
+
+    await page
+      .locator('ore-command-palette')
+      .evaluate((palette) => palette.shadowRoot!.querySelector<HTMLElement>('.item[data-category]')!.click());
+    await page.locator('ore-command-palette').locator('.back-row').click();
+
+    const focused = await page
+      .locator('ore-command-palette')
+      .evaluate((palette) => palette.shadowRoot!.activeElement?.className ?? '');
+
+    expect(focused).toContain('search-input');
+  });
+
+  test('flattens category leaves into global search results', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`<ore-command-palette open label="Palette">${nestedHtml}</ore-command-palette>`);
+
+    await page.locator('ore-command-palette').evaluate((palette) => {
+      const input = palette.shadowRoot!.querySelector<HTMLInputElement>('input')!;
+
+      input.value = 'open';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    expect(await shadowValues(page, '.item')).toEqual(['open-file']);
   });
 });

@@ -12,9 +12,10 @@
  * see `src/types/elements.test.ts` for the regression test that would have caught this.
  */
 
+import type { OreAccordionEvents, OreAccordionProps } from '../content/accordion/accordion';
+import type { OreAccordionItemEvents, OreAccordionItemProps } from '../content/accordion-item/accordion-item';
 import type { OreAvatarProps } from '../content/avatar/avatar';
 import type { OreAvatarGroupProps } from '../content/avatar/avatar-group';
-import type { OreBreadcrumbItemProps, OreBreadcrumbProps } from '../content/breadcrumb/breadcrumb';
 import type { OreCardEvents, OreCardProps } from '../content/card/card';
 import type { OreCarouselEvents, OreCarouselProps } from '../content/carousel/carousel';
 import type { OreChatMessageEvents, OreChatMessageProps } from '../content/chat-message/chat-message';
@@ -26,23 +27,14 @@ import type { OreKeyboardKeyProps, OreKeyboardShortcutProps } from '../content/k
 import type { OreListEvents, OreListProps } from '../content/list/list';
 import type { OreListItemEvents, OreListItemProps } from '../content/list/list-item';
 import type { OreMarqueeProps } from '../content/marquee/marquee';
-import type { OrePaginationEvents, OrePaginationProps } from '../content/pagination/pagination';
 import type { OreQrCodeEvents, OreQrCodeProps } from '../content/qr-code/qr-code';
 import type { OreRankItemProps } from '../content/rank-list/rank-item';
 import type { OreRankListProps } from '../content/rank-list/rank-list';
-import type { OreSeparatorProps } from '../content/separator/separator';
 import type { OreSpeechPlayerEvents, SpeechPlayerElement } from '../content/speech-player/speech-player';
 import type { OreSpeedReadingEvents, SpeedReadingElement } from '../content/speed-reading/speed-reading';
 import type { OreStatsProps } from '../content/stats/stats';
-import type { OreStepProps } from '../content/stepper/step';
-import type { OreStepperEvents, OreStepperProps } from '../content/stepper/stepper';
 import type { OreTableProps } from '../content/table/table';
 import type { OreTextProps } from '../content/text/text';
-import type { OreAccordionEvents, OreAccordionProps } from '../disclosure/accordion/accordion';
-import type { OreAccordionItemEvents, OreAccordionItemProps } from '../disclosure/accordion-item/accordion-item';
-import type { OreTabItemProps } from '../disclosure/tab-item/tab-item';
-import type { OreTabPanelProps } from '../disclosure/tab-panel/tab-panel';
-import type { OreTabsEvents, OreTabsProps } from '../disclosure/tabs/tabs';
 import type { OreAlertEvents, OreAlertProps } from '../feedback/alert/alert';
 import type { OreAsyncEvents, OreAsyncProps } from '../feedback/async/async';
 import type { OreBadgeProps } from '../feedback/badge/badge';
@@ -85,6 +77,7 @@ import type { OreBoxProps } from '../layout/box/box';
 import type { OreGridProps } from '../layout/grid/grid';
 import type { OreGridItemProps } from '../layout/grid-item/grid-item';
 import type { NavbarElement, OreNavbarEvents, OreNavbarItemProps } from '../layout/navbar/navbar';
+import type { OreSeparatorProps } from '../layout/separator/separator';
 import type {
   OreSidebarEvents,
   OreSidebarGroupEvents,
@@ -92,6 +85,18 @@ import type {
   OreSidebarItemProps,
   SidebarElement,
 } from '../layout/sidebar/sidebar';
+import type { OreBreadcrumbItemProps, OreBreadcrumbProps } from '../navigation/breadcrumb/breadcrumb';
+import type {
+  OreNavigationMenuEvents,
+  OreNavigationMenuItemProps,
+  OreNavigationMenuProps,
+} from '../navigation/navigation-menu/navigation-menu';
+import type { OrePaginationEvents, OrePaginationProps } from '../navigation/pagination/pagination';
+import type { OreStepProps } from '../navigation/stepper/step';
+import type { OreStepperEvents, OreStepperProps } from '../navigation/stepper/stepper';
+import type { OreTabItemProps } from '../navigation/tab-item/tab-item';
+import type { OreTabPanelProps } from '../navigation/tab-panel/tab-panel';
+import type { OreTabsEvents, OreTabsProps } from '../navigation/tabs/tabs';
 import type {
   CommandPaletteItemInput,
   OreCommandPaletteEvents,
@@ -100,11 +105,6 @@ import type {
 import type { OreDialogEvents, OreDialogProps } from '../overlay/dialog/dialog';
 import type { DrawerElement, OreDrawerEvents } from '../overlay/drawer/drawer';
 import type { OreMenuEvents, OreMenuItemProps, OreMenuProps } from '../overlay/menu/menu';
-import type {
-  OreNavigationMenuEvents,
-  OreNavigationMenuItemProps,
-  OreNavigationMenuProps,
-} from '../overlay/navigation-menu/navigation-menu';
 import type { OrePopoverEvents, OrePopoverProps } from '../overlay/popover/popover';
 import type { OreSpotlightProps } from '../overlay/spotlight/spotlight';
 import type { OreTooltipEvents, OreTooltipProps } from '../overlay/tooltip/tooltip';

@@ -92,7 +92,7 @@ Each `ore-navigation-menu-item` needs a unique `value`. Pair panels and footers 
 
 Panels use the viewport as their placement boundary, including when their menu is inside an `overflow: hidden`, scrollable, or sandboxed container. The native Popover top layer keeps the panel visible outside that container while preserving its trigger alignment.
 
-Opening and closing a panel cross-fades it with a small rise, reusing the `--overlay-enter-translate-y` and `--overlay-enter-scale` tokens. The panel holds its exit through the top layer, so the fade plays even as the popover closes. Under `prefers-reduced-motion` (or `data-motion="reduced"`) the cross-fade collapses to an instant show/hide; see [Motion Mode](/refine/theming#motion-mode).
+Opening and closing a panel cross-fades it with a small rise, reusing the `--overlay-enter-translate-y` and `--overlay-enter-scale` tokens. The panel holds its exit through the top layer, so the fade plays even as the popover closes. Under `prefers-reduced-motion` (or `data-motion="reduced"`) the cross-fade collapses to an instant show/hide; see [Motion Mode](/refine/animation#motion-mode).
 
 ## Controlled State
 

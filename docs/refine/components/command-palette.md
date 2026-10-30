@@ -77,7 +77,9 @@ Pass the `items` property for programmatically generated commands instead of (or
 
 ## Groups and Icons
 
-Items sharing a `group` value are clustered under a heading, in the order groups first appear. Add an `icon` (a [registered icon name](./icon.md)) for a leading icon.
+Items sharing a `group` value are clustered under a heading, in the order groups first appear. The heading stays pinned to the top of the list while its own group scrolls, and its name is searchable: typing a group name keeps that group's items and drops the rest. Add an `icon` (a [registered icon name](./icon.md)) for a leading icon.
+
+Grouping is presentation only: every item stays visible in one list. To keep the list short instead, nest items into [drill-down categories](#drill-down-categories).
 
 <ComponentPreview height="480px">
 
@@ -99,6 +101,51 @@ Items sharing a `group` value are clustered under a heading, in the order groups
 ```
 
 </ComponentPreview>
+
+## Drill-down Categories
+
+When a command set is too large for one list, nest items inside an item. The parent renders as a single category row: a chevron and a leaf count instead of a shortcut hint. `ArrowRight`, `Enter`, or a click opens it, showing only that category's commands; `ArrowLeft` (with an empty query), `Backspace`, `Escape`, or the back row returns to the root list. Categories nest one level: a command inside a category is always a leaf.
+
+Search stays global from the root: a typed query flattens category leaves into one result list, so no command hides behind a category, and typing a category's name surfaces all of its commands. Inside an opened category, the query narrows that category's own children. Entering a category is navigation, never `select`: it emits `category-open` instead, so command handlers never see a category value.
+
+<ComponentPreview height="480px">
+
+```html
+<ore-command-palette id="nested-palette" label="Command palette" open>
+  <ore-command-palette-item value="cat-file" label="File" icon="folder">
+    <ore-command-palette-item value="new-file" shortcut="⌘+N">New File</ore-command-palette-item>
+    <ore-command-palette-item value="open-file" shortcut="⌘+O">Open File…</ore-command-palette-item>
+    <ore-command-palette-item value="save-file" shortcut="⌘+S">Save</ore-command-palette-item>
+  </ore-command-palette-item>
+  <ore-command-palette-item value="cat-view" label="View" icon="eye">
+    <ore-command-palette-item value="toggle-theme" keywords="dark,light">Toggle Theme</ore-command-palette-item>
+    <ore-command-palette-item value="zoom-in">Zoom In</ore-command-palette-item>
+  </ore-command-palette-item>
+  <ore-command-palette-item value="help" shortcut="⌘+/">Help</ore-command-palette-item>
+</ore-command-palette>
+
+<script type="module">
+  import '@vielzeug/refine/command-palette';
+</script>
+```
+
+</ComponentPreview>
+
+The same shape works data-driven: give an `items` entry a `children` array.
+
+```js
+palette.items = [
+  {
+    label: 'File',
+    value: 'cat-file',
+    children: [
+      { label: 'New File', value: 'new-file' },
+      { label: 'Open File', value: 'open-file' },
+    ],
+  },
+  { label: 'Help', value: 'help' },
+];
+```
 
 ## Disabled Items
 
@@ -156,7 +203,7 @@ By default, selecting an item closes the palette. Set `keep-open-on-select` for 
 
 Override the global shortcut with `shortcut`, or set it to an empty string to disable the built-in trigger entirely and open the palette from your own UI instead. Use `no-filter` when `items` is already filtered server-side, and `empty-text` to customize the no-results message.
 
-As the query narrows, surviving rows slide from their old slot to their new one instead of snapping, so the focused command never jumps out of context. The reflow honors [Motion Mode](/refine/theming#motion-mode): it is skipped under reduced motion and can be forced on with `data-motion="full"`.
+As the query narrows, surviving rows slide from their old slot to their new one instead of snapping, so the focused command never jumps out of context. The reflow honors [Motion Mode](/refine/animation#motion-mode): it is skipped under reduced motion and can be forced on with `data-motion="full"`. The same helper is available for your own keyed lists: [`animateReflow`](/refine/animation#list-reflow-animatereflow).
 
 <ComponentPreview height="480px">
 
@@ -191,6 +238,21 @@ As the query narrows, surviving rows slide from their old slot to their new one 
 </ComponentPreview>
 
 Set `no-filter` on this pattern once results come back already scoped to the query, otherwise the built-in client-side filter runs again on top of the server response.
+
+## Settling the Search
+
+Filtering normally runs on every keystroke, so a fast typist watches the list rebuild once per character: rows slide, counts change, and a `no-filter` consumer rebuilds its own catalogue each time. `search-debounce` holds typed text for the given number of milliseconds before it reaches the list and the `search` event, so a burst of keystrokes settles into one result set instead.
+
+```html
+<ore-command-palette label="Search" search-debounce="150"></ore-command-palette>
+```
+
+The input itself is never delayed: every character appears as it is typed, and the caret stays put. Two transitions ignore the window on purpose:
+
+- `Enter` applies a query still inside the window before choosing, so the command committed is the best match for the text in the input rather than for whatever last settled. A click keeps the opposite contract: the row under the pointer is the row that was seen.
+- Opening a category, stepping back, and closing cancel a pending query outright, because those views are not filtered by the text being typed. A cancelled query emits nothing, which keeps a `no-filter` consumer's mirrored search text in step with the cleared input.
+
+Set it per consumer: server-driven search wants a window (it stops one request per keystroke), a large local catalogue wants one too (it stops one reflow per keystroke), and a small local list is better off instant. The default is `0`, which is the instant behavior.
 
 ## Previewing the Active Row
 
@@ -285,6 +347,8 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 | ---------------------- | --------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `open`                 | `boolean` | N/A | Controlled visibility                                                                               |
 | `default-open`         | `boolean` | `false`                          | Initial visibility when `open` is not provided                                                      |
+| `backdrop`             | `'opaque' \| 'blur' \| 'transparent'` | `'opaque'`          | Backdrop style: dimming veil only (default), veil + blur, or no overlay                        |
+| `back-text`            | `string`  | `'All commands'`               | Label of the back row shown above an opened category                                              |
 | `label`                | `string`  | `'Command palette'`              | Accessible label for the dialog                                                                     |
 | `placeholder`          | `string`  | `'Type a command or search…'`   | Placeholder text for the search input                                                               |
 | `shortcut`             | `string`  | `'mod+k'`                        | Global keyboard shortcut ([keymap syntax](/keymap/usage.md)) that toggles the palette; `''` disables it |
@@ -292,6 +356,7 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 | `loading`               | `boolean` | `false`                          | Shows a loading indicator next to the search input                                                  |
 | `empty-text`           | `string`  | `'No results found.'`            | Message shown when no item matches the query                                                        |
 | `keep-open-on-select`  | `boolean` | `false`                          | Keep the palette open after an item is selected, refocusing the search input                        |
+| `search-debounce`      | `number`  | `0`                              | Milliseconds typed text waits before filtering the list and emitting `search`; `0` filters on every keystroke |
 
 **`ore-command-palette`** Properties
 
@@ -312,19 +377,22 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 | ---------- | --------- | ------- | -------------------------------------------------------- |
 | `value`    | `string`  | `''`    | Value emitted by the `select` event and matched by search |
 | `label`    | `string`  | N/A | Explicit label text; falls back to the element's text content |
-| `group`    | `string`  | N/A | Group heading the item is clustered under                |
+| `group`    | `string`  | N/A | Group heading the item is clustered under; the name is also matched by search |
 | `icon`     | `string`  | N/A | Lucide icon name rendered at the start of the row         |
 | `shortcut` | `string`  | N/A | Display-only keyboard hint rendered at the end of the row: one `<kbd>` per key, separated with `+` (e.g. `"⌘+S"`). A literal `+` key isn't representable this way: spell it out (e.g. `"Ctrl+Plus"`) |
 | `keywords` | `string`  | N/A | Comma-separated extra search terms matched in addition to the label |
 | `disabled` | `boolean` | `false` | Excludes the item from keyboard navigation and selection  |
+
+An item that contains nested `<ore-command-palette-item>` elements (or, data-driven, a `children` array) becomes a category row that opens on `ArrowRight`/`Enter`/click instead of selecting. Nesting is one level only: a nested item's own children are ignored with a development warning.
 
 **Events**
 
 | Event    | Detail                                                                          | Description                                        |
 | -------- | -------------------------------------------------------------------------------- | --------------------------------------------------- |
 | `select` | `{ value: string, label: string, item: CommandPaletteItem }`                    | Emitted when a command is chosen (click or `Enter`) |
+| `category-open` | `{ value: string, label: string, count: number }`                   | Emitted when a category row is opened; `select` never carries a category value |
 | `active-change` | `{ value: string, label: string, item?: CommandPaletteItem }`          | Emitted when the focused row changes; `item` is `undefined` when no row is active |
-| `search` | `{ query: string }`                                                              | Emitted on every keystroke in the search input      |
+| `search` | `{ query: string }`                                                              | Emitted when the query reaches the list: every keystroke, or after `search-debounce` settles it. Also when a drill-in or back step clears a typed query |
 | `open-change` | `{ open: boolean, reason: string }`                                         | Emitted whenever the palette opens or closes        |
 
 **CSS Custom Properties**
@@ -336,17 +404,20 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 | `--command-palette-radius`            | Panel border radius         | `var(--rounded-lg)`    |
 | `--command-palette-shadow`            | Panel drop shadow           | `var(--shadow-2xl)`    |
 | `--command-palette-max-width`         | Maximum panel width         | `40rem`                 |
-| `--command-palette-backdrop`          | Backdrop overlay color      | Theme-dependent         |
+| `--command-palette-backdrop-bg`       | Backdrop veil color         | `var(--overlay-veil)`     |
 | `--command-palette-option-hover-bg`   | Item background on hover    | Theme-dependent         |
 | `--command-palette-option-focus-bg`   | Item background when keyboard-focused | Theme-dependent |
+| `--command-palette-group-sticky-bg`   | Background of the pinned group heading while it sticks | Theme-dependent |
 | `--command-palette-preview-width`     | Preview pane width (when the `preview` slot has content) | `18rem` |
 
 ## Accessibility
 
 The dialog panel follows the [WAI-ARIA Dialog (Modal) Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/), built on the native `<dialog>` element: `Tab`/`Shift+Tab` trap focus inside the panel, `Escape` closes it, and focus returns to the triggering element on close. The `label` attribute becomes the dialog's `aria-label`: always set one, since the palette has no visible title.
 
-The search input follows the collapsible listbox pattern: it carries `role="combobox"`, `aria-expanded="true"`, `aria-controls` pointing at the listbox, and a reactive `aria-activedescendant` that tracks the keyboard-focused row. The listbox itself has `role="listbox"`; each command row has `role="option"` with `aria-selected` reflecting keyboard focus and `aria-disabled` for disabled items. Group headings are `role="presentation"` decorative text, not part of the accessibility tree's option count.
+The search input follows the collapsible listbox pattern: it carries `role="combobox"`, `aria-expanded="true"`, `aria-controls` pointing at the listbox, and a reactive `aria-activedescendant` that tracks the keyboard-focused row. The listbox itself has `role="listbox"`; each command row has `role="option"` with `aria-selected` reflecting keyboard focus and `aria-disabled` for disabled items. Each named group is a `role="group"` container labelled by its heading via `aria-labelledby`, so screen readers announce the section a row belongs to; the heading text itself is `role="presentation"` to avoid double-speaking, and ungrouped items render directly in the listbox without a wrapper.
 
-`ArrowUp`/`ArrowDown` move focus through enabled items (wrapping at the ends); `Home`/`End` jump to the first/last enabled item; `Enter` selects the focused item, or the first result if none has been focused yet, so pressing `Enter` immediately after typing a query works as expected. Disabled items are skipped entirely by keyboard navigation. On open, the search input receives focus automatically; on close, the query resets so the next open starts from a clean slate.
+`ArrowUp`/`ArrowDown` move focus through enabled items (wrapping at the ends); `Home`/`End` jump to the first/last enabled item; `Enter` selects the focused item, or the first result if none has been focused yet, so pressing `Enter` immediately after typing a query works as expected. Disabled items are skipped entirely by keyboard navigation. On open, the search input receives focus automatically; on close, the query and any opened category reset so the next open starts from a clean slate.
+
+A category row is an ordinary `role="option"`: its openable-ness is carried by the visible chevron and leaf count, which put "opens a list" into the accessible name rather than into ARIA state that a listbox option has no defined meaning for. Inside a category, the listbox's `aria-label` names the category, so the change of scope is announced. The back row is a real `<button>` above the listbox rather than a row inside it: pointer and `Tab` users get a visible way back without the listbox gaining a non-option child, and focus returns to the search input when it is used. `ArrowRight` opens the focused category; `ArrowLeft` and `Backspace` step out only while the query is empty, so editing the query keeps normal caret behavior; `Escape` steps out first and closes the palette only once the root list is showing.
 
 Because the palette can be summoned from anywhere via its global keyboard shortcut, avoid relying on `shortcut` collisions with other page-level bindings: check for conflicts with [`findShortcutConflicts`](/keymap/api.md#findshortcutconflicts-shortcut-entries-options) if your app registers other global shortcuts.

@@ -47,44 +47,39 @@
 }
 
 @layer refine.variants {
+  /* Active surface lives on the parent ore-tabs sliding pill, so each variant only owns
+     the hover fill and the active label color here; the pill's fill mirrors these values
+     in tabs.css. */
+
   /* ─── solid / default ─── */
   :host,
   :host([variant='solid']) {
     --_hover-bg: var(--tab-item-hover-bg, var(--color-contrast-200));
-    --_active-bg: var(--tab-item-active-bg, var(--color-contrast-0, var(--color-canvas)));
     --_active-color: var(--tab-item-active-color, var(--text-color-heading));
-    --_active-shadow: var(--tab-item-active-shadow, var(--shadow-xs), var(--inset-shadow-xs));
   }
 
   /* ─── flat ─── */
   :host([variant='flat']) {
     --_hover-bg: var(--tab-item-hover-bg, var(--color-contrast-200));
-    --_active-bg: var(--tab-item-active-bg, var(--color-contrast-0, var(--color-canvas)));
     --_active-color: var(--tab-item-active-color, var(--text-color-heading));
-    --_active-shadow: var(--tab-item-active-shadow, var(--shadow-xs), var(--inset-shadow-xs));
   }
 
   /* ─── bordered ─── */
   :host([variant='bordered']) {
     --_hover-bg: var(--tab-item-hover-bg, var(--color-contrast-200));
-    --_active-bg: var(--tab-item-active-bg, var(--color-contrast-0, var(--color-canvas)));
     --_active-color: var(--tab-item-active-color, var(--text-color-heading));
-    --_active-shadow: var(--tab-item-active-shadow, var(--shadow-xs));
   }
 
   /* ─── ghost ─── */
   :host([variant='ghost']) {
     --_hover-bg: var(--tab-item-hover-bg, var(--color-contrast-100));
-    --_active-bg: var(--tab-item-active-bg, var(--_theme-base));
     --_active-color: var(--tab-item-active-color, var(--_theme-contrast));
   }
 
   /* ─── frost ─── */
   :host([variant='frost']) {
     --_hover-bg: var(--tab-item-hover-bg, color-mix(in oklch, var(--color-contrast) 10%, transparent));
-    --_active-bg: var(--tab-item-active-bg, color-mix(in oklch, var(--color-canvas) 60%, transparent));
     --_active-color: var(--tab-item-active-color, var(--text-color-heading));
-    --_active-shadow: var(--tab-item-active-shadow, var(--shadow-xs), var(--inset-shadow-xs));
   }
 
   :host([variant='frost']) button {
@@ -98,10 +93,14 @@
     background: var(--_hover-bg);
   }
 
+  /* The default active surface is the parent ore-tabs sliding pill (::part(indicator)):
+     a static per-item fill would cross-fade in place and hide the slide, so the fill and
+     shadow default to nothing. Consumers who opt those knobs back in (e.g. a bordered
+     pill treatment) paint the active item themselves. */
   :host([active]) button {
     color: var(--_active-color);
-    background: var(--_active-bg);
-    box-shadow: var(--_active-shadow);
+    background: var(--tab-item-active-bg, transparent);
+    box-shadow: var(--tab-item-active-shadow, none);
   }
 
   /* ─── sizes ─── */

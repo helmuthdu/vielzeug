@@ -36,6 +36,12 @@ export type UseDialogOptions = {
     options?: AddEventListenerOptions,
   ) => void;
   /**
+   * Called before the native Escape close, from the `cancel` handler. Return `true` to
+   * consume the key (the dialog stays open) : used by `ore-command-palette` to pop a
+   * drilled-in category before closing the palette. Not called for other close reasons.
+   */
+  onEscape?: () => boolean;
+  /**
    * Called after the native `close` event fires: after background unlock,
    * isOpen reset, and focus restore. Use to emit component events.
    */
@@ -250,6 +256,8 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     e.preventDefault();
 
     if (options.isPersistent()) return;
+
+    if (options.onEscape?.()) return;
 
     requestClose('escape');
   };

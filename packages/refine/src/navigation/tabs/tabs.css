@@ -17,7 +17,6 @@
   }
 
   .tablist-wrapper {
-    position: relative;
     flex-shrink: 0;
   }
 
@@ -34,15 +33,25 @@
     display: none;
   }
 
+  /* Sliding active pill: JS sets width/height/transform from the active tab's box.
+     It lives inside the scrollable tablist so it travels with the tab content. */
   .indicator {
     position: absolute;
-    bottom: 0;
+    top: 0;
     left: 0;
-    height: 2px;
     pointer-events: none;
-    background: var(--tabs-indicator-color, var(--_theme-base));
-    border-radius: var(--rounded-full);
-    transition: transform var(--tabs-transition);
+    border-radius: var(--tabs-radius);
+    transition:
+      transform var(--tabs-transition),
+      width var(--tabs-transition),
+      height var(--tabs-transition);
+  }
+
+  /* The pill paints the active surface; slotted items are positioned so they paint
+     above it (later DOM order within the positioned layer) and their labels stay
+     readable over the pill. */
+  [role='tablist'] ::slotted(ore-tab-item) {
+    position: relative;
   }
 
   .panels {
@@ -75,17 +84,6 @@
     overflow-x: unset;
     overflow-y: auto;
   }
-
-  :host([orientation='vertical']) .indicator {
-    inset-inline-start: 0;
-    top: 0;
-
-    /* Reposition indicator to inline-start side for vertical */
-    bottom: unset;
-    width: 2px;
-    height: unset;
-    transition: transform var(--tabs-transition);
-  }
 }
 
 @layer refine.variants {
@@ -107,7 +105,8 @@
 
   :host .indicator,
   :host([variant='solid']) .indicator {
-    display: none;
+    background: var(--tabs-indicator-color, var(--color-contrast-0, var(--color-canvas)));
+    box-shadow: var(--shadow-xs), var(--inset-shadow-xs);
   }
 
   /* ─── flat ─── */
@@ -131,7 +130,8 @@
   }
 
   :host([variant='flat']) .indicator {
-    display: none;
+    background: var(--tabs-indicator-color, var(--color-contrast-0, var(--color-canvas)));
+    box-shadow: var(--shadow-xs), var(--inset-shadow-xs);
   }
 
   /* ─── bordered ─── */
@@ -149,7 +149,8 @@
   }
 
   :host([variant='bordered']) .indicator {
-    display: none;
+    background: var(--tabs-indicator-color, var(--color-contrast-0, var(--color-canvas)));
+    box-shadow: var(--shadow-xs);
   }
 
   :host([variant='bordered']) .panels {
@@ -177,7 +178,7 @@
   }
 
   :host([variant='ghost']) .indicator {
-    display: none;
+    background: var(--tabs-indicator-color, var(--_theme-base));
   }
 
   /* ─── frost ─── */
@@ -210,7 +211,8 @@
   }
 
   :host([variant='frost']) .indicator {
-    display: none;
+    background: var(--tabs-indicator-color, color-mix(in oklch, var(--color-canvas) 60%, transparent));
+    box-shadow: var(--shadow-xs), var(--inset-shadow-xs);
   }
 }
 
@@ -226,5 +228,20 @@
 
   :host([density='compact'][variant='ghost']) [role='tablist'] {
     padding: 0;
+  }
+}
+
+@layer refine.overrides {
+  /* Own layer so `fullwidth` beats the base `:host(:not([data-has-panels]))` fit-content
+     rule by layer order, not by source order within `refine.base`. */
+  :host([fullwidth]) {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Vertical tabs keep the column's content width: stretching the host fills the row,
+     the panels take the rest. Only horizontal tabs share the tablist width evenly. */
+  :host([fullwidth]:not([orientation='vertical'])) ::slotted(ore-tab-item[slot='tabs']) {
+    flex: 1;
   }
 }

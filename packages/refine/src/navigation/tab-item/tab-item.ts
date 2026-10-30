@@ -57,9 +57,9 @@ export type OreTabItemProps = {
  * @cssprop --tab-item-font-size - Button font size
  * @cssprop --tab-item-color - Default text color
  * @cssprop --tab-item-hover-bg - Background on hover
- * @cssprop --tab-item-active-bg - Background when active/selected
+ * @cssprop --tab-item-active-bg - Opt-in active fill: unset by default so the parent ore-tabs sliding pill paints the active surface
  * @cssprop --tab-item-active-color - Text color when active/selected
- * @cssprop --tab-item-active-shadow - Box shadow when active/selected
+ * @cssprop --tab-item-active-shadow - Opt-in active shadow: unset by default so the sliding pill carries the elevation
  * @part tab - Tab trigger element.
  * @example
  * ```html

@@ -39,6 +39,12 @@ jobs:
           node common/scripts/install-run-rush.js rebuild --verbose
           pnpm verify:prod-gate
 
+      # Packed-consumer icon contract (tarball install + jsdom + tsc resolution matrix).
+      # Excluded from refine's own `build` because it packs the whole @vielzeug/* closure
+      # and runs a real npm install (~40s): a release-shaped gate, not an inner-loop check.
+      - name: Verify packed icon contract (refine)
+        run: pnpm --filter @vielzeug/refine run check:packed-icons
+
       - name: Unit tests
         run: pnpm test --run ${{ github.event_name == 'push' && '--coverage' || '' }}
 

@@ -6,8 +6,20 @@ import { browserslistToTargets } from 'lightningcss';
 import { type DefaultTheme, defineConfig, type UserConfig } from 'vitepress';
 import { buildVielzeugSrcAliases } from '../../scripts/vielzeug-packages.ts';
 import { componentPreviewPlugin } from './plugins/component-preview/index.ts';
+import { REFINE_CATEGORIES, refineComponentLabel } from './theme/components/refineCategories.ts';
 import type { ThemeConfig } from './theme/types.ts';
 import { getPackagesData } from './theme/utils/packageData.ts';
+
+/**
+ * Refine's component sidebar, generated from the single category map. The map is
+ * the only place a component's category is decided; `refine-categories.test.ts`
+ * keeps it covering every component page exactly once.
+ */
+const refineComponentSidebarGroups = REFINE_CATEGORIES.map((category) => ({
+  collapsed: true,
+  items: category.components.map((slug) => ({ link: `/refine/components/${slug}`, text: refineComponentLabel(slug) })),
+  text: category.name,
+}));
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKAGES_DIR = resolve(__dirname, '../../packages');
@@ -1587,116 +1599,23 @@ export default defineConfig({
               link: '/refine/theming',
               text: 'Theming',
             },
+            {
+              collapsed: true,
+              items: [
+                { link: '/refine/animation#duration-easing', text: 'Duration & Easing' },
+                { link: '/refine/animation#named-animations', text: 'Named Animations' },
+                { link: '/refine/animation#motion-mode', text: 'Motion Mode' },
+                { link: '/refine/animation#inside-shadow-dom', text: 'Inside Shadow DOM' },
+                { link: '/refine/animation#list-reflow-animatereflow', text: 'List Reflow' },
+              ],
+              link: '/refine/animation',
+              text: 'Animation & Motion',
+            },
           ],
           text: 'Getting Started',
         },
         {
-          items: [
-            {
-              collapsed: true,
-              items: [
-                { link: '/refine/components/accordion', text: 'Accordion' },
-                { link: '/refine/components/tabs', text: 'Tabs' },
-              ],
-              text: 'Disclosure',
-            },
-            {
-              collapsed: true,
-              items: [
-                { link: '/refine/components/alert', text: 'Alert' },
-                { link: '/refine/components/async', text: 'Async' },
-                { link: '/refine/components/badge', text: 'Badge' },
-                { link: '/refine/components/chip', text: 'Chip' },
-                { link: '/refine/components/cookie-banner', text: 'Cookie Banner' },
-                { link: '/refine/components/password-strength', text: 'Password Strength' },
-                { link: '/refine/components/progress', text: 'Progress' },
-                { link: '/refine/components/skeleton', text: 'Skeleton' },
-                { link: '/refine/components/toast', text: 'Toast' },
-                { link: '/refine/components/typing-indicator', text: 'Typing Indicator' },
-              ],
-              text: 'Feedback',
-            },
-            {
-              collapsed: true,
-              items: [
-                { link: '/refine/components/avatar', text: 'Avatar' },
-                { link: '/refine/components/breadcrumb', text: 'Breadcrumb' },
-                { link: '/refine/components/card', text: 'Card' },
-                { link: '/refine/components/carousel', text: 'Carousel' },
-                { link: '/refine/components/chat-message', text: 'Chat Message' },
-                { link: '/refine/components/chat-panel', text: 'Chat Panel' },
-                { link: '/refine/components/code-window', text: 'Code Window' },
-                { link: '/refine/components/copy-command', text: 'Copy Command' },
-                { link: '/refine/components/icon', text: 'Icon' },
-                { link: '/refine/components/keyboard-key', text: 'Keyboard Key' },
-                { link: '/refine/components/list', text: 'List' },
-                { link: '/refine/components/marquee', text: 'Marquee' },
-                { link: '/refine/components/pagination', text: 'Pagination' },
-                { link: '/refine/components/qr-code', text: 'QR Code' },
-                { link: '/refine/components/rank-list', text: 'Rank List' },
-                { link: '/refine/components/separator', text: 'Separator' },
-                { link: '/refine/components/stats', text: 'Stats' },
-                { link: '/refine/components/speech-player', text: 'Speech Player' },
-                { link: '/refine/components/speed-reading', text: 'Speed Reading' },
-                { link: '/refine/components/stepper', text: 'Stepper' },
-                { link: '/refine/components/table', text: 'Table' },
-                { link: '/refine/components/text', text: 'Text' },
-              ],
-              text: 'Content',
-            },
-            {
-              collapsed: true,
-              items: [
-                { link: '/refine/components/command-palette', text: 'Command Palette' },
-                { link: '/refine/components/dialog', text: 'Dialog' },
-                { link: '/refine/components/drawer', text: 'Drawer' },
-                { link: '/refine/components/menu', text: 'Menu' },
-                { link: '/refine/components/navigation-menu', text: 'Navigation Menu' },
-                { link: '/refine/components/popover', text: 'Popover' },
-                { link: '/refine/components/spotlight', text: 'Spotlight' },
-                { link: '/refine/components/tooltip', text: 'Tooltip' },
-                { link: '/refine/components/tour', text: 'Tour' },
-              ],
-              text: 'Overlay',
-            },
-            {
-              collapsed: true,
-              items: [
-                { link: '/refine/components/button', text: 'Button' },
-                { link: '/refine/components/calendar', text: 'Calendar' },
-                { link: '/refine/components/checkbox', text: 'Checkbox' },
-                { link: '/refine/components/combobox', text: 'Combobox' },
-                { link: '/refine/components/counter', text: 'Counter' },
-                { link: '/refine/components/datagrid', text: 'Data Grid' },
-                { link: '/refine/components/date-picker', text: 'Date Picker' },
-                { link: '/refine/components/file-input', text: 'File Input' },
-                { link: '/refine/components/input', text: 'Input' },
-                { link: '/refine/components/message-composer', text: 'Message Composer' },
-                { link: '/refine/components/number-input', text: 'Number Input' },
-                { link: '/refine/components/query-bar', text: 'Query Bar' },
-                { link: '/refine/components/otp-input', text: 'OTP Input' },
-                { link: '/refine/components/qr-scanner', text: 'QR Scanner' },
-                { link: '/refine/components/radio', text: 'Radio' },
-                { link: '/refine/components/rating', text: 'Rating' },
-                { link: '/refine/components/select', text: 'Select' },
-                { link: '/refine/components/slider', text: 'Slider' },
-                { link: '/refine/components/switch', text: 'Switch' },
-                { link: '/refine/components/textarea', text: 'Textarea' },
-                { link: '/refine/components/time-picker', text: 'Time Picker' },
-              ],
-              text: 'Inputs',
-            },
-            {
-              collapsed: true,
-              items: [
-                { link: '/refine/components/box', text: 'Box' },
-                { link: '/refine/components/grid', text: 'Grid' },
-                { link: '/refine/components/navbar', text: 'Navbar' },
-                { link: '/refine/components/sidebar', text: 'Sidebar' },
-              ],
-              text: 'Layout',
-            },
-          ],
+          items: refineComponentSidebarGroups,
           text: 'Components',
         },
         {

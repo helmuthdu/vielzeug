@@ -45,6 +45,183 @@ const tabMetrics = (page: Page, selector: string) =>
   }, selector);
 
 test.describe('Layout', () => {
+  for (const variant of ['solid', 'flat', 'bordered', 'ghost', 'frost']) {
+    for (const width of [390, 1280]) {
+      test(`fullwidth ${variant} tabs fill their container at ${width}px`, async ({ page, refinePage }) => {
+        await page.setViewportSize({ height: 844, width });
+        await refinePage.mountComponent(
+          `<ore-tabs id="full" fullwidth variant="${variant}" label="Views">` +
+            '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+            '<ore-tab-item slot="tabs" value="two">Settings</ore-tab-item>' +
+            '<ore-tab-item slot="tabs" value="three">Billing</ore-tab-item>' +
+            '</ore-tabs>',
+        );
+
+        const geometry = await page.locator('#full').evaluate((tabs) => {
+          const tablist = tabs.shadowRoot!.querySelector<HTMLElement>('[role="tablist"]')!;
+          const items = [...tabs.querySelectorAll('ore-tab-item')].map((item) => item.getBoundingClientRect());
+
+          return {
+            frame: tabs.parentElement!.clientWidth,
+            host: tabs.getBoundingClientRect().width,
+            itemWidths: items.map((item) => item.width),
+            lastRight: items.at(-1)!.right,
+            listRight: tablist.getBoundingClientRect().right,
+          };
+        });
+
+        expect(geometry.host).toBeCloseTo(geometry.frame, 0);
+        expect(geometry.itemWidths[0]).toBeCloseTo(geometry.itemWidths[1], 0);
+        expect(geometry.itemWidths[1]).toBeCloseTo(geometry.itemWidths[2], 0);
+        expect(geometry.listRight - geometry.lastRight).toBeLessThanOrEqual(5);
+
+        await page.locator('#full ore-tab-item[value="two"]').click();
+        await expect(page.locator('#full')).toHaveAttribute('value', 'two');
+      });
+    }
+  }
+
+  // Unequal labels: equal widths can only come from `flex: 1` (basis 0), never from content sizing.
+  test('fullwidth distributes tabs evenly despite unequal label lengths', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="full" fullwidth>' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="two">Subscriptions and Billing</ore-tab-item>' +
+        '<ore-tab-panel value="one">Overview content</ore-tab-panel>' +
+        '<ore-tab-panel value="two">Settings content</ore-tab-panel>' +
+        '</ore-tabs>',
+    );
+
+    const items = page.locator('#full ore-tab-item');
+    const first = await items.nth(0).boundingBox();
+    const second = await items.nth(1).boundingBox();
+
+    expect(first!.width).toBeCloseTo(second!.width, 0);
+    expect(first!.width).toBeGreaterThan(250);
+  });
+
+  test('removing fullwidth restores navigation-only intrinsic sizing', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="full" fullwidth>' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="two">Settings</ore-tab-item>' +
+        '</ore-tabs>',
+    );
+
+    const full = await page.locator('#full').boundingBox();
+
+    await page.locator('#full').evaluate((tabs) => tabs.removeAttribute('fullwidth'));
+
+    await expect.poll(async () => (await page.locator('#full').boundingBox())!.width).toBeLessThan(full!.width);
+  });
+
+  test('indicator follows the active tab when the container resizes', async ({ page, refinePage }) => {
+    // A container resize changes fullwidth tab widths while selection stays put, so only
+    // the ResizeObserver re-sync keeps the pill over its tab.
+    await refinePage.mountComponent(
+      '<div id="wrap" style="width: 600px">' +
+        '<ore-tabs id="ind-tabs" fullwidth value="two">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="two">Settings</ore-tab-item>' +
+        '</ore-tabs>' +
+        '</div>',
+    );
+
+    const measure = () =>
+      page.locator('#ind-tabs').evaluate((tabs) => {
+        const indicator = tabs.shadowRoot!.querySelector<HTMLElement>('.indicator')!;
+        const active = tabs.querySelector<HTMLElement>('ore-tab-item[value="two"]')!;
+        const ind = indicator.getBoundingClientRect();
+        const tab = active.getBoundingClientRect();
+
+        return { indLeft: ind.left, indWidth: ind.width, tabLeft: tab.left, tabWidth: tab.width };
+      });
+
+    await expect
+      .poll(async () => {
+        const m = await measure();
+
+        return Math.abs(m.indWidth - m.tabWidth) < 2 && Math.abs(m.indLeft - m.tabLeft) < 2;
+      })
+      .toBe(true);
+
+    await page.locator('#wrap').evaluate((wrap) => {
+      wrap.style.width = '300px';
+    });
+
+    await expect
+      .poll(async () => {
+        const m = await measure();
+
+        return Math.abs(m.indWidth - m.tabWidth) < 2 && Math.abs(m.indLeft - m.tabLeft) < 2;
+      })
+      .toBe(true);
+  });
+
+  test('the pill is the painted active surface and slides to the clicked tab', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="pill-tabs" value="one" variant="ghost" color="primary">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="two">Settings</ore-tab-item>' +
+        '</ore-tabs>',
+    );
+
+    const measure = () =>
+      page.locator('#pill-tabs').evaluate((tabs) => {
+        const indicator = tabs.shadowRoot!.querySelector<HTMLElement>('.indicator')!;
+        const style = getComputedStyle(indicator);
+        const active = tabs.querySelector<HTMLElement>('ore-tab-item[active]')!;
+        const ind = indicator.getBoundingClientRect();
+        const tab = active.getBoundingClientRect();
+
+        return {
+          aligned: Math.abs(ind.left - tab.left) < 2 && Math.abs(ind.width - tab.width) < 2,
+          background: style.backgroundColor,
+          display: style.display,
+          transitions: style.transitionProperty,
+        };
+      });
+
+    const initial = await measure();
+
+    // Visible, painted, and transitioned: the slide is the selection affordance.
+    expect(initial.display).toBe('block');
+    expect(initial.background).not.toBe('rgba(0, 0, 0, 0)');
+    expect(initial.transitions).toContain('transform');
+    expect(initial.aligned).toBe(true);
+
+    await page.locator('#pill-tabs ore-tab-item[value="two"]').click();
+
+    await expect.poll(async () => (await measure()).aligned).toBe(true);
+  });
+
+  test('fullwidth preserves the vertical tablist layout', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="full" fullwidth orientation="vertical">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="two">Settings</ore-tab-item>' +
+        '</ore-tabs>',
+    );
+
+    const geometry = await page.locator('#full').evaluate((tabs) => {
+      const tablist = tabs.shadowRoot!.querySelector<HTMLElement>('[role="tablist"]')!;
+      const items = [...tabs.querySelectorAll('ore-tab-item')].map((item) => item.getBoundingClientRect());
+
+      return {
+        direction: getComputedStyle(tablist).flexDirection,
+        frame: tabs.parentElement!.clientWidth,
+        host: tabs.getBoundingClientRect().width,
+        itemWidth: items[0].width,
+        stacked: items[1].top >= items[0].bottom,
+      };
+    });
+
+    expect(geometry.host).toBeCloseTo(geometry.frame, 0);
+    expect(geometry.direction).toBe('column');
+    expect(geometry.stacked).toBe(true);
+    expect(geometry.itemWidth).toBeLessThan(geometry.host / 2);
+  });
+
   test('compact density renders a smaller modern tab control', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-tabs id="standard" value="one" variant="ghost">' +

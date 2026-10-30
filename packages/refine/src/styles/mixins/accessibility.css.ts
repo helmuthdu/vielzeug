@@ -62,6 +62,18 @@ export const srOnlyMixin = css`
  *    - `size="sm"` → md-scale tokens
  *    - `size="lg"` → nothing (already at max scale)
  *
+ *    `--_font-size` is the exception: it floors at `--text-base` (16 px) at *every*
+ *    size, including `sm`. iOS Safari zooms the whole page when a focused text
+ *    control's computed font-size is below 16 px, so a coarse pointer never renders
+ *    field text smaller than 16 px whatever `size` says (SC 1.4.4).
+ *
+ * Ordering contract: this mixin must come **after** `sizeVariantMixin()` in a
+ * component's `styles: [...]` array. Both sheets are unlayered, so on an equal-
+ * specificity `:host` tie the *later* sheet wins; placed before `sizeVariantMixin`
+ * its unlayered per-size `--_font-size`/`--_gap`/`--_height` declarations silently
+ * override the whole coarse block and the promotion becomes dead code.
+ * (`ore-switch`/`ore-rating` carry the reference order.)
+ *
  * The target is the same 44 px on both pointers, so the coarse block no longer
  * re-declares it. Interactive elements inside the component reference it directly:
  *
@@ -71,10 +83,11 @@ export const srOnlyMixin = css`
  *
  * @example
  * ```ts
- * import { touchTargetMixin } from '../../styles';
+ * import { sizeVariantMixin, touchTargetMixin } from '../../styles';
  *
  * return {
- *   styles: [touchTargetMixin, componentStyles],
+ *   // touchTargetMixin after sizeVariantMixin: see the ordering contract above.
+ *   styles: [sizeVariantMixin(MY_SIZE_PRESET), touchTargetMixin, componentStyles],
  *   template: html`...`
  * };
  * ```
@@ -96,9 +109,9 @@ export const touchTargetMixin = css`
       --_padding: var(--size-2-5) var(--size-5);
     }
 
-    /* sm size: promote to md scale */
+    /* sm size: promote the box to md scale; text stays at the 16 px iOS zoom floor */
     :host([size='sm']) {
-      --_font-size: var(--text-sm);
+      --_font-size: var(--text-base);
       --_gap: var(--size-2);
       --_height: var(--size-10);
       --_size: var(--size-5);

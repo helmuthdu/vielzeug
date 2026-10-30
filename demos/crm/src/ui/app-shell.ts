@@ -397,7 +397,6 @@ define('crm-app-shell', {
           id="crm-sidebar"
           class="app-sidebar"
           collapsible
-          close-on-select
           responsive="(max-width: 1180px)"
           bottom-nav-at="(max-width: 920px)"
           label=${() => t('topbar.workspaceSections')}

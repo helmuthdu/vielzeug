@@ -110,7 +110,6 @@ define('voyage-shell', {
           class="sidebar"
           data-tour="sidebar"
           label="Voyage navigation"
-          close-on-select
           bottom-nav-at="(max-width: 680px)">
           <button
             class="brand"

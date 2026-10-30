@@ -258,8 +258,10 @@ define<OreRadioProps>(RADIO_TAG, {
     colorThemeMixin,
     forcedColorsFormControlMixin,
     disabledStateMixin,
-    touchTargetMixin,
     sizeVariantMixin(CONTROL_SIZE_PRESET),
+    // Must come after `sizeVariantMixin`: see `ore-input`'s identical ordering note for why the
+    // coarse-pointer promotion is otherwise overridden by the size preset's own declarations.
+    touchTargetMixin,
     componentStyles,
   ],
 });

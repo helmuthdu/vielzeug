@@ -709,10 +709,12 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
   shadow: { delegatesFocus: true },
   styles: [
     colorThemeMixin,
-    touchTargetMixin,
     roundedVariantMixin,
     disabledLoadingMixin,
     sizeVariantMixin(FILE_INPUT_SIZE_PRESET),
+    // Must come after `sizeVariantMixin`: see `ore-input`'s identical ordering note for why the
+    // coarse-pointer promotion is otherwise overridden by the size preset's own declarations.
+    touchTargetMixin,
     forcedColorsFocusMixin('.dropzone'),
     componentStyles,
   ],

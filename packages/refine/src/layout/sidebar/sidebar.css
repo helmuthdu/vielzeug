@@ -59,15 +59,23 @@
     overflow: visible;
   }
 
+  /*
+   * Drawer backdrop veil. --overlay-veil is the theme's dimming recipe (built
+   * from --color-scrim): unlike a contrast-ramp color it always darkens, so it
+   * never inverts into a bright fog in dark mode. Fades with the panel instead
+   * of popping (display is transitionable with allow-discrete, like
+   * ore-drawer's ::backdrop).
+   */
   .drawer-backdrop {
     position: absolute;
     inset: 0;
     z-index: calc(var(--z-sticky) + 1);
     display: none;
-    width: 100%;
-    height: 100%;
-    background: color-mix(in oklch, var(--color-contrast-900) 36%, transparent);
-    border: 0;
+    background: var(--sidebar-drawer-backdrop-bg, var(--overlay-veil));
+    opacity: 0;
+    transition:
+      opacity var(--_sidebar-transition),
+      display var(--_sidebar-transition) allow-discrete;
   }
 
   :host([data-bottom-nav][data-drawer-open]) .drawer-backdrop {
@@ -75,8 +83,12 @@
     inset: 0;
     z-index: calc(var(--z-sticky) + 1);
     display: block;
-    width: 100vw;
-    height: 100dvh;
+    pointer-events: auto;
+    opacity: 1;
+
+    @starting-style {
+      opacity: 0;
+    }
   }
 
   :host([data-preview-mode][data-bottom-nav][data-drawer-open]) .drawer-backdrop {
@@ -108,6 +120,17 @@
     pointer-events: auto;
   }
 
+  /* Drawer-only mode has no bottom bar: the host strip must not swallow taps
+     on the page behind it. The fixed panel re-enables its own pointer events
+     (the open backdrop does the same in its rule). */
+  :host([drawer][data-bottom-nav]) {
+    pointer-events: none;
+  }
+
+  :host([drawer][data-bottom-nav]) > nav {
+    pointer-events: auto;
+  }
+
   /* Preview mode: constrain bottom-nav to container bounds */
   :host([data-preview-mode][data-bottom-nav]) {
     position: absolute;
@@ -122,11 +145,14 @@
     inset-block: 0;
     inset-inline-start: 0;
     z-index: calc(var(--z-sticky) + 3);
-    width: min(var(--_sidebar-width), 85vw);
+    width: min(var(--sidebar-drawer-width, var(--_sidebar-width)), 85vw);
     max-width: 85vw;
     max-height: 100dvh;
+    box-shadow: var(--sidebar-drawer-shadow, var(--shadow-xl));
     transform: translateX(-104%);
-    transition: transform var(--transition-normal);
+    transition:
+      transform var(--transition-normal),
+      opacity var(--transition-normal);
   }
 
   /* Preview mode: use absolute positioning so drawer stays within container */
@@ -216,7 +242,15 @@
       color var(--transition-fast);
   }
 
-  .bottom-tab:hover,
+  /* Pointer-only affordance: on touch, :hover sticks after a tap and the tab
+     would stay tinted until the next tap elsewhere. */
+  @media (hover: hover) {
+    .bottom-tab:hover {
+      color: var(--sidebar-item-hover-color, var(--color-contrast-900));
+      background: var(--sidebar-item-hover-bg, var(--color-contrast-100));
+    }
+  }
+
   .bottom-tab:focus-visible {
     color: var(--sidebar-item-hover-color, var(--color-contrast-900));
     outline: var(--focus-ring);
@@ -237,11 +271,6 @@
       --sidebar-item-active-bg,
       var(--color-primary-100, color-mix(in oklch, var(--color-primary) 12%, transparent))
     );
-  }
-
-  .bottom-tab-active::before,
-  .bottom-tab[data-active='true']::before {
-    display: none;
   }
 
   .bottom-tab-icon {
@@ -326,6 +355,93 @@
     flex-shrink: 0;
     padding: var(--size-4);
     border-top: var(--border) solid var(--color-contrast-200);
+  }
+
+  .drawer-close-btn[hidden] {
+    display: none;
+  }
+
+  .drawer-close-btn {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-8);
+    height: var(--size-8);
+    margin-inline-start: auto;
+    color: var(--sidebar-toggle-color, var(--color-contrast-500));
+    cursor: pointer;
+    border-radius: var(--rounded-sm);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  @media (hover: hover) {
+    .drawer-close-btn:hover {
+      color: var(--color-contrast-800);
+      background: var(--color-contrast-200);
+    }
+  }
+
+  .drawer-close-btn:active {
+    opacity: 0.8;
+  }
+
+  .drawer-close-btn:focus-visible {
+    outline: var(--focus-ring);
+  }
+
+  /* Swipe-to-dismiss grabber: a small nub on the drawer's trailing edge, the
+     same affordance ore-drawer's drag handle uses. Inset (the panel clips
+     overflow) and deliberately small: a full-height strip would silently
+     swallow taps landing on the right edge of nav items. touch-action: pan-y
+     keeps native vertical scrolling intact while horizontal pans reach the
+     gesture. */
+  .swipe-handle {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 0;
+    z-index: 2;
+    display: none;
+    width: var(--size-4);
+    height: var(--size-14);
+    touch-action: pan-y;
+    cursor: grab;
+    transform: translateY(-50%);
+  }
+
+  .swipe-handle::before {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    width: 5px;
+    height: var(--size-10);
+    content: '';
+    background: var(--color-contrast-400);
+    border-radius: var(--rounded-full);
+    opacity: 0.6;
+    transform: translate(-50%, -50%);
+    transition:
+      background var(--transition-fast),
+      opacity var(--transition-fast);
+  }
+
+  @media (hover: hover) {
+    .swipe-handle:hover::before {
+      background: var(--color-contrast-600);
+      opacity: 0.9;
+    }
+  }
+
+  .swipe-handle:active {
+    cursor: grabbing;
+  }
+
+  :host([data-bottom-nav][data-drawer-open]) .swipe-handle {
+    display: block;
   }
 
   .toggle-btn {
@@ -444,5 +560,14 @@
     --_panel-bg: var(--color-contrast-50);
     --_panel-shadow: none;
     --_panel-border-color: transparent;
+  }
+
+  /* ── drawer backdrop styles (mirrors ore-drawer) ── */
+  :host([backdrop='blur']) .drawer-backdrop {
+    backdrop-filter: blur(var(--blur-xs));
+  }
+
+  :host([backdrop='transparent']) .drawer-backdrop {
+    background: transparent;
   }
 }

@@ -6,7 +6,7 @@
     --_max-width: var(--dialog-max-width, 32rem);
     --_elevation: var(--shadow-xl);
     --_backdrop-filter: none;
-    --_backdrop-bg: var(--dialog-backdrop, color-mix(in oklch, var(--color-canvas) 40%, transparent));
+    --_backdrop-bg: var(--dialog-backdrop-bg, var(--overlay-veil));
     --_panel-bg: var(--dialog-bg, color-mix(in oklch, var(--surface-overlay) 85%, transparent));
     --_panel-blur: var(--dialog-panel-blur, var(--blur-md));
     --_panel-border-color: var(--dialog-border-color, var(--color-divider));

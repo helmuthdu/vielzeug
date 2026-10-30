@@ -249,7 +249,7 @@ Use `backdrop` to match dialog behavior:
 
 | Property               | Description                                   |
 | ---------------------- | --------------------------------------------- |
-| `--drawer-backdrop-bg` | Backdrop background color                     |
+| `--drawer-backdrop-bg` | Backdrop veil color (default `--overlay-veil`)   |
 | `--drawer-bg`          | Panel background color                        |
 | `--drawer-size`        | Panel width (horizontal) or height (vertical) |
 | `--drawer-shadow`      | Panel box shadow                              |

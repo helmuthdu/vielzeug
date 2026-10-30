@@ -135,7 +135,7 @@ export type OreDrawerProps = {
  * @slot - Main body content
  * @slot footer - Drawer footer content
  *
- * @cssprop --drawer-backdrop-bg - Backdrop background color
+ * @cssprop --drawer-backdrop-bg - Backdrop veil color (default: var(--overlay-veil))
  * @cssprop --drawer-bg - Panel background color
  * @cssprop --drawer-size - Panel width (horizontal) or height (vertical)
  * @cssprop --drawer-shadow - Panel box-shadow

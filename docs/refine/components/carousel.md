@@ -479,7 +479,7 @@ Horizontal coverflow mirrors layout and Left/Right navigation for `dir="rtl"`. A
 | `--carousel-bg`                  | `var(--color-canvas)`       | Slide area background                                                                                                                            |
 | `--carousel-radius`              | `var(--rounded-xl)`         | Host border radius                                                                                                                               |
 | `--carousel-min-height`          | `240px`                     | Fallback minimum height: set an explicit height for `filmstrip` and `gallery`                                                                   |
-| `--carousel-transition-duration` | `var(--duration-350)`       | Slide transition duration, including coverflow. Zeroes under Motion Mode (see [Theming → Motion Mode](/refine/theming#motion-mode)) |
+| `--carousel-transition-duration` | `var(--duration-350)`       | Slide transition duration, including coverflow. Zeroes under Motion Mode (see [Animation → Motion Mode](/refine/animation#motion-mode)) |
 | `--carousel-dot-bg`              | `var(--color-contrast-300)` | Inactive indicator dot color                                                                                                                     |
 | `--carousel-dot-active-bg`       | `var(--color-contrast-700)` | Active indicator fill color                                                                                                                      |
 | `--carousel-filmstrip-inactive`  | `var(--size-16)`            | Collapsed width (horizontal) or height (vertical) of inactive filmstrip slides                                                                   |

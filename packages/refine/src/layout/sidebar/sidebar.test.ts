@@ -321,13 +321,13 @@ describe('ore-sidebar', () => {
       });
 
       expect(fixture.query('[part="toggle-btn"]')?.getAttribute('aria-label')).toBe('Expand navigation');
-      expect(fixture.query('[part="drawer-backdrop"]')?.getAttribute('aria-label')).toBe('Close navigation');
+      expect(fixture.query('[part="drawer-close-btn"]')?.getAttribute('aria-label')).toBe('Close navigation');
     } finally {
       window.matchMedia = originalMatchMedia;
     }
   });
 
-  it('closes the drawer on item selection and Escape when enabled', async () => {
+  it('shows the drawer close button and backdrop veil only while the drawer is open', async () => {
     const originalMatchMedia = window.matchMedia;
 
     window.matchMedia = vi.fn().mockImplementation(() => ({
@@ -338,7 +338,66 @@ describe('ore-sidebar', () => {
 
     try {
       fixture = await mount('ore-sidebar', {
-        attrs: { 'bottom-nav-at': '(max-width: 768px)', 'close-on-select': '' },
+        attrs: { 'bottom-nav-at': '(max-width: 768px)', 'drawer-close-label': 'Close navigation' },
+      });
+      const sidebar = fixture.element as HTMLElement & { openDrawer(): void };
+      const closeBtn = fixture.query<HTMLButtonElement>('[part="drawer-close-btn"]')!;
+      const backdrop = fixture.query<HTMLElement>('[part="drawer-backdrop"]')!;
+
+      expect(closeBtn.hidden).toBe(true);
+      expect(backdrop.getAttribute('aria-hidden')).toBe('true');
+
+      sidebar.openDrawer();
+      await fixture.flush();
+
+      expect(closeBtn.hidden).toBe(false);
+      expect(closeBtn.getAttribute('aria-label')).toBe('Close navigation');
+
+      closeBtn.click();
+      await fixture.flush();
+      expect(sidebar.hasAttribute('data-drawer-open')).toBe(false);
+
+      sidebar.openDrawer();
+      await fixture.flush();
+      backdrop.click();
+      await fixture.flush();
+      expect(sidebar.hasAttribute('data-drawer-open')).toBe(false);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('keeps drawer-only mode in the overlay presentation without a bottom bar', async () => {
+    fixture = await mount('ore-sidebar', {
+      attrs: { drawer: '' },
+      html: '<ore-sidebar-item>Dashboard</ore-sidebar-item>',
+    });
+    await fixture.flush();
+
+    const sidebar = fixture.element as HTMLElement & { openDrawer(): void };
+
+    expect(sidebar.hasAttribute('data-bottom-nav')).toBe(true);
+    expect(fixture.query('[part="bottom-bar"]')?.hasAttribute('hidden')).toBe(true);
+
+    sidebar.openDrawer();
+    await fixture.flush();
+
+    expect(sidebar.hasAttribute('data-drawer-open')).toBe(true);
+    expect(fixture.query('[part="drawer-close-btn"]')?.hasAttribute('hidden')).toBe(false);
+  });
+
+  it('closes the drawer on item selection and Escape by default', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-sidebar', {
+        attrs: { 'bottom-nav-at': '(max-width: 768px)' },
         html: '<ore-sidebar-item>Dashboard</ore-sidebar-item>',
       });
       const sidebar = fixture.element as HTMLElement & { openDrawer(): void };
@@ -388,7 +447,7 @@ describe('ore-sidebar-group', () => {
   it('starts closed in uncontrolled mode when default-open is false', async () => {
     fixture = await mount('ore-sidebar-group', { attrs: { collapsible: '', 'default-open': 'false' } });
 
-    expect(fixture.element.hasAttribute('open')).toBe(false);
+    expect(fixture.element.hasAttribute('data-open')).toBe(false);
     expect(fixture.query<HTMLDetailsElement>('[part="group"]')?.open).toBe(false);
   });
 
@@ -399,6 +458,39 @@ describe('ore-sidebar-group', () => {
     await fixture.flush();
 
     expect(fixture.element.hasAttribute('open')).toBe(true);
+    expect(fixture.element.hasAttribute('data-open')).toBe(true);
+  });
+
+  it('reflects the real open state in aria-expanded', async () => {
+    fixture = await mount('ore-sidebar-group', { attrs: { collapsible: '', 'default-open': 'false' } });
+
+    const header = fixture.query<HTMLElement>('[part="group-header"]')!;
+
+    expect(header.getAttribute('aria-expanded')).toBe('false');
+
+    header.click();
+    await fixture.flush();
+
+    expect(header.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('emits open-change when an uncontrolled group is toggled', async () => {
+    fixture = await mount('ore-sidebar-group', { attrs: { collapsible: '' } });
+
+    const handler = vi.fn();
+    fixture.element.addEventListener('open-change', handler);
+
+    fixture.query<HTMLElement>('[part="group-header"]')?.click();
+    await fixture.flush();
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler.mock.calls[0][0].detail).toEqual({ open: false });
+
+    fixture.query<HTMLElement>('[part="group-header"]')?.click();
+    await fixture.flush();
+
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler.mock.calls[1][0].detail).toEqual({ open: true });
   });
 });
 

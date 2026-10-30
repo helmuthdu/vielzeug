@@ -145,6 +145,43 @@ test.describe('Interaction', () => {
     expect(triggerFocused).toBe(true);
   });
 
+  test('the backdrop dims the page with the shared veil', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-dialog id="dlg" label="Veil test" open>' + '<p>Dialog content</p>' + '</ore-dialog>',
+    );
+    await page.waitForSelector('ore-dialog[open]');
+
+    // The veil must darken: paint the resolved ::backdrop background over white
+    // on a canvas and read the pixel back. Format-independent (color-mix may
+    // compute to oklab) and proves a dark, semi-transparent fill rather than
+    // the old canvas wash, which brightened the page in light mode.
+    const veil = await page.evaluate(() => {
+      const host = document.querySelector('ore-dialog') as HTMLElement & { shadowRoot: ShadowRoot };
+      const dialog = host.shadowRoot.querySelector('dialog')!;
+      const bg = getComputedStyle(dialog, '::backdrop').backgroundColor;
+      const canvas = document.createElement('canvas');
+
+      canvas.width = 1;
+      canvas.height = 1;
+
+      const ctx = canvas.getContext('2d')!;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 1, 1);
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, 1, 1);
+
+      const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+
+      return { bg, rgb: [r, g, b] as number[] };
+    });
+
+    expect(veil.bg).not.toBe('rgba(0, 0, 0, 0)');
+    for (const channel of veil.rgb) {
+      expect(channel).toBeLessThan(230);
+    }
+  });
+
   test('keeps background controls inert while open', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<button id="outside">Outside</button>' +

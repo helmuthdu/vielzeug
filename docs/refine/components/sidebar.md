@@ -1,6 +1,6 @@
 # Sidebar
 
-A collapsible navigation sidebar with labelled groups and individual items. It uses the same frosted panel surface treatment as the drawer, while still supporting icon-only collapse mode, keyboard navigation, and full ARIA compliance.
+A collapsible navigation sidebar with labelled groups and individual items. It uses the same frosted panel surface treatment as the drawer, while still supporting icon-only collapse mode, keyboard navigation, and full ARIA compliance. On small screens it switches to a bottom tab bar plus an overlay drawer with a dimming scrim, a close button, and swipe-to-dismiss.
 
 ## Collapsible Sidebar
 
@@ -157,13 +157,35 @@ Use two breakpoints to get the full three-state behavior:
 - `ore-sidebar-group` content remains available in the drawer opened by `openDrawer()` or a linked `ore-navbar mobile-sidebar` trigger.
 - Use `responsive` for tablet compact mode and `bottom-nav-at` for mobile bottom-nav mode.
 
+## Drawer Behavior
+
+When the sidebar enters bottom-nav mode (or you call `openDrawer()`), the panel becomes a modal overlay: the page behind it is dimmed with the theme scrim, background content becomes `inert`, and focus is trapped inside the drawer until it closes.
+
+The drawer offers three ways to dismiss it, covering touch, pointer, and keyboard:
+
+- **Scrim tap** — clicking the dimmed backdrop closes the drawer.
+- **Close button** — an `×` button appears in the drawer header, labelled by `drawer-close-label`.
+- **Swipe** — dragging the grabber nub on the panel's trailing edge past a threshold closes the drawer; releasing early snaps back.
+
+`Escape` also closes the drawer, and focus returns to the element that opened it. Selecting a navigation item closes the drawer by default; set `close-on-select="false"` to keep it open.
+
+The backdrop style matches `ore-drawer`: `backdrop="opaque"` (default scrim veil), `backdrop="blur"` (adds a blur), or `backdrop="transparent"` (no veil, still click-to-close). The scrim is built from the theme's darkening veil, so it dims the page in both light and dark schemes.
+
+```html
+<ore-sidebar bottom-nav-at="(max-width: 640px)" backdrop="blur" drawer-close-label="Close navigation">
+  <!-- ... -->
+</ore-sidebar>
+```
+
+In `drawer`-only mode the sidebar has no inline panel and no bottom bar: it exists solely as the API/navbar-driven overlay drawer, with the same scrim, close button, and swipe behavior.
+
 ## Groups
 
 Use `ore-sidebar-group` to organize items into labelled sections. Add the `collapsible` attribute to allow toggling the group open/closed.
 
-`ore-sidebar-group` now uses native `details/summary` semantics internally for simpler keyboard and accessibility behavior. Collapsible group headers receive `role="button"`, `tabindex="0"`, and `aria-expanded` so they can be activated via keyboard (`Enter` or `Space`). The item list is hidden with the `hidden` attribute when closed.
+`ore-sidebar-group` uses native `details/summary` semantics internally: the header is a real `summary`, so keyboard activation (`Enter`/`Space`), focus, and the disclosed-region relationship come from the browser. Collapsible headers carry `aria-expanded` reflecting the real open state, and toggling an uncontrolled group emits `open-change` with `{ open }`.
 
-Set `default-open="false"` for uncontrolled groups that start collapsed, or pass `open` to control the group state externally.
+Set `default-open="false"` for uncontrolled groups that start collapsed, or pass `open` to control the group state externally. While `open` is set, the prop is the single source of truth: header clicks no longer change the state until the attribute is removed.
 
 Use `ore-sidebar-group` to group semantically related items: it adds a visible label and an implicit `role="list"` on the items container. Avoid setting `active` on more than one item simultaneously, as it breaks `aria-current` semantics.
 
@@ -199,8 +221,7 @@ Use `ore-sidebar-group` to group semantically related items: it adds a visible l
     </ore-sidebar-group>
   </ore-sidebar>
   <main style="grid-area: main; padding: var(--size-4);">Content area</main>
-  </ore-grid>
-  </div>
+</ore-grid>
 ```
 
 </ComponentPreview>
@@ -414,7 +435,7 @@ sidebar.addEventListener('drawer-change', (e) => {
 
 const group = document.querySelector('ore-sidebar-group[collapsible]');
 
-group.addEventListener('toggle', (e) => {
+group.addEventListener('open-change', (e) => {
   console.log('Group open:', e.detail.open);
 });
 ```
@@ -443,7 +464,6 @@ ore-sidebar-item {
   --sidebar-item-hover-color: var(--color-contrast-900);
   --sidebar-item-active-bg: color-mix(in oklch, var(--color-primary) 12%, transparent);
   --sidebar-item-active-color: var(--color-primary);
-  --sidebar-item-indicator: var(--color-primary);
 }
 ```
 
@@ -458,11 +478,12 @@ ore-sidebar-item {
 | `collapsible`       | `boolean` | `false`                | Shows the collapse/expand toggle button in the header        |
 | `responsive`        | `string`  | N/A | Media query that enables compact (collapsed) sidebar mode    |
 | `bottom-nav-at`     | `string`  | N/A | Media query that switches to mobile bottom-nav + drawer mode |
-| `close-on-select`   | `boolean` | `false`                | Closes the drawer after primary item activation             |
+| `backdrop`          | `string`  | `'opaque'`             | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` |
+| `close-on-select`   | `boolean` | `true`                 | Closes the drawer after primary item activation             |
 | `collapse-label`    | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                    |
 | `expand-label`      | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                      |
-| `drawer`            | `boolean` | `false`                | Drawer-only mode: no inline panel or bottom bar              |
-| `drawer-close-label`| `string`  | `'Close sidebar'`      | Accessible label for the drawer backdrop close control       |
+| `drawer`            | `boolean` | `false`                | Drawer-only mode: the sidebar exists solely as the overlay drawer |
+| `drawer-close-label`| `string`  | `'Close sidebar'`      | Accessible label for the drawer close button                 |
 | `variant`           | `string`  | N/A | Visual variant: `'floating'` \| `'inset'`                    |
 | `label`             | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                        |
 
@@ -509,6 +530,24 @@ ore-sidebar-item {
 | `--sidebar-toggle-border-color` | Toggle border color     | divider  |
 | `--sidebar-toggle-hover-bg` | Toggle hover background     | contrast |
 | `--sidebar-toggle-hover-color` | Toggle hover icon color  | contrast |
+| `--sidebar-drawer-width`  | Open drawer panel width     | `min(--sidebar-width, 85vw)` |
+| `--sidebar-drawer-backdrop-bg` | Drawer backdrop color  | `--overlay-veil` |
+| `--sidebar-drawer-shadow` | Shadow on the open drawer panel | `--shadow-xl` |
+| `--sidebar-bottom-nav-height` | Bottom bar height        | `3.75rem` |
+
+**`ore-sidebar` Parts**
+
+| Part                | Description                                        |
+| ------------------- | -------------------------------------------------- |
+| `nav`               | The navigation panel (inline and drawer)           |
+| `header`            | Header container (logo, branding, controls)        |
+| `content`           | Scrollable navigation content                      |
+| `footer`            | Footer container                                   |
+| `toggle-btn`        | Collapse/expand toggle                             |
+| `drawer-close-btn`  | Close button shown while the drawer is open        |
+| `drawer-backdrop`   | Dimming veil behind the open drawer                |
+| `swipe-handle`      | Grabber nub that drag-closes the open drawer       |
+| `bottom-bar`        | Mobile bottom tab bar                              |
 
 ---
 
@@ -530,9 +569,9 @@ ore-sidebar-item {
 
 **`ore-sidebar-group` Events**
 
-| Event    | Detail              | Description                               |
-| -------- | ------------------- | ----------------------------------------- |
-| `toggle` | `{ open: boolean }` | Fired when a collapsible group is toggled |
+| Event        | Detail              | Description                                        |
+| ------------ | ------------------- | -------------------------------------------------- |
+| `open-change` | `{ open: boolean }` | Fired when an uncontrolled collapsible group is toggled |
 
 ---
 
@@ -574,7 +613,6 @@ ore-sidebar-item {
 | `--sidebar-item-hover-color`  | Text color on hover              |
 | `--sidebar-item-active-bg`    | Background when active           |
 | `--sidebar-item-active-color` | Text color when active           |
-| `--sidebar-item-indicator`    | Active state indicator bar color |
 
 ## Accessibility
 
@@ -592,8 +630,11 @@ When the sidebar is collapsed to icon-only mode, the toggle button updates `aria
 
 ### Keyboard Navigation
 
-| Key     | Behavior                                                 |
-| ------- | -------------------------------------------------------- |
-| `Tab`   | Moves focus to the next focusable item in DOM order      |
-| `Enter` | Activates a focused item or toggles a collapsible header |
-| `Space` | Same as `Enter` on collapsible group headers             |
+| Key     | Behavior                                                        |
+| ------- | --------------------------------------------------------------- |
+| `Tab`   | Moves focus to the next focusable item in DOM order             |
+| `Enter` | Activates a focused item or toggles a collapsible header        |
+| `Space` | Same as `Enter` on collapsible group headers                    |
+| `Escape` | Closes the open drawer and returns focus to the opener        |
+
+While the drawer is open, the rest of the page is `inert`: Tab cannot leave the drawer, and focus is pulled back to the panel if it escapes.

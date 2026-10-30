@@ -1,7 +1,7 @@
-import { createLayoutMotion, type LayoutMotion } from '../../shared/layout-motion';
+import { animateReflow, type Reflow } from '../../reflow';
 
 /**
- * FLIP row motion for ore-datagrid, delegated to the shared layout-motion
+ * FLIP row motion for ore-datagrid, delegated to the shared reflow
  * helper (which delegates the FLIP recipe to necromancer).
  *
  * Sorting, paging, and filtering reorder rows in place, and an instant swap
@@ -14,16 +14,14 @@ import { createLayoutMotion, type LayoutMotion } from '../../shared/layout-motio
 /** Rows move, they do not scale: a subtle overshoot reads as a slip. */
 const ROW_MOVE_STAGGER = 12;
 
-export type { LayoutMotion as RowMotion } from '../../shared/layout-motion';
-
 /**
  * Builds the grid's row-motion helper.
  *
  * @param host - The grid host element (its shadow root holds the rows).
  * @param signal - Lifecycle signal: disposing it cancels in-flight animations.
  */
-export function createRowMotion(host: HTMLElement, signal: AbortSignal): LayoutMotion {
-  return createLayoutMotion(host, signal, {
+export function createRowMotion(host: HTMLElement, signal: AbortSignal): Reflow {
+  return animateReflow(host, signal, {
     elements: () => [...(host.shadowRoot?.querySelectorAll<HTMLElement>('tr[part="row"]') ?? [])],
     getKey: (row) => row.dataset.rowKey || undefined,
     stagger: ROW_MOVE_STAGGER,

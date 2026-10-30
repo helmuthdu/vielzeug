@@ -18,13 +18,15 @@ description: Published component, stylesheet, framework type, and error entry po
 | `@vielzeug/refine/frameworks/vue` | Register typed Vue global components | Types only | Does not install a Vue plugin |
 | `@vielzeug/refine/theme` | `createThemeController()`: light/dark/system document theme | Sync | Does not persist the preference or set an accent color |
 | `eventFieldValue()` / `eventFieldChecked()` | Read a form control's value/checked from `event.currentTarget` | Sync | Exported from the package root; guards non-field targets |
+| `animateReflow()` | Token-driven FLIP reflow for keyed lists | Async (next frame) | Exported from the package root; elements need stable keys or it correctly does nothing |
+| `setMotionMode()` / `getMotionMode()` | Read/write the `data-motion` attribute on `<html>` | Sync | Exported from the package root; an unknown mode throws `RangeError` |
 | `RefineError` | Base class for package-defined public errors | Sync | Component configuration warnings do not throw this error |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/refine` | Export `registerIcons`, icon definition types, `RefineError`, and the field readers without registering components |
+| `@vielzeug/refine` | Export `registerIcons`, icon definition types, `RefineError`, `animateReflow`, the motion-mode functions, and the field readers without registering components |
 | `@vielzeug/refine/<component>` | Register one component and export its tag constant, props, events, and related types |
 | `@vielzeug/refine/theme` | `createThemeController()` and its theme types |
 | `@vielzeug/refine/tokens.css` | Required global design contract |
@@ -93,12 +95,14 @@ import type { OreButtonProps } from '@vielzeug/refine/button';
 
 | Area | Components |
 | --- | --- |
-| Content | `avatar`, `avatar-group`, `breadcrumb`, `card`, `carousel`, `chat-message`, `code-window`, `copy-command`, `icon`, `keyboard-key`, `list`, `list-item`, `marquee`, `pagination`, `separator`, `speech-player`, `speed-reading`, `stats`, `step`, `stepper`, `table`, `text` |
-| Disclosure | `accordion`, `accordion-item`, `tabs`, `tab-item`, `tab-panel` |
+| Content | `accordion`, `avatar`, `card`, `carousel`, `chat-message`, `chat-panel`, `code-window`, `copy-command`, `icon`, `keyboard-key`, `list`, `marquee`, `qr-code`, `rank-list`, `speech-player`, `speed-reading`, `stats`, `table`, `text` |
 | Feedback | `alert`, `async`, `badge`, `chip`, `cookie-banner`, `password-strength`, `progress`, `skeleton`, `toast`, `typing-indicator` |
-| Inputs | `button`, `button-group`, `calendar`, `checkbox`, `checkbox-group`, `combobox`, `counter`, `datagrid`, `date-picker`, `file-input`, `input`, `message-composer`, `number-input`, `otp-input`, `query-bar`, `radio`, `radio-group`, `rating`, `select`, `slider`, `switch`, `textarea`, `time-picker` |
-| Layout | `box`, `grid`, `grid-item`, `navbar`, `sidebar` |
-| Overlays | `command-palette`, `dialog`, `drawer`, `menu`, `navigation-menu`, `popover`, `tooltip` |
+| Inputs | `button`, `calendar`, `checkbox`, `combobox`, `counter`, `datagrid`, `date-picker`, `file-input`, `input`, `message-composer`, `number-input`, `otp-input`, `qr-scanner`, `query-bar`, `radio`, `rating`, `select`, `slider`, `switch`, `textarea`, `time-picker` |
+| Layout | `box`, `grid`, `navbar`, `separator`, `sidebar` |
+| Navigation | `breadcrumb`, `navigation-menu`, `pagination`, `stepper`, `tabs` |
+| Overlay | `command-palette`, `dialog`, `drawer`, `menu`, `popover`, `spotlight`, `tooltip`, `tour` |
+
+Each row lists the entry points that own a documentation page. Sub-element entries (`accordion-item`, `tab-item`, `avatar-group`, `list-item`, `step`, and the rest) are documented on their parent's page and share its category.
 
 Each component page lists its attributes, JavaScript properties, events, slots, parts, and CSS custom properties.
 
@@ -156,11 +160,53 @@ input.addEventListener('input', (event) => {
 
 Guarded readers for the standard `input`/`change` event pattern above: they read `value`/`checked` from `event.currentTarget` only when the target actually carries it, so a handler wired to the wrong element yields `undefined`/`false` instead of a crash or a lie. Exported from the package root, which registers no components.
 
+---
+
+### `animateReflow(host, signal, options)`
+
+```ts
+import { animateReflow } from '@vielzeug/refine';
+
+const reflow = animateReflow(list, abortController.signal, {
+  elements: () => [...list.querySelectorAll('li')],
+  getKey: (item) => item.dataset.id,
+});
+reflow.run(() => renderItems(nextItems));
+```
+
+Token-driven FLIP reflow for keyed lists: captures the current layout, runs `mutate`, then animates the tracked elements into their new positions on the next frame. The same helper the DataGrid, command palette, and toast stack use.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `host` | `HTMLElement` | Element whose computed style carries the timing tokens |
+| `signal` | `AbortSignal` | Aborting cancels in-flight animations |
+| `options.elements` | `() => HTMLElement[]` | Tracked elements, read live on both sides of the mutation |
+| `options.getKey` | `(el) => string \| undefined` | Stable identity per element; all-or-nothing |
+| `options.durationToken` | `string?` | Duration token, default `'--duration-200'` |
+| `options.easingToken` | `string?` | Easing token, default `'--ease-move'` |
+| `options.stagger` | `number?` | Per-element delay in ms, default `0` |
+
+**Returns** a `Reflow` handle with one method: `run(mutate)` (sync; the animation is fire-and-forget). Timing is read from the tokens at animation time, so Motion Mode reduction skips the reflow instead of playing it instantly. Every path that cannot animate (no elements, missing keys, zeroed tokens, aborted signal, no Web Animations API) still runs `mutate` exactly once and never throws. See [Animation & Motion → List Reflow](./animation#list-reflow-animatereflow) for behavior details.
+
+---
+
+### `setMotionMode(mode)` / `getMotionMode()`
+
+```ts
+import { getMotionMode, setMotionMode } from '@vielzeug/refine';
+
+setMotionMode('reduced'); // returns the applied mode
+```
+
+Read/write the `data-motion` attribute on `<html>` (`'full' | 'reduced' | 'system'`; `'system'` removes the attribute). An unknown mode throws `RangeError`. The attribute drives the token layer: see [Animation & Motion → Motion Mode](./animation#motion-mode).
+
 ## Types
 
 Component props follow the `Ore<Component>Props` naming pattern. Event maps follow `Ore<Component>Events`. Import both from the component subpath that owns them.
 
 `RefineElementMap`, `RefineReactIntrinsicElements`, and `RefineVueGlobalComponents` are exported from their respective `frameworks/*` type entry points.
+
+The package root also exports `Reflow` (the `run()` handle), `ReflowOptions` (its options object), and `MotionMode` (`'full' | 'reduced' | 'system'`).
 
 ## Errors
 

@@ -245,6 +245,10 @@ const loadingEffect = effect(() => {
 loadingEffect.dispose();
 ```
 
+### Necromancer
+
+Use Necromancer directly when you need animation handles, groups, or explicit keyframes. Refine's [`animateReflow`](./animation#list-reflow-animatereflow) is the token-driven wrapper over its FLIP primitive and is enough for keyed lists that reflow.
+
 ## Best Practices
 
 - **Import** `tokens.css` once before rendering components.
