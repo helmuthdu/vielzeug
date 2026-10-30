@@ -1,7 +1,29 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Tue, 27 Oct 2026 08:39:39 GMT and should not be manually modified.
+This log was last generated on Fri, 30 Oct 2026 19:07:28 GMT and should not be manually modified.
 
+## 26.10.22
+Fri, 30 Oct 2026 19:07:28 GMT
+
+### Minor changes
+
+- ore-tabs: new fullwidth prop fills the container and distributes horizontal tabs evenly
+- ore-tabs: the selected tab is now marked by a single sliding pill (::part(indicator)) that travels between tabs; ore-tab-item no longer paints its own active background by default (set --tab-item-active-bg to opt back in)
+- ore-sidebar: the drawer now dims the page with a theme scrim veil (never a bright fog in dark mode), fades with the panel, gains a header close button, swipe-to-dismiss, and panel elevation; new backdrop prop and --sidebar-drawer-backdrop-bg/--sidebar-drawer-shadow tokens; --sidebar-drawer-width now takes effect
+- ore-sidebar: close-on-select defaults to true (pass false to keep the drawer open after selecting); drawer-only mode now uses the same overlay presentation as the bottom-nav drawer
+- ore-sidebar-group: toggling an uncontrolled collapsible group now emits the documented open-change event and aria-expanded reflects the real state; the dead --sidebar-item-indicator property was removed
+- overlay backdrops standardized on the new --overlay-veil token (a darkening scrim veil): dialog, drawer, command palette, and tour no longer wash the page pale in light mode with the canvas color
+- ore-command-palette and ore-tour gained the backdrop="opaque | blur | transparent" prop shared by dialog/drawer/sidebar; command palette no longer blurs its backdrop unconditionally (use backdrop="blur"), and tour gained --tour-backdrop-bg
+- backdrop CSS custom properties renamed to the --<component>-backdrop-bg convention: --dialog-backdrop is now --dialog-backdrop-bg, --command-palette-backdrop is now --command-palette-backdrop-bg
+- inputs no longer trigger the iOS Safari page zoom: the coarse-pointer size promotion in touchTargetMixin was dead code (it sat before sizeVariantMixin, whose unlayered per-size declarations overrode it); it now applies, so on touch devices fields render one size tier larger and field text floors at 16px at every size including sm
+- touchTargetMixin ordering contract: consumers must place it after sizeVariantMixin in the styles array (see the mixin's doc comment); ore-button, ore-checkbox, and ore-radio labels also render at the 16px touch floor at every size
+- animation: every --animate-* token now ships a matching .animate-* utility class (hatch-wrapped so motion mode stops loops), guarded by a contract test
+- animateReflow is public: exported from the package root with Reflow/ReflowOptions types, so an app's keyed lists get the same token-driven FLIP reflow the datagrid, command palette, and toast stack use (the internal RowMotion alias was removed)
+- reorganize component categories: retire Disclosure (Tabs is its own ARIA pattern, leaving one family), add Navigation for breadcrumb/pagination/stepper/tabs/navigation-menu, move accordion into Content and separator into Layout; src/ directories now follow the same taxonomy
+- docs: component categories have one source of truth (REFINE_CATEGORIES) that generates the sidebar and validates the api.md and index.md tables; both tables were already missing components (6 and 4)
+- command-palette: group names are searchable, groups render as ARIA role=group clusters labelled by their heading, and headings stick while their group scrolls
+- command-palette: drill-down categories (nested items open on ArrowRight/Enter with global search still flattening leaves), category-open event, back row, and an optional onEscape hook in useDialogControl
+- command-palette: search-debounce attribute and search re-emit on drill navigation
 ## 26.10.21
 Tue, 27 Oct 2026 08:39:39 GMT
 
