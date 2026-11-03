@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "ore-menu grid layout now renders cards for statically parsed markup: ore-menu-item defines after ore-menu, so a child's inject(MENU_CTX) can no longer cache a miss before the parent provides it.",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

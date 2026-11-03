@@ -178,6 +178,37 @@ test.describe('Layout', () => {
 
     expect(card).toEqual({ clamped: '2', iconAboveLabel: true, labelLines: 2 });
   });
+
+  test('cards stay cards when markup parses before the bundle loads', async ({ page, refinePage }) => {
+    // The docs sandbox scenario: markup is parsed first, then the IIFE defines the elements, so
+    // each define() upgrades its tag's parser-created elements immediately. If ore-menu-item were
+    // defined before ore-menu, the item would inject(MENU_CTX) before any menu provides it, and
+    // inject caches the miss: the grid would render list rows. Parent-before-child define order
+    // is what keeps this honest; this test is the guard against silently inverting it again.
+    await refinePage.mountComponent('<iframe title="Static preview"></iframe>');
+
+    await page.evaluate(() => {
+      const scripts = Array.from(document.scripts, (script) => `<script>${script.textContent}</script>`).join('');
+      const iframe = document.querySelector('iframe')!;
+
+      iframe.srcdoc = `<html><body><ore-menu layout="grid" default-open><ore-button slot="trigger">Actions</ore-button><ore-menu-item value="a">Share this build with the table</ore-menu-item></ore-menu>${scripts}</body></html>`;
+    });
+
+    const preview = page.frameLocator('iframe[title="Static preview"]');
+
+    // Wait for the srcdoc bundle to finish defining the elements and upgrading the parsed markup.
+    await preview.locator('ore-menu-item').evaluate(() => customElements.whenDefined('ore-menu-item'));
+
+    const card = await preview.locator('ore-menu').evaluate((menu) => {
+      const item = menu.querySelector<HTMLElement>('ore-menu-item')!;
+      const row = item.shadowRoot!.querySelector<HTMLElement>('[part="item"]')!;
+
+      return { classes: row.className, stacked: getComputedStyle(row).flexDirection };
+    });
+
+    expect(card.classes).toContain('is-grid');
+    expect(card.stacked).toBe('column');
+  });
 });
 
 test.describe('Accessibility', () => {

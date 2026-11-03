@@ -84,102 +84,6 @@ export const MENU_CTX = createContext<{ layout: Readable<OreMenuLayout | undefin
 
 // ── Styles ─────────────────────────────────────────────────────────────
 
-// ── Menu Item Component ─────────────────────────────────────────────────────────────
-
-/**
- * A selectable action item used inside `<ore-menu>`.
- *
- * @element ore-menu-item
- *
- * @attr {boolean} checked - Checked state for `checkbox` and `radio` item types
- * @attr {boolean} disabled - Disables selection and pointer interaction
- * @attr {'checkbox'|'radio'} type - Optional checkable menu item mode
- * @attr {string} value - Value emitted by parent menu on selection
- *
- * @slot - Item label/content
- * @slot icon - Optional leading icon content
- *
- * @cssprop --menu-item-hover-bg - Background on hover
- * @cssprop --menu-item-focus-color - Text color when keyboard-focused
- * @cssprop --menu-item-focus-bg - Background when keyboard-focused
- * @cssprop --menu-item-selection-bg - Background for checkbox/radio items (unselected)
- * @cssprop --menu-item-checked-color - Text color when checked
- * @cssprop --menu-item-checked-bg - Background when checked
- *
- * @part item - Root item container element.
- * @part item-label - Label text container.
- * @part icon-slot - Leading icon slot container.
- *
- * @example
- * ```html
- * <ore-menu-item value="edit">Edit</ore-menu-item>
- * <ore-menu-item value="delete" disabled>Delete</ore-menu-item>
- * <ore-menu-item type="checkbox" value="wrap" checked>Word wrap</ore-menu-item>
- * <ore-menu-item type="radio" value="left">Align left</ore-menu-item>
- * ```
- */
-export const MENU_ITEM_TAG = 'ore-menu-item' as const;
-define<OreMenuItemProps>(MENU_ITEM_TAG, {
-  props: {
-    checked: prop.bool(false),
-    disabled: prop.bool(false),
-    type: prop.oneOf(ORE_MENU_ITEM_TYPES),
-    value: prop.string(),
-  },
-  setup(props) {
-    // A grid menu restyles its items as cards. The layout cannot reach them through CSS alone
-    // (a shadow rule cannot select a slotted child's internals), so the menu provides it as
-    // context and the item marks its own row: the same channel ore-button-group uses for
-    // color/size/variant. Standalone items inject `undefined` and stay a list row.
-    const menuCtx = inject(MENU_CTX);
-    const isGrid = () => menuCtx?.layout.value === 'grid';
-    const isCheckable = () => props.type.value === 'checkbox' || props.type.value === 'radio';
-    const isChecked = () => isCheckable() && props.checked.value;
-    const itemRole = () => {
-      if (props.type.value === 'checkbox') return 'menuitemcheckbox';
-
-      if (props.type.value === 'radio') return 'menuitemradio';
-
-      return 'menuitem';
-    };
-    const itemClass = () => {
-      const type = props.type.value;
-
-      return [
-        'item',
-        isGrid() ? 'is-grid' : '',
-        type === 'checkbox' ? 'is-checkbox' : '',
-        type === 'radio' ? 'is-radio' : '',
-        isChecked() ? 'is-checked' : '',
-      ]
-        .filter(Boolean)
-        .join(' ');
-    };
-    // `aria-checked` belongs only to the checkable roles; a plain menuitem with it is invalid ARIA,
-    // so null (attribute removed) is the plain item's value.
-    const ariaChecked = () => (isCheckable() ? String(isChecked()) : null);
-
-    // `bothAxes`: a grid card clamps its label to two lines, and a line clamp reports overflow
-    // on the block axis, not the inline one. Harmless in list rows, which clip horizontally.
-    const labelRef = truncationRevealRef({ bothAxes: true });
-
-    return html`
-      <div
-        class="${itemClass}"
-        part="item"
-        tabindex="-1"
-        role="${itemRole}"
-        aria-checked="${ariaChecked}"
-        aria-disabled="${props.disabled}">
-        ${when(isCheckable, () => html`<span class="item-check" aria-hidden="true"></span>`)}
-        <span class="icon-slot" part="icon-slot"><slot name="icon"></slot></span>
-        <span class="item-label" part="item-label" ref=${labelRef}><slot></slot></span>
-      </div>
-    `;
-  },
-  styles: [colorThemeMixin, menuItemStyles],
-});
-
 // ── Menu Separator ─────────────────────────────────────────────────────────────
 
 /**
@@ -650,4 +554,107 @@ define<OreMenuProps>(MENU_TAG, {
     `;
   },
   styles: [componentStyles, sizeVariantMixin(MENU_SIZE_PRESET), forcedColorsMixin],
+});
+
+// ── Menu Item Component ─────────────────────────────────────────────────────────────
+
+// Defined after `ore-menu` on purpose. A child that injects parent context must be registered
+// after its parent: with statically parsed markup and a deferred bundle, each `define()` upgrades
+// the parser-created elements immediately, so an item defined first would run `inject(MENU_CTX)`
+// before any menu has `provide()`d it — and `inject` caches a miss per setup, permanently leaving
+// grid menus with list rows instead of cards. Same rule as navbar/sidebar/button-group: parent
+// first, children after.
+
+/**
+ * A selectable action item used inside `<ore-menu>`.
+ *
+ * @element ore-menu-item
+ *
+ * @attr {boolean} checked - Checked state for `checkbox` and `radio` item types
+ * @attr {boolean} disabled - Disables selection and pointer interaction
+ * @attr {'checkbox'|'radio'} type - Optional checkable menu item mode
+ * @attr {string} value - Value emitted by parent menu on selection
+ *
+ * @slot - Item label/content
+ * @slot icon - Optional leading icon content
+ *
+ * @cssprop --menu-item-hover-bg - Background on hover
+ * @cssprop --menu-item-focus-color - Text color when keyboard-focused
+ * @cssprop --menu-item-focus-bg - Background when keyboard-focused
+ * @cssprop --menu-item-selection-bg - Background for checkbox/radio items (unselected)
+ * @cssprop --menu-item-checked-color - Text color when checked
+ * @cssprop --menu-item-checked-bg - Background when checked
+ *
+ * @part item - Root item container element.
+ * @part item-label - Label text container.
+ * @part icon-slot - Leading icon slot container.
+ *
+ * @example
+ * ```html
+ * <ore-menu-item value="edit">Edit</ore-menu-item>
+ * <ore-menu-item value="delete" disabled>Delete</ore-menu-item>
+ * <ore-menu-item type="checkbox" value="wrap" checked>Word wrap</ore-menu-item>
+ * <ore-menu-item type="radio" value="left">Align left</ore-menu-item>
+ * ```
+ */
+export const MENU_ITEM_TAG = 'ore-menu-item' as const;
+define<OreMenuItemProps>(MENU_ITEM_TAG, {
+  props: {
+    checked: prop.bool(false),
+    disabled: prop.bool(false),
+    type: prop.oneOf(ORE_MENU_ITEM_TYPES),
+    value: prop.string(),
+  },
+  setup(props) {
+    // A grid menu restyles its items as cards. The layout cannot reach them through CSS alone
+    // (a shadow rule cannot select a slotted child's internals), so the menu provides it as
+    // context and the item marks its own row: the same channel ore-button-group uses for
+    // color/size/variant. Standalone items inject `undefined` and stay a list row.
+    const menuCtx = inject(MENU_CTX);
+    const isGrid = () => menuCtx?.layout.value === 'grid';
+    const isCheckable = () => props.type.value === 'checkbox' || props.type.value === 'radio';
+    const isChecked = () => isCheckable() && props.checked.value;
+    const itemRole = () => {
+      if (props.type.value === 'checkbox') return 'menuitemcheckbox';
+
+      if (props.type.value === 'radio') return 'menuitemradio';
+
+      return 'menuitem';
+    };
+    const itemClass = () => {
+      const type = props.type.value;
+
+      return [
+        'item',
+        isGrid() ? 'is-grid' : '',
+        type === 'checkbox' ? 'is-checkbox' : '',
+        type === 'radio' ? 'is-radio' : '',
+        isChecked() ? 'is-checked' : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+    };
+    // `aria-checked` belongs only to the checkable roles; a plain menuitem with it is invalid ARIA,
+    // so null (attribute removed) is the plain item's value.
+    const ariaChecked = () => (isCheckable() ? String(isChecked()) : null);
+
+    // `bothAxes`: a grid card clamps its label to two lines, and a line clamp reports overflow
+    // on the block axis, not the inline one. Harmless in list rows, which clip horizontally.
+    const labelRef = truncationRevealRef({ bothAxes: true });
+
+    return html`
+      <div
+        class="${itemClass}"
+        part="item"
+        tabindex="-1"
+        role="${itemRole}"
+        aria-checked="${ariaChecked}"
+        aria-disabled="${props.disabled}">
+        ${when(isCheckable, () => html`<span class="item-check" aria-hidden="true"></span>`)}
+        <span class="icon-slot" part="icon-slot"><slot name="icon"></slot></span>
+        <span class="item-label" part="item-label" ref=${labelRef}><slot></slot></span>
+      </div>
+    `;
+  },
+  styles: [colorThemeMixin, menuItemStyles],
 });

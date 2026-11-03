@@ -44,7 +44,7 @@ Control which side of the trigger the panel opens on. The menu automatically fli
 Use the `icon` named slot on each `ore-menu-item` for leading icons.
 
 ::: tip Icons
-These examples use inline SVG slot content so they stay framework and icon-library agnostic.
+These examples use `ore-icon` with names from the shared icon registry. The docs preview registers the full Lucide set so every name resolves; an app registers its own icons first, as described in the [icon guide](./icon.md).
 :::
 
 <ComponentPreview align="start" justify="start" height="400px" vertical>
@@ -105,46 +105,6 @@ Set `disabled` on the `ore-menu` element to prevent the panel from opening at al
 ```
 
 </ComponentPreview>
-
-## Listening to Events
-
-```html
-<ore-menu id="action-menu">
-  <ore-button slot="trigger">Actions</ore-button>
-  <ore-menu-item value="rename">Rename</ore-menu-item>
-  <ore-menu-item value="move">Move to folder</ore-menu-item>
-  <ore-menu-item value="delete">Delete</ore-menu-item>
-</ore-menu>
-
-<script type="module">
-  import '@vielzeug/refine/menu';
-  import '@vielzeug/refine/button';
-
-  const menu = document.getElementById('action-menu');
-
-  // Fired when a menu item is selected
-  menu.addEventListener('select', (e) => {
-    console.log('selected:', e.detail.value, 'checked:', e.detail.checked);
-    switch (e.detail.value) {
-      case 'rename':
-        openRenameDialog();
-        break;
-      case 'move':
-        openMoveDialog();
-        break;
-      case 'delete':
-        confirmDelete();
-        break;
-    }
-  });
-
-  menu.addEventListener('open-change', (e) => {
-    console.log('menu open:', e.detail.open, e.detail.reason);
-  });
-</script>
-```
-
-Use `value` on each item to handle selection in a single `select` listener rather than per-item click handlers. Keep menu items short and action-oriented (verb + noun: "Edit post", "Delete file").
 
 ## Trigger with an Icon Button
 
@@ -264,6 +224,46 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 ```
 
 </ComponentPreview>
+
+## Listening to Events
+
+```html
+<ore-menu id="action-menu">
+  <ore-button slot="trigger">Actions</ore-button>
+  <ore-menu-item value="rename">Rename</ore-menu-item>
+  <ore-menu-item value="move">Move to folder</ore-menu-item>
+  <ore-menu-item value="delete">Delete</ore-menu-item>
+</ore-menu>
+
+<script type="module">
+  import '@vielzeug/refine/menu';
+  import '@vielzeug/refine/button';
+
+  const menu = document.getElementById('action-menu');
+
+  // Fired when a menu item is selected
+  menu.addEventListener('select', (e) => {
+    console.log('selected:', e.detail.value, 'checked:', e.detail.checked);
+    switch (e.detail.value) {
+      case 'rename':
+        openRenameDialog();
+        break;
+      case 'move':
+        openMoveDialog();
+        break;
+      case 'delete':
+        confirmDelete();
+        break;
+    }
+  });
+
+  menu.addEventListener('open-change', (e) => {
+    console.log('menu open:', e.detail.open, e.detail.reason);
+  });
+</script>
+```
+
+Use `value` on each item to handle selection in a single `select` listener rather than per-item click handlers. Keep menu items short and action-oriented (verb + noun: "Edit post", "Delete file").
 
 ## API Reference
 
