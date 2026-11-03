@@ -25,7 +25,7 @@ A lightweight floating label that appears on hover, focus, or click. Automatical
 
 ## Trigger Modes
 
-Use the `trigger` attribute to control when the tooltip appears. Multiple triggers can be combined with commas (e.g. `"hover,focus"`). When `trigger` includes `focus`, the tooltip is automatically wired as a programmatic description (`aria-describedby`) for the focused element, which benefits screen reader users.
+Use the `trigger` attribute to control when the tooltip appears. Multiple triggers can be combined with commas (e.g. `"hover,focus"`). When `trigger` includes `focus`, the tooltip is automatically wired as a programmatic description (`aria-describedby`) for the focused element, which benefits screen reader users. A tooltip with the `click` trigger also closes when a pointer press starts outside its trigger and bubble; hover/focus-only tooltips do not use outside-pointer dismissal.
 
 <ComponentPreview>
 
@@ -126,7 +126,7 @@ Set `disabled` to suppress the tooltip entirely.
 
 ## Controlled Open State
 
-Use `open` as the controlled state and update it from `open-change`. Use `default-open` only to initialize an uncontrolled tooltip.
+Set `open` to control visibility. When a click-enabled tooltip requests dismissal, update `open` from the `open-change` event. Use `default-open` only to initialize an uncontrolled tooltip.
 
 ```html
 <ore-tooltip id="save-tip" content="Save changes" trigger="click">
@@ -136,8 +136,10 @@ Use `open` as the controlled state and update it from `open-change`. Use `defaul
 <script type="module">
   const tooltip = document.getElementById('save-tip');
 
+  tooltip.open = true;
   tooltip.addEventListener('open-change', (e) => {
-    console.log('tooltip open:', e.detail.open, e.detail.reason);
+    tooltip.open = e.detail.open;
+    console.log('tooltip open:', tooltip.open, e.detail.reason);
   });
 </script>
 ```

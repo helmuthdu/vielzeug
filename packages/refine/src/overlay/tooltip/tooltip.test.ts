@@ -92,6 +92,53 @@ describe('ore-tooltip', () => {
     });
   });
 
+  describe('Dismissal', () => {
+    // Touch relies on this: when the next tap lands on non-focusable content the trigger keeps
+    // focus (Safari), so no focusout fires and an outside press is the only way back to closed.
+    it('closes when a pointer press starts outside a click trigger', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'tip', trigger: 'hover,focus,click' },
+        html: '<button>Trigger</button>',
+      });
+      await fixture.flush();
+
+      const onOpenChange = vi.fn();
+
+      fixture.element.addEventListener('open-change', onOpenChange);
+      fireClick(fixture.element.querySelector<HTMLButtonElement>('button')!);
+      await fixture.flush();
+
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('false');
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      await fixture.flush();
+
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('true');
+      expect((onOpenChange.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({
+        open: false,
+        reason: 'outsideClick',
+      });
+    });
+
+    it('ignores an outside press for a hover-only tooltip', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'tip', delay: '0', trigger: 'hover' },
+        html: '<button>Trigger</button>',
+      });
+      await fixture.flush();
+
+      fixture.element.querySelector('button')?.dispatchEvent(new Event('pointerenter'));
+      await fixture.flush();
+
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('false');
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      await fixture.flush();
+
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('false');
+    });
+  });
+
   // HIG: hover needs a dwell so sweeping a toolbar does not fire every tooltip;
   // focus and click are deliberate and stay immediate.
   describe('Dwell', () => {

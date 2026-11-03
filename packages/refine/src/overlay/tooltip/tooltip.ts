@@ -182,6 +182,10 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
         }
       },
       openProp: props.open as typeof props.open & { value: boolean | undefined },
+      // Trigger events are bound manually above (for the delay timers), so the hook sees no
+      // triggers and would skip tap-away dismissal. Tap-away is the only dismissal left when a
+      // tap on non-focusable content keeps focus on the trigger, which is how iOS Safari behaves.
+      outsidePointerDismissal: computed(() => triggers.value.includes('click')),
       placement: computed(() => props.placement.value as Placement),
       slot: () => shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])') ?? null,
       slotElements: slots.elements(),

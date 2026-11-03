@@ -47,6 +47,15 @@ export type FloatingTriggerOptions = {
   slotElements: Readable<Element[]>;
   /** Which triggers are active. Set to empty array or omit if handling events manually. */
   triggers: Readable<FloatingTriggerType[]>;
+  /**
+   * Whether a pointer press outside the trigger/panel dismisses the panel. Defaults to
+   * `triggers.includes('click')`. A component that binds its own trigger events (tooltip, which
+   * wraps show/hide in delay timers) passes an empty `triggers` and must set this explicitly, or
+   * it silently loses tap-away dismissal. That matters on touch: where a tap on non-focusable
+   * content leaves focus on the trigger (iOS Safari), no `focusout` fires and an outside press is
+   * the only path back to closed.
+   */
+  outsidePointerDismissal?: Readable<boolean>;
 };
 
 export type FloatingTriggerHandle = {
@@ -281,7 +290,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
   const stopOutsidePointerDismissal = createOutsidePointerDismissal({
     getTargets: () => [currentTrigger, getPanel(), options.getHost?.()],
-    isActive: () => visible.value && triggers.value.includes('click'),
+    isActive: () => visible.value && (options.outsidePointerDismissal?.value ?? triggers.value.includes('click')),
     onDismiss: () => close('outsideClick'),
     signal: abortSignal,
   });
