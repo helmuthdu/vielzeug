@@ -5,6 +5,45 @@ description: Migrate command palette categories and the item type, the mobile in
 
 # Migration
 
+## Dock mobile sizing follows occupied slots
+
+`ore-dock` now defaults to `mobile-layout="auto"` below 640 px. A lone `start` or `commit`
+action zone hugs its content at the corresponding logical edge; default tools hug the middle.
+A lone `center` stays inside a centered bar instead of hovering over an empty action row.
+Multiple action zones and `attached` tools retain their full-width distribution. Empty docks
+render no surface. Desktop sizing is unchanged.
+
+Use `mobile-layout="full"` to preserve the previous default mobile distribution:
+
+```html
+<!-- Before -->
+<ore-dock><ore-button slot="commit">Save</ore-button></ore-dock>
+
+<!-- After: retain the full-width mobile row -->
+<ore-dock mobile-layout="full"><ore-button slot="commit">Save</ore-button></ore-dock>
+```
+
+The `compact` boolean attribute/property has been removed. Use `mobile-layout="compact"`
+(`mobileLayout: 'compact'` in JavaScript) for the previous forced-centered layout:
+
+```html
+<!-- Before -->
+<ore-dock compact><ore-button>Share</ore-button></ore-dock>
+
+<!-- After -->
+<ore-dock mobile-layout="compact"><ore-button>Share</ore-button></ore-dock>
+```
+
+```ts
+import type { OreDockProps } from '@vielzeug/refine/dock';
+
+// Before
+const options = { compact: true };
+
+// After
+const options = { mobileLayout: 'compact' } satisfies OreDockProps;
+```
+
 ## Command palette categories and searchable group headings
 
 `ore-command-palette` gained drill-down categories: an item with nested items (a `children` array

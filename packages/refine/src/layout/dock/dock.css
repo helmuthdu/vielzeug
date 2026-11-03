@@ -167,12 +167,23 @@
     --button-radius: 0 var(--dock-tool-radius, var(--rounded-full)) var(--dock-tool-radius, var(--rounded-full)) 0;
   }
 
+  /* A lone tool is both ends of the capsule at once: without this it matches the two rules
+     above and the later `:last-child` wins, leaving its leading edge square. */
+  :host([attached]) .dock-tools ::slotted(ore-button:only-child) {
+    --button-radius: var(--dock-tool-radius, var(--rounded-full));
+  }
+
   :host([attached]) .dock-tools ::slotted(ore-button:not(:first-child)) {
     --button-border-start: 0;
   }
 }
 
 @layer refine.overrides {
+  :host(:not([data-start-claimed]):not([data-center-claimed]):not([data-tools-claimed]):not([data-commit-claimed]))
+    .dock {
+    display: none;
+  }
+
   /* The phone layout is a plain media query, the same way every other refine breakpoint is
      written: a dock spans the viewport, so the viewport's width is the width being tested, and no
      observed state has to be reflected for a selector to read. The query matches the exported
@@ -187,6 +198,16 @@
      is the row's to distribute. Where a flank does stretch, it consumes that space and this is a
      no-op. */
   @media (width < 640px) {
+    :host {
+      --_dock-inset-start: max(var(--_dock-offset), env(safe-area-inset-left));
+      --_dock-inset-end: max(var(--_dock-offset), env(safe-area-inset-right));
+    }
+
+    :host(:dir(rtl)) {
+      --_dock-inset-start: max(var(--_dock-offset), env(safe-area-inset-right));
+      --_dock-inset-end: max(var(--_dock-offset), env(safe-area-inset-left));
+    }
+
     :host .dock {
       flex-wrap: nowrap;
       gap: var(--_dock-tool-gap);
@@ -206,7 +227,7 @@
 
     /* Pinned on a phone, the bar detaches from the walls and becomes a pill: inset from the edges
        like the iOS tab bar, carrying its own border. Unpinned it is resting in the flow, so it stays
-       a full-width strip. Compact keeps its own hug-and-center, and only takes the pill's skin. */
+       a full-width strip unless the mobile layout hugs its content. */
     :host([data-pinned]) .dock {
       padding-inline: var(--_dock-padding);
       border: var(--border) solid var(--_dock-border-color);
@@ -217,48 +238,56 @@
       }
     }
 
-    :host([data-pinned]:not([compact])) .dock {
+    :host([data-pinned]) .dock {
       width: auto;
-      max-width: calc(100% - (var(--_dock-offset) * 2));
-      margin-inline: var(--_dock-offset);
+      max-width: calc(100% - var(--_dock-inset-start) - var(--_dock-inset-end));
+      margin-inline: var(--_dock-inset-start) var(--_dock-inset-end);
     }
 
     :host .dock-trailing {
       display: contents;
     }
 
-    /* Compact: the row hugs its content and centers, for a bar whose hovering center is its whole
-       subject: a fight console, not a toolbar with dead space on either side.
+    /* Auto hugs one action zone; attached tools and multi-zone rows keep their distribution.
+       Width stays on the inner bar so sticky geometry and document-tree resets cannot interfere.
+       Symmetric safe insets keep centered bars clear of a notch on either edge. */
+    :host([mobile-layout='compact']) .dock,
+    :host([mobile-layout='auto']:not([data-tools-claimed]):not([data-start-claimed][data-commit-claimed])) .dock,
+    :host(
+        [mobile-layout='auto'][data-tools-claimed]:not([attached]):not([data-start-claimed]):not([data-commit-claimed])
+      )
+      .dock {
+      --_dock-flank-flex: 0 1 auto;
 
-       It shapes the phone row only, because that is the only place there is a hovering center to be
-       the subject: above the phone width the middle sits inline in a full-width strip, and a hugging
-       bar would shrink the wash and the pinned hairline away from the row they belong to.
-
-       The width lives on the bar, never the host: a consumer's reset (`* { margin: 0 }`) sits in the
-       outer tree, and the outer tree outranks every `:host` rule when styling the host element, so an
-       auto margin declared in the shadow root could never win. The host keeps the full width so the
-       sticky area stays a strip. */
-    :host([compact]) .dock {
       width: fit-content;
-      max-width: calc(100% - (var(--_dock-offset) * 2));
+      max-width: calc(100% - (max(var(--_dock-inset-start), var(--_dock-inset-end)) * 2));
+      padding-inline: var(--_dock-padding);
       margin-inline: auto;
+    }
+
+    :host([mobile-layout='auto'][data-start-claimed]:not([data-tools-claimed]):not([data-commit-claimed])) .dock {
+      margin-inline: var(--_dock-inset-start) auto;
+    }
+
+    :host([mobile-layout='auto'][data-commit-claimed]:not([data-tools-claimed]):not([data-start-claimed])) .dock {
+      margin-inline: auto var(--_dock-inset-end);
     }
 
     /* The flanks stretch equally, which is what puts the tools on the row's true middle whatever the
        flanks weigh. They stretch their own box only: a slotted tool keeps its natural width and the
        zone's alignment carries it to the edge, so a lone glyph never grows into a wide pill.
-       Compact opts out: its row hugs its content, so an equal-stretch flank is dead space. */
-    :host(:not([compact])) .dock-start:not([hidden]),
-    :host(:not([compact])) .dock-commit:not([hidden]) {
-      flex: 1 1 0;
+       A hugging row opts out: an equal-stretch flank there is dead space. */
+    :host .dock-start:not([hidden]),
+    :host .dock-commit:not([hidden]) {
+      flex: var(--_dock-flank-flex, 1 1 0);
       min-width: 0;
     }
 
     /* A centered tools row needs an empty opposite flank as its counterweight when only one flank
        is claimed. Without tools to center, the occupied flank should use the whole row instead:
        stretching a hidden spacer beside it would confine the actions to half the bar. */
-    :host(:not([compact])[data-tools-claimed][data-commit-claimed]) .dock-start[hidden],
-    :host(:not([compact])[data-tools-claimed][data-start-claimed]) .dock-commit[hidden] {
+    :host(:not([mobile-layout='compact'])[data-tools-claimed][data-commit-claimed]) .dock-start[hidden],
+    :host(:not([mobile-layout='compact'])[data-tools-claimed][data-start-claimed]) .dock-commit[hidden] {
       display: flex;
       flex: 1 1 0;
       min-width: 0;
@@ -278,6 +307,15 @@
       justify-content: center;
     }
 
+    :host([mobile-layout='auto']) .dock-tools {
+      flex-wrap: wrap;
+    }
+
+    :host([mobile-layout='auto']) ::slotted(*) {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
     /* The center leaves the row and hovers above the bar as its own chip: on a phone the row is thumb
        territory and a clock is a read-out. The zone passes pointers through to the content beneath;
        the chip carries its own. */
@@ -290,6 +328,16 @@
     }
 
     :host .dock-center > * {
+      pointer-events: auto;
+    }
+
+    /* A read-out without actions is the bar itself, not a chip hovering over an empty surface. */
+    :host(
+        [mobile-layout='auto'][data-center-claimed]:not([data-start-claimed]):not([data-tools-claimed]):not(
+          [data-commit-claimed]
+        )
+      ) .dock-center {
+      position: static;
       pointer-events: auto;
     }
 

@@ -93,7 +93,7 @@ ore-button:not(ore-button-group[attached] *):not(ore-dock[attached] *) {
 
 ## Phone layout
 
-Below the phone width (640 px) the bar trades its strip for a single tool row in the iOS toolbar grammar: the flanks stretch equally so the tools rest on the row's true middle whatever they weigh, the bar lifts off the viewport's foot, and a pinned bar detaches from the walls into a pill. `center` leaves the row entirely and hovers above it, because the row is thumb territory and a read-out is not a button.
+Below the phone width (640 px) the bar trades its strip for a single tool row in the iOS toolbar grammar: the bar lifts off the viewport's foot, and a pinned bar detaches from the walls into a pill. `center` leaves the row and hovers above it, because the row is thumb territory and a read-out is not a button. How wide that row gets is `mobile-layout`'s decision: by default (`auto`) a bar carrying a single action zone hugs its content, `start` at the leading edge, `commit` at the trailing edge, tools in the middle; a lone `center` with no actions stays inside the bar rather than hovering over an empty row. Once the bar carries more than one action zone, or its tools are `attached`, the flanks stretch equally so the tools rest on the row's true middle whatever they weigh.
 
 The width is the bar's own media query, like every other refine breakpoint. `DOCK_PHONE_QUERY` is exported from `@vielzeug/refine/dock` for code that renders alongside the bar and has to switch on the same line:
 
@@ -123,12 +123,12 @@ The width is the bar's own media query, like every other refine breakpoint. `DOC
 import { DOCK_PHONE_QUERY } from '@vielzeug/refine/dock';
 
 // A header that hands its actions to the bar below the phone width reads the same query:
-const isPhone = useMediaQuery(DOCK_PHONE_QUERY);
+const phoneRow = window.matchMedia(DOCK_PHONE_QUERY);
 ```
 
-## Compact
+## Mobile sizing
 
-When the hovering `center` is the bar's whole subject, a full-width row is mostly dead space. `compact` shrinks the phone row to its content and centers it, which is what a fight console or a timer wants. Above the phone width it changes nothing: there the middle sits inline in a full-width strip, and a hugging bar would shrink the wash and the pinned hairline away from the row they belong to.
+`mobile-layout` decides how the phone row distributes its width. `auto` (the default) adapts to the places the bar occupies: one action zone hugs its content at its logical edge, and anything wider fills the row. `full` always stretches edge to edge, which is what a multi-action commit flank wants. `compact` always hugs and centers, which is what a fight console or a timer wants. Above the phone width every mode is the same full-width strip: there the middle sits inline, and a hugging bar would shrink the wash and the pinned hairline away from the row they belong to.
 
 <ComponentPreview>
 
@@ -136,7 +136,7 @@ When the hovering `center` is the bar's whole subject, a full-width row is mostl
 <div
   style="width: 340px; border: 1px dashed var(--color-contrast-300); border-radius: var(--rounded-lg); padding: var(--size-2);">
   <div style="height: 120px; display: flex; align-items: flex-end;">
-    <ore-dock compact style="width: 100%" label="Hunt actions">
+    <ore-dock mobile-layout="compact" style="width: 100%" label="Hunt actions">
       <ore-button slot="start" icon-only label="Retreat">
         <ore-icon name="arrow-left"></ore-icon>
       </ore-button>
@@ -173,13 +173,13 @@ Set the properties on a parent for contextual theming, or on the dock itself:
 
 ### Attributes
 
-| Attribute  | Type                | Default          | Description                                       |
-| ---------- | ------------------- | ---------------- | ------------------------------------------------- |
-| `side`     | `'top' \| 'bottom'` | `'bottom'`       | Viewport edge the bar pins to                     |
-| `sticky`   | `boolean`           | `true`           | Pin to the edge while the container scrolls       |
-| `attached` | `boolean`           | `false`          | Fuse the tool row into one segmented capsule      |
-| `compact`  | `boolean`           | `false`          | Shrink the phone row to its content and center it |
-| `label`    | `string`            | `'Page actions'` | Accessible name for the toolbar landmark          |
+| Attribute       | Type                          | Default          | Description                                      |
+| --------------- | ----------------------------- | ---------------- | ------------------------------------------------ |
+| `side`          | `'top' \| 'bottom'`           | `'bottom'`       | Viewport edge the bar pins to                    |
+| `sticky`        | `boolean`                     | `true`           | Pin to the edge while the container scrolls      |
+| `attached`      | `boolean`                     | `false`          | Fuse the tool row into one segmented capsule     |
+| `mobile-layout` | `'auto' \| 'full' \| 'compact'` | `'auto'`       | Phone row sizing: adapt, fill, or hug and center |
+| `label`         | `string`                      | `'Page actions'` | Accessible name for the toolbar landmark         |
 
 ### Slots
 

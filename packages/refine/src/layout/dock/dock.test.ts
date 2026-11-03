@@ -1,7 +1,9 @@
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
+import type { OreDockProps } from './dock';
+
 describe('ore-dock', () => {
-  let fixture: Fixture<HTMLElement>;
+  let fixture: Fixture<HTMLElement & OreDockProps>;
 
   beforeAll(async () => {
     await import('./dock');
@@ -121,6 +123,7 @@ describe('ore-dock', () => {
 
       expect(fixture.element.getAttribute('side')).toBe('bottom');
       expect(fixture.element.hasAttribute('sticky')).toBe(true);
+      expect(fixture.element.getAttribute('mobile-layout')).toBe('auto');
     });
 
     it('reflects side', async () => {
@@ -135,11 +138,25 @@ describe('ore-dock', () => {
       expect(fixture.element.hasAttribute('sticky')).toBe(false);
     });
 
-    it('reflects the layout modifiers', async () => {
-      fixture = await mount('ore-dock', { attrs: { attached: true, compact: true } });
+    it('reflects attached mode', async () => {
+      fixture = await mount('ore-dock', { attrs: { attached: true } });
 
       expect(fixture.element.hasAttribute('attached')).toBe(true);
-      expect(fixture.element.hasAttribute('compact')).toBe(true);
+    });
+
+    it.each(['auto', 'full', 'compact'])('reflects the %s mobile layout', async (mobileLayout) => {
+      fixture = await mount('ore-dock', { attrs: { 'mobile-layout': mobileLayout } });
+
+      expect(fixture.element.getAttribute('mobile-layout')).toBe(mobileLayout);
+    });
+
+    it('updates mobile layout through its property', async () => {
+      fixture = await mount('ore-dock');
+      await fixture.act(() => {
+        fixture.element.mobileLayout = 'full';
+      });
+
+      expect(fixture.element.getAttribute('mobile-layout')).toBe('full');
     });
   });
 

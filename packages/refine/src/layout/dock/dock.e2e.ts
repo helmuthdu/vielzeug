@@ -147,7 +147,7 @@ test.describe('Layout', () => {
     await page.setViewportSize({ height: 900, width: 1440 });
     await fullBleed(page);
     await refinePage.mountComponent(`
-      <ore-dock compact id="dock">
+      <ore-dock mobile-layout="compact" id="dock">
         <button slot="start" style="width: 40px">Back</button>
         <span slot="center" style="padding: 8px 20px">02:31</span>
         <button style="padding: 0 24px">Boards</button>
@@ -238,14 +238,11 @@ test.describe('Layout', () => {
     expect(Math.abs(layout.zones.tools.left + layout.zones.tools.width / 2 - barMiddle)).toBeLessThanOrEqual(1);
   });
 
-  test('lets a multi-action commit flank use the full row when there are no tools to center', async ({
-    page,
-    refinePage,
-  }) => {
+  test('lets full mode use the whole row for a multi-action commit flank', async ({ page, refinePage }) => {
     await page.setViewportSize({ height: 700, width: 375 });
     await fullBleed(page);
     await refinePage.mountComponent(`
-      <ore-dock id="dock">
+      <ore-dock id="dock" mobile-layout="full">
         <button slot="commit">Share</button>
         <button slot="commit">Continue</button>
       </ore-dock>
@@ -324,6 +321,34 @@ test.describe('Layout', () => {
     expect(tools[0].radiusEnd).toBe(0);
     expect(tools[1].radiusStart).toBe(0);
     expect(tools[1].radiusEnd).toBeGreaterThan(0);
+  });
+
+  test('rounds both ends of a lone attached tool', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 700, width: 375 });
+    await fullBleed(page);
+    await refinePage.mountComponent(`
+      <ore-dock id="dock" attached>
+        <ore-button color="primary">New game</ore-button>
+      </ore-dock>
+    `);
+
+    const tool = await page.locator('#dock').evaluate((dock) => {
+      const button = dock.querySelector('ore-button');
+      const style = button?.shadowRoot?.querySelector('[part="button"]')
+        ? getComputedStyle(button.shadowRoot.querySelector('[part="button"]'))
+        : null;
+
+      return {
+        radiusEnd: Number.parseFloat(style?.borderEndEndRadius ?? '0'),
+        radiusStart: Number.parseFloat(style?.borderStartStartRadius ?? '0'),
+      };
+    });
+
+    // A lone tool is the capsule's only member, so it is both ends at once. Without the
+    // `:only-child` rule it matches `:first-child` and `:last-child` and the later rule wins,
+    // leaving the leading edge square.
+    expect(tool.radiusStart).toBeGreaterThan(0);
+    expect(tool.radiusEnd).toBeGreaterThan(0);
   });
 
   test('leaves the flanks out of the fused capsule', async ({ page, refinePage }) => {
@@ -435,7 +460,7 @@ test.describe('Layout', () => {
     await page.setViewportSize({ height: 700, width: 375 });
     await fullBleed(page);
     await refinePage.mountComponent(`
-      <ore-dock id="dock" compact>
+      <ore-dock id="dock" mobile-layout="compact">
         <button slot="start">Back</button>
         <span slot="center">02:31</span>
         <button slot="commit">Done</button>
@@ -455,7 +480,7 @@ test.describe('Layout', () => {
     await page.setViewportSize({ height: 900, width: 1280 });
     await fullBleed(page);
     await refinePage.mountComponent(`
-      <ore-dock id="dock" compact>
+      <ore-dock id="dock" mobile-layout="compact">
         <button slot="start">Back</button>
         <span slot="center">02:31</span>
         <button slot="commit">Done</button>
@@ -470,7 +495,240 @@ test.describe('Layout', () => {
   });
 });
 
+test.describe('Adaptive mobile layout', () => {
+  for (const direction of ['ltr', 'rtl'] as const) {
+    for (const slot of ['start', 'commit'] as const) {
+      test(`hugs a lone ${slot} at its logical edge in ${direction}`, async ({ page, refinePage }) => {
+        await page.setViewportSize({ height: 700, width: 375 });
+        await fullBleed(page);
+        await refinePage.mountComponent(`
+          <ore-dock id="dock" dir="${direction}">
+            <ore-button slot="${slot}">Action</ore-button>
+          </ore-dock>
+        `);
+
+        const { bar, host, zones } = await geometry(page, 'dock');
+        const onLeft = (slot === 'start') === (direction === 'ltr');
+
+        expect(Math.round(host.width)).toBe(375);
+        expect(bar.width).toBeLessThan(200);
+        expect(bar.width).toBeGreaterThan(zones[slot].width);
+        expect(onLeft ? bar.left : 375 - bar.right).toBeCloseTo(8, 0);
+      });
+    }
+  }
+
+  test('puts a lone center inside a centered content-width bar', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 700, width: 375 });
+    await fullBleed(page);
+    await refinePage.mountComponent('<ore-dock id="dock"><span slot="center">02:31</span></ore-dock>');
+
+    const { bar, zones } = await geometry(page, 'dock');
+
+    expect(bar.width).toBeLessThan(200);
+    expect(zones.center.top).toBeGreaterThanOrEqual(bar.top);
+    expect(zones.center.bottom).toBeLessThanOrEqual(bar.bottom);
+    expect(Math.abs(bar.left + bar.width / 2 - 187.5)).toBeLessThanOrEqual(1);
+  });
+
+  test('hugs and centers default tools without requiring button elements', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 700, width: 375 });
+    await fullBleed(page);
+    await refinePage.mountComponent('<ore-dock id="dock"><a href="#share">Share</a></ore-dock>');
+
+    const { bar, zones } = await geometry(page, 'dock');
+
+    expect(bar.width).toBeLessThan(200);
+    expect(zones.tools.width).toBeGreaterThan(0);
+    expect(Math.abs(bar.left + bar.width / 2 - 187.5)).toBeLessThanOrEqual(1);
+  });
+
+  test('keeps a center hovering above a single action zone', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 700, width: 375 });
+    await fullBleed(page);
+    await refinePage.mountComponent(`
+      <ore-dock id="dock">
+        <span slot="center">02:31</span>
+        <button slot="commit">Done</button>
+      </ore-dock>
+    `);
+
+    const { bar, zones } = await geometry(page, 'dock');
+
+    expect(bar.width).toBeLessThan(200);
+    expect(bar.right).toBeCloseTo(367, 0);
+    expect(zones.center.bottom).toBeLessThan(bar.top);
+  });
+
+  test('keeps opposing action zones spread across the row', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 700, width: 375 });
+    await fullBleed(page);
+    await refinePage.mountComponent(`
+      <ore-dock id="dock"><button slot="start">Back</button><button slot="commit">Done</button></ore-dock>
+    `);
+
+    const { bar, zones } = await geometry(page, 'dock');
+
+    expect(bar.width).toBe(375);
+    expect(zones.start.left).toBe(bar.left);
+    expect(zones.commit.right).toBe(bar.right);
+  });
+
+  test('adapts when slots are added, reassigned, and removed', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 700, width: 375 });
+    await fullBleed(page);
+    await refinePage.mountComponent('<ore-dock id="dock"><button slot="commit">Done</button></ore-dock>');
+
+    await page.locator('#dock').evaluate((dock) => {
+      const start = document.createElement('button');
+
+      start.slot = 'start';
+      start.textContent = 'Back';
+      dock.append(start);
+    });
+    await expect.poll(async () => (await geometry(page, 'dock')).bar.width).toBe(375);
+    await page.locator('#dock [slot="commit"]').evaluate((button) => {
+      button.slot = 'start';
+    });
+    await expect.poll(async () => (await geometry(page, 'dock')).bar.left).toBeCloseTo(8, 0);
+    expect((await geometry(page, 'dock')).bar.width).toBeLessThan(200);
+
+    await page.locator('#dock').evaluate((dock) => dock.replaceChildren());
+    await expect(page.locator('#dock').locator('[part="bar"]')).toBeHidden();
+    expect((await geometry(page, 'dock')).bar.width).toBe(0);
+  });
+
+  for (const mobileLayout of ['auto', 'full', 'compact']) {
+    test(`renders no surface for an empty ${mobileLayout} dock`, async ({ page, refinePage }) => {
+      await page.setViewportSize({ height: 700, width: 375 });
+      await fullBleed(page);
+      await refinePage.mountComponent(`<ore-dock id="dock" mobile-layout="${mobileLayout}"></ore-dock>`);
+
+      await expect(page.locator('#dock').locator('[part="bar"]')).toBeHidden();
+      expect((await geometry(page, 'dock')).bar.width).toBe(0);
+    });
+  }
+
+  test('bounds a long action group and wraps it without shrinking controls', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 700, width: 320 });
+    await fullBleed(page);
+    await refinePage.mountComponent(`
+      <ore-dock id="dock" style="--dock-offset: var(--size-4)">
+        <ore-button>First long action</ore-button>
+        <ore-button>Second long action</ore-button>
+        <ore-button>Third long action</ore-button>
+      </ore-dock>
+    `);
+
+    const { bar } = await geometry(page, 'dock');
+    const boxes = await page
+      .locator('#dock ore-button')
+      .evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON()));
+
+    expect(bar.left).toBeGreaterThanOrEqual(16);
+    expect(bar.right).toBeLessThanOrEqual(304);
+    expect(boxes[1].top).toBeGreaterThan(boxes[0].top);
+
+    for (const box of boxes) {
+      expect(box.left).toBeGreaterThanOrEqual(bar.left);
+      expect(box.right).toBeLessThanOrEqual(bar.right);
+      expect(box.height).toBeGreaterThanOrEqual(24);
+    }
+  });
+
+  for (const side of ['top', 'bottom']) {
+    test(`keeps a trailing adaptive bar aligned while pinning and releasing at the ${side}`, async ({
+      page,
+      refinePage,
+    }) => {
+      await page.setViewportSize({ height: 700, width: 375 });
+      await fullBleed(page);
+      const dock = `<ore-dock id="dock" side="${side}"><ore-button slot="commit">Done</ore-button></ore-dock>`;
+
+      await refinePage.mountComponent(
+        side === 'bottom' ? scrolling(dock) : `<div>${dock}<div style="height:2000px"></div></div>`,
+      );
+      await scrollToPin(page, 'dock', 400);
+
+      const pinned = await geometry(page, 'dock');
+
+      expect(pinned.bar.width).toBeLessThan(200);
+      expect(pinned.bar.right).toBeCloseTo(367, 0);
+      if (side === 'top') expect(pinned.bar.top).toBeCloseTo(8, 0);
+      else expect(pinned.bar.bottom).toBeCloseTo(692, 0);
+
+      await page.evaluate((edge) => window.scrollTo(0, edge === 'top' ? 0 : document.body.scrollHeight), side);
+      await expect(page.locator('#dock')).not.toHaveAttribute('data-pinned');
+      const released = await geometry(page, 'dock');
+
+      expect(released.bar.width).toBeLessThan(200);
+      expect(released.bar.right).toBeCloseTo(pinned.bar.right, 0);
+    });
+  }
+
+  for (const mobileLayout of ['auto', 'compact']) {
+    test(`keeps a centered ${mobileLayout} bar clear of asymmetric safe areas`, async ({ page, refinePage }) => {
+      await page.setViewportSize({ height: 700, width: 375 });
+      await fullBleed(page);
+      const session = await page.context().newCDPSession(page);
+
+      await session.send('Emulation.setSafeAreaInsetsOverride', { insets: { bottom: 0, left: 44, right: 0, top: 0 } });
+      await refinePage.mountComponent(`
+        <ore-dock id="dock" mobile-layout="${mobileLayout}">
+          <ore-button>First long action</ore-button>
+          <ore-button>Second long action</ore-button>
+          <ore-button>Third long action</ore-button>
+        </ore-dock>
+      `);
+
+      const { bar } = await geometry(page, 'dock');
+
+      expect(bar.left).toBeGreaterThanOrEqual(44);
+      expect(bar.right).toBeLessThanOrEqual(331);
+      expect(Math.abs(bar.left + bar.width / 2 - 187.5)).toBeLessThanOrEqual(1);
+      await session.detach();
+    });
+  }
+
+  test('switches mobile layouts at the phone breakpoint without changing desktop sizing', async ({
+    page,
+    refinePage,
+  }) => {
+    await page.setViewportSize({ height: 700, width: 639 });
+    await fullBleed(page);
+    await refinePage.mountComponent('<ore-dock id="dock"><button slot="commit">Done</button></ore-dock>');
+
+    expect((await geometry(page, 'dock')).bar.width).toBeLessThan(200);
+    await page.locator('#dock').evaluate((dock) => dock.setAttribute('mobile-layout', 'full'));
+    await expect.poll(async () => (await geometry(page, 'dock')).bar.width).toBe(639);
+    await page.locator('#dock').evaluate((dock) => dock.setAttribute('mobile-layout', 'compact'));
+    await expect.poll(async () => (await geometry(page, 'dock')).bar.width).toBeLessThan(200);
+    const compact = await geometry(page, 'dock');
+
+    expect(Math.abs(compact.bar.left + compact.bar.width / 2 - 319.5)).toBeLessThanOrEqual(1);
+    for (const mobileLayout of ['auto', 'full', 'compact']) {
+      await page.locator('#dock').evaluate((dock, mode) => dock.setAttribute('mobile-layout', mode), mobileLayout);
+      await page.setViewportSize({ height: 700, width: 640 });
+      expect((await geometry(page, 'dock')).bar.width).toBe(640);
+    }
+  });
+});
+
 test.describe('Accessibility', () => {
+  for (const slot of ['start', 'center', 'commit']) {
+    test(`has no violations for a content-width ${slot} bar`, async ({ page, refinePage }) => {
+      await page.setViewportSize({ height: 700, width: 375 });
+      await fullBleed(page);
+      await refinePage.mountComponent(`
+        <ore-dock label="Document actions"><ore-button slot="${slot}">Action</ore-button></ore-dock>
+      `);
+
+      const results = await axeCheck(page);
+
+      expect(results.violations).toEqual([]);
+    });
+  }
+
   test('has no violations for a full bar', async ({ page, refinePage }) => {
     await page.setViewportSize({ height: 900, width: 1280 });
     await fullBleed(page);

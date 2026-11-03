@@ -6,6 +6,7 @@ import dockStyles from './dock.css?inline';
 
 /** Edges a dock can pin to. */
 const DOCK_SIDES = ['top', 'bottom'] as const;
+const DOCK_MOBILE_LAYOUTS = ['auto', 'full', 'compact'] as const;
 
 /**
  * The viewport width below which a dock trades its full-width bar for the phone tool row. The
@@ -18,10 +19,10 @@ export const DOCK_PHONE_QUERY = '(width < 640px)';
 export type OreDockProps = {
   /** Fuse the tool row into one segmented capsule, leaving the flanks alone */
   attached?: boolean;
-  /** Shrink the phone row to its content and center it, for a bar whose hovering center is a HUD */
-  compact?: boolean;
   /** Accessible name for the toolbar landmark */
   label?: string;
+  /** Mobile sizing: adapt to occupied slots, fill the row, or always hug and center */
+  mobileLayout?: 'auto' | 'full' | 'compact';
   /** Viewport edge the bar pins to */
   side?: 'top' | 'bottom';
   /** Pin the bar to its edge while its container scrolls */
@@ -42,8 +43,11 @@ export type OreDockProps = {
  * the row take an equal share. Below the phone width (640 px) the bar becomes a single tool row in
  * the iOS toolbar grammar: the flanks stretch equally so the tools rest on the row's true middle,
  * the bar detaches from the viewport's foot, and `center` lifts out of the row to hover above it.
- * Pass `compact` when that hovering center is the bar's whole subject: the phone row then hugs its
- * content instead of stretching edge to edge. Above the phone width every bar is a full-width strip.
+ * By default, a phone row with one action zone hugs its content: `start` aligns to the leading
+ * edge, `commit` to the trailing edge, and tools to the middle. A lone `center` stays in the row.
+ * Multiple action zones and attached tools fill the row. `mobile-layout="full"` always fills it;
+ * `mobile-layout="compact"` always hugs and centers it. Above the phone width every bar is a
+ * full-width strip.
  *
  * The bar's surface rides a pseudo-element, never the host: `backdrop-filter` on the host would
  * make it a containing block for `position: fixed` descendants, trapping any panel a slotted
@@ -68,7 +72,7 @@ export type OreDockProps = {
  * @attr {string} side - Edge to pin to: 'top' | 'bottom' (default)
  * @attr {boolean} sticky - Pin to the edge while the container scrolls (default true)
  * @attr {boolean} attached - Fuse the tool row into one segmented capsule
- * @attr {boolean} compact - Shrink the phone row to its content and center it
+ * @attr {string} mobile-layout - Phone sizing: 'auto' (default) | 'full' | 'compact'
  * @attr {string} label - Accessible name for the toolbar landmark
  *
  * @slot - The tool row, between the flanks
@@ -116,8 +120,8 @@ export const DOCK_TAG = 'ore-dock' as const;
 define<OreDockProps>(DOCK_TAG, {
   props: {
     attached: prop.bool(false),
-    compact: prop.bool(false),
     label: prop.string('Page actions'),
+    mobileLayout: prop.oneOf(DOCK_MOBILE_LAYOUTS, 'auto'),
     side: prop.oneOf(DOCK_SIDES, 'bottom'),
     sticky: prop.bool(true),
   },
