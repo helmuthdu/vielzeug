@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "ore-tooltip: a tooltip whose trigger includes click now closes when a pointer press starts outside its trigger and bubble, so touch users are not stranded on an open tooltip when iOS Safari keeps focus on the trigger",
+            "commit": "3bf47f256a7e69b50d22e629d5fdf773f4fff327"
+          }
+        ]
+      },
+      "date": "Tue, 03 Nov 2026 16:30:26 GMT",
+      "tag": "@vielzeug/refine_v26.11.0",
+      "version": "26.11.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "ore-tabs: new fullwidth prop fills the container and distributes horizontal tabs evenly",
             "commit": "fca08b2e4283ad346e589b41967f2c272d4f8fa7"
           },

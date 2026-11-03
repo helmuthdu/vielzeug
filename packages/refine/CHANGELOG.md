@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Fri, 30 Oct 2026 19:07:28 GMT and should not be manually modified.
+This log was last generated on Tue, 03 Nov 2026 16:30:26 GMT and should not be manually modified.
 
+## 26.11.0
+Tue, 03 Nov 2026 16:30:26 GMT
+
+### Minor changes
+
+- ore-tooltip: a tooltip whose trigger includes click now closes when a pointer press starts outside its trigger and bubble, so touch users are not stranded on an open tooltip when iOS Safari keeps focus on the trigger
 ## 26.10.22
 Fri, 30 Oct 2026 19:07:28 GMT
 

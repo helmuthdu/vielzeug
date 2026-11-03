@@ -6,6 +6,20 @@
           {
             "author": "release-train",
             "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "3bf47f256a7e69b50d22e629d5fdf773f4fff327"
+          }
+        ]
+      },
+      "date": "Tue, 03 Nov 2026 16:30:26 GMT",
+      "tag": "@vielzeug/prism_v26.11.0",
+      "version": "26.11.0"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "fca08b2e4283ad346e589b41967f2c272d4f8fa7"
           }
         ]
