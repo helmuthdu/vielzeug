@@ -1,0 +1,318 @@
+@layer refine.base {
+  :host {
+    --_dock-bg: var(--dock-bg, color-mix(in oklch, var(--color-canvas) 92%, transparent));
+    --_dock-blur: var(--dock-blur, var(--blur-sm));
+    --_dock-border-color: var(--dock-border-color, var(--color-divider));
+    --_dock-color: var(--dock-color, var(--color-contrast-900));
+    --_dock-gap: var(--dock-gap, var(--size-3));
+    --_dock-offset: var(--dock-offset, var(--size-2));
+    --_dock-padding: var(--dock-padding, var(--size-2));
+    --_dock-radius: var(--dock-radius, var(--rounded-full));
+    --_dock-tool-gap: var(--dock-tool-gap, var(--size-2));
+    --_dock-z-index: var(--dock-z-index, var(--z-sticky));
+
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    color: var(--_dock-color);
+  }
+
+  :host([sticky]) {
+    position: sticky;
+    z-index: var(--_dock-z-index);
+  }
+
+  :host([side='bottom'][sticky]) {
+    bottom: 0;
+  }
+
+  :host([side='top'][sticky]) {
+    top: 0;
+  }
+
+  .dock {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--_dock-gap);
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* The bar's surface rides a pseudo-element, never the bar: `backdrop-filter` on an element makes
+     it the containing block for `position: fixed` descendants, which would trap any panel a
+     slotted control opens (a menu, a tooltip) inside the bar and cut that panel's own blur off
+     from the content behind it. */
+  .dock::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    content: '';
+    background: var(--_dock-bg);
+    border-radius: inherit;
+    backdrop-filter: blur(var(--_dock-blur));
+  }
+
+  /* Reduced transparency: the canvas wash becomes opaque and the blur drops. */
+  @media (prefers-reduced-transparency: reduce) {
+    .dock::before {
+      background: var(--color-canvas);
+      backdrop-filter: none;
+    }
+  }
+
+  :host([side='bottom']) .dock {
+    padding-block-start: var(--_dock-padding);
+    padding-block-end: max(var(--_dock-padding), env(safe-area-inset-bottom));
+  }
+
+  :host([side='top']) .dock {
+    padding-block-start: max(var(--_dock-padding), env(safe-area-inset-top));
+    padding-block-end: var(--_dock-padding);
+  }
+
+  /* The hairline arrives only with the pinned state: a bar that has settled into the flow at the
+     end of its container is content, not chrome, and stops announcing itself as one. Forced colors
+     replace the token, so the edge is carried by the palette's own text colour. */
+  :host([data-pinned][side='bottom']) .dock {
+    border-block-start: var(--border) solid var(--_dock-border-color);
+
+    @media (forced-colors: active) {
+      border-color: CanvasText;
+    }
+  }
+
+  :host([data-pinned][side='top']) .dock {
+    border-block-end: var(--border) solid var(--_dock-border-color);
+
+    @media (forced-colors: active) {
+      border-color: CanvasText;
+    }
+  }
+
+  .dock-start,
+  .dock-center,
+  .dock-tools,
+  .dock-commit {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--_dock-tool-gap);
+    align-items: center;
+    min-width: 0;
+  }
+
+  /* Every zone carries `display: flex`, an author declaration that outranks the UA sheet's
+     `[hidden] { display: none }`. Without this reset an unclaimed place would still collect the
+     bar's gap: the "an unclaimed place leaves no gap" contract that the JS slot-claim state exists
+     to keep, since a `<slot>` always matches `:empty`. */
+  .dock-start[hidden],
+  .dock-center[hidden],
+  .dock-tools[hidden],
+  .dock-commit[hidden] {
+    display: none;
+  }
+
+  /* The trailing wrapper holds its own content at the row's end, which matters as soon as the
+     wrapper grows: a hugged wrapper already sits there, so this is a no-op until something gives it
+     a share (a claimed center above the desktop width, an `attached` phone row with the wrapper
+     dissolved). Without it the tools would pack against the wrapper's leading edge and leave the
+     bar's whole right end empty. */
+  .dock-trailing {
+    display: flex;
+    flex: 0 1 auto;
+    gap: var(--_dock-tool-gap);
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    margin-inline-start: auto;
+  }
+
+  .dock-tools {
+    justify-content: flex-end;
+  }
+}
+
+@layer refine.variants {
+  /* Attached: the tool row fuses into one segmented capsule. Corner geometry and the inner seam
+     ride `--button-radius`/`--button-border-start` because a shadow rule cannot reach a slotted
+     child's internals through `::slotted(x)::part(p)`; `ore-button` reads those two itself, which
+     is the same channel `ore-button-group` uses. A document-tree `--button-radius` outranks these,
+     so an app with a global button radius must exclude its dock tools from that rule the way it
+     excludes an attached `ore-button-group`.
+
+     Every rule is scoped through `.dock-tools`: the selector before `::slotted()` is the slot's
+     shadow-tree ancestor, so an unscoped `::slotted(*)` would also fuse the flanks - squaring off a
+     `slot="start"` back button that is not part of the capsule at all. */
+  :host([attached]) .dock-tools {
+    gap: 0;
+  }
+
+  :host([attached]) .dock-tools ::slotted(*) {
+    flex: var(--dock-tool-flex, 1 1 0);
+    min-width: 0;
+  }
+
+  :host([attached]) .dock-tools ::slotted(ore-button) {
+    --button-radius: 0;
+  }
+
+  :host([attached]) .dock-tools ::slotted(ore-button:first-child) {
+    --button-radius: var(--dock-tool-radius, var(--rounded-full)) 0 0 var(--dock-tool-radius, var(--rounded-full));
+  }
+
+  :host([attached]) .dock-tools ::slotted(ore-button:last-child) {
+    --button-radius: 0 var(--dock-tool-radius, var(--rounded-full)) var(--dock-tool-radius, var(--rounded-full)) 0;
+  }
+
+  :host([attached]) .dock-tools ::slotted(ore-button:not(:first-child)) {
+    --button-border-start: 0;
+  }
+}
+
+@layer refine.overrides {
+  /* The phone layout is a plain media query, the same way every other refine breakpoint is
+     written: a dock spans the viewport, so the viewport's width is the width being tested, and no
+     observed state has to be reflected for a selector to read. The query matches the exported
+     `DOCK_PHONE_QUERY`, which exists for consumers that switch their own layout on the same line.
+
+     The tool row is the iOS toolbar grammar: one line, and the trailing wrapper dissolves
+     (`display: contents`) so its two zones become the bar's own flex items and the flanks can
+     stretch against each other across the whole row.
+
+     Centering is the bar's own job here: dissolving the wrapper drops its `margin-inline-start: auto`
+     with it, and when a bar carries nothing but tools there is no flank to stretch, so the free space
+     is the row's to distribute. Where a flank does stretch, it consumes that space and this is a
+     no-op. */
+  @media (width < 640px) {
+    :host .dock {
+      flex-wrap: nowrap;
+      gap: var(--_dock-tool-gap);
+      justify-content: center;
+    }
+
+    /* A phone bar lifts off the viewport's foot even before it pins, so the row never sits under the
+       home indicator. */
+    :host([sticky][side='bottom']) {
+      bottom: var(--_dock-offset);
+    }
+
+    :host([sticky][side='top']) {
+      top: var(--_dock-offset);
+      bottom: auto;
+    }
+
+    /* Pinned on a phone, the bar detaches from the walls and becomes a pill: inset from the edges
+       like the iOS tab bar, carrying its own border. Unpinned it is resting in the flow, so it stays
+       a full-width strip. Compact keeps its own hug-and-center, and only takes the pill's skin. */
+    :host([data-pinned]) .dock {
+      padding-inline: var(--_dock-padding);
+      border: var(--border) solid var(--_dock-border-color);
+      border-radius: var(--_dock-radius);
+
+      @media (forced-colors: active) {
+        border-color: CanvasText;
+      }
+    }
+
+    :host([data-pinned]:not([compact])) .dock {
+      width: auto;
+      max-width: calc(100% - (var(--_dock-offset) * 2));
+      margin-inline: var(--_dock-offset);
+    }
+
+    :host .dock-trailing {
+      display: contents;
+    }
+
+    /* Compact: the row hugs its content and centers, for a bar whose hovering center is its whole
+       subject: a fight console, not a toolbar with dead space on either side.
+
+       It shapes the phone row only, because that is the only place there is a hovering center to be
+       the subject: above the phone width the middle sits inline in a full-width strip, and a hugging
+       bar would shrink the wash and the pinned hairline away from the row they belong to.
+
+       The width lives on the bar, never the host: a consumer's reset (`* { margin: 0 }`) sits in the
+       outer tree, and the outer tree outranks every `:host` rule when styling the host element, so an
+       auto margin declared in the shadow root could never win. The host keeps the full width so the
+       sticky area stays a strip. */
+    :host([compact]) .dock {
+      width: fit-content;
+      max-width: calc(100% - (var(--_dock-offset) * 2));
+      margin-inline: auto;
+    }
+
+    /* The flanks stretch equally, which is what puts the tools on the row's true middle whatever the
+       flanks weigh. They stretch their own box only: a slotted tool keeps its natural width and the
+       zone's alignment carries it to the edge, so a lone glyph never grows into a wide pill.
+       Compact opts out: its row hugs its content, so an equal-stretch flank is dead space. */
+    :host(:not([compact])) .dock-start:not([hidden]),
+    :host(:not([compact])) .dock-commit:not([hidden]) {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    /* A centered tools row needs an empty opposite flank as its counterweight when only one flank
+       is claimed. Without tools to center, the occupied flank should use the whole row instead:
+       stretching a hidden spacer beside it would confine the actions to half the bar. */
+    :host(:not([compact])[data-tools-claimed][data-commit-claimed]) .dock-start[hidden],
+    :host(:not([compact])[data-tools-claimed][data-start-claimed]) .dock-commit[hidden] {
+      display: flex;
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    :host .dock-start:not([hidden]) {
+      justify-content: flex-start;
+    }
+
+    :host .dock-commit:not([hidden]) {
+      justify-content: flex-end;
+    }
+
+    :host .dock-tools {
+      flex: 0 1 auto;
+      flex-wrap: nowrap;
+      justify-content: center;
+    }
+
+    /* The center leaves the row and hovers above the bar as its own chip: on a phone the row is thumb
+       territory and a clock is a read-out. The zone passes pointers through to the content beneath;
+       the chip carries its own. */
+    :host .dock-center {
+      position: absolute;
+      inset-inline: 0;
+      bottom: calc(100% + var(--_dock-tool-gap));
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    :host .dock-center > * {
+      pointer-events: auto;
+    }
+
+    /* The capsule takes a share of the row rather than hugging its content, which is what makes its
+       seam land on the row's middle when a flank is present and fill the row when there is none. */
+    :host([attached]) .dock-tools {
+      flex: 1 1 0;
+    }
+  }
+
+  /* From the desktop width up, a claimed center sits dead-center: both sides of the row take an
+     equal share, so the middle holds whatever the flanks weigh. The leading flank stretches even
+     when unclaimed, because its empty box is the counterweight the center is measured against.
+     Below this width the center leads the bar's left side and the actions trail right, which needs
+     no help from here. */
+  @media (width >= 1280px) {
+    :host([data-center-claimed]) .dock-start {
+      display: flex;
+      flex: 1 1 0;
+    }
+
+    :host([data-center-claimed]) .dock-trailing {
+      flex: 1 1 0;
+    }
+  }
+}

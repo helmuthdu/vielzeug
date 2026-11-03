@@ -64,7 +64,7 @@ describe('ore-menu', () => {
       expect(onSelect).toHaveBeenCalledTimes(1);
       expect((onSelect.mock.calls[0][0] as CustomEvent).detail.value).toBe('edit');
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(false);
-      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'programmatic' });
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'select' });
     });
 
     it('toggles checkbox menu item without closing menu', async () => {
@@ -253,6 +253,45 @@ describe('ore-menu', () => {
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
     });
 
+    it('focuses the first item when the list opens from the keyboard', async () => {
+      fixture = await mount('ore-menu', {
+        html: `
+          <button slot="trigger">Open</button>
+          <ore-menu-item value="edit" disabled>Edit</ore-menu-item>
+          <ore-menu-item value="copy">Copy</ore-menu-item>
+        `,
+      });
+
+      const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
+      fireKeyDown(trigger, { key: 'ArrowDown' });
+      await fixture.flush();
+
+      const items = fixture.element.querySelectorAll<MenuItemElement>('ore-menu-item');
+
+      expect(items[1]?.shadowRoot?.activeElement).toBe(items[1]?.shadowRoot?.querySelector('[role="menuitem"]'));
+    });
+
+    it('focuses the first usable card when the grid opens from the keyboard', async () => {
+      fixture = await mount('ore-menu', {
+        attrs: { layout: 'grid' },
+        html: `
+          <button slot="trigger">Open</button>
+          <ore-menu-item value="a" disabled>A</ore-menu-item>
+          <ore-menu-item value="b">B</ore-menu-item>
+        `,
+      });
+
+      const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
+      fireKeyDown(trigger, { key: 'ArrowDown' });
+      await fixture.flush();
+
+      const items = fixture.element.querySelectorAll<MenuItemElement>('ore-menu-item');
+
+      expect(items[1]?.shadowRoot?.activeElement).toBe(items[1]?.shadowRoot?.querySelector('[role="menuitem"]'));
+    });
+
     it('emits escape close reason when dismissed via Escape key', async () => {
       fixture = await mount('ore-menu', {
         html: `
@@ -343,6 +382,178 @@ describe('ore-menu', () => {
 
       expect(onSelect).toHaveBeenCalledTimes(1);
       expect((onSelect.mock.calls[0][0] as CustomEvent).detail.value).toBe('delete');
+    });
+  });
+
+  describe('Grid layout', () => {
+    it('marks items as cards when the menu uses grid layout', async () => {
+      fixture = await mount('ore-menu', {
+        attrs: { layout: 'grid' },
+        html: `
+          <button slot="trigger">Open</button>
+          <ore-menu-item value="edit">Edit</ore-menu-item>
+          <ore-menu-item value="delete">Delete</ore-menu-item>
+        `,
+      });
+
+      const items = fixture.element.querySelectorAll<MenuItemElement>('ore-menu-item');
+
+      expect(items[0]?.shadowRoot?.querySelector('.item')?.classList.contains('is-grid')).toBe(true);
+      expect(items[1]?.shadowRoot?.querySelector('.item')?.classList.contains('is-grid')).toBe(true);
+    });
+
+    it('leaves standalone items as list rows', async () => {
+      fixture = await mount('ore-menu-item', { html: 'Edit' });
+
+      expect(fixture.query('.item')?.classList.contains('is-grid')).toBe(false);
+    });
+
+    it('reflects an explicit columns prop as a panel style', async () => {
+      fixture = await mount('ore-menu', {
+        attrs: { columns: '2', layout: 'grid' },
+        html: `
+          <button slot="trigger">Open</button>
+          <ore-menu-item value="edit">Edit</ore-menu-item>
+        `,
+      });
+
+      expect(fixture.element.style.getPropertyValue('--menu-panel-columns')).toBe('2');
+    });
+
+    it('defaults the panel to three columns', async () => {
+      fixture = await mount('ore-menu', {
+        attrs: { layout: 'grid' },
+        html: `
+          <button slot="trigger">Open</button>
+          <ore-menu-item value="edit">Edit</ore-menu-item>
+        `,
+      });
+
+      expect(fixture.element.style.getPropertyValue('--menu-panel-columns')).toBe('3');
+    });
+
+    it('walks columns with ArrowRight and rows with ArrowDown', async () => {
+      fixture = await mount('ore-menu', {
+        attrs: { columns: '2', layout: 'grid' },
+        html: `
+          <button slot="trigger">Open</button>
+          <ore-menu-item value="a">A</ore-menu-item>
+          <ore-menu-item value="b">B</ore-menu-item>
+          <ore-menu-item value="c">C</ore-menu-item>
+          <ore-menu-item value="d">D</ore-menu-item>
+        `,
+      });
+
+      const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
+      fireKeyDown(trigger, { key: 'ArrowDown' });
+      await fixture.flush();
+
+      const items = fixture.element.querySelectorAll<MenuItemElement>('ore-menu-item');
+      const focusedValue = () =>
+        [...items]
+          .find((item) => item.shadowRoot?.activeElement === item.shadowRoot?.querySelector('[role="menuitem"]'))
+          ?.getAttribute('value');
+
+      expect(focusedValue()).toBe('a');
+
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'ArrowRight' });
+      await fixture.flush();
+      expect(focusedValue()).toBe('b');
+
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'ArrowDown' });
+      await fixture.flush();
+      expect(focusedValue()).toBe('d');
+
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'ArrowLeft' });
+      await fixture.flush();
+      expect(focusedValue()).toBe('c');
+    });
+
+    it('steps over a disabled card to keep row alignment', async () => {
+      fixture = await mount('ore-menu', {
+        attrs: { columns: '2', layout: 'grid' },
+        html: `
+          <button slot="trigger">Open</button>
+          <ore-menu-item value="a">A</ore-menu-item>
+          <ore-menu-item value="b" disabled>B</ore-menu-item>
+          <ore-menu-item value="c">C</ore-menu-item>
+        `,
+      });
+
+      const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
+      fireKeyDown(trigger, { key: 'ArrowDown' });
+      await fixture.flush();
+
+      const items = fixture.element.querySelectorAll<MenuItemElement>('ore-menu-item');
+
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'ArrowRight' });
+      await fixture.flush();
+
+      expect(items[1]?.shadowRoot?.activeElement).toBe(items[1]?.shadowRoot?.querySelector('[role="menuitem"]'));
+    });
+
+    it('refuses to activate a disabled card with Enter', async () => {
+      fixture = await mount('ore-menu', {
+        attrs: { columns: '1', layout: 'grid' },
+        html: `
+          <button slot="trigger">Open</button>
+          <ore-menu-item value="a" disabled>A</ore-menu-item>
+        `,
+      });
+
+      const onSelect = vi.fn();
+
+      fixture.element.addEventListener('select', onSelect);
+
+      const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
+      fireKeyDown(trigger, { key: 'ArrowDown' });
+      await fixture.flush();
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'Enter' });
+      await fixture.flush();
+
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('activates the focused card with Enter', async () => {
+      fixture = await mount('ore-menu', {
+        attrs: { columns: '2', layout: 'grid' },
+        html: `
+          <button slot="trigger">Open</button>
+          <ore-menu-item value="a">A</ore-menu-item>
+          <ore-menu-item value="b">B</ore-menu-item>
+        `,
+      });
+
+      const onSelect = vi.fn();
+
+      fixture.element.addEventListener('select', onSelect);
+
+      const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
+
+      fireKeyDown(trigger, { key: 'ArrowDown' });
+      await fixture.flush();
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'ArrowRight' });
+      await fixture.flush();
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'Enter' });
+      await fixture.flush();
+
+      expect((onSelect.mock.calls[0]?.[0] as CustomEvent).detail.value).toBe('b');
+    });
+
+    it('passes axe checks when open in grid layout', async () => {
+      fixture = await mount('ore-menu', {
+        attrs: { 'default-open': '', layout: 'grid' },
+        html: `<button slot="trigger">Open</button>
+               <ore-menu-item value="a">A</ore-menu-item>
+               <ore-menu-item value="b">B</ore-menu-item>`,
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
     });
   });
 

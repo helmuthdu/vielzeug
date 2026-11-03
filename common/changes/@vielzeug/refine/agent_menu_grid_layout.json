@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "ore-menu: layout=\"grid\" turns the panel into a card grid (icon over a clamped label, `columns` per row owning both the tracks and the arrow-key rows, row/column arrow keys, full-width separators); opening from the keyboard now focuses the first usable item; closing after a plain-item selection reports reason \"select\"",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

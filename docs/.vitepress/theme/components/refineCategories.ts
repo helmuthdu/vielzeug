@@ -99,7 +99,7 @@ export const REFINE_CATEGORIES: RefineCategory[] = [
     name: 'Inputs',
   },
   {
-    components: ['box', 'grid', 'navbar', 'separator', 'sidebar'],
+    components: ['box', 'dock', 'grid', 'navbar', 'separator', 'sidebar'],
     name: 'Layout',
   },
   {

@@ -39,6 +39,7 @@ exports:
     ore-datagrid,
     ore-date-picker,
     ore-dialog,
+    ore-dock,
     ore-drawer,
     ore-file-input,
     ore-grid,
@@ -233,7 +234,7 @@ Each entry below is a component with its own documentation page and registration
 
 **Inputs:** `ore-button`, `ore-calendar`, `ore-checkbox`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-query-bar`, `ore-radio`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
 
-**Layout:** `ore-box`, `ore-grid`, `ore-navbar`, `ore-separator`, `ore-sidebar`
+**Layout:** `ore-box`, `ore-dock`, `ore-grid`, `ore-navbar`, `ore-separator`, `ore-sidebar`
 
 **Navigation:** `ore-breadcrumb`, `ore-navigation-menu`, `ore-pagination`, `ore-stepper`, `ore-tabs`
 

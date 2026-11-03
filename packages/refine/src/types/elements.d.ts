@@ -74,6 +74,7 @@ import type { OreSwitchEvents, OreSwitchProps } from '../inputs/switch/switch';
 import type { OreTextareaEvents, OreTextareaProps } from '../inputs/textarea/textarea';
 import type { OreTimePickerEvents, OreTimePickerProps } from '../inputs/time-picker/time-picker';
 import type { OreBoxProps } from '../layout/box/box';
+import type { OreDockProps } from '../layout/dock/dock';
 import type { OreGridProps } from '../layout/grid/grid';
 import type { OreGridItemProps } from '../layout/grid-item/grid-item';
 import type { NavbarElement, OreNavbarEvents, OreNavbarItemProps } from '../layout/navbar/navbar';
@@ -154,6 +155,7 @@ export interface RefineElementMap {
   'ore-date-picker': HTMLElement & OreDatePickerProps & AddEventListeners<OreDatePickerEvents>;
   // overlay
   'ore-dialog': HTMLElement & OreDialogProps & AddEventListeners<OreDialogEvents>;
+  'ore-dock': HTMLElement & OreDockProps;
   'ore-drawer': DrawerElement & AddEventListeners<OreDrawerEvents>;
   'ore-file-input': HTMLElement & OreFileInputProps & FormValidityMethods & AddEventListeners<OreFileInputEvents>;
   'ore-grid': HTMLElement & OreGridProps;

@@ -10,25 +10,28 @@ Control which side of the trigger the panel opens on. The menu automatically fli
 
 ```html
 <ore-menu placement="bottom-start">
-  <ore-button slot="trigger" variant="outline" size="sm"
-    >Bottom Start <ore-icon name="arrow-down-left" size="16"></ore-icon
-  ></ore-button>
+  <ore-button slot="trigger" variant="outline" size="sm">
+    Bottom Start
+    <ore-icon name="arrow-down-left" size="16"></ore-icon>
+  </ore-button>
   <ore-menu-item value="a">Option A</ore-menu-item>
   <ore-menu-item value="b">Option B</ore-menu-item>
 </ore-menu>
 
 <ore-menu placement="bottom-end">
-  <ore-button slot="trigger" variant="outline" size="sm"
-    >Bottom End <ore-icon name="arrow-down-right" size="16"></ore-icon
-  ></ore-button>
+  <ore-button slot="trigger" variant="outline" size="sm">
+    Bottom End
+    <ore-icon name="arrow-down-right" size="16"></ore-icon>
+  </ore-button>
   <ore-menu-item value="a">Option A</ore-menu-item>
   <ore-menu-item value="b">Option B</ore-menu-item>
 </ore-menu>
 
 <ore-menu placement="top-start">
-  <ore-button slot="trigger" variant="outline" size="sm"
-    >Top Start <ore-icon name="arrow-up-left" size="16"></ore-icon
-  ></ore-button>
+  <ore-button slot="trigger" variant="outline" size="sm">
+    Top Start
+    <ore-icon name="arrow-up-left" size="16"></ore-icon>
+  </ore-button>
   <ore-menu-item value="a">Option A</ore-menu-item>
   <ore-menu-item value="b">Option B</ore-menu-item>
 </ore-menu>
@@ -183,6 +186,43 @@ Use `ore-menu-separator` to add a horizontal divider between groups of related i
 
 </ComponentPreview>
 
+## Grid Layout
+
+Set `layout="grid"` to turn the panel into a grid of cards: icon above a centered, two-line-clamped label, equal columns, no scroller to fight. This suits a small, complete action set (three to six verbs a thumb should see at once). For longer lists, keep the default `list` layout. Use `columns` to set the row size (default 3); `ore-menu-separator` still works and spans the full width between clusters. The `columns` prop owns the column count outright: the panel's grid tracks and the arrow-key rows always read the same number.
+
+<ComponentPreview align="start" justify="start" height="400px" vertical>
+
+```html
+<ore-menu layout="grid">
+  <ore-button slot="trigger">Actions</ore-button>
+  <ore-menu-item value="forge">
+    <ore-icon slot="icon" name="hammer" size="18"></ore-icon>
+    Open Forge
+  </ore-menu-item>
+  <ore-menu-item value="decks">
+    <ore-icon slot="icon" name="layers" size="18"></ore-icon>
+    Edit decks
+  </ore-menu-item>
+  <ore-menu-item value="share">
+    <ore-icon slot="icon" name="share-2" size="18"></ore-icon>
+    Share build
+  </ore-menu-item>
+  <ore-menu-separator></ore-menu-separator>
+  <ore-menu-item value="export">
+    <ore-icon slot="icon" name="download" size="18"></ore-icon>
+    Export
+  </ore-menu-item>
+  <ore-menu-item value="delete" disabled>
+    <ore-icon slot="icon" name="trash-2" size="18"></ore-icon>
+    Delete
+  </ore-menu-item>
+</ore-menu>
+```
+
+</ComponentPreview>
+
+Keyboard navigation follows the grid: `ArrowLeft` / `ArrowRight` step one card, `ArrowUp` / `ArrowDown` step one row, `Home` / `End` jump to the ends. Disabled cards are still stepped over (skipping them would desync the arrows from the visible rows) but never activated.
+
 ## Checkable Items
 
 ### Checkbox Items
@@ -229,20 +269,22 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 
 **`ore-menu`** Attributes
 
-| Attribute   | Type                                                                              | Default          | Description                                                |
-| ----------- | --------------------------------------------------------------------------------- | ---------------- | ---------------------------------------------------------- |
-| `placement` | `'bottom' \| 'bottom-start' \| 'bottom-end' \| 'top' \| 'top-start' \| 'top-end'` | `'bottom-start'` | Preferred panel placement (auto-flips near viewport edges) |
-| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`         | N/A | Color theme                                                |
-| `size`      | `'sm' \| 'md' \| 'lg'`                                                            | `'md'`           | Size theme                                                 |
-| `disabled`  | `boolean`                                                                         | `false`          | Prevent the menu from opening                              |
-| `open`      | `boolean`                                                                         | N/A | Controlled panel visibility                                |
-| `default-open` | `boolean`                                                                      | `false`          | Initial visibility when `open` is not provided             |
+| Attribute      | Type                                                                              | Default          | Description                                                                 |
+| -------------- | --------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------- |
+| `placement`    | `'bottom' \| 'bottom-start' \| 'bottom-end' \| 'top' \| 'top-start' \| 'top-end'` | `'bottom-start'` | Preferred panel placement (auto-flips near viewport edges)                  |
+| `color`        | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`         | N/A              | Color theme                                                                 |
+| `size`         | `'sm' \| 'md' \| 'lg'`                                                            | `'md'`           | Size theme                                                                  |
+| `disabled`     | `boolean`                                                                         | `false`          | Prevent the menu from opening                                               |
+| `open`         | `boolean`                                                                         | N/A              | Controlled panel visibility                                                 |
+| `default-open` | `boolean`                                                                         | `false`          | Initial visibility when `open` is not provided                              |
+| `layout`       | `'list' \| 'grid'`                                                                | `'list'`         | Panel layout: rows or a grid of cards                                       |
+| `columns`      | `number`                                                                          | `3`              | Cards per row in `grid` layout; sets both the tracks and the arrow-key rows |
 
 **`ore-menu`** Slots
 
-| Slot      | Description                                        |
-| --------- | -------------------------------------------------- |
-| `trigger` | The element that opens/closes the menu panel       |
+| Slot      | Description                                         |
+| --------- | --------------------------------------------------- |
+| `trigger` | The element that opens/closes the menu panel        |
 | (default) | `ore-menu-item` elements to display as menu options |
 
 **`ore-menu-item`** Attributes
@@ -250,7 +292,7 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | Attribute  | Type                    | Default | Description                                                  |
 | ---------- | ----------------------- | ------- | ------------------------------------------------------------ |
 | `value`    | `string`                | `''`    | Value emitted in the `select` event detail                   |
-| `type`     | `'checkbox' \| 'radio'` | N/A | Makes the item checkable; radio items are mutually exclusive |
+| `type`     | `'checkbox' \| 'radio'` | N/A     | Makes the item checkable; radio items are mutually exclusive |
 | `checked`  | `boolean`               | `false` | Whether a checkable item is currently checked                |
 | `disabled` | `boolean`               | `false` | Prevent the item from being selected                         |
 
@@ -263,33 +305,40 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 
 **Events**
 
-| Event    | Detail                                                                   | Description                                                                                               |
-| -------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| `select` | `{ value: string, checked?: boolean }`                                   | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items |
-| `open-change` | `{ open: boolean, reason: string }`                                      | Emitted whenever the panel opens or closes.                                                               |
+| Event         | Detail                                 | Description                                                                                                  |
+| ------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `select`      | `{ value: string, checked?: boolean }` | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items    |
+| `open-change` | `{ open: boolean, reason: string }`    | Emitted whenever the panel opens or closes. Closing after a plain item is chosen reports `reason: "select"`. |
 
 **CSS Custom Properties (`ore-menu`)**
 
-| Property                    | Description                                      | Default             |
-| --------------------------- | ------------------------------------------------ | ------------------- |
-| `--menu-panel-min-width`    | Minimum width of the panel                       | `10rem`             |
-| `--menu-panel-radius`       | Border radius of the panel                       | `var(--rounded-lg)` |
-| `--menu-panel-shadow`       | Box shadow of the panel                          | `var(--shadow-xl)`  |
-| `--menu-panel-bg`           | Panel background surface                         | Theme-dependent     |
-| `--menu-panel-color`        | Panel foreground and unchecked indicator color   | Theme-dependent     |
-| `--menu-panel-border-color` | Panel border color                               | Theme-dependent     |
-| `--menu-panel-blur`         | Panel backdrop blur amount                       | `var(--blur-md)`    |
-| `--menu-item-hover-bg`      | Item background on hover                         | Theme-dependent     |
-| `--menu-item-focus-color`   | Item text color when keyboard-focused            | Theme-dependent     |
-| `--menu-item-focus-bg`      | Item background when keyboard-focused            | Theme-dependent     |
-| `--menu-item-selection-bg`  | Background for checkbox/radio items (unselected) | Theme-dependent     |
-| `--menu-item-checked-color` | Item text color when checked                     | Theme-dependent     |
-| `--menu-item-checked-bg`    | Item background when checked                     | Theme-dependent     |
+| Property                        | Description                                      | Default                                   |
+| ------------------------------- | ------------------------------------------------ | ----------------------------------------- |
+| `--menu-panel-min-width`        | Minimum width of the panel                       | `10rem`                                   |
+| `--menu-panel-radius`           | Border radius of the panel                       | `var(--rounded-lg)`                       |
+| `--menu-panel-shadow`           | Box shadow of the panel                          | `var(--shadow-xl)`                        |
+| `--menu-panel-bg`               | Panel background surface                         | Theme-dependent                           |
+| `--menu-panel-color`            | Panel foreground and unchecked indicator color   | Theme-dependent                           |
+| `--menu-panel-border-color`     | Panel border color                               | Theme-dependent                           |
+| `--menu-panel-blur`             | Panel backdrop blur amount                       | `var(--blur-md)`                          |
+| `--menu-panel-padding`          | Panel padding                                    | `var(--size-1)`                           |
+| `--menu-panel-width`            | Panel width in `grid` layout                     | `min(21rem, calc(100vw - var(--size-4)))` |
+| `--menu-panel-gap`              | Gap between grid cards                           | `var(--size-1-5)`                         |
+| `--menu-item-card-min-height`   | Grid card height floor                           | `var(--size-20)`                          |
+| `--menu-item-card-border-color` | Grid card border color                           | `var(--color-divider)`                    |
+| `--menu-item-card-radius`       | Grid card corner radius                          | `var(--rounded-md)`                       |
+| `--menu-item-card-icon-size`    | Icon size inside a grid card (`--ore-icon-size`) | `var(--size-5)`                           |
+| `--menu-item-hover-bg`          | Item background on hover                         | Theme-dependent                           |
+| `--menu-item-focus-color`       | Item text color when keyboard-focused            | Theme-dependent                           |
+| `--menu-item-focus-bg`          | Item background when keyboard-focused            | Theme-dependent                           |
+| `--menu-item-selection-bg`      | Background for checkbox/radio items (unselected) | Theme-dependent                           |
+| `--menu-item-checked-color`     | Item text color when checked                     | Theme-dependent                           |
+| `--menu-item-checked-bg`        | Item background when checked                     | Theme-dependent                           |
 
 ## Accessibility
 
 The menu component follows WAI-ARIA Menu Button Pattern best practices.
 
-Arrow keys move focus between items; `Enter` / `Space` activates the focused item; `Escape` closes the panel and returns focus to the trigger. `Home` / `End` jump to the first or last item. Outside clicks and `Tab` also close the menu and restore focus to the trigger.
+Arrow keys move focus between items; `Enter` / `Space` activates the focused item; `Escape` closes the panel and returns focus to the trigger. `Home` / `End` jump to the first or last item. Opening with `Enter`, `Space`, or `ArrowDown` moves focus to the first usable item. Outside clicks and `Tab` also close the menu and restore focus to the trigger. In `grid` layout the arrow keys follow the two-dimensional layout instead: left/right step one card, up/down step one row.
 
 The panel has `role="menu"` and `aria-orientation="vertical"`. The trigger element receives `aria-haspopup="menu"`, `aria-expanded`, and `aria-controls` pointing to the menu panel. Each item has `role="menuitem"` and `aria-disabled` when disabled. Checkable items automatically switch to `role="menuitemcheckbox"` or `role="menuitemradio"` with the appropriate `aria-checked` value.

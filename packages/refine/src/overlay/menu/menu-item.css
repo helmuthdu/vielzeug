@@ -43,6 +43,55 @@
     border-radius: var(--rounded-sm);
   }
 
+  /* Grid layout: the same item becomes a card. These rules must outrank the edge-radius rules
+     above, which sit at :host + .class specificity, hence the explicit `:host` prefix here. The
+     parent ore-menu signals the layout through context, so a standalone item never picks this up. */
+  :host .item.is-grid {
+    /* Preflight's border-box is a global sheet and never reaches this shadow root, so the card
+       states it: without it the padding + border stack outside `height: 100%` and every card
+       overflows its grid cell into the row below. */
+    box-sizing: border-box;
+    flex-direction: column;
+    gap: var(--size-1);
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: var(--menu-item-card-min-height, var(--size-20));
+    padding: var(--size-2);
+    text-align: center;
+    white-space: normal;
+    border: var(--border) solid var(--menu-item-card-border-color, var(--color-divider));
+    border-radius: var(--menu-item-card-radius, var(--rounded-md));
+
+    @media (forced-colors: active) {
+      border-color: CanvasText;
+    }
+  }
+
+  /* Two-line clamp: card copy wraps, which a row item never does. The clamp keeps one long verb
+     from stretching its row; truncationRevealRef moves the full text into `title` when it bites. */
+  .is-grid .item-label {
+    display: -webkit-box;
+    flex: none;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: clip;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+  }
+
+  .is-grid .icon-slot {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* The icon sizes itself through its own public hook, which a parent rule cannot reach across
+     the slot — this is the one place allowed to set it. */
+  .is-grid .icon-slot ::slotted(ore-icon) {
+    --ore-icon-size: var(--menu-item-card-icon-size, var(--size-5));
+  }
+
   :host(:not([disabled])) .item:hover {
     background: var(--_hover-bg);
   }

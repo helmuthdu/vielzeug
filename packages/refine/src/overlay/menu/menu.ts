@@ -1,18 +1,22 @@
-import { restoreFocus } from '@vielzeug/focus';
+import { createGridNavigation, restoreFocus } from '@vielzeug/focus';
 import type { Placement } from '@vielzeug/orbit';
 import {
   bind,
+  createContext,
   createId,
   define,
   getHost,
   html,
+  inject,
   onCleanup,
   onMounted,
   prop,
+  provide,
   useEmit,
   useSlots,
-  watchEffect,
+  when,
 } from '@vielzeug/ore';
+import type { Readable } from '@vielzeug/ripple';
 import { computed, watch as rippleWatch, signal } from '@vielzeug/ripple';
 import {
   createDropdownPositioner,
@@ -43,6 +47,12 @@ export interface MenuSelectDetail {
 export const ORE_MENU_ITEM_TYPES = ['checkbox', 'radio'] as const;
 export type OreMenuItemType = (typeof ORE_MENU_ITEM_TYPES)[number];
 
+export const MENU_LAYOUTS = ['grid', 'list'] as const;
+export type OreMenuLayout = (typeof MENU_LAYOUTS)[number];
+
+/** Columns per row when `layout` is `grid` and the `columns` prop is unset. */
+const DEFAULT_GRID_COLUMNS = 3;
+
 export type OreMenuEvents = {
   'open-change': OverlayOpenChangeDetail;
   select: MenuSelectDetail;
@@ -56,14 +66,21 @@ export type OreMenuItemProps = {
 };
 
 export type OreMenuProps = {
+  /** Cards per row when `layout` is `grid` (default 3). Owns the panel's column count outright. */
+  columns?: number;
   /** Initial uncontrolled open state. Ignored when `open` is set. */
   'default-open'?: boolean;
   disabled?: boolean;
+  /** Panel layout: 'list' (default) | 'grid' */
+  layout?: OreMenuLayout;
   /** Controlled open state. */
   open?: boolean;
   placement?: 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end';
   size?: ComponentSize;
 };
+
+/** Shared context propagated from `ore-menu` to its slotted `ore-menu-item` children. */
+export const MENU_CTX = createContext<{ layout: Readable<OreMenuLayout | undefined> }>('OreMenu');
 
 // ── Styles ─────────────────────────────────────────────────────────────
 
@@ -110,6 +127,12 @@ define<OreMenuItemProps>(MENU_ITEM_TAG, {
     value: prop.string(),
   },
   setup(props) {
+    // A grid menu restyles its items as cards. The layout cannot reach them through CSS alone
+    // (a shadow rule cannot select a slotted child's internals), so the menu provides it as
+    // context and the item marks its own row: the same channel ore-button-group uses for
+    // color/size/variant. Standalone items inject `undefined` and stay a list row.
+    const menuCtx = inject(MENU_CTX);
+    const isGrid = () => menuCtx?.layout.value === 'grid';
     const isCheckable = () => props.type.value === 'checkbox' || props.type.value === 'radio';
     const isChecked = () => isCheckable() && props.checked.value;
     const itemRole = () => {
@@ -124,6 +147,7 @@ define<OreMenuItemProps>(MENU_ITEM_TAG, {
 
       return [
         'item',
+        isGrid() ? 'is-grid' : '',
         type === 'checkbox' ? 'is-checkbox' : '',
         type === 'radio' ? 'is-radio' : '',
         isChecked() ? 'is-checked' : '',
@@ -131,27 +155,27 @@ define<OreMenuItemProps>(MENU_ITEM_TAG, {
         .filter(Boolean)
         .join(' ');
     };
+    // `aria-checked` belongs only to the checkable roles; a plain menuitem with it is invalid ARIA,
+    // so null (attribute removed) is the plain item's value.
+    const ariaChecked = () => (isCheckable() ? String(isChecked()) : null);
 
-    return isCheckable()
-      ? html`
-          <div
-            class="${itemClass}"
-            part="item"
-            tabindex="-1"
-            role="${itemRole}"
-            aria-checked="${() => String(isChecked())}"
-            aria-disabled="${props.disabled}">
-            <span class="item-check" aria-hidden="true"></span>
-            <span class="icon-slot" part="icon-slot"><slot name="icon"></slot></span>
-            <span class="item-label" part="item-label" ref=${truncationRevealRef()}><slot></slot></span>
-          </div>
-        `
-      : html`
-          <div class="item" part="item" tabindex="-1" role="menuitem" aria-disabled="${props.disabled}">
-            <span class="icon-slot" part="icon-slot"><slot name="icon"></slot></span>
-            <span class="item-label" part="item-label" ref=${truncationRevealRef()}><slot></slot></span>
-          </div>
-        `;
+    // `bothAxes`: a grid card clamps its label to two lines, and a line clamp reports overflow
+    // on the block axis, not the inline one. Harmless in list rows, which clip horizontally.
+    const labelRef = truncationRevealRef({ bothAxes: true });
+
+    return html`
+      <div
+        class="${itemClass}"
+        part="item"
+        tabindex="-1"
+        role="${itemRole}"
+        aria-checked="${ariaChecked}"
+        aria-disabled="${props.disabled}">
+        ${when(isCheckable, () => html`<span class="item-check" aria-hidden="true"></span>`)}
+        <span class="icon-slot" part="icon-slot"><slot name="icon"></slot></span>
+        <span class="item-label" part="item-label" ref=${labelRef}><slot></slot></span>
+      </div>
+    `;
   },
   styles: [colorThemeMixin, menuItemStyles],
 });
@@ -182,7 +206,18 @@ define(SEPARATOR_TAG, {
 
 const isCheckableItemType = (value: string | null): value is OreMenuItemType =>
   value === 'checkbox' || value === 'radio';
-
+/**
+ * The layout-specific half of keyboard interaction: which item activation uses, how the arrow
+ * keys move, and what a close resets. Selected per key from the layout, so the keydown handler
+ * never branches on layout itself.
+ */
+type ItemNavigation = {
+  /** The item activation targets, or nothing when focus sits on nothing usable. */
+  activeItem(): HTMLElement | undefined;
+  /** Moves focus for a recognized key; returns whether the key was handled. */
+  handleKeydown(event: KeyboardEvent): boolean;
+  reset(): void;
+};
 /**
  * Action dropdown menu triggered by a slotted trigger element.
  *
@@ -193,6 +228,8 @@ const isCheckableItemType = (value: string | null): value is OreMenuItemType =>
  * @attr {boolean} disabled - Disables opening and keyboard interaction
  * @attr {boolean} open - Controlled open state
  * @attr {boolean} default-open - Initial uncontrolled open state
+ * @attr {string} layout - Panel layout: 'list' (default) | 'grid'
+ * @attr {number} columns - Columns per row in `grid` layout (default 3)
  * @attr {string} placement - Panel placement: 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end' (default: 'bottom-start')
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
  *
@@ -211,6 +248,8 @@ const isCheckableItemType = (value: string | null): value is OreMenuItemType =>
  * @cssprop --menu-panel-min-width - Minimum width of the floating panel
  * @cssprop --menu-panel-max-height - Maximum height of the floating panel before it scrolls
  * @cssprop --menu-panel-radius - Border radius of the floating panel
+ * @cssprop --menu-panel-width - Panel width in `grid` layout. Defaults to a phone-safe cap
+ * @cssprop --menu-panel-gap - Gap between grid cards
  *
  * @example
  * ```html
@@ -226,7 +265,9 @@ define<OreMenuProps>(MENU_TAG, {
   props: {
     ...sizableBundle,
     ...disablableBundle,
+    columns: prop.number(),
     'default-open': prop.bool(false),
+    layout: prop.oneOf(MENU_LAYOUTS, 'list'),
     open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     placement: prop.oneOf(
       ['bottom', 'bottom-start', 'bottom-end', 'top', 'top-start', 'top-end'] as const,
@@ -237,10 +278,24 @@ define<OreMenuProps>(MENU_TAG, {
     const el = getHost();
     const emit = useEmit<OreMenuEvents>();
     const slots = useSlots();
-    const watch = watchEffect;
+
+    // Items restyle themselves as cards through this context: the layout cannot reach a slotted
+    // child's shadow internals from here, the same reason ore-button-group provides its own.
+    provide(MENU_CTX, { layout: props.layout });
 
     const menuId = createId('menu');
     const isDisabled = computed(() => Boolean(props.disabled.value));
+    const isGrid = computed(() => props.layout.value === 'grid');
+    // The `columns` prop owns the column count outright: one normalization feeds both the CSS
+    // grid (through `--menu-panel-columns`) and the keyboard grid, so a row the pointer sees is
+    // always the row the arrows walk. A stylesheet hook could only ever serve one of the two.
+    const gridColumns = computed(() => {
+      const columns = props.columns.value;
+
+      return columns === undefined || !Number.isFinite(columns)
+        ? DEFAULT_GRID_COLUMNS
+        : Math.max(1, Math.trunc(columns));
+    });
     const abortSignal = lifecycleSignal(onCleanup);
     let triggerEl: HTMLElement | null = null;
     let panelEl: HTMLElement | null = null;
@@ -251,20 +306,22 @@ define<OreMenuProps>(MENU_TAG, {
       return Array.from(el.querySelectorAll<HTMLElement>('ore-menu-item:not([disabled])'));
     }
 
+    // Every item, disabled ones included: a grid that skipped them would walk off the row the
+    // pointer shows (createGridNavigation documents the same rule).
+    function getAllItems(): HTMLElement[] {
+      return Array.from(el.querySelectorAll<HTMLElement>('ore-menu-item'));
+    }
+
     function getItemFocusable(item: HTMLElement | null | undefined): HTMLElement | null {
       if (!item) return null;
 
       return item.shadowRoot?.querySelector<HTMLElement>('[role^="menuitem"]') ?? item;
     }
 
-    function getFocusedItemIndex(): number {
-      const items = getItems();
+    function isFocusedItem(item: HTMLElement): boolean {
+      const focusable = getItemFocusable(item);
 
-      return items.findIndex((item) => {
-        const focusable = getItemFocusable(item);
-
-        return item === document.activeElement || focusable === document.activeElement;
-      });
+      return item === document.activeElement || focusable === document.activeElement;
     }
 
     const isOpenSignal = signal(false);
@@ -291,11 +348,72 @@ define<OreMenuProps>(MENU_TAG, {
       signal: abortSignal,
     });
 
+    // Grid layout walks every item by row and column, so it needs its own navigation: the list
+    // control filters disabled items out of its index space, which would desync the arrow moves
+    // from the cards on screen. `getActiveIndex` keeps pointer focus and Tab in sync with the
+    // keyboard grid, mirroring how the list re-reads focus before every key.
+    const grid = createGridNavigation<HTMLElement>({
+      columns: () => gridColumns.value,
+      disabled: () => !isOpenSignal.value,
+      getActiveIndex: () => getAllItems().findIndex(isFocusedItem),
+      getItems: getAllItems,
+    });
+
+    const focusItem = (item: HTMLElement | null | undefined): void => {
+      getItemFocusable(item)?.focus();
+    };
+
+    // The list control tracks its own index, so it must be told where the focus is before every
+    // key; `getActiveItem` then hands out only usable items, because its index space filters
+    // disabled ones out.
+    const listNav: ItemNavigation = {
+      activeItem: () => list.getActiveItem(),
+      handleKeydown: (event) => {
+        const focusedIndex = getItems().findIndex(isFocusedItem);
+        if (focusedIndex >= 0) list.set(focusedIndex);
+
+        return list.handleKeydown(event);
+      },
+      reset: () => list.reset(),
+    };
+
+    const gridNav: ItemNavigation = {
+      // A grid walks every card, disabled ones included (skipping them would desync the arrows
+      // from the visible rows), so the adapter refuses for the keyboard what the click path
+      // already refuses for the pointer. The list control never hands out a disabled item.
+      activeItem: () => {
+        const item = grid.getActiveItem();
+
+        return item && !item.hasAttribute('disabled') ? item : undefined;
+      },
+      // createGridNavigation re-reads focus through `getActiveIndex` on every move, so pointer
+      // clicks and Tab need no re-seeding. It reports a move but never focuses it; `change` is
+      // null when the move clamped at an edge, which means "handled, stay put".
+      handleKeydown: (event) => {
+        const moved = grid.handleKeydown(event);
+        if (!moved?.handled) return false;
+
+        focusItem(moved.change?.item);
+
+        return true;
+      },
+      reset: () => grid.reset(),
+    };
+
+    const nav = (): ItemNavigation => (isGrid.value ? gridNav : listNav);
+
+    // Both layouts open onto the first usable item; `getItems` already excludes disabled ones,
+    // and the grid re-derives its index from the focused card, so no layout branch is needed.
+    const focusFirstItem = (): void => {
+      focusItem(getItems()[0]);
+    };
+
     const close = (reason: DropdownCloseReason = 'programmatic', shouldRestoreFocus = true): void => {
       if (!isOpenSignal.value) return;
 
       isOpenSignal.value = false;
       list.reset();
+      grid.reset();
       stopPositioning?.();
       stopPositioning = null;
 
@@ -353,6 +471,7 @@ define<OreMenuProps>(MENU_TAG, {
 
         isOpenSignal.value = false;
         list.reset();
+        grid.reset();
         stopPositioning?.();
         stopPositioning = null;
       },
@@ -377,7 +496,7 @@ define<OreMenuProps>(MENU_TAG, {
       emit('select', { checked, value });
 
       if (!isCheckable) {
-        close('programmatic');
+        close('select');
       }
     };
 
@@ -385,15 +504,8 @@ define<OreMenuProps>(MENU_TAG, {
       keys: ['Enter', ' ', 'ArrowDown'],
       onPress: () => {
         open('keyboard');
-        requestAnimationFrame(() => list.set(0));
-      },
-    });
-
-    const activateFocusedFromKeyboardPress = createInteraction({
-      onPress: () => {
-        const focused = list.getActiveItem();
-
-        if (focused) activateItem(focused);
+        // The panel renders on the next frame; focus the first usable item once it exists.
+        requestAnimationFrame(focusFirstItem);
       },
     });
 
@@ -410,10 +522,6 @@ define<OreMenuProps>(MENU_TAG, {
         return;
       }
 
-      const currentFocusedIndex = getFocusedItemIndex();
-
-      if (currentFocusedIndex >= 0) list.set(currentFocusedIndex);
-
       if (e.key === 'Escape') {
         e.preventDefault();
         close('escape');
@@ -421,11 +529,14 @@ define<OreMenuProps>(MENU_TAG, {
         return;
       }
 
-      if (list.handleKeydown(e)) return;
+      if (nav().handleKeydown(e)) return;
 
-      // When open: navigate and activate
+      // When open: activate
       if (e.key === ' ' || e.key === 'Enter') {
-        activateFocusedFromKeyboardPress.handleKeydown(e);
+        e.preventDefault();
+
+        const focused = nav().activeItem();
+        if (focused) activateItem(focused);
 
         return;
       }
@@ -455,12 +566,13 @@ define<OreMenuProps>(MENU_TAG, {
       },
     });
 
-    watch(() => {
-      const open = isOpenSignal.value;
-
-      if (!panelEl) return;
-
-      panelEl.toggleAttribute('data-open', open);
+    // The `columns` prop owns the column count outright, so it is always emitted: the CSS grid
+    // and the keyboard grid read the same normalized number, and a stylesheet hook could only
+    // ever serve one of the two.
+    bind({
+      style: {
+        '--menu-panel-columns': () => gridColumns.value,
+      },
     });
 
     function resolveTrigger() {
@@ -528,10 +640,10 @@ define<OreMenuProps>(MENU_TAG, {
         id="${menuId}"
         role="menu"
         aria-orientation="vertical"
+        data-open="${() => (isOpenSignal.value ? '' : null)}"
         @keydown="${handleMenuKeydown}"
         ref="${(el: HTMLElement | null) => {
           panelEl = el;
-          panelEl?.toggleAttribute('data-open', isOpenSignal.value);
         }}">
         <slot></slot>
       </div>

@@ -25,7 +25,9 @@ test.describe('Accessibility', () => {
   });
 
   test('icon-only button with label passes a11y checks', async ({ page, refinePage }) => {
-    await refinePage.mountComponent('<ore-button label="Close dialog" icon="x"></ore-button>');
+    await refinePage.mountComponent(
+      '<ore-button label="Close dialog" icon-only><ore-icon name="x"></ore-icon></ore-button>',
+    );
 
     const results = await axeCheck(page);
 

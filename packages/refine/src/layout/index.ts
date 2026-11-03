@@ -1,5 +1,7 @@
 export type { OreBoxProps } from './box/box';
 export { BOX_TAG } from './box/box';
+export type { OreDockProps } from './dock/dock';
+export { DOCK_PHONE_QUERY, DOCK_TAG } from './dock/dock';
 export type { OreGridProps } from './grid/grid';
 export { GRID_TAG } from './grid/grid';
 export type { OreGridItemProps } from './grid-item/grid-item';

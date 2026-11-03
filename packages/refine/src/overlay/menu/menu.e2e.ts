@@ -110,6 +110,74 @@ test.describe('Layout', () => {
     expect(geometry.panelBottom).toBeGreaterThan(geometry.cardBottom);
     expect(errors).toEqual([]);
   });
+
+  test('lays items out as equal cards in grid layout', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-menu id="menu" layout="grid" columns="2" default-open>
+        <ore-button slot="trigger">Actions</ore-button>
+        <ore-menu-item value="a">Share this build with the table</ore-menu-item>
+        <ore-menu-item value="b">Retreat</ore-menu-item>
+        <ore-menu-separator></ore-menu-separator>
+        <ore-menu-item value="c">Export</ore-menu-item>
+      </ore-menu>
+    `);
+
+    const grid = await page.locator('#menu').evaluate((menu) => {
+      const panel = menu.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+      const items = Array.from(menu.querySelectorAll<HTMLElement>('ore-menu-item'), (item) => {
+        const card = item.shadowRoot!.querySelector<HTMLElement>('[part="item"]')!;
+        const rect = card.getBoundingClientRect();
+
+        return { height: rect.height, left: rect.left, top: rect.top, width: rect.width };
+      });
+      const separator = menu.querySelector<HTMLElement>('ore-menu-separator')!.getBoundingClientRect();
+
+      return {
+        // a/b sit in row one, c in row two under the separator: same left/top means the
+        // separator did not span, different column widths means the tracks followed content.
+        firstRow: items.slice(0, 2),
+        panelWidth: panel.getBoundingClientRect().width,
+        separatorWidth: separator.width,
+        third: items[2]!,
+      };
+    });
+
+    expect(grid.firstRow[0]!.width).toBeCloseTo(grid.firstRow[1]!.width, 0);
+    expect(grid.firstRow[0]!.top).toBeCloseTo(grid.firstRow[1]!.top, 0);
+    expect(grid.firstRow[0]!.height).toBeGreaterThan(0);
+    // The separator spans the panel's content box, so it is wider than one card column.
+    expect(grid.separatorWidth).toBeGreaterThan(grid.firstRow[0]!.width * 1.5);
+    expect(grid.third.top).toBeGreaterThan(grid.firstRow[0]!.top + grid.firstRow[0]!.height);
+  });
+
+  test('stacks the icon above a clamped label in grid cards', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-menu layout="grid" default-open>
+        <ore-button slot="trigger">Actions</ore-button>
+        <ore-menu-item value="share">
+          <ore-icon slot="icon" name="share-2" size="18"></ore-icon>
+          Share this build with everyone at the table right now
+        </ore-menu-item>
+      </ore-menu>
+    `);
+
+    const card = await page.locator('ore-menu').evaluate((menu) => {
+      const item = menu.querySelector<HTMLElement>('ore-menu-item')!;
+      const icon = item.shadowRoot!.querySelector('.icon-slot')!.getBoundingClientRect();
+      const label = item.shadowRoot!.querySelector('[part="item-label"]')!;
+      const labelRect = label.getBoundingClientRect();
+      const style = getComputedStyle(label);
+
+      return {
+        clamped: style.webkitLineClamp,
+        iconAboveLabel: icon.bottom <= labelRect.top + 1,
+        // Two lines of a size-3.5-ish label: taller than one line, bounded by the clamp.
+        labelLines: Math.round(labelRect.height / parseFloat(style.lineHeight)),
+      };
+    });
+
+    expect(card).toEqual({ clamped: '2', iconAboveLabel: true, labelLines: 2 });
+  });
 });
 
 test.describe('Accessibility', () => {

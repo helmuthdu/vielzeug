@@ -30,26 +30,13 @@ import {
   type ThemeColor,
 } from '../../types';
 import { computeSafeRel } from '../../utils';
-import { parseMaxWidthPx, readContainerWidth, resolveContainerElement } from '../shared';
+import { findScrollContainer, listen, parseMaxWidthPx, readContainerWidth, resolveContainerElement } from '../shared';
 import navbarStyles from './navbar.css?inline';
 
 export { ICON_TAG } from '../../content/icon/icon';
 
 const NAVBAR_VARIANTS = ['flat', 'solid', 'bordered', 'outline', 'frost'] as const;
 type NavbarVariant = (typeof NAVBAR_VARIANTS)[number];
-
-const listen = <E extends Event = Event>(
-  el: EventTarget | null | undefined,
-  name: string,
-  handler: (e: E) => void,
-  options?: AddEventListenerOptions,
-): (() => void) => {
-  if (!el) return () => {};
-
-  el.addEventListener(name, handler as EventListener, options);
-
-  return () => el.removeEventListener(name, handler as EventListener, options);
-};
 
 type NavbarMode = 'floating' | 'sticky';
 
@@ -61,23 +48,6 @@ const hasElementContent = (el: Element): boolean => {
   if (el.childElementCount > 0) return true;
 
   return (el.textContent ?? '').trim().length > 0;
-};
-
-const findScrollContainer = (start: HTMLElement): HTMLElement | null => {
-  let current: HTMLElement | null = start.parentElement;
-
-  while (current) {
-    const styles = window.getComputedStyle(current);
-    const overflowY = styles.overflowY;
-
-    if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') {
-      return current;
-    }
-
-    current = current.parentElement;
-  }
-
-  return null;
 };
 
 /** Context provided by `ore-navbar` to `ore-navbar-item` children. */

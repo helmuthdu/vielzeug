@@ -22,7 +22,7 @@
     box-sizing: border-box;
     min-width: var(--menu-panel-min-width, 10rem);
     max-height: var(--menu-panel-max-height, min(70vh, 32rem));
-    padding: var(--_panel-padding, var(--size-1));
+    padding: var(--menu-panel-padding, var(--_panel-padding, var(--size-1)));
     margin: 0;
     overflow-y: auto;
     color: var(--_menu-panel-color);
@@ -80,5 +80,25 @@
 
   ::slotted(ore-menu-separator) {
     display: block;
+  }
+}
+
+@layer refine.variants {
+  /* Grid layout: the panel becomes a card grid for a small, complete action set (three to six
+     verbs a thumb should see at once, no scroller to fight). The host always sets
+     `--menu-panel-columns` from the `columns` prop, so the arrows walk the rows the pointer sees.
+     An explicit width is what makes the `1fr` tracks equal: without one they follow their content
+     and the columns come out uneven. The cap keeps the panel inside a phone viewport;
+     `--menu-panel-width` overrides it. */
+  :host([layout='grid']) .menu-panel {
+    display: grid;
+    grid-template-columns: repeat(var(--menu-panel-columns), minmax(0, 1fr));
+    gap: var(--menu-panel-gap, var(--size-1-5));
+    width: var(--menu-panel-width, min(21rem, calc(100vw - var(--size-4))));
+  }
+
+  /* A group divider belongs to the whole panel, not one card's column. */
+  :host([layout='grid']) ::slotted(ore-menu-separator) {
+    grid-column: 1 / -1;
   }
 }

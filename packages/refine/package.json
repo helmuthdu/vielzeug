@@ -251,6 +251,11 @@
       "require": "./dist/dialog.cjs",
       "types": "./dist/overlay/dialog/dialog.d.ts"
     },
+    "./dock": {
+      "import": "./dist/dock.js",
+      "require": "./dist/dock.cjs",
+      "types": "./dist/layout/dock/dock.d.ts"
+    },
     "./drawer": {
       "import": "./dist/drawer.js",
       "require": "./dist/drawer.cjs",

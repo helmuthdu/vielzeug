@@ -98,7 +98,7 @@ import type { OreButtonProps } from '@vielzeug/refine/button';
 | Content | `accordion`, `avatar`, `card`, `carousel`, `chat-message`, `chat-panel`, `code-window`, `copy-command`, `icon`, `keyboard-key`, `list`, `marquee`, `qr-code`, `rank-list`, `speech-player`, `speed-reading`, `stats`, `table`, `text` |
 | Feedback | `alert`, `async`, `badge`, `chip`, `cookie-banner`, `password-strength`, `progress`, `skeleton`, `toast`, `typing-indicator` |
 | Inputs | `button`, `calendar`, `checkbox`, `combobox`, `counter`, `datagrid`, `date-picker`, `file-input`, `input`, `message-composer`, `number-input`, `otp-input`, `qr-scanner`, `query-bar`, `radio`, `rating`, `select`, `slider`, `switch`, `textarea`, `time-picker` |
-| Layout | `box`, `grid`, `navbar`, `separator`, `sidebar` |
+| Layout | `box`, `dock`, `grid`, `navbar`, `separator`, `sidebar` |
 | Navigation | `breadcrumb`, `navigation-menu`, `pagination`, `stepper`, `tabs` |
 | Overlay | `command-palette`, `dialog`, `drawer`, `menu`, `popover`, `spotlight`, `tooltip`, `tour` |
 
