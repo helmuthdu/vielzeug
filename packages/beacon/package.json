@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/beacon",
-  "version": "26.11.0",
+  "version": "26.11.1",
   "description": "Guided onboarding and contextual product tours for web applications",
   "repository": {
     "type": "git",

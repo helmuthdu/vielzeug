@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Tue, 03 Nov 2026 16:30:26 GMT and should not be manually modified.
+This log was last generated on Tue, 03 Nov 2026 17:00:37 GMT and should not be manually modified.
 
+## 26.11.1
+Tue, 03 Nov 2026 17:00:37 GMT
+
+### Minor changes
+
+- ore-dock: new action bar that pins to a viewport edge, with start/center/commit places, an attached capsule, a phone tool row and a compact HUD mode
+- ore-menu: layout="grid" turns the panel into a card grid (icon over a clamped label, `columns` per row owning both the tracks and the arrow-key rows, row/column arrow keys, full-width separators); opening from the keyboard now focuses the first usable item; closing after a plain-item selection reports reason "select"
 ## 26.11.0
 Tue, 03 Nov 2026 16:30:26 GMT
 
