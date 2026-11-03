@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Tue, 03 Nov 2026 17:00:37 GMT and should not be manually modified.
+This log was last generated on Tue, 03 Nov 2026 18:42:43 GMT and should not be manually modified.
 
+## 26.11.2
+Tue, 03 Nov 2026 18:42:43 GMT
+
+### Minor changes
+
+- Replace the dock compact boolean with mobile-layout auto/full/compact; default mobile sizing now hugs and aligns single occupied zones while preserving full-width multi-zone and attached rows.
+- ore-menu grid layout now renders cards for statically parsed markup: ore-menu-item defines after ore-menu, so a child's inject(MENU_CTX) can no longer cache a miss before the parent provides it.
 ## 26.11.1
 Tue, 03 Nov 2026 17:00:37 GMT
 

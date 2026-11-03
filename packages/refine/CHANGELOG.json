@@ -5,6 +5,25 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "Replace the dock compact boolean with mobile-layout auto/full/compact; default mobile sizing now hugs and aligns single occupied zones while preserving full-width multi-zone and attached rows.",
+            "commit": "17b3c4973b3ef699ffc073cfaba8160121d1f848"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "ore-menu grid layout now renders cards for statically parsed markup: ore-menu-item defines after ore-menu, so a child's inject(MENU_CTX) can no longer cache a miss before the parent provides it.",
+            "commit": "17b3c4973b3ef699ffc073cfaba8160121d1f848"
+          }
+        ]
+      },
+      "date": "Tue, 03 Nov 2026 18:42:43 GMT",
+      "tag": "@vielzeug/refine_v26.11.2",
+      "version": "26.11.2"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "ore-dock: new action bar that pins to a viewport edge, with start/center/commit places, an attached capsule, a phone tool row and a compact HUD mode",
             "commit": "f35650f7bf4fb5d0e258609cee5e72fa4da0d19e"
           },
