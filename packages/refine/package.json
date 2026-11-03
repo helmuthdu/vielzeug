@@ -631,6 +631,9 @@
       "dialog": [
         "dist/overlay/dialog/dialog.d.ts"
       ],
+      "dock": [
+        "dist/layout/dock/dock.d.ts"
+      ],
       "drawer": [
         "dist/overlay/drawer/drawer.d.ts"
       ],
