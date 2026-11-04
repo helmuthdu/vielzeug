@@ -315,11 +315,11 @@ export function parseRefine(value: unknown): CemDeclaration[] {
 }
 
 export interface LoadedSnapshot {
-  catalog: CatalogFile;
-  contentDirectory: string;
-  manifest: SnapshotManifest;
-  refineComponents: CemDeclaration[];
-  search: SearchRecord[];
+  readonly catalog: CatalogFile;
+  readonly contentDirectory: string;
+  readonly manifest: SnapshotManifest;
+  readonly refineComponents: readonly CemDeclaration[];
+  readonly search: readonly SearchRecord[];
 }
 
 function validateContent(meta: PackageMeta, content: PackageContent): void {

@@ -4,122 +4,122 @@ export type DocPage = (typeof DOC_PAGES)[number];
 export const SNAPSHOT_SCHEMA_VERSION = 1 as const;
 
 export interface CemTypeRef {
-  text: string;
+  readonly text: string;
 }
 
 export interface CemAttribute {
-  default?: string;
-  description?: string;
-  fieldName?: string;
-  name: string;
-  type?: CemTypeRef;
+  readonly default?: string;
+  readonly description?: string;
+  readonly fieldName?: string;
+  readonly name: string;
+  readonly type?: CemTypeRef;
 }
 
 export interface CemCssPart {
-  description?: string;
-  name: string;
+  readonly description?: string;
+  readonly name: string;
 }
 
 export interface CemCssProperty {
-  default?: string;
-  description?: string;
-  name: string;
+  readonly default?: string;
+  readonly description?: string;
+  readonly name: string;
 }
 
 export interface CemEvent {
-  description?: string;
-  name: string;
-  type?: CemTypeRef;
+  readonly description?: string;
+  readonly name: string;
+  readonly type?: CemTypeRef;
 }
 
 export interface CemMember {
-  description?: string;
-  kind?: 'field' | 'method';
-  name: string;
-  type?: CemTypeRef;
+  readonly description?: string;
+  readonly kind?: 'field' | 'method';
+  readonly name: string;
+  readonly type?: CemTypeRef;
 }
 
 export interface CemSlot {
-  description?: string;
-  name: string;
+  readonly description?: string;
+  readonly name: string;
 }
 
 export interface CemDeclaration {
-  attributes?: CemAttribute[];
-  cssParts?: CemCssPart[];
-  cssProperties?: CemCssProperty[];
-  description?: string;
-  events?: CemEvent[];
-  members?: CemMember[];
-  name?: string;
-  slots?: CemSlot[];
-  superclass?: { name: string; package?: string };
-  tagName?: string;
-  [key: string]: unknown;
+  readonly attributes?: readonly CemAttribute[];
+  readonly cssParts?: readonly CemCssPart[];
+  readonly cssProperties?: readonly CemCssProperty[];
+  readonly description?: string;
+  readonly events?: readonly CemEvent[];
+  readonly members?: readonly CemMember[];
+  readonly name?: string;
+  readonly slots?: readonly CemSlot[];
+  readonly superclass?: { readonly name: string; readonly package?: string };
+  readonly tagName?: string;
+  readonly [key: string]: unknown;
 }
 
 export interface Example {
-  code: string;
-  id: string;
-  name: string;
+  readonly code: string;
+  readonly id: string;
+  readonly name: string;
 }
 
 export interface PackageMeta {
-  availableDocPages: DocPage[];
-  category: string;
-  description: string;
-  exampleIds: string[];
-  exports: string[];
-  hasSource: boolean;
-  keywords: string[];
-  name: string;
-  related: string[];
-  slug: string;
-  version: string;
+  readonly availableDocPages: readonly DocPage[];
+  readonly category: string;
+  readonly description: string;
+  readonly exampleIds: readonly string[];
+  readonly exports: readonly string[];
+  readonly hasSource: boolean;
+  readonly keywords: readonly string[];
+  readonly name: string;
+  readonly related: readonly string[];
+  readonly slug: string;
+  readonly version: string;
 }
 
 export interface PackageContent {
-  apiSource: string | null;
-  docs: Partial<Record<DocPage, string>>;
-  examples: Example[];
-  typeSignatures: Record<string, string>;
+  readonly apiSource: string | null;
+  readonly docs: Readonly<Partial<Record<DocPage, string>>>;
+  readonly examples: readonly Example[];
+  readonly typeSignatures: Readonly<Record<string, string>>;
 }
 
 export interface CatalogFile {
-  packages: PackageMeta[];
-  version: string;
+  readonly packages: readonly PackageMeta[];
+  readonly version: string;
 }
 
 export interface SearchRecord {
-  category: string;
-  description: string;
-  docs: Partial<Record<DocPage, string>>;
-  examples: Array<{ id: string; text: string }>;
-  exports: string;
-  keywords: string;
-  name: string;
-  related: string;
-  slug: string;
-  source: string | null;
+  readonly category: string;
+  readonly description: string;
+  readonly docs: Readonly<Partial<Record<DocPage, string>>>;
+  readonly examples: readonly { readonly id: string; readonly text: string }[];
+  readonly exports: string;
+  readonly keywords: string;
+  readonly name: string;
+  readonly related: string;
+  readonly slug: string;
+  readonly source: string | null;
 }
 
 export interface SnapshotPointer {
-  directory: string;
+  readonly directory: string;
 }
 
 export interface SnapshotManifest {
-  catalog: 'catalog.json';
-  contentDirectory: 'packages';
-  refine: 'refine.json' | null;
-  schemaVersion: typeof SNAPSHOT_SCHEMA_VERSION;
-  search: 'search.json';
-  version: string;
+  readonly catalog: 'catalog.json';
+  readonly contentDirectory: 'packages';
+  readonly refine: 'refine.json' | null;
+  readonly schemaVersion: typeof SNAPSHOT_SCHEMA_VERSION;
+  readonly search: 'search.json';
+  readonly version: string;
 }
 
 export interface SnapshotArtifacts {
-  catalog: CatalogFile;
-  contents: ReadonlyMap<string, PackageContent>;
-  manifest: SnapshotManifest;
-  refineComponents: CemDeclaration[];
-  search: SearchRecord[];
+  readonly catalog: CatalogFile;
+  readonly contents: ReadonlyMap<string, PackageContent>;
+  readonly manifest: SnapshotManifest;
+  readonly refineComponents: readonly CemDeclaration[];
+  readonly search: readonly SearchRecord[];
 }

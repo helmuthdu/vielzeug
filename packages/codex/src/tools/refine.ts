@@ -1,8 +1,5 @@
-import type { Server } from '@modelcontextprotocol/server';
-
 import type { RefineCatalog } from '../refine-catalog.js';
 import type { CemAttribute, CemDeclaration } from '../types.js';
-import { packageTools, registerTools } from './index.js';
 import { EMPTY_SCHEMA, parseArgs, type ToolSchema } from './schema.js';
 import type { ToolDefinition } from './shared.js';
 
@@ -159,7 +156,3 @@ export const refineTools: readonly ToolDefinition<RefineCatalog>[] = [
     name: 'refine-validate-usage',
   },
 ];
-
-export function registerRefineTools(server: Server, catalog: RefineCatalog, debug = false): void {
-  registerTools(server, catalog, [...packageTools, ...refineTools], debug);
-}

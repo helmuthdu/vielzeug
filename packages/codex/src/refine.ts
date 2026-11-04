@@ -1,14 +1,15 @@
-/**
- * `@vielzeug/codex/refine`: opt-in Refine component tools.
- *
- * The main entry (`@vielzeug/codex`) registers only generic, product-agnostic package
- * tools. Refine-specific tools (`refine-*`) live here behind a subpath so the core
- * documentation server stays reusable without Refine. Call `registerRefineTools()` on
- * a server created by `createMcpServer()` to upgrade it to the full Refine-augmented
- * tool surface.
- */
+import type { Server } from '@modelcontextprotocol/server';
+import type { RefineCatalog } from './refine-catalog.js';
+import { createMcpServerWithTools, type McpServerOptions } from './server.js';
+import { packageTools } from './tools/index.js';
+import { refineTools } from './tools/refine.js';
+
+/** Creates an MCP server with both package and Refine component tools. */
+export function createMcpServerWithRefine(catalog: RefineCatalog, options: McpServerOptions): Server {
+  return createMcpServerWithTools(catalog, options, [...packageTools, ...refineTools]);
+}
+
 export { type RefineCatalog, SnapshotRefineCatalog } from './refine-catalog.js';
-export { refineTools, registerRefineTools } from './tools/refine.js';
 export type {
   CemAttribute,
   CemCssPart,

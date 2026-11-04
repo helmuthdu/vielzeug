@@ -13,7 +13,6 @@ export { type LoadedSnapshot, loadSnapshot } from './snapshot.js';
 export type {
   DocPage,
   Example,
-  PackageContent,
   PackageMeta,
   SnapshotManifest,
 } from './types.js';

@@ -4,11 +4,11 @@ import type { CemDeclaration } from './types.js';
 
 export interface RefineCatalog extends Catalog {
   getComponent(tagName: string): CemDeclaration;
-  listComponents(): CemDeclaration[];
+  listComponents(): readonly CemDeclaration[];
 }
 
 export class SnapshotRefineCatalog extends SnapshotCatalog implements RefineCatalog {
-  private readonly components: CemDeclaration[];
+  private readonly components: readonly CemDeclaration[];
   private readonly componentsByTag: Map<string, CemDeclaration>;
 
   constructor(snapshot: LoadedSnapshot) {
@@ -19,19 +19,22 @@ export class SnapshotRefineCatalog extends SnapshotCatalog implements RefineCata
     );
   }
 
-  listComponents(): CemDeclaration[] {
+  private assertComponentsAvailable(): void {
     if (this.components.length === 0) {
       throw new CatalogError('UNAVAILABLE', 'Refine component metadata is unavailable in this snapshot.');
     }
+  }
 
-    return [...this.components];
+  listComponents(): readonly CemDeclaration[] {
+    this.assertComponentsAvailable();
+    return this.components.map((component) => structuredClone(component));
   }
 
   getComponent(tagName: string): CemDeclaration {
-    this.listComponents();
+    this.assertComponentsAvailable();
     const component = this.componentsByTag.get(tagName);
 
     if (!component) throw new CatalogError('NOT_FOUND', `Component "${tagName}" not found.`);
-    return component;
+    return structuredClone(component);
   }
 }

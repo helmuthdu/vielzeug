@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { SnapshotCatalog } from '../catalog.js';
+import { SnapshotRefineCatalog } from '../refine-catalog.js';
 import { type LoadedSnapshot, loadSnapshot, parseRefine, validateSnapshot } from '../snapshot.js';
 
 const roots: string[] = [];
@@ -93,6 +94,47 @@ describe('snapshot catalog', () => {
     expect(catalog.search('package')).toEqual([
       { matchedIn: ['docs', 'metadata'], matchedPages: ['index'], name: '@vielzeug/test', slug: 'test' },
     ]);
+  });
+
+  it('returns empty but present content without treating it as missing', () => {
+    const { directory, root } = snapshot();
+    writeFileSync(
+      join(directory, 'packages', 'test.json'),
+      JSON.stringify({
+        apiSource: '',
+        docs: { index: '' },
+        examples: [{ code: '', id: 'basic', name: '' }],
+        typeSignatures: { test: '' },
+      }),
+    );
+    const catalog = new SnapshotCatalog(loadSnapshot(root));
+
+    expect(catalog.getDocs('test', 'index')).toBe('');
+    expect(catalog.getSource('test')).toBe('');
+    expect(catalog.getTypeSignature('test', 'test')).toBe('');
+    expect(catalog.getExample('test', 'basic').code).toBe('');
+  });
+
+  it('does not expose mutable catalog metadata or component declarations', () => {
+    const { directory, root } = snapshot();
+    writeFileSync(
+      join(directory, 'refine.json'),
+      JSON.stringify([{ attributes: [{ name: 'variant' }], tagName: 'ore-button' }]),
+    );
+    const snapshotData = loadSnapshot(root);
+    const catalog = new SnapshotCatalog(snapshotData);
+    const refineCatalog = new SnapshotRefineCatalog(snapshotData);
+    const packageMeta = catalog.getPackage('test');
+
+    Object.assign(packageMeta, { keywords: ['changed'] });
+    Object.assign(packageMeta.keywords, { 0: 'changed' });
+
+    const component = refineCatalog.getComponent('ore-button');
+
+    Object.assign(component.attributes?.[0] ?? {}, { name: 'changed' });
+
+    expect(catalog.getPackage('test').keywords).toEqual(['test']);
+    expect(refineCatalog.getComponent('ore-button').attributes?.[0]?.name).toBe('variant');
   });
 
   it('rejects path traversal and duplicate search records before catalog creation', () => {

@@ -9,7 +9,7 @@ Vielzeug is a monorepo of independently published TypeScript packages. "Zero dep
 
 ## Detect
 
-1. Read `package.json` (`dependencies`, `devDependencies`, `peerDependencies`) and list every `@vielzeug/*` entry.
+1. Read `package.json` (`dependencies`, `devDependencies`, `peerDependencies`) and list every `@vielzeug/*` entry. Resolve each installed version from `node_modules/@vielzeug/<pkg>/package.json` when present, otherwise from the package-manager lockfile.
 2. Note whether `@vielzeug/refine` is installed. If it is, the **Refine** and **Theme** sections below are mandatory for any UI work.
 3. Read the project's own agent contract (`AGENTS.md`, `.github/copilot-instructions.md`) first: project rules win over this skill.
 
@@ -26,10 +26,12 @@ Never guess exports, attributes, events, slots, or token names. Look them up:
 | Which Refine components exist? | `refine-list-components` | `node_modules/@vielzeug/refine/dist/custom-elements.json` |
 | Attributes, properties, events, slots, CSS parts of `ore-*` | `refine-get-component` | same manifest |
 | Available design tokens | `refine-get-tokens` | `node_modules/@vielzeug/refine/dist/styles/tokens.css` |
-| Is my markup valid? | `refine-validate-usage` | compare against the manifest |
+| Are component attribute names recognized? | `refine-validate-usage` | compare against the manifest |
 | Blank component scaffold | `refine-generate-template` | N/A |
 
-If MCP is unavailable, use the offline fallback first. If it does not contain the needed information and MCP setup would help, ask before running `npx -y @vielzeug/codex` or changing MCP configuration; setup details are in `node_modules/@vielzeug/codex/mcp-setup.json`.
+Codex serves a versioned snapshot, which may not match the versions installed in the project or include the newest packages. Compare `get-package`'s `version` with the installed version before using its API docs or signatures. If they differ, treat the installed package's declarations, docs, and runtime as authoritative; do not use newer snapshot APIs unless the dependency is deliberately updated. Treat the generated package list as a discovery aid, not proof that no other package exists.
+
+If MCP is unavailable, use the offline fallback first. Check installed packages and the lockfile when the generated package list has no match. If the needed information is still unavailable and MCP setup would help, ask before running `npx -y @vielzeug/codex` or changing MCP configuration; setup details are in `node_modules/@vielzeug/codex/mcp-setup.json`.
 
 ## Use the owning package
 
@@ -88,7 +90,7 @@ Common compositions (verify each API with `get-docs` before writing code):
 - **Data**: `courier` for HTTP with caching and structured errors; `sourcerer` for paged/cursor/infinite collections; `vault` for storage; `postmaster` for durable jobs; `scout` for fuzzy search; `mesh` for backendless peer sessions on a LAN; `sigil` for QR generation/scanning: prefer `ore-qr-code` / `ore-qr-scanner` when Refine is installed.
 - **Forms**: `forge` for form state, validation, and submission; `spell` for schemas; render fields with Refine inputs when Refine is installed.
 - **App shell**: `wayfinder` routing; `conduit` DI; `herald` events; `lingua` i18n; `rune` logging; `ward` authorization; `keymap` shortcuts.
-- **Dispose** every handle you create (`effect`, subscriptions, clients) when its owner unmounts. Vielzeug APIs return disposables: use them.
+- **Own cleanup** for every stateful handle or subscription whose API documents disposal or unsubscription, and tie it to the owner's lifecycle. Pure functions and value-returning APIs need no cleanup; verify the specific API contract rather than assuming it returns a disposable.
 
 ## Refine (when `@vielzeug/refine` is installed)
 
@@ -105,17 +107,17 @@ Refine is the UI layer. Build interfaces from `ore-*` elements before anything e
 
 2. **Register per component** through explicit side-effect subpaths (`import '@vielzeug/refine/button'`), never the whole library, unless the project already does so.
 
-3. **Component first.** For any of these needs, use the Refine element rather than a native element, a hand-built composite, or a third-party widget: buttons, inputs, selects, comboboxes, checkboxes, radios, switches, sliders, date/time pickers, file inputs, OTP, rating, textareas, forms, cards, tables, data grids, lists, tabs, accordions, dialogs, drawers, menus, popovers, tooltips, toasts, alerts, badges, chips, progress, skeletons, avatars, breadcrumbs, pagination, steppers, navbars, sidebars, grids, command palettes. Confirm the tag with `refine-list-components`; read its contract with `refine-get-component`.
+3. **Prefer Refine components when they fit.** For common interface controls and widgets such as buttons, inputs, selects, dialogs, menus, tables, and tabs, first check whether Refine has a component whose documented behavior fits the feature and the project's framework, accessibility, and runtime requirements. Confirm the tag with `refine-list-components`; read its contract with `refine-get-component`. If no component fits or a project requirement makes it unsuitable, use the simplest appropriate native element or other package and briefly explain the choice; do not build a parallel composite when a suitable Refine component exists.
 
-4. **Native elements only for document semantics** that no Refine component duplicates (`<main>`, `<section>`, `<article>`, `<h1>`–`<h6>`, `<p>`, `<a>` for plain links, `<img>`).
+4. **Use native elements for document semantics** (`<main>`, `<section>`, `<article>`, headings, paragraphs, plain links, and images), and when they are the better fit for a documented project or platform constraint.
 
 5. **Follow the element contract**: attributes for primitives, JavaScript properties for objects/arrays/callbacks, standard DOM events (read state from `event.target`), named slots for composition. Icon-only controls need an accessible label.
 
 6. **Type the tags** once in a type entry point: `import type {} from '@vielzeug/refine/frameworks/elements'` (or `/react`, `/vue`). Framework wiring (React 18/19, Vue, Svelte, Angular, SSR guards) is documented in the Refine `frameworks` doc: fetch it with `get-docs` before integrating.
 
-7. **Validate** every fragment you write with `refine-validate-usage` before finishing.
+7. **Check attribute names** with `refine-validate-usage` when available. It only checks for unknown attributes on the specified component's opening tag; it does not validate HTML generally, attribute values, JavaScript properties, events, slots, accessibility, or runtime behavior. Check those against the component docs and relevant tests instead.
 
-8. **Missing capability?** Do not build a parallel component in the app. Compose existing `ore-*` elements (optionally with `@vielzeug/ore` for a custom element), and report the gap.
+8. **Missing capability?** Compose existing `ore-*` elements when they fit. If none meets the documented feature and project requirements, use the simplest appropriate native element or other package and report the gap; avoid a parallel composite when a suitable Refine component exists.
 
 ## Theme (when `@vielzeug/refine` is installed)
 
@@ -128,7 +130,7 @@ Refine is the UI layer. Build interfaces from `ore-*` elements before anything e
 
 ## Other UI packages
 
-Refine covers the widget layer; these cover what it does not. Use them directly only when no `ore-*` element already provides the behavior:
+Refine covers the widget layer; these provide specialized behavior it may not cover. Use the package that best fits the requirement, and prefer an `ore-*` element when it provides the needed behavior:
 
 - `prism`: SVG charts (line, bar, area, pie, sparkline) plus `@vielzeug/prism/theme`.
 - `scroll`: virtualized large lists (prefer `ore-datagrid`/`ore-list` for ordinary sizes).
@@ -141,8 +143,8 @@ Refine covers the widget layer; these cover what it does not. Use them directly 
 ## Anti-patterns
 
 - Hand-rolled signals, fetch wrappers, validators, routers, i18n, or DI when the package is installed.
-- Custom modal, dropdown, tooltip, select, tabs, or toast implementations while Refine is installed.
-- `<button>`, `<input>`, `<select>`, `<table>` for interactive UI while Refine is installed.
+- Custom modal, dropdown, tooltip, select, tabs, or toast implementations when a suitable Refine component meets the project requirements.
+- Native `<button>`, `<input>`, `<select>`, or `<table>` for interactive UI when a suitable Refine component meets the project requirements.
 - Inline colors, magic pixel values, `!important`, or `@media (prefers-color-scheme)` color rules.
 - Inventing an attribute, event, or slot that `refine-get-component` does not list.
 - Forgetting `tokens.css`/`fouc.css`, or importing the whole library when subpaths suffice.
@@ -152,6 +154,6 @@ Refine covers the widget layer; these cover what it does not. Use them directly 
 
 - Every new capability maps to an installed `@vielzeug/*` package or is justified as out of scope.
 - No parallel implementation of something an installed package provides.
-- With Refine installed: all interactive UI is `ore-*`, `tokens.css` + `fouc.css` are loaded once, every fragment passed `refine-validate-usage`, and app CSS uses tokens only.
-- Every disposable is disposed by its owner.
+- With Refine installed: prefer `ore-*` for interactive UI when its documented contract fits; load `tokens.css` + `fouc.css` once, use the attribute checker within its stated limits, and use Refine tokens for app styling where suitable tokens exist.
+- Every API that documents an owned resource or cleanup operation is integrated with the owning lifecycle; pure and value-returning APIs are not given invented cleanup.
 - Claims about package APIs were verified with `get-docs` / `get-type-signature`, not recalled.

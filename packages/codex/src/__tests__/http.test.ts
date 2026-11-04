@@ -4,9 +4,10 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { startHttpHost } from '../http.js';
+import { createMcpServerWithRefine } from '../refine.js';
 import { SnapshotRefineCatalog } from '../refine-catalog.js';
+import { createMcpServer } from '../server.js';
 import { loadSnapshot } from '../snapshot.js';
-import { registerRefineTools } from '../tools/refine.js';
 
 const roots: string[] = [];
 
@@ -55,7 +56,12 @@ async function readMcpResult(response: Response): Promise<{ error?: { message: s
 
 describe('HTTP host', () => {
   it('binds loopback and exposes health only as host-owned infrastructure', async () => {
-    const host = await startHttpHost({ catalog: catalog(), port: 0, version: '1.0.0' });
+    const source = catalog();
+    const host = await startHttpHost({
+      createServer: () => createMcpServer(source, { version: '1.0.0' }),
+      port: 0,
+      version: '1.0.0',
+    });
 
     try {
       const response = await fetch(`http://${host.host}:${host.port}/health`);
@@ -70,10 +76,20 @@ describe('HTTP host', () => {
 
   it('rejects non-loopback host options and hostile Host/Origin headers', async () => {
     await expect(
-      startHttpHost({ catalog: catalog(), host: '0.0.0.0' as '127.0.0.1', port: 0, version: '1.0.0' }),
+      startHttpHost({
+        createServer: () => createMcpServer(catalog(), { version: '1.0.0' }),
+        host: '0.0.0.0' as '127.0.0.1',
+        port: 0,
+        version: '1.0.0',
+      }),
     ).rejects.toThrow('loopback');
 
-    const host = await startHttpHost({ catalog: catalog(), port: 0, version: '1.0.0' });
+    const source = catalog();
+    const host = await startHttpHost({
+      createServer: () => createMcpServer(source, { version: '1.0.0' }),
+      port: 0,
+      version: '1.0.0',
+    });
 
     try {
       const response = await fetch(`http://${host.host}:${host.port}/`, {
@@ -105,21 +121,20 @@ describe('HTTP host', () => {
     }
   });
 
-  it('configures each request server once and exposes Refine tools when requested', async () => {
-    let configurations = 0;
+  it('creates a fully configured Refine server for each request', async () => {
+    let creations = 0;
     const source = catalog();
     const host = await startHttpHost({
-      catalog: source,
-      configureServer: (server) => {
-        configurations += 1;
-        registerRefineTools(server, source);
+      createServer: () => {
+        creations += 1;
+        return createMcpServerWithRefine(source, { version: '1.0.0' });
       },
       port: 0,
       version: '1.0.0',
     });
 
     try {
-      expect(configurations).toBe(0);
+      expect(creations).toBe(0);
       const response = await fetch(`http://${host.host}:${host.port}/`, {
         body: JSON.stringify({ id: 1, jsonrpc: '2.0', method: 'tools/list', params: {} }),
         headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
@@ -128,8 +143,17 @@ describe('HTTP host', () => {
       const { result } = await readMcpResult(response);
       const tools = result as { tools: { name: string }[] };
 
-      expect(configurations).toBe(1);
+      expect(creations).toBe(1);
       expect(tools.tools.map((tool) => tool.name)).toContain('refine-list-components');
+
+      const secondResponse = await fetch(`http://${host.host}:${host.port}/`, {
+        body: JSON.stringify({ id: 2, jsonrpc: '2.0', method: 'tools/list', params: {} }),
+        headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
+        method: 'POST',
+      });
+
+      expect(secondResponse.status).toBe(200);
+      expect(creations).toBe(2);
       expect(host.disposed).toBe(false);
     } finally {
       await host.dispose();
@@ -139,7 +163,12 @@ describe('HTTP host', () => {
   });
 
   it('answers a legacy-shaped tools/list call over the MCP endpoint', async () => {
-    const host = await startHttpHost({ catalog: catalog(), port: 0, version: '1.0.0' });
+    const source = catalog();
+    const host = await startHttpHost({
+      createServer: () => createMcpServer(source, { version: '1.0.0' }),
+      port: 0,
+      version: '1.0.0',
+    });
 
     try {
       const response = await fetch(`http://${host.host}:${host.port}/`, {
@@ -161,7 +190,12 @@ describe('HTTP host', () => {
   });
 
   it('answers a modern 2026-07-28 envelope-carrying tools/call over the MCP endpoint', async () => {
-    const host = await startHttpHost({ catalog: catalog(), port: 0, version: '1.0.0' });
+    const source = catalog();
+    const host = await startHttpHost({
+      createServer: () => createMcpServer(source, { version: '1.0.0' }),
+      port: 0,
+      version: '1.0.0',
+    });
 
     try {
       const response = await fetch(`http://${host.host}:${host.port}/`, {
@@ -201,7 +235,12 @@ describe('HTTP host', () => {
   });
 
   it('rejects an unknown tool with a MethodNotFound JSON-RPC error', async () => {
-    const host = await startHttpHost({ catalog: catalog(), port: 0, version: '1.0.0' });
+    const source = catalog();
+    const host = await startHttpHost({
+      createServer: () => createMcpServer(source, { version: '1.0.0' }),
+      port: 0,
+      version: '1.0.0',
+    });
 
     try {
       const response = await fetch(`http://${host.host}:${host.port}/`, {

@@ -7,7 +7,6 @@ import { packageTools } from '../tools/packages.js';
 import { refineTools } from '../tools/refine.js';
 
 const catalog: Catalog = {
-  getContent: () => ({ apiSource: null, docs: {}, examples: [], typeSignatures: {} }),
   getDocs: (slug, page) => `${slug}:${page}`,
   getExample: () => ({ code: 'run()', id: 'basic', name: 'Basic' }),
   getPackage: (slug) => ({

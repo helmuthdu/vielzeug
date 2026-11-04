@@ -24,7 +24,7 @@ npx -y @vielzeug/codex --port=3100
 curl http://127.0.0.1:3100/health
 ```
 
-Response includes snapshot version. Runtime bind validation and Host/Origin allowlists restrict access to localhost; no remote host mode exists. Programmatic `configureServer` hooks run once per MCP request server, not at host startup. Dispose the host asynchronously and observe `disposed` or `disposalSignal` when coordinating shutdown.
+Response includes snapshot version. Runtime bind validation and Host/Origin allowlists restrict access to localhost; no remote host mode exists. Programmatic HTTP hosting takes a `createServer` factory that returns a fresh, unconnected server with its request handlers registered. Dispose the host asynchronously and observe `disposed` or `disposalSignal` when coordinating shutdown.
 
 ## Agent Skill
 
@@ -74,16 +74,15 @@ const catalog = new SnapshotCatalog(snapshot);
 await createMcpServer(catalog, { version: snapshot.manifest.version }).connect(new StdioServerTransport());
 ```
 
-To include Refine component tools, upgrade the server with the `@vielzeug/codex/refine` subpath:
+To include Refine component tools, create a server with the `@vielzeug/codex/refine` subpath:
 
 ```ts
-import { StdioServerTransport, createMcpServer, loadSnapshot } from '@vielzeug/codex';
-import { SnapshotRefineCatalog, registerRefineTools } from '@vielzeug/codex/refine';
+import { StdioServerTransport, loadSnapshot } from '@vielzeug/codex';
+import { createMcpServerWithRefine, SnapshotRefineCatalog } from '@vielzeug/codex/refine';
 
 const snapshot = loadSnapshot();
 const catalog = new SnapshotRefineCatalog(snapshot);
-const server = createMcpServer(catalog, { version: snapshot.manifest.version });
-registerRefineTools(server, catalog);
+const server = createMcpServerWithRefine(catalog, { version: snapshot.manifest.version });
 await server.connect(new StdioServerTransport());
 ```
 
@@ -93,6 +92,6 @@ await server.connect(new StdioServerTransport());
 - Use `get-type-signature` before loading full source.
 - Published package snapshots are static directories; local dev snapshots are immutable generations selected by `.dev/current.json`.
 - Pass `validateContents: true` to `loadSnapshot()` for artifact verification; normal startup keeps package chunks lazy.
-- Treat `configureServer` as a per-request factory hook and avoid process-global side effects.
+- Return a fresh configured server from `startHttpHost`'s `createServer` factory.
 - Keep HTTP local. Use stdio for normal client integration.
 - Run `pnpm test:unit` before `pnpm test:integration`.

@@ -3,17 +3,15 @@ import { readFileSync, realpathSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
-import type { Server } from '@modelcontextprotocol/server';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
 import { log } from './_log.js';
 import { startHttpHost } from './http.js';
 import { resolvePort } from './port.js';
+import { createMcpServerWithRefine } from './refine.js';
 import { SnapshotRefineCatalog } from './refine-catalog.js';
-import { createMcpServer } from './server.js';
 import { installSkills, SKILL_TARGET_CANDIDATES } from './skills.js';
 import { loadSnapshot } from './snapshot.js';
-import { registerRefineTools } from './tools/refine.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -96,21 +94,18 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     const snapshot = loadSnapshot(values.snapshot);
     const catalog = new SnapshotRefineCatalog(snapshot);
     const port = resolvePort(values.port);
-    const configure = (server: Server): void => registerRefineTools(server, catalog, values.debug);
 
     if (port === null) {
-      const server = createMcpServer(catalog, { debug: values.debug, version: snapshot.manifest.version });
+      const server = createMcpServerWithRefine(catalog, { debug: values.debug, version: snapshot.manifest.version });
 
-      configure(server);
       await server.connect(new StdioServerTransport());
 
       return 0;
     }
 
     const host = await startHttpHost({
-      catalog,
-      configureServer: configure,
-      debug: values.debug,
+      createServer: () =>
+        createMcpServerWithRefine(catalog, { debug: values.debug, version: snapshot.manifest.version }),
       port,
       version: snapshot.manifest.version,
     });

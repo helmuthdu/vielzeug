@@ -12,15 +12,15 @@ description: Snapshot, catalog, MCP server, and local HTTP host APIs.
 | `loadSnapshot` | Read validated snapshot metadata | Sync | Content chunks load lazily |
 | `SnapshotCatalog` | Query package corpus | Sync | Construct from loaded snapshot |
 | `createMcpServer` | MCP adapter factory (generic tools) | Sync | Requires catalog and version |
+| `createMcpServerWithRefine` | MCP adapter factory (all package and Refine tools) | Sync | Import from `@vielzeug/codex/refine` |
 | `startHttpHost` | Loopback Streamable HTTP host | Async | HTTP remains local-only |
-| `registerRefineTools` | Opt-in Refine tool registration | Sync | Import from `@vielzeug/codex/refine` |
 
 ## Package Entry Points
 
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/codex` | `Catalog`, `SnapshotCatalog`, `loadSnapshot`, MCP server, and HTTP host |
-| `@vielzeug/codex/refine` | Opt-in Refine component tools (`registerRefineTools`) |
+| `@vielzeug/codex/refine` | Refine catalog and MCP server with component tools |
 
 ## Snapshot
 
@@ -54,6 +54,14 @@ Registers generic package tools over `Catalog`. Refine tools are opt-in through 
 
 ## Refine tools (`@vielzeug/codex/refine`)
 
+### `createMcpServerWithRefine`
+
+```ts
+createMcpServerWithRefine(catalog: RefineCatalog, options: { version: string; debug?: boolean }): Server;
+```
+
+Creates a server with the general Vielzeug package catalog tools and the additional `refine-*` component tools.
+
 ### `SnapshotRefineCatalog`
 
 ```ts
@@ -62,13 +70,7 @@ new SnapshotRefineCatalog(snapshot: LoadedSnapshot)
 
 Extends `SnapshotCatalog` with `getComponent()` and `listComponents()`.
 
-### `registerRefineTools`
-
-```ts
-registerRefineTools(server: Server, catalog: RefineCatalog, debug?: boolean): void;
-```
-
-Upgrades a server created by `createMcpServer()` with the combined generic and `refine-*` tool set. `refineTools` is exported as a readonly registry.
+Component declarations and their nested data use readonly TypeScript types.
 
 ## HTTP
 
@@ -78,22 +80,22 @@ Upgrades a server created by `createMcpServer()` with the combined generic and `
 startHttpHost(options: HttpHostOptions): Promise<HttpHost>;
 ```
 
-Starts Streamable HTTP on `127.0.0.1` by default. Runtime validation accepts only `127.0.0.1` or `::1`; every request must also pass localhost Host and Origin checks. `configureServer` runs once for each lazily created MCP request server and is not called during host startup.
+Starts Streamable HTTP on `127.0.0.1` by default. Runtime validation accepts only `127.0.0.1` or `::1`; every request must also pass localhost Host and Origin checks. `createServer` must return a fresh, unconnected server with its request handlers registered.
 
 ## Types
 
 ```ts
 interface SnapshotPointer {
-  directory: string;
+  readonly directory: string;
 }
 
 interface SnapshotManifest {
-  catalog: 'catalog.json';
-  contentDirectory: 'packages';
-  refine: 'refine.json' | null;
-  schemaVersion: typeof SNAPSHOT_SCHEMA_VERSION;
-  search: 'search.json';
-  version: string;
+  readonly catalog: 'catalog.json';
+  readonly contentDirectory: 'packages';
+  readonly refine: 'refine.json' | null;
+  readonly schemaVersion: typeof SNAPSHOT_SCHEMA_VERSION;
+  readonly search: 'search.json';
+  readonly version: string;
 }
 ```
 
@@ -101,87 +103,81 @@ Dev snapshots use `SnapshotPointer` (via `current.json`); published snapshots ar
 
 ```ts
 interface LoadedSnapshot {
-  catalog: CatalogFile;
-  contentDirectory: string;
-  manifest: SnapshotManifest;
-  refineComponents: CemDeclaration[];
-  search: SearchRecord[];
+  readonly catalog: CatalogFile;
+  readonly contentDirectory: string;
+  readonly manifest: SnapshotManifest;
+  readonly refineComponents: readonly CemDeclaration[];
+  readonly search: readonly SearchRecord[];
 }
 ```
 
 ```ts
 interface CatalogFile {
-  packages: PackageMeta[];
-  version: string;
+  readonly packages: readonly PackageMeta[];
+  readonly version: string;
 }
 
 interface SearchRecord {
-  category: string;
-  description: string;
-  docs: Partial<Record<DocPage, string>>;
-  examples: Array<{ id: string; text: string }>;
-  exports: string;
-  keywords: string;
-  name: string;
-  related: string;
-  slug: string;
-  source: string | null;
+  readonly category: string;
+  readonly description: string;
+  readonly docs: Readonly<Partial<Record<DocPage, string>>>;
+  readonly examples: readonly { readonly id: string; readonly text: string }[];
+  readonly exports: string;
+  readonly keywords: string;
+  readonly name: string;
+  readonly related: string;
+  readonly slug: string;
+  readonly source: string | null;
 }
 
 interface PackageMeta {
-  availableDocPages: DocPage[];
-  category: string;
-  description: string;
-  exampleIds: string[];
-  exports: string[];
-  hasSource: boolean;
-  keywords: string[];
-  name: string;
-  related: string[];
-  slug: string;
-  version: string;
-}
-
-interface PackageContent {
-  apiSource: string | null;
-  docs: Partial<Record<DocPage, string>>;
-  examples: Example[];
-  typeSignatures: Record<string, string>;
+  readonly availableDocPages: readonly DocPage[];
+  readonly category: string;
+  readonly description: string;
+  readonly exampleIds: readonly string[];
+  readonly exports: readonly string[];
+  readonly hasSource: boolean;
+  readonly keywords: readonly string[];
+  readonly name: string;
+  readonly related: readonly string[];
+  readonly slug: string;
+  readonly version: string;
 }
 
 interface Example {
-  code: string;
-  id: string;
-  name: string;
+  readonly code: string;
+  readonly id: string;
+  readonly name: string;
 }
 ```
 
 ```ts
 interface Catalog {
-  getContent(slug: string): PackageContent;
   getDocs(slug: string, page: DocPage): string;
   getExample(slug: string, exampleId: string): Example;
   getPackage(slug: string): PackageMeta;
   getSource(slug: string): string;
   getTypeSignature(slug: string, symbol: string): string;
-  listExamples(slug: string): Array<Pick<Example, 'id' | 'name'>>;
-  listPackages(): PackageMeta[];
-  search(query: string): SearchHit[];
+  listExamples(slug: string): readonly Pick<Example, 'id' | 'name'>[];
+  listPackages(): readonly PackageMeta[];
+  search(query: string): readonly SearchHit[];
 }
 
 interface RefineCatalog extends Catalog {
   getComponent(tagName: string): CemDeclaration;
-  listComponents(): CemDeclaration[];
+  listComponents(): readonly CemDeclaration[];
 }
 
 interface SearchHit {
-  matchedExamples?: string[];
-  matchedIn: Array<'docs' | 'examples' | 'exports' | 'keywords' | 'metadata' | 'related' | 'source'>;
-  matchedPages?: DocPage[];
-  name: string;
-  slug: string;
+  readonly matchedExamples?: readonly string[];
+  readonly matchedIn: readonly ('docs' | 'examples' | 'exports' | 'keywords' | 'metadata' | 'related' | 'source')[];
+  readonly matchedPages?: readonly DocPage[];
+  readonly name: string;
+  readonly slug: string;
 }
 ```
+
+Catalog exposes semantic reads. It does not expose its cached content chunks.
 
 ```ts
 interface HttpHost {
@@ -194,9 +190,7 @@ interface HttpHost {
 }
 
 interface HttpHostOptions {
-  catalog: Catalog;
-  configureServer?: (server: Server) => void;
-  debug?: boolean;
+  createServer: () => Server;
   host?: '127.0.0.1' | '::1';
   port: number;
   version: string;
@@ -214,54 +208,54 @@ CEM types and `RefineCatalog` are exported from `/refine`.
 
 ```ts
 interface CemDeclaration {
-  attributes?: CemAttribute[];
-  cssParts?: CemCssPart[];
-  cssProperties?: CemCssProperty[];
-  description?: string;
-  events?: CemEvent[];
-  members?: CemMember[];
-  name?: string;
-  slots?: CemSlot[];
-  superclass?: { name: string; package?: string };
-  tagName?: string;
-  [key: string]: unknown;
+  readonly attributes?: readonly CemAttribute[];
+  readonly cssParts?: readonly CemCssPart[];
+  readonly cssProperties?: readonly CemCssProperty[];
+  readonly description?: string;
+  readonly events?: readonly CemEvent[];
+  readonly members?: readonly CemMember[];
+  readonly name?: string;
+  readonly slots?: readonly CemSlot[];
+  readonly superclass?: { readonly name: string; readonly package?: string };
+  readonly tagName?: string;
+  readonly [key: string]: unknown;
 }
 
 interface CemAttribute {
-  default?: string;
-  description?: string;
-  fieldName?: string;
-  name: string;
-  type?: { text: string };
+  readonly default?: string;
+  readonly description?: string;
+  readonly fieldName?: string;
+  readonly name: string;
+  readonly type?: { readonly text: string };
 }
 
 interface CemCssPart {
-  description?: string;
-  name: string;
+  readonly description?: string;
+  readonly name: string;
 }
 
 interface CemCssProperty {
-  default?: string;
-  description?: string;
-  name: string;
+  readonly default?: string;
+  readonly description?: string;
+  readonly name: string;
 }
 
 interface CemEvent {
-  description?: string;
-  name: string;
-  type?: { text: string };
+  readonly description?: string;
+  readonly name: string;
+  readonly type?: { readonly text: string };
 }
 
 interface CemMember {
-  description?: string;
-  kind?: 'field' | 'method';
-  name: string;
-  type?: { text: string };
+  readonly description?: string;
+  readonly kind?: 'field' | 'method';
+  readonly name: string;
+  readonly type?: { readonly text: string };
 }
 
 interface CemSlot {
-  description?: string;
-  name: string;
+  readonly description?: string;
+  readonly name: string;
 }
 ```
 

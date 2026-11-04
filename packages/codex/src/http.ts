@@ -1,6 +1,7 @@
 import { createServer, type Server as HttpServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import type { Server } from '@modelcontextprotocol/server';
 import {
   createMcpHandler,
   hostHeaderValidationResponse,
@@ -8,12 +9,9 @@ import {
   localhostAllowedOrigins,
   type McpHttpHandler,
   originValidationResponse,
-  type Server,
 } from '@modelcontextprotocol/server';
 import { log } from './_log.js';
-import type { Catalog } from './catalog.js';
 import { CodexError } from './errors.js';
-import { createMcpServer } from './server.js';
 
 export interface HttpHost {
   readonly disposalSignal: AbortSignal;
@@ -25,10 +23,8 @@ export interface HttpHost {
 }
 
 export interface HttpHostOptions {
-  catalog: Catalog;
-  /** Optional hook invoked after generic tools are registered (e.g. to register Refine tools). */
-  configureServer?: (server: Server) => void;
-  debug?: boolean;
+  /** Creates a fresh, unconnected server with its request handlers registered. */
+  createServer: () => Server;
   host?: '127.0.0.1' | '::1';
   port: number;
   version: string;
@@ -88,20 +84,8 @@ export async function startHttpHost(options: HttpHostOptions): Promise<HttpHost>
   if (host !== '127.0.0.1' && host !== '::1') {
     throw new CodexError('HTTP host must be a loopback address (127.0.0.1 or ::1).');
   }
-  // Stateless by default (SEP-2575): a fresh server instance per request, matching the
-  // spec's "any request can land on any instance" design: codex's tools carry no
-  // per-connection state, so a persistent instance buys nothing beyond a small, negligible
-  // (13-tool catalog) reconstruction cost per request.
-  const factory = () => {
-    const server = createMcpServer(options.catalog, { debug: options.debug, version: options.version });
-
-    options.configureServer?.(server);
-
-    return server;
-  };
-
-  // `createMcpHandler()` creates and configures one fresh server per MCP request.
-  const handler: McpHttpHandler = createMcpHandler(factory);
+  // Stateless by default (SEP-2575): each request gets its own fully configured server.
+  const handler: McpHttpHandler = createMcpHandler(options.createServer);
   const allowedHosts = localhostAllowedHostnames();
   const allowedOrigins = localhostAllowedOrigins();
   const httpServer = createServer((request, response) => {

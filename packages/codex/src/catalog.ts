@@ -16,27 +16,37 @@ export class CatalogError extends CodexError {
 }
 
 export interface SearchHit {
-  matchedExamples?: string[];
-  matchedIn: Array<'docs' | 'examples' | 'exports' | 'keywords' | 'metadata' | 'related' | 'source'>;
-  matchedPages?: DocPage[];
-  name: string;
-  slug: string;
+  readonly matchedExamples?: readonly string[];
+  readonly matchedIn: readonly ('docs' | 'examples' | 'exports' | 'keywords' | 'metadata' | 'related' | 'source')[];
+  readonly matchedPages?: readonly DocPage[];
+  readonly name: string;
+  readonly slug: string;
 }
 
 export interface Catalog {
-  getContent(slug: string): PackageContent;
   getDocs(slug: string, page: DocPage): string;
   getExample(slug: string, exampleId: string): Example;
   getPackage(slug: string): PackageMeta;
   getSource(slug: string): string;
   getTypeSignature(slug: string, symbol: string): string;
-  listExamples(slug: string): Array<Pick<Example, 'id' | 'name'>>;
-  listPackages(): PackageMeta[];
-  search(query: string): SearchHit[];
+  listExamples(slug: string): readonly Pick<Example, 'id' | 'name'>[];
+  listPackages(): readonly PackageMeta[];
+  search(query: string): readonly SearchHit[];
 }
 
 function matches(haystack: string, terms: readonly string[]): boolean {
   return terms.every((term) => haystack.includes(term));
+}
+
+function copyPackage(pkg: PackageMeta): PackageMeta {
+  return {
+    ...pkg,
+    availableDocPages: [...pkg.availableDocPages],
+    exampleIds: [...pkg.exampleIds],
+    exports: [...pkg.exports],
+    keywords: [...pkg.keywords],
+    related: [...pkg.related],
+  };
 }
 
 interface RankedSearchHit {
@@ -112,7 +122,7 @@ export class SnapshotCatalog implements Catalog {
     this.bySlug = new Map(snapshot.catalog.packages.map((pkg) => [pkg.slug, pkg]));
   }
 
-  getPackage(slug: string): PackageMeta {
+  private requirePackage(slug: string): PackageMeta {
     const pkg = this.bySlug.get(slug);
 
     if (!pkg)
@@ -124,8 +134,12 @@ export class SnapshotCatalog implements Catalog {
     return pkg;
   }
 
-  getContent(slug: string): PackageContent {
-    this.getPackage(slug);
+  getPackage(slug: string): PackageMeta {
+    return copyPackage(this.requirePackage(slug));
+  }
+
+  private readContent(slug: string): PackageContent {
+    this.requirePackage(slug);
 
     const cached = this.contentCache.get(slug);
 
@@ -150,51 +164,51 @@ export class SnapshotCatalog implements Catalog {
     return content;
   }
 
-  listPackages(): PackageMeta[] {
-    return [...this.bySlug.values()];
+  listPackages(): readonly PackageMeta[] {
+    return [...this.bySlug.values()].map(copyPackage);
   }
 
   getDocs(slug: string, page: DocPage): string {
-    const content = this.getContent(slug).docs[page];
+    const content = this.readContent(slug).docs[page];
 
-    if (!content)
+    if (content === undefined)
       throw new CatalogError(
         'NOT_FOUND',
-        `No "${page}" page for "${slug}". Available: ${this.getPackage(slug).availableDocPages.join(', ') || 'none'}.`,
+        `No "${page}" page for "${slug}". Available: ${this.requirePackage(slug).availableDocPages.join(', ') || 'none'}.`,
       );
 
     return content;
   }
 
   getSource(slug: string): string {
-    const source = this.getContent(slug).apiSource;
+    const source = this.readContent(slug).apiSource;
 
-    if (!source) throw new CatalogError('UNAVAILABLE', `Package "${slug}" has no bundled source.`);
+    if (source === null) throw new CatalogError('UNAVAILABLE', `Package "${slug}" has no bundled source.`);
 
     return source;
   }
 
-  listExamples(slug: string): Array<Pick<Example, 'id' | 'name'>> {
-    return this.getContent(slug).examples.map(({ id, name }) => ({ id, name }));
+  listExamples(slug: string): readonly Pick<Example, 'id' | 'name'>[] {
+    return this.readContent(slug).examples.map(({ id, name }) => ({ id, name }));
   }
 
   getExample(slug: string, exampleId: string): Example {
-    const example = this.getContent(slug).examples.find((item) => item.id === exampleId);
+    const example = this.readContent(slug).examples.find((item) => item.id === exampleId);
 
     if (!example) throw new CatalogError('NOT_FOUND', `No example "${exampleId}" for "${slug}".`);
 
-    return example;
+    return { ...example };
   }
 
   getTypeSignature(slug: string, symbol: string): string {
-    const signature = this.getContent(slug).typeSignatures[symbol];
+    const signature = this.readContent(slug).typeSignatures[symbol];
 
-    if (!signature) throw new CatalogError('NOT_FOUND', `No exported symbol "${symbol}" for "${slug}".`);
+    if (signature === undefined) throw new CatalogError('NOT_FOUND', `No exported symbol "${symbol}" for "${slug}".`);
 
     return signature;
   }
 
-  search(query: string): SearchHit[] {
+  search(query: string): readonly SearchHit[] {
     return this.snapshot.search
       .map((record) => searchRecord(record, query))
       .filter((result): result is RankedSearchHit => result !== null)
