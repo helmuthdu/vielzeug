@@ -40,9 +40,11 @@ export type OreDockProps = {
  *
  * Wide, the bar is a full-width strip flush to its edge, wearing a hairline only while pinned.
  * From the desktop width (1280 px) up, a claimed `center` sits dead-center because both sides of
- * the row take an equal share. Below the phone width (640 px) the bar becomes a single tool row in
- * the iOS toolbar grammar: the flanks stretch equally so the tools rest on the row's true middle,
- * the bar detaches from the viewport's foot, and `center` lifts out of the row to hover above it.
+ * the row take an equal share. Below the phone width (640 px) the bar becomes a tool row in
+ * the iOS toolbar grammar: the flanks stretch equally so the tools rest on the row's true middle
+ * while space permits. Flank content takes priority over centering; crowded zones wrap rather
+ * than overlapping or shrinking controls.
+ * The bar detaches from the viewport's foot, and `center` lifts out of the row to hover above it.
  * By default, a phone row with one action zone hugs its content: `start` aligns to the leading
  * edge, `commit` to the trailing edge, and tools to the middle. A lone `center` stays in the row.
  * Multiple action zones and attached tools fill the row. `mobile-layout="full"` always fills it;

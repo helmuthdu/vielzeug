@@ -58,3 +58,26 @@ test.describe('Accessibility', () => {
     expect(results.violations).toEqual([]);
   });
 });
+
+test.describe('Touch interaction', () => {
+  test.use({ hasTouch: true });
+
+  test('does not close a combined-trigger popover when the first tap focuses its trigger', async ({
+    page,
+    refinePage,
+  }) => {
+    await refinePage.mountComponent(`
+      <ore-popover trigger="hover,focus,click">
+        <ore-button>Info</ore-button>
+        <p slot="content">Popover content</p>
+      </ore-popover>
+    `);
+    const button = page.locator('ore-button');
+    const panel = page.locator('ore-popover').locator('[part="panel"]');
+
+    await button.tap();
+    await expect(panel).toHaveAttribute('aria-hidden', 'false');
+    await button.tap();
+    await expect(panel).toHaveAttribute('aria-hidden', 'true');
+  });
+});

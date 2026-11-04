@@ -93,6 +93,65 @@ describe('ore-tooltip', () => {
   });
 
   describe('Dismissal', () => {
+    it('keeps the first touch open when focus arrives before click and ignores touch leave', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { 'close-delay': '0', content: 'tip', delay: '0', trigger: 'hover,focus,click' },
+        html: '<button>Trigger</button>',
+      });
+      const button = fixture.element.querySelector('button')!;
+      const pointer = { bubbles: true, pointerType: 'touch' };
+
+      button.dispatchEvent(new PointerEvent('pointerenter', pointer));
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('true');
+      button.dispatchEvent(new PointerEvent('pointerdown', pointer));
+      button.focus();
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      button.dispatchEvent(new PointerEvent('pointerleave', pointer));
+      await fixture.flush();
+
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('false');
+
+      button.dispatchEvent(new PointerEvent('pointerdown', pointer));
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      await fixture.flush();
+
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('rebinds changed triggers and cancels pending hover timers without replacing the element', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'tip', delay: '100', trigger: 'hover' },
+        html: '<button>Trigger</button>',
+      });
+      const button = fixture.element.querySelector('button')!;
+
+      button.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' }));
+      fixture.element.setAttribute('trigger', 'click');
+      fixture.element.setAttribute('delay', '0');
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('true');
+      button.focus();
+      await fixture.flush();
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('true');
+      button.click();
+      await fixture.flush();
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('false');
+
+      fixture.element.setAttribute('trigger', 'focus');
+      await fixture.flush();
+      button.dispatchEvent(new Event('focusout'));
+      await fixture.flush();
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('true');
+      button.click();
+      await fixture.flush();
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('true');
+      button.dispatchEvent(new Event('focusin'));
+      await fixture.flush();
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('false');
+    });
+
     // Touch relies on this: when the next tap lands on non-focusable content the trigger keeps
     // focus (Safari), so no focusout fires and an outside press is the only way back to closed.
     it('closes when a pointer press starts outside a click trigger', async () => {

@@ -209,7 +209,7 @@
     }
 
     :host .dock {
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       gap: var(--_dock-tool-gap);
       justify-content: center;
     }
@@ -275,14 +275,13 @@
       margin-inline: auto var(--_dock-inset-end);
     }
 
-    /* The flanks stretch equally, which is what puts the tools on the row's true middle whatever the
-       flanks weigh. They stretch their own box only: a slotted tool keeps its natural width and the
-       zone's alignment carries it to the edge, so a lone glyph never grows into a wide pill.
-       A hugging row opts out: an equal-stretch flank there is dead space. */
+    /* Equal flanks center the tools while space permits. A multi-control flank keeps its intrinsic
+       width when the row gets tight: centering yields before controls overlap or escape the bar.
+       A hugging row opts out of equal stretching. */
     :host .dock-start:not([hidden]),
     :host .dock-commit:not([hidden]) {
       flex: var(--_dock-flank-flex, 1 1 0);
-      min-width: 0;
+      min-width: min-content;
     }
 
     /* A centered tools row needs an empty opposite flank as its counterweight when only one flank
@@ -307,6 +306,7 @@
       flex: 0 1 auto;
       flex-wrap: nowrap;
       justify-content: center;
+      min-width: min-content;
     }
 
     :host([mobile-layout='auto']) .dock-tools {

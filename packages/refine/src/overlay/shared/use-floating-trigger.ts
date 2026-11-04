@@ -78,6 +78,37 @@ export type FloatingTriggerHandle = {
 
 // ── Implementation ─────────────────────────────────────────────────────────────
 
+/** A pointer press may focus and open the panel before its click arrives. Toggle from the pre-press state. */
+export function bindFloatingClick(
+  trigger: HTMLElement,
+  handlers: { close: () => void; isOpen: () => boolean; open: () => void },
+): () => void {
+  let openBeforePress: boolean | undefined;
+  const onPointerDown = (): void => {
+    openBeforePress = handlers.isOpen();
+  };
+  const onPointerCancel = (): void => {
+    openBeforePress = undefined;
+  };
+  const onClick = (event: MouseEvent): void => {
+    const wasOpen = event.detail === 0 ? handlers.isOpen() : (openBeforePress ?? handlers.isOpen());
+
+    openBeforePress = undefined;
+    if (wasOpen) handlers.close();
+    else handlers.open();
+  };
+
+  trigger.addEventListener('pointerdown', onPointerDown);
+  trigger.addEventListener('pointercancel', onPointerCancel);
+  trigger.addEventListener('click', onClick);
+
+  return () => {
+    trigger.removeEventListener('pointerdown', onPointerDown);
+    trigger.removeEventListener('pointercancel', onPointerCancel);
+    trigger.removeEventListener('click', onClick);
+  };
+}
+
 /**
  * Shared logic for floating-panel triggers (tooltip, popover).
  *
@@ -253,18 +284,31 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
     const t = triggers.value;
 
     if (t.includes('click')) {
-      add(triggerEl, 'click', toggle as EventListener);
+      cleanups.push(
+        bindFloatingClick(triggerEl, {
+          close: () => close(),
+          isOpen: () => visible.value,
+          open: () => open('click'),
+        }),
+      );
     }
 
     if (t.includes('hover')) {
-      add(triggerEl, 'pointerenter', () => open('hover'));
-      add(triggerEl, 'pointerleave', () => close('trigger'));
+      const onPointerEnter: EventListener = (event) => {
+        if ((event as PointerEvent).pointerType !== 'touch') open('hover');
+      };
+      const onPointerLeave: EventListener = (event) => {
+        if ((event as PointerEvent).pointerType !== 'touch') close('trigger');
+      };
+
+      add(triggerEl, 'pointerenter', onPointerEnter);
+      add(triggerEl, 'pointerleave', onPointerLeave);
 
       const panelEl = getPanel();
 
       if (panelEl) {
-        add(panelEl, 'pointerenter', () => open('hover'));
-        add(panelEl, 'pointerleave', () => close('trigger'));
+        add(panelEl, 'pointerenter', onPointerEnter);
+        add(panelEl, 'pointerleave', onPointerLeave);
       }
     }
 
@@ -307,6 +351,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
     triggerSlot?.addEventListener('slotchange', rebind);
     rebind();
     watch(slotElements, bindEvents, { immediate: true });
+    watch(triggers, bindEvents);
 
     watch(
       openProp,

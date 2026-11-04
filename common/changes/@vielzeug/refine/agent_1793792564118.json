@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix combined focus/click tooltip and popover activation, react to trigger changes, and keep mobile dock controls within their content-sized flanks.",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

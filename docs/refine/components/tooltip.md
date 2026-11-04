@@ -27,6 +27,8 @@ A lightweight floating label that appears on hover, focus, or click. Automatical
 
 Use the `trigger` attribute to control when the tooltip appears. Multiple triggers can be combined with commas (e.g. `"hover,focus"`). When `trigger` includes `focus`, the tooltip is automatically wired as a programmatic description (`aria-describedby`) for the focused element, which benefits screen reader users. A tooltip with the `click` trigger also closes when a pointer press starts outside its trigger and bubble; hover/focus-only tooltips do not use outside-pointer dismissal.
 
+For explanations that also need tap activation, use `trigger="hover,focus,click"`. A touch press that focuses the trigger opens the tooltip once and keeps it open; a second tap closes it. Touch pointer entry and exit do not act as hover. Changing `trigger` after mounting updates its listeners and cancels pending show/hide delays without replacing the element.
+
 <ComponentPreview>
 
 ```html

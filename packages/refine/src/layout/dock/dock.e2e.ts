@@ -496,6 +496,87 @@ test.describe('Layout', () => {
 });
 
 test.describe('Adaptive mobile layout', () => {
+  test('wraps crowded action zones rather than overlapping or shrinking controls', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 700, width: 320 });
+    await fullBleed(page);
+    await refinePage.mountComponent(
+      scrolling(`
+        <ore-dock id="dock" style="width:calc(100% - 32px);margin-inline:16px;--dock-offset:12px">
+          <ore-button slot="start" icon-only label="Back"><ore-icon name="arrow-left"></ore-icon></ore-button>
+          <ore-button variant="ghost">More actions<ore-icon slot="suffix" name="chevron-down"></ore-icon></ore-button>
+          <ore-button-group slot="commit" variant="bordered">
+            <ore-button icon-only label="Undo"><ore-icon name="undo-2"></ore-icon></ore-button>
+            <ore-button icon-only label="Redo"><ore-icon name="redo-2"></ore-icon></ore-button>
+          </ore-button-group>
+        </ore-dock>
+      `),
+    );
+    await scrollToPin(page, 'dock', 400);
+
+    const { bar, zones } = await geometry(page, 'dock');
+    const boxes = await page
+      .locator('#dock ore-button')
+      .evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON()));
+
+    expect(zones.commit.top).toBeGreaterThan(zones.tools.top);
+    for (const box of boxes) {
+      expect(box.left).toBeGreaterThanOrEqual(bar.left);
+      expect(box.right).toBeLessThanOrEqual(bar.right);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  for (const width of [320, 360, 390]) {
+    for (const direction of ['ltr', 'rtl']) {
+      test(`keeps grouped history controls inside a narrow ${width}px ${direction} dock`, async ({
+        page,
+        refinePage,
+      }) => {
+        await page.setViewportSize({ height: 700, width });
+        await fullBleed(page);
+        await refinePage.mountComponent(
+          scrolling(`
+            <ore-dock id="dock" dir="${direction}" style="width:calc(100% - 32px);margin-inline:16px;--dock-offset:12px">
+              <ore-button slot="start" icon-only label="Back"><ore-icon name="arrow-left"></ore-icon></ore-button>
+              <ore-button variant="ghost" size="sm">Actions</ore-button>
+              <ore-button-group slot="commit" variant="bordered">
+                <ore-button icon-only label="Undo"><ore-icon name="undo-2"></ore-icon></ore-button>
+                <ore-button icon-only label="Redo"><ore-icon name="redo-2"></ore-icon></ore-button>
+              </ore-button-group>
+            </ore-dock>
+          `),
+        );
+        await scrollToPin(page, 'dock', 400);
+
+        for (const pinned of [true, false]) {
+          if (!pinned) await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+          await expect.poll(async () => (await geometry(page, 'dock')).pinned).toBe(pinned);
+
+          const { bar, zones } = await geometry(page, 'dock');
+          const boxes = await page
+            .locator('#dock ore-button')
+            .evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON()));
+
+          for (const box of boxes) {
+            expect(box.left).toBeGreaterThanOrEqual(bar.left);
+            expect(box.right).toBeLessThanOrEqual(bar.right);
+            expect(box.width).toBeGreaterThanOrEqual(44);
+            expect(box.height).toBeGreaterThanOrEqual(44);
+          }
+
+          expect(zones.tools.top).toBe(zones.commit.top);
+          expect(zones.tools.top).toBe(zones.start.top);
+          const ordered = boxes.toSorted((a, b) => a.left - b.left);
+
+          for (let i = 1; i < ordered.length; i++) {
+            expect(ordered[i].left).toBeGreaterThanOrEqual(ordered[i - 1].right);
+          }
+        }
+      });
+    }
+  }
+
   for (const direction of ['ltr', 'rtl'] as const) {
     for (const slot of ['start', 'commit'] as const) {
       test(`hugs a lone ${slot} at its logical edge in ${direction}`, async ({ page, refinePage }) => {

@@ -1,7 +1,7 @@
 import type { Placement } from '@vielzeug/orbit';
 
 import { bind, createId, define, getHost, html, onCleanup, onMounted, prop, useEmit, useSlots } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
+import { computed, signal, watch } from '@vielzeug/ripple';
 import {
   type OverlayOpenChangeDetail,
   type OverlayOpenReason,
@@ -11,7 +11,7 @@ import {
 import { disablableBundle, sizableBundle } from '../../shared';
 import { forcedColorsMixin } from '../../styles';
 import type { ComponentSize } from '../../types';
-import { useFloatingTrigger } from '../shared/use-floating-trigger';
+import { bindFloatingClick, useFloatingTrigger } from '../shared/use-floating-trigger';
 import styles from './tooltip.css?inline';
 
 type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
@@ -248,6 +248,8 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
       const bindTriggerEvents = (): void => {
         for (const cleanup of eventCleanups) cleanup();
         eventCleanups = [];
+        clearShowTimer();
+        clearHideTimer();
 
         const triggerEl = triggerSlot?.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
 
@@ -256,8 +258,12 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
         const t = triggers.value;
 
         if (t.includes('hover')) {
-          addEvent(triggerEl, 'pointerenter', () => show('hover'));
-          addEvent(triggerEl, 'pointerleave', () => hide());
+          addEvent(triggerEl, 'pointerenter', (event) => {
+            if ((event as PointerEvent).pointerType !== 'touch') show('hover');
+          });
+          addEvent(triggerEl, 'pointerleave', (event) => {
+            if ((event as PointerEvent).pointerType !== 'touch') hide();
+          });
         }
 
         if (t.includes('focus')) {
@@ -266,12 +272,18 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
         }
 
         if (t.includes('click')) {
-          addEvent(triggerEl, 'click', () => (floating.visible.value ? hide() : show('click')));
+          eventCleanups.push(
+            bindFloatingClick(triggerEl, {
+              close: () => hide(),
+              isOpen: () => floating.visible.value,
+              open: () => show('click'),
+            }),
+          );
         }
       };
 
       triggerSlot?.addEventListener('slotchange', bindTriggerEvents);
-      bindTriggerEvents();
+      watch(triggers, bindTriggerEvents, { immediate: true });
 
       const destroyFloating = floating.mount();
 
