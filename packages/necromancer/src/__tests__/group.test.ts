@@ -165,7 +165,7 @@ describe('animateEach', () => {
     ]);
   });
 
-  it('preserves every child result', async () => {
+  it('finishes reduced children like any other child', async () => {
     const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
@@ -176,7 +176,7 @@ describe('animateEach', () => {
 
     for (const call of calls) call.animation.finish();
 
-    await expect(group.results).resolves.toEqual([{ status: 'reduced' }, { status: 'reduced' }]);
+    await expect(group.results).resolves.toEqual([{ status: 'finished' }, { status: 'finished' }]);
   });
 
   it('reports natural child completion and exposes resource disposal', async () => {

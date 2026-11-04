@@ -1,13 +1,19 @@
 import { uniqueElements } from './_elements';
 import { createAnimationGroup } from './_handle';
+import { withStaggeredDelay } from './_options';
 import { animate } from './animate';
 import { NecromancerConfigError } from './errors';
-import { withStaggeredDelay } from './motion';
 import type { AnimateEachOptions, AnimationGroup, AnimationHandle, KeyframeFactory, Keyframes } from './types';
 
-function validateStagger(stagger: number): void {
+function validateStagger(stagger: number, delay: number | string | null | undefined): void {
   if (!Number.isFinite(stagger) || stagger < 0) {
     throw new NecromancerConfigError('stagger must be a finite, non-negative number.');
+  }
+
+  // A non-zero stagger adds to the delay, so it needs a numeric one. Checking here,
+  // before any animation starts, keeps a pure config error free of side effects.
+  if (stagger > 0 && delay !== undefined && typeof delay !== 'number') {
+    throw new NecromancerConfigError(`A non-zero stagger requires a numeric delay; received ${typeof delay}.`);
   }
 }
 
@@ -24,16 +30,16 @@ export function animateEach<ElementType extends Element>(
 ): AnimationGroup {
   const { signal, stagger = 0, ...animationOptions } = options;
 
-  validateStagger(stagger);
+  validateStagger(stagger, animationOptions.delay);
 
-  if (signal?.aborted) throw signal.reason;
+  signal?.throwIfAborted();
 
   const unique = uniqueElements(elements);
   const frames = unique.map((element, index) =>
     typeof keyframes === 'function' ? keyframes(element, index, unique.length) : keyframes,
   );
 
-  if (signal?.aborted) throw signal.reason;
+  signal?.throwIfAborted();
 
   const handles: AnimationHandle[] = [];
 

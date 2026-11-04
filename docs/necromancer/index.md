@@ -89,7 +89,7 @@ animation.dispose();
 - `animate()`: Native element animation with lifecycle ownership and direct native access
 - `animateEach()`: Group ownership with stable keyframe factories and `stagger`
 - `captureLayout()`: One-shot FLIP transition with additive `translate` (position) and `scale` (size)
-- `motion`: `'system'` reduced-motion support with explicit reduced outcomes
+- `motion`: `'system'` reduced-motion support with the same keyframes on instant timing
 - Native timing: Omitted timing fields retain Web Animations API behavior
 - `signal`: Abort a handle from its parent lifecycle
 - `dispose()`: Idempotent cleanup with `[Symbol.dispose]()`
@@ -107,7 +107,7 @@ Necromancer owns explicit WAAPI keyframes. It does not generate CSS keyframes, o
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
-- [3.0 Migration](./migration.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

@@ -1,5 +1,5 @@
 export const reducedMotionExample = {
-  code: `import { animate } from '@vielzeug/necromancer'
+  code: `import { animate, shouldReduceMotion } from '@vielzeug/necromancer'
 
 const panel = document.createElement('section')
 panel.style.cssText = 'display: grid; gap: 12px; max-width: 320px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff;'
@@ -31,7 +31,8 @@ function run(motion) {
   )
   status.textContent = 'Running with motion: ' + motion
   handle.result.then((result) => {
-    status.textContent = result.status === 'reduced' ? 'Keyframes finished with reduced timing' : 'Finished'
+    status.textContent =
+      result.status === 'cancelled' ? 'Cancelled' : shouldReduceMotion(motion) ? 'Finished with reduced timing' : 'Finished'
   })
 }
 

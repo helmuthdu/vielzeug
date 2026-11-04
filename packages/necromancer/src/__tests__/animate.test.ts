@@ -184,7 +184,7 @@ describe('animate', () => {
 
     calls[0]?.animation.finish();
 
-    await expect(handle.result).resolves.toEqual({ status: 'reduced' });
+    await expect(handle.result).resolves.toEqual({ status: 'finished' });
   });
 
   it('allows callers to select full or reduced motion', () => {
@@ -224,6 +224,6 @@ describe('animate', () => {
     handle[Symbol.dispose]();
 
     expect(calls[0]?.animation.cancelCallCount).toBe(1);
-    await expect(handle.result).resolves.toMatchObject({ reason: expect.any(DOMException), status: 'cancelled' });
+    await expect(handle.result).resolves.toEqual({ status: 'cancelled' });
   });
 });

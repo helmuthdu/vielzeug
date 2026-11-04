@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Simplify AnimationResult to finished/cancelled, report owner dispose reasons, and fail stagger config before starting animations.",
+      "packageName": "@vielzeug/necromancer",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/necromancer"
+}

@@ -1,5 +1,7 @@
+import type { MotionMode } from '@vielzeug/necromancer';
+
 /**
- * App-level motion mode, mirroring `@vielzeug/necromancer`'s `MotionMode`:
+ * App-level motion mode, built on `@vielzeug/necromancer`'s `MotionMode`:
  * the operating-system preference is the default, and an application with its
  * own "reduce motion" setting can force either direction.
  *
@@ -19,7 +21,7 @@
  * ```
  */
 export const MOTION_MODES = ['full', 'reduced', 'system'] as const;
-export type MotionMode = (typeof MOTION_MODES)[number];
+export type { MotionMode } from '@vielzeug/necromancer';
 
 /** Reads the current motion mode from `<html>`; `'system'` when unset. */
 export function getMotionMode(): MotionMode {

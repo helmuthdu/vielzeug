@@ -1,4 +1,4 @@
-import { type AnimationGroup, animateEach } from '@vielzeug/necromancer';
+import { type AnimationGroup, animateEach, NecromancerUnsupportedError } from '@vielzeug/necromancer';
 import { define, each, html, onCleanup, onMounted, prop, ref } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 import { now, Temporal } from '@vielzeug/tempo';
@@ -130,12 +130,21 @@ define<ActivitySignalProps>('activity-signal', {
     let animation: AnimationGroup | null = null;
 
     onMounted(() => {
-      if (typeof Element.prototype.animate !== 'function') return;
-      const group = animateEach(
-        grid.value?.querySelectorAll<HTMLElement>('.activity-signal__cell') ?? [],
-        [{ opacity: 0 }, { opacity: 1 }],
-        { duration: 180, easing: 'ease-out', motion: 'system', stagger: 3 },
-      );
+      let group: AnimationGroup;
+
+      try {
+        group = animateEach(
+          grid.value?.querySelectorAll<HTMLElement>('.activity-signal__cell') ?? [],
+          [{ opacity: 0 }, { opacity: 1 }],
+          { duration: 180, easing: 'ease-out', motion: 'system', stagger: 3 },
+        );
+      } catch (error) {
+        // A browser without the Web Animations API simply keeps the grid static.
+        if (error instanceof NecromancerUnsupportedError) return;
+
+        throw error;
+      }
+
       animation = group;
       void group.results.finally(() => {
         group.dispose();

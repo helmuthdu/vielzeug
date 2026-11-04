@@ -1,6 +1,7 @@
 import { createAnimationHandle } from './_handle';
+import { resolveAnimationOptions } from './_options';
 import { NecromancerUnsupportedError } from './errors';
-import { resolveAnimationOptions, shouldReduceMotion } from './motion';
+import { shouldReduceMotion } from './motion';
 import type { AnimateOptions, AnimationHandle, Keyframes } from './types';
 
 /**
@@ -10,16 +11,15 @@ import type { AnimateOptions, AnimationHandle, Keyframes } from './types';
  * operating system's reduced-motion preference suppresses movement.
  */
 export function animate(element: Element, keyframes: Keyframes, options: AnimateOptions = {}): AnimationHandle {
-  if (options.signal?.aborted) throw options.signal.reason;
+  options.signal?.throwIfAborted();
 
   if (typeof element.animate !== 'function') {
     throw new NecromancerUnsupportedError('The Web Animations API is not available in this environment.');
   }
 
-  const reduced = shouldReduceMotion(options.motion ?? 'system');
   const nativeAnimation = element.animate(
     keyframes as Keyframe[] | PropertyIndexedKeyframes,
-    resolveAnimationOptions(options, reduced),
+    resolveAnimationOptions(options, shouldReduceMotion(options.motion ?? 'system')),
   );
-  return createAnimationHandle(nativeAnimation, options.signal, reduced);
+  return createAnimationHandle(nativeAnimation, options.signal);
 }

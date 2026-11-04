@@ -1,10 +1,14 @@
 /** Chooses whether an animation uses full or reduced motion. */
 export type MotionMode = 'full' | 'reduced' | 'system';
 
-/** The terminal result of a lifecycle-owned animation. */
+/**
+ * The terminal result of a lifecycle-owned animation.
+ *
+ * Reduced motion is not a separate outcome: a reduced animation finishes, and
+ * `shouldReduceMotion()` answers whether a requested mode reduces it.
+ */
 export type AnimationResult =
   | { readonly status: 'finished' }
-  | { readonly status: 'reduced' }
   | { readonly reason?: unknown; readonly status: 'cancelled' };
 
 /** Keyframes accepted by the Web Animations API. */
@@ -25,7 +29,7 @@ export type Keyframes = readonly Keyframe[] | PropertyIndexedKeyframes;
  *
  * Option chain: `AnimateOptions` -> `AnimateEachOptions` (+`stagger`) -> `LayoutAnimationOptions`
  * (+`elements`). Each layer's implementation module strips only the field it added before
- * forwarding the rest down (see `animate-each.ts`, `layout.ts`, and `motion.ts`'s
+ * forwarding the rest down (see `animate-each.ts`, `layout.ts`, and `_options.ts`'s
  * `resolveAnimationOptions()`, which is the last stop and strips `motion`/`signal`).
  */
 export type AnimateOptions = KeyframeAnimationOptions & {
@@ -69,7 +73,7 @@ export interface AnimationHandle {
   dispose(reason?: unknown): void;
   /** Whether this handle has been disposed. */
   readonly disposed: boolean;
-  /** Resolves once the animation finishes, is reduced, or is cancelled. */
+  /** Resolves once the animation finishes or is cancelled. */
   readonly result: Promise<AnimationResult>;
   /** Calls {@link dispose}. */
   [Symbol.dispose](): void;

@@ -23,7 +23,7 @@ const result = await handle.result;
 handle.dispose();
 ```
 
-`result` distinguishes natural completion, reduced timing, and cancellation. `disposed` reports only whether the owner was explicitly disposed.
+`result` distinguishes natural completion from cancellation. `disposed` reports only whether the owner was explicitly disposed.
 
 Omitted timing fields retain native Web Animations API behavior. Pass an explicit `duration` when the animation should run over time.
 
@@ -42,7 +42,7 @@ const result = await handle.result;
 
 `'system'` is the default and reduces movement when `prefers-reduced-motion: reduce` matches. `'full'` preserves the requested timing, while `'reduced'` always reduces it.
 
-Reduced motion keeps the supplied keyframes but normalizes delay, duration, and end delay to zero and iterations to one. The result is `{ status: 'reduced' }`, and `handle.animation` still represents the requested visual transition.
+Reduced motion keeps the supplied keyframes but normalizes delay, duration, and end delay to zero and iterations to one. The animation finishes immediately, so its result is `{ status: 'finished' }`; call `shouldReduceMotion()` with the same mode when your own code needs to know whether movement was reduced. `handle.animation` still represents the requested visual transition.
 
 ## Parent Cancellation
 

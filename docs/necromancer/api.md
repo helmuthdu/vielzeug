@@ -154,11 +154,10 @@ type MotionMode = 'full' | 'reduced' | 'system';
 ```ts
 type AnimationResult =
   | { readonly status: 'finished' }
-  | { readonly status: 'reduced' }
   | { readonly reason?: unknown; readonly status: 'cancelled' };
 ```
 
-`cancelled` describes native cancellation and includes its native rejection reason. A reason passed to `dispose()` or an abort signal takes precedence. The independent `disposed` property becomes `true` only when the lifecycle owner is explicitly disposed.
+A reduced animation finishes: reduction is decided at call time and `shouldReduceMotion()` answers it, so the result reports only what the caller could not know. `cancelled` carries the reason the animation was cancelled: the value passed to `dispose()`, the abort reason of the owning `signal`, or the native rejection reason when something outside Necromancer cancelled the animation. A bare `dispose()` carries no reason. The independent `disposed` property becomes `true` only when the lifecycle owner is explicitly disposed.
 
 ### `AnimateOptions`
 

@@ -1,10 +1,37 @@
 ---
-title: Necromancer Migration
+title: 'Necromancer: Migration Guide'
+description: Migrate removed results statuses, cancellation reasons, and stagger validation to current Necromancer contracts.
 ---
 
-# Necromancer 3.0 Migration
+Breaking changes ship in CalVer trains. The sections below describe removed contracts and their replacements.
 
-Necromancer 3 removes implicit animation replacement and package-owned timing defaults. Animation ownership and visual timing now remain explicit at the call site.
+## Animation results report two statuses
+
+`AnimationResult` no longer carries a `'reduced'` status: a reduced animation finishes immediately, so awaiting `result` reports `{ status: 'finished' }`. Ask the mode directly when your own flow needs the answer:
+
+```ts
+// Before
+const result = await handle.result;
+if (result.status === 'reduced') applyStaticLayout();
+
+// After
+if (shouldReduceMotion(options.motion ?? 'system')) applyStaticLayout();
+```
+
+## Owner cancellations report their own reason
+
+`dispose()` without a reason now resolves `{ status: 'cancelled' }` with no `reason`, instead of leaking the native cancel's `DOMException`. Only a cancellation from outside Necromancer (for example `handle.animation.cancel()`) surfaces a native reason.
+
+```ts
+// Before: a bare dispose() resolved with the WAAPI DOMException
+// After
+handle.dispose();
+await handle.result; // { status: 'cancelled' }
+```
+
+## Stagger configuration fails before any animation starts
+
+`animateEach()` with a non-zero `stagger` and a non-numeric `delay` now throws `NecromancerConfigError` before starting its first animation, instead of after partially starting the group. No code change is required; the same error simply arrives earlier and with no side effects.
 
 ## Dispose the previous animation explicitly
 

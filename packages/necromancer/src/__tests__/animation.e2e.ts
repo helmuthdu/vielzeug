@@ -97,7 +97,7 @@ test('reduces motion while preserving its requested keyframes', async ({ page })
     };
   });
 
-  expect(outcome).toEqual({ finalOpacity: '1', firstOpacity: '0', status: 'reduced' });
+  expect(outcome).toEqual({ finalOpacity: '1', firstOpacity: '0', status: 'finished' });
 });
 
 test('adds FLIP translation without replacing authored transforms or translate', async ({ page }) => {

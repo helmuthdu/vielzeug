@@ -18,12 +18,12 @@ function attachAbortSignalListener(signal: AbortSignal, dispose: (reason?: unkno
   return () => signal.removeEventListener('abort', abort);
 }
 
-function createResultPromise(animation: Animation, onSettled: () => void, reduced: boolean): Promise<AnimationResult> {
+function createResultPromise(animation: Animation, onSettled: () => void): Promise<AnimationResult> {
   return animation.finished.then(
     () => {
       onSettled();
 
-      return { status: reduced ? 'reduced' : 'finished' };
+      return { status: 'finished' };
     },
     (reason: unknown) => {
       onSettled();
@@ -34,22 +34,20 @@ function createResultPromise(animation: Animation, onSettled: () => void, reduce
 }
 
 /** Wraps a native Animation with Necromancer's lifecycle contract. */
-export function createAnimationHandle(animation: Animation, signal?: AbortSignal, reduced = false): AnimationHandle {
+export function createAnimationHandle(animation: Animation, signal?: AbortSignal): AnimationHandle {
   let disposed = false;
   let disposeReason: unknown;
-  let hasDisposeReason = false;
   let removeAbortListener: (() => void) | undefined;
 
-  const result: Promise<AnimationResult> = createResultPromise(
-    animation,
-    () => {
-      removeAbortListener?.();
-      removeAbortListener = undefined;
-    },
-    reduced,
-  ).then((outcome): AnimationResult => {
-    if (disposed && hasDisposeReason && outcome.status === 'cancelled') {
-      return { reason: disposeReason, status: 'cancelled' };
+  const result: Promise<AnimationResult> = createResultPromise(animation, () => {
+    removeAbortListener?.();
+    removeAbortListener = undefined;
+  }).then((outcome): AnimationResult => {
+    // An owner-driven cancellation reports the owner's dispose reason (none for a
+    // bare dispose()), never the native cancel's DOMException: only an external
+    // cancellation of the native animation surfaces that reason here.
+    if (disposed && outcome.status === 'cancelled') {
+      return disposeReason === undefined ? { status: 'cancelled' } : { reason: disposeReason, status: 'cancelled' };
     }
 
     return outcome;
@@ -60,7 +58,6 @@ export function createAnimationHandle(animation: Animation, signal?: AbortSignal
 
     disposed = true;
     disposeReason = reason;
-    hasDisposeReason = reason !== undefined;
     removeAbortListener?.();
     removeAbortListener = undefined;
     animation.cancel();

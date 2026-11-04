@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "BREAKING: redesign the Codex catalog and server APIs; see docs/codex/migration.md.",
+      "packageName": "@vielzeug/codex",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}
