@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "6587863cac662059f15580a5880d710737beafce"
+          }
+        ]
+      },
+      "date": "Wed, 04 Nov 2026 16:49:50 GMT",
+      "tag": "@vielzeug/necromancer_v26.11.4",
+      "version": "26.11.4"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",

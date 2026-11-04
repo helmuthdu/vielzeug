@@ -5,6 +5,27 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "Add on-demand UI blueprint contract: strict document validator, thirteen-component registry with host-addressable node ids, JSON Schema, and deterministic renderer returning an id-keyed node map (@vielzeug/refine/blueprint and /blueprint/render)",
+            "commit": "6587863cac662059f15580a5880d710737beafce"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Fix combined focus/click tooltip and popover activation, react to trigger changes, and keep mobile dock controls within their content-sized flanks.",
+            "commit": "6587863cac662059f15580a5880d710737beafce"
+          }
+        ]
+      },
+      "date": "Wed, 04 Nov 2026 16:49:50 GMT",
+      "tag": "@vielzeug/refine_v26.11.4",
+      "version": "26.11.4"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "MotionMode is re-exported from @vielzeug/necromancer instead of mirrored.",
             "commit": "3cd81cce5c39ecbfd18dda85d7d27848d5e60ed5"
           },

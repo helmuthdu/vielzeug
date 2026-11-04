@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/tempo",
-  "version": "26.11.3",
+  "version": "26.11.4",
   "description": "Temporal-powered date utilities",
   "repository": {
     "type": "git",

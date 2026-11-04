@@ -1,7 +1,17 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 04 Nov 2026 05:52:43 GMT and should not be manually modified.
+This log was last generated on Wed, 04 Nov 2026 16:49:50 GMT and should not be manually modified.
 
+## 26.11.4
+Wed, 04 Nov 2026 16:49:50 GMT
+
+### Minor changes
+
+- Add on-demand UI blueprint contract: strict document validator, thirteen-component registry with host-addressable node ids, JSON Schema, and deterministic renderer returning an id-keyed node map (@vielzeug/refine/blueprint and /blueprint/render)
+
+### Patches
+
+- Fix combined focus/click tooltip and popover activation, react to trigger changes, and keep mobile dock controls within their content-sized flanks.
 ## 26.11.3
 Wed, 04 Nov 2026 05:52:43 GMT
 
