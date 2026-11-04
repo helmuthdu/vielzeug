@@ -140,6 +140,8 @@ const staticExportKeys = new Set([
   './frameworks/react',
   './frameworks/vue',
   './theme',
+  './blueprint',
+  './blueprint/render',
   './icons',
   './icons/lucide',
   './icons/lucide/all',
@@ -193,6 +195,18 @@ const staticJsExports = {
     import: './dist/theme.js',
     require: './dist/theme.cjs',
     types: './dist/theme.d.ts',
+  },
+  // Model-authored UI: the pure document contract, and the renderer that consumes it. Neither
+  // registers a component, so neither is a `define(...)` entry the discovery walk would find.
+  './blueprint': {
+    import: './dist/blueprint/blueprint.js',
+    require: './dist/blueprint/blueprint.cjs',
+    types: './dist/blueprint/blueprint.d.ts',
+  },
+  './blueprint/render': {
+    import: './dist/blueprint/render.js',
+    require: './dist/blueprint/render.cjs',
+    types: './dist/blueprint/render.d.ts',
   },
   './icons': {
     import: './dist/icons/index.js',
@@ -273,6 +287,8 @@ export function getRefineLibraryEntries(rootDir) {
   return Object.fromEntries([
     ['index', resolve(rootDir, './src/index')],
     ['theme', resolve(rootDir, './src/theme')],
+    ['blueprint/blueprint', resolve(rootDir, './src/blueprint/blueprint')],
+    ['blueprint/render', resolve(rootDir, './src/blueprint/render')],
     ['icons/index', resolve(rootDir, './src/icons/index')],
     ['icons/lucide', resolve(rootDir, './src/icons/lucide')],
     ['icons/lucide/all', resolve(rootDir, './src/icons/lucide/all')],

@@ -17,6 +17,8 @@ description: Published component, stylesheet, framework type, and error entry po
 | `@vielzeug/refine/frameworks/react` | Register typed React JSX elements | Types only | Does not provide runtime wrappers |
 | `@vielzeug/refine/frameworks/vue` | Register typed Vue global components | Types only | Does not install a Vue plugin |
 | `@vielzeug/refine/theme` | `createThemeController()`: light/dark/system document theme | Sync | Does not persist the preference or set an accent color |
+| `@vielzeug/refine/blueprint` | `parseUiBlueprint()`: validate a model-authored UI document against a fixed registry | Sync | Pure contract only: it registers no components and renders nothing |
+| `@vielzeug/refine/blueprint/render` | `renderUiBlueprint()`: render a validated document with registered components | Sync | Registers its thirteen components on import; rejects before touching the container |
 | `eventFieldValue()` / `eventFieldChecked()` | Read a form control's value/checked from `event.currentTarget` | Sync | Exported from the package root; guards non-field targets |
 | `animateReflow()` | Token-driven FLIP reflow for keyed lists | Async (next frame) | Exported from the package root; elements need stable keys or it correctly does nothing |
 | `setMotionMode()` / `getMotionMode()` | Read/write the `data-motion` attribute on `<html>` | Sync | Exported from the package root; an unknown mode throws `RangeError` |
@@ -29,6 +31,8 @@ description: Published component, stylesheet, framework type, and error entry po
 | `@vielzeug/refine` | Export `registerIcons`, icon definition types, `RefineError`, `animateReflow`, the motion-mode functions, and the field readers without registering components |
 | `@vielzeug/refine/<component>` | Register one component and export its tag constant, props, events, and related types |
 | `@vielzeug/refine/theme` | `createThemeController()` and its theme types |
+| `@vielzeug/refine/blueprint` | On-demand UI document contract: `parseUiBlueprint()`, the node types, bounds, `UI_BLUEPRINT_REGISTRY`, and `UI_BLUEPRINT_JSON_SCHEMA` |
+| `@vielzeug/refine/blueprint/render` | `renderUiBlueprint()` and the thirteen component tags it registers |
 | `@vielzeug/refine/tokens.css` | Required global design contract |
 | `@vielzeug/refine/fouc.css` | Optional pre-upgrade visibility rule |
 | `@vielzeug/refine/styles/*` | Focused theme, animation, layer, and preflight stylesheets |
@@ -200,6 +204,68 @@ setMotionMode('reduced'); // returns the applied mode
 
 Read/write the `data-motion` attribute on `<html>` (`'full' | 'reduced' | 'system'`; `'system'` removes the attribute). An unknown mode throws `RangeError`. The attribute drives the token layer: see [Animation & Motion → Motion Mode](./animation#motion-mode).
 
+## On-Demand UI Documents
+
+`@vielzeug/refine/blueprint` is the trusted boundary for UI that a model writes. A harness asks a model to describe a small UI in JSON, and this contract decides whether that JSON may be rendered. It is data only: no code, no HTML, no callbacks, no styles, no URLs. See [On-Demand UI Documents](./on-demand-ui) for the full guide.
+
+```ts
+import { parseUiBlueprint, safeParseUiBlueprint } from '@vielzeug/refine/blueprint';
+
+const result = safeParseUiBlueprint(JSON.parse(modelOutput)); // model output stays `unknown`
+if (!result.success) showError(result.issues); // safe to display: field paths, no secrets
+else renderValidated(result.document);
+```
+
+| Export | Purpose |
+| --- | --- |
+| `UI_BLUEPRINT_VERSION` | The only document version accepted (`1`) |
+| `parseUiBlueprint(value)` | Validate `unknown`. Returns the document unchanged, or throws `UiBlueprintError`. Nothing is repaired or partially accepted |
+| `safeParseUiBlueprint(value)` | Non-throwing form: `{ success: true, document }` or `{ success: false, issues }` |
+| `UiBlueprintError` | `RefineError` subclass carrying `issues: readonly string[]`, each a field path such as `root.children[0].size` |
+| `UI_BLUEPRINT_COMPONENTS` | The thirteen accepted component names: `text`, `box`, `card`, `button`, `badge`, `separator`, `slider`, `switch`, `checkbox`, `number-input`, `alert`, `progress`, `icon` |
+| `UI_BLUEPRINT_REGISTRY` | The same registry as data: element tag, child policy, attribute names, slot-text fields, and accepted values per component |
+| `UI_BLUEPRINT_JSON_SCHEMA` | JSON Schema (draft 2020-12) for the contract, for harnesses with structured output |
+| `BlueprintDocument`, `BlueprintNode`, and the node interfaces | TypeScript types for the document shape. Every node accepts an optional bounded `id` through `BlueprintNodeMeta` |
+| `MAX_BLUEPRINT_NODES`, `MAX_BLUEPRINT_DEPTH`, `MAX_BLUEPRINT_CHILDREN`, `MAX_BLUEPRINT_TEXT_LENGTH`, `MAX_BLUEPRINT_LABEL_LENGTH`, `MAX_BLUEPRINT_NUMBER`, `MAX_BLUEPRINT_ID_LENGTH` | Document bounds, not user-configurable |
+
+`@vielzeug/refine/blueprint` imports nothing but `RefineError`: it is pure, DOM-free, and safe to run in a model harness, a worker, or CI. It registers no components.
+
+`UI_BLUEPRINT_JSON_SCHEMA` constrains generation but cannot express the tree-wide node and depth bounds, so runtime validation stays mandatory. Treat the schema as a generation aid, never as the trust boundary.
+
+### `renderUiBlueprint(container, value, options?)`
+
+```ts
+import { renderUiBlueprint } from '@vielzeug/refine/blueprint/render';
+
+try {
+  const { element, nodes } = renderUiBlueprint(host, JSON.parse(modelOutput), { label: 'Generated summary' });
+  nodes.get('rate')?.addEventListener('change', () => recalculate());
+} catch (error) {
+  // The container is untouched: the previous preview is still on screen.
+}
+```
+
+Validate `value`, then render it into `container` using only registry components. Importing the entry registers those thirteen components, so no separate component imports are needed.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `container` | `HTMLElement` | Element that receives the rendered tree |
+| `value` | `unknown` | Untrusted model output. Validated before anything is rendered |
+| `options.label` | `string?` | Accessible name for a `role="group"` wrapper. Host-owned: a document cannot set it |
+| `options.replace` | `boolean?` | Clear the container first. Default `true`; `false` appends |
+
+**Returns** a `UiBlueprintRenderResult`: `{ element, nodes }`, the rendered root and a `ReadonlyMap<string, HTMLElement>` keyed by each node's optional `id` so the host can wire behaviour to addressable controls. `id` is host-facing metadata: the renderer never writes it to the DOM. Validation runs first, so a rejected document throws `UiBlueprintError` before the container is read or written: an invalid response can never partially render or erase a valid preview. Text becomes a text node, never markup.
+
+### `createUiBlueprintElement(node, owner?, nodes?)`
+
+```ts
+import { createUiBlueprintElement } from '@vielzeug/refine/blueprint/render';
+
+const element = createUiBlueprintElement(document.root, 'root', nodeMap);
+```
+
+Build one element for an already-validated node. Pass a `Map` as `nodes` to collect every id-tagged element it creates, including nested ones; `owner` labels the node's position in rejection messages. This is the component registry: adding a component means adding a rule in the contract and a case here, and nothing else. It throws `TypeError` for an unregistered node type, so a hand-built node cannot bypass validation either. Embedders that place nodes themselves use this; `renderUiBlueprint()` is the normal entry point.
+
 ## Types
 
 Component props follow the `Ore<Component>Props` naming pattern. Event maps follow `Ore<Component>Events`. Import both from the component subpath that owns them.
@@ -219,3 +285,13 @@ class RefineError extends Error {
 ```
 
 Base class for public Refine errors. It preserves `cause` through `ErrorOptions`.
+
+### `UiBlueprintError`
+
+```ts
+class UiBlueprintError extends RefineError {
+  readonly issues: readonly string[];
+}
+```
+
+Thrown by `parseUiBlueprint()` and `renderUiBlueprint()` for a rejected on-demand UI document. Every rejection is collected first, so `issues` lists all of them at once, each as a field path plus a plain reason (`root.children[0].size: expected one of sm, md, lg, received string.`). The messages name fields and allowed values, report a wrong-typed value only as its *type*, and echo an accepted-type value only as a truncated snippet, so they are safe to display to a user. See [On-Demand UI Documents](./on-demand-ui).

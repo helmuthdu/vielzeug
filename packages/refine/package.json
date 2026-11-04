@@ -111,6 +111,16 @@
     "./frameworks/vue": {
       "types": "./dist/frameworks/vue.d.ts"
     },
+    "./blueprint": {
+      "import": "./dist/blueprint/blueprint.js",
+      "require": "./dist/blueprint/blueprint.cjs",
+      "types": "./dist/blueprint/blueprint.d.ts"
+    },
+    "./blueprint/render": {
+      "import": "./dist/blueprint/render.js",
+      "require": "./dist/blueprint/render.cjs",
+      "types": "./dist/blueprint/render.d.ts"
+    },
     "./accordion": {
       "import": "./dist/accordion.js",
       "require": "./dist/accordion.cjs",
@@ -516,6 +526,12 @@
     "*": {
       "theme": [
         "dist/theme.d.ts"
+      ],
+      "blueprint": [
+        "dist/blueprint/blueprint.d.ts"
+      ],
+      "blueprint/render": [
+        "dist/blueprint/render.d.ts"
       ],
       "icons": [
         "dist/icons/index.d.ts"

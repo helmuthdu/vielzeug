@@ -1621,6 +1621,7 @@ export default defineConfig({
         {
           items: [
             { link: '/refine/api', text: 'API Reference' },
+            { link: '/refine/on-demand-ui', text: 'On-Demand UI' },
             { link: '/refine/accessibility', text: 'Accessibility' },
           ],
           text: 'Reference',

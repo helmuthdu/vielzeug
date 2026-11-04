@@ -260,3 +260,4 @@ Use Necromancer directly when you need animation handles, groups, or explicit ke
 - **Dispose** application-owned Ripple effects and service handles.
 - **Guard** DOM-dependent component registration during SSR.
 - **Working with AI agents?** Install the `vielzeug` skill (`npx -y @vielzeug/codex skills install`) so agents reach for Refine components and tokens instead of custom widgets: see the [Codex usage guide](../codex/usage.md#agent-skill).
+- **Rendering model-authored UI?** Validate it through the [on-demand UI document contract](./on-demand-ui) instead of trusting model output; never build DOM from unvalidated JSON.

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add on-demand UI blueprint contract: strict document validator, thirteen-component registry with host-addressable node ids, JSON Schema, and deterministic renderer returning an id-keyed node map (@vielzeug/refine/blueprint and /blueprint/render)",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}
