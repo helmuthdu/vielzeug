@@ -103,14 +103,26 @@
   border-radius: var(--rounded-full);
   box-shadow: var(--shadow-sm);
   transform: translate(-50%, -50%);
-  transition: var(--_motion-transition, box-shadow var(--transition-fast), left var(--transition-fast));
+  transition: var(
+    --_motion-transition,
+    box-shadow var(--transition-fast),
+    left var(--transition-fast),
+    transform var(--duration-100) var(--ease-spring)
+  );
   will-change: transform;
 }
 
 :host([data-dragging]) .slider-thumb {
   cursor: grabbing;
   box-shadow: var(--_shadow);
-  transition: var(--_motion-transition, box-shadow var(--transition-fast));
+  /* The grab grows the thumb (the conventional drag affordance); the
+     centering translate must ride along, so the scale composes after it. */
+  transform: translate(-50%, -50%) scale(1.15);
+  transition: var(
+    --_motion-transition,
+    box-shadow var(--transition-fast),
+    transform var(--duration-100) var(--ease-spring)
+  );
 }
 
 /* ── Single-value thumb ─────────────────────────────────── */
@@ -145,6 +157,9 @@
 @media (hover: hover) {
   :host(:not([disabled])) .slider-thumb:hover {
     box-shadow: var(--_shadow);
+    /* Hover grows the thumb the same way the grab does, so the affordance
+       invites the drag. The centering translate rides along with the scale. */
+    transform: translate(-50%, -50%) scale(1.15);
   }
 }
 

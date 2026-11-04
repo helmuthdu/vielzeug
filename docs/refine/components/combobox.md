@@ -1,6 +1,6 @@
 # Combobox
 
-An autocomplete input that combines a text field with a filterable dropdown listbox. Users can type to narrow the displayed options or use arrow keys to browse, making it ideal for long option lists.
+An autocomplete input that combines a text field with a filterable dropdown listbox. Users can type to narrow the displayed options or use arrow keys to browse, making it ideal for long option lists. Filtered options glide to their new slots with the same reflow motion as the command palette ([`animateReflow`](/refine/animation#list-reflow-animatereflow)), so a narrowing list keeps its context.
 
 ## Basic Usage
 

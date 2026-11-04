@@ -598,6 +598,37 @@ describe('ore-combobox', () => {
       expect(options[0]?.style.transform).toContain('translateY(0px)');
     });
 
+    it('keys every rendered option so a filtered reflow can track it', async () => {
+      // animateReflow matches rows by option value across a filter pass; a row
+      // without a key makes the whole reflow degrade to an instant swap.
+      fixture = await mount('ore-combobox', {
+        attrs: { label: 'Country' },
+        html: `
+          <ore-combobox-option value="us">United States</ore-combobox-option>
+          <ore-combobox-option value="gb">United Kingdom</ore-combobox-option>
+          <ore-combobox-option value="de">Germany</ore-combobox-option>
+        `,
+      });
+
+      const input = getInput()!;
+
+      fireClick(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const values = () =>
+        fixture!.queryAll<HTMLElement>('.option[data-option-value]').map((option) => option.dataset.optionValue);
+
+      expect(values()).toEqual(['us', 'gb', 'de']);
+
+      input.value += 'ger';
+      fireInput(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(values()).toEqual(['de']);
+    });
+
     it('autocloses after selection in multiple mode if autoclose is set', async () => {
       fixture = await mount('ore-combobox', {
         attrs: { autoclose: '', label: 'Country', multiple: '' },

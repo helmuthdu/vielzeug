@@ -119,7 +119,7 @@ setMotionMode('system'); // back to following the OS preference
 
 The mode drives the token layer: every `--duration-*`/`--transition-*` token zeroes and the `--_motion-*` escape hatches switch to `none`, which reaches every CSS animation and transition in the library — including inside shadow DOMs, because custom properties inherit through the boundary. Programmatic motion built on necromancer honors the same preference through its own `motion` option.
 
-The components that move their content programmatically — DataGrid row sorting, command-palette result filtering, and the toast stack — read their timing from the same tokens at animation time, so a zeroed `--duration-200` skips the reflow entirely rather than playing it instantly. Override `--duration-200` on one component to retune (or `0` to silence) just its reflow.
+The components that move their content programmatically — DataGrid row sorting, command-palette and combobox result filtering, and the toast stack — read their timing from the same tokens at animation time, so a zeroed `--duration-200` skips the reflow entirely rather than playing it instantly. Override `--duration-200` on one component to retune (or `0` to silence) just its reflow.
 
 ## Inside Shadow DOM
 
@@ -132,7 +132,7 @@ The same hatch is available to your own components: it is an ordinary inherited 
 
 ## List Reflow: `animateReflow`
 
-Keyed lists that change content should move their items, not swap them. `animateReflow` is the same FLIP helper the DataGrid, command palette, and toast stack use, exported from the package root:
+Keyed lists that change content should move their items, not swap them. `animateReflow` is the same FLIP helper the DataGrid, command palette, combobox, and toast stack use, exported from the package root:
 
 ```ts
 import { animateReflow } from '@vielzeug/refine';

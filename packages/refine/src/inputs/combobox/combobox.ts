@@ -20,6 +20,7 @@ import {
   lifecycleSignal,
   type OverlayOpenReason,
 } from '../../core';
+import { animateReflow } from '../../reflow';
 import { colorThemeMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
 import { type AddEventListeners, COMPONENT_SIZES, FIELD_VARIANTS, ROUNDED_SIZES, THEME_COLORS } from '../../types';
 import { dispatchNativeFieldEvent } from '../shared/native-field-event';
@@ -300,12 +301,29 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     // Initialize from light DOM immediately; onMounted/observer keep this in sync afterwards.
     readOptions();
 
+    // ── Option reflow motion ──
+    // Filtering rewrites the option list under the caret, and an instant swap
+    // teleports the surviving options out of context. Rows are keyed by their
+    // option `value`, not by node identity: ore reuses row nodes positionally,
+    // so the element carrying a key after a keystroke is often a different node
+    // than the one that carried it before — necromancer's key matching animates
+    // the value from its old slot to its new one either way. While the dropdown
+    // is closed the template renders no rows, so the capture finds nothing and
+    // the mutation runs unanimated: only open-list changes move. No stagger:
+    // rows arrive and leave every keystroke, a cascade would read as lag.
+    const optionMotion = animateReflow(el, abortSignal, {
+      elements: () => [...(listboxEl?.querySelectorAll<HTMLElement>('.option[data-option-value]') ?? [])],
+      getKey: (option) => option.dataset.optionValue || undefined,
+    });
+
     watch(() => {
       const nextOptions = filterOptions(allOptions.value, query.value, isNoFilter());
 
-      filteredOptions.value = isMultiple()
-        ? nextOptions.filter((option) => !selectedValues.value.includes(option.value))
-        : nextOptions;
+      optionMotion.run(() => {
+        filteredOptions.value = isMultiple()
+          ? nextOptions.filter((option) => !selectedValues.value.includes(option.value))
+          : nextOptions;
+      });
     });
 
     // "Create" option shown when creatable + query doesn't match any existing option

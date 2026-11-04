@@ -14,6 +14,14 @@
     display: none;
   }
 
+  /* Status swaps fade the incoming region in: a display flip restarts CSS
+     animations, so the region becoming visible plays the fade once, from its
+     own first frame. A keyframe (not @starting-style + a display transition)
+     is deliberate: an allow-discrete display hold would keep the outgoing
+     region in flow beside the incoming one for the hold duration, and these
+     regions are stacked blocks, not top-layer overlays. The hatch zeroes the
+     duration under Reduced Motion, leaving the region at its resting state.
+     Local keyframe: @keyframes do not cross the shadow boundary. */
   :host([status='idle']) .region-idle,
   :host([status='loading']) .region-loading,
   :host([status='empty']) .region-empty,
@@ -21,6 +29,17 @@
   :host([status='success']) .region-success,
   :host(:not([status])) .region-success {
     display: block;
+    animation: var(--_motion-animation, ore-async-fade-in var(--duration-200) var(--ease-out) both);
+  }
+
+  @keyframes ore-async-fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
 
   /* ── Empty state ─────────────────────────────────────────────────── */

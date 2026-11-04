@@ -19,9 +19,9 @@ The component renders one view per state:
 | State         | Shown when                                            | Renders                                   |
 | ------------- | ----------------------------------------------------- | ----------------------------------------- |
 | `idle`        | Default; camera off                                   | Placeholder panel + "Start camera" button |
-| `starting`    | `getUserMedia` in flight                              | Video preview                             |
+| `starting`    | `getUserMedia` in flight                              | Video preview + spinner ring                |
 | `scanning`    | Camera live, detection running                        | Video + viewfinder                        |
-| `result`      | A code was decoded (`once`, the default)              | Result panel + "Scan again" button        |
+| `result`      | A code was decoded (`once`, the default)              | Result panel (check pops in) + "Scan again" |
 | `denied`      | Camera permission rejected                            | Message + "Retry" button                  |
 | `unsupported` | `BarcodeDetector`/`getUserMedia` missing              | `unsupported` slot (app paste fallback)   |
 | `error`       | Any other detection failure                           | Message + "Retry" button                  |

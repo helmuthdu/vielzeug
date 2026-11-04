@@ -38,7 +38,8 @@
     transition:
       background var(--transition-fast),
       color var(--transition-fast),
-      border-color var(--transition-fast);
+      border-color var(--transition-fast),
+      transform var(--duration-100) var(--ease-spring);
   }
 
   /* Default (ghost-like) behavior unless variant is specified */
@@ -135,6 +136,14 @@
 
   button:hover:not(:disabled, [aria-current='page']) {
     background: var(--color-contrast-100);
+  }
+
+  /* Press feedback borrows ore-button's physical press (button.css): the page
+     button sinks 1px under the finger. Variant-agnostic on purpose: a fill
+     change would need one rule per variant, the sink reads the same on all,
+     and the spring duration is token-driven so Reduced Motion snaps it. */
+  button:active:not(:disabled, [aria-current='page']) {
+    transform: translateY(1px);
   }
 
   button:focus-visible {

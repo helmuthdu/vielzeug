@@ -102,6 +102,7 @@ const STATUS_TEXT: Record<OreQrScannerStatus, string> = {
  * @part stage - Square preview area (video + overlays)
  * @part video - The `<video>` preview element
  * @part viewfinder - Decorative scan frame over the preview
+ * @part spinner - Busy ring shown over the stage while the camera starts
  * @part state - Idle/error/denied/unsupported/result panel
  * @part status - Live status line
  * @part controls - Button row
@@ -257,6 +258,7 @@ define<OreQrScannerProps>(QR_SCANNER_TAG, {
             aria-hidden="true"
             ?hidden=${() => !showVideo()}></video>
           <div class="viewfinder" part="viewfinder" aria-hidden="true" ?hidden=${() => status.value !== 'scanning'}></div>
+          <span class="spinner" part="spinner" aria-hidden="true" ?hidden=${() => status.value !== 'starting'}></span>
           <div class="overlay"><slot name="overlay"></slot></div>
           ${when(
             () => !showVideo(),
@@ -268,7 +270,8 @@ define<OreQrScannerProps>(QR_SCANNER_TAG, {
                   () => html`
                     ${when(
                       () => status.value === 'result',
-                      () => html`<ore-icon name="check" size="24" aria-hidden="true"></ore-icon>`,
+                      () =>
+                        html`<ore-icon class="state-icon-result" name="check" size="24" aria-hidden="true"></ore-icon>`,
                       () => html`<ore-icon name="camera" size="24" aria-hidden="true"></ore-icon>`,
                     )}
                     <span class="state-text">${() => failure.value || STATUS_TEXT[status.value]}</span>

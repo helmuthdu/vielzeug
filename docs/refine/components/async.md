@@ -5,7 +5,7 @@ description: Composable async data state wrapper for loading, empty, error, and 
 
 # Async
 
-A zero-boilerplate wrapper that drives the right UI for every stage of an async data fetch. It manages `aria-busy`, `aria-live`, and `role` automatically so screen readers always stay informed.
+A zero-boilerplate wrapper that drives the right UI for every stage of an async data fetch. It manages `aria-busy`, `aria-live`, and `role` automatically so screen readers always stay informed. State changes fade the incoming region in, and the fade honors Motion Mode.
 
 `status` defaults to `success`, so default slotted content is visible unless you explicitly set another state.
 

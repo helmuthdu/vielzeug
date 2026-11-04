@@ -64,7 +64,7 @@ Use `heading` to add a bold heading above the message body.
 
 ## Dismissible
 
-Add `dismissible` to show a close (×) button. When clicked, the component plays a `ore-alert-exit` animation (opacity fade + height collapse) before applying `[dismissed]` which sets `display: none`. Listen to the `dismiss` event to remove it from the DOM or restore it later. Always supply a `color` to convey semantic intent (`color="error"` for failures, `color="success"` for confirmations, etc.).
+Add `dismissible` to show a close (×) button. When clicked, the component plays a `ore-alert-exit` animation (opacity fade + height collapse) before applying `[dismissed]` which sets `display: none`. An alert entering the page plays the matching enter animation (unfold + fade); both honor Motion Mode. Listen to the `dismiss` event to remove it from the DOM or restore it later. Always supply a `color` to convey semantic intent (`color="error"` for failures, `color="success"` for confirmations, etc.).
 
 <ComponentPreview center vertical>
 

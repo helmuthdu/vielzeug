@@ -142,6 +142,23 @@
 
   .icon-copied {
     color: var(--color-success, oklch(64% 0.17 142deg));
+    /* The swap to the check is the action's confirmation, so it lands with a
+       small pop instead of an instant repaint. One-shot: the icon mounts with
+       the copied state and the animation runs once per copy. Local keyframe:
+       @keyframes do not cross the shadow boundary. */
+    animation: var(--_motion-animation, ore-copy-pop var(--duration-200) var(--ease-overshoot) both);
+  }
+
+  @keyframes ore-copy-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
   .icon-failed {

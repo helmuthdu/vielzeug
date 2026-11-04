@@ -53,6 +53,52 @@
     box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.15);
   }
 
+  /* Camera-starting spinner: the video is already shown while `starting`, so the
+     busy signal rides the stage instead of the state panel. Same ring as the
+     combobox loader; the hatch stops the loop under Reduced Motion (a zeroed
+     duration would otherwise settle the infinite spin on its last keyframe). */
+  .spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--size-8);
+    height: var(--size-8);
+    /* The viewfinder accent, not a fixed white: the ring sits on the light
+       stage background before the camera feed lands, where a light ring would
+       vanish in light mode. */
+    border: var(--border-2) solid var(--_viewfinder-color);
+    border-inline-end-color: transparent;
+    border-radius: var(--rounded-full);
+    transform: translate(-50%, -50%);
+    animation: var(--_motion-animation, ore-qr-spin var(--transition-loader) infinite);
+  }
+
+  /* Local keyframes: @keyframes do not cross the shadow boundary. */
+  @keyframes ore-qr-spin {
+    to {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
+
+  /* Result confirmation pop: the check that replaces the state panel scales in,
+     so the scan landing reads as an event, not a repaint. One-shot: the icon
+     mounts with the `result` status and the animation runs once per scan. */
+  .state-icon-result {
+    animation: var(--_motion-animation, ore-qr-result-pop var(--duration-200) var(--ease-overshoot) both);
+  }
+
+  @keyframes ore-qr-result-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
   .overlay {
     position: absolute;
     inset: 0;

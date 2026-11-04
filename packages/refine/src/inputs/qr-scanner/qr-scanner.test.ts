@@ -4,7 +4,7 @@ import { SigilPermissionError, SigilUnsupportedError } from '@vielzeug/sigil';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { QrScannerFactory } from './qr-scanner';
 
-type FakeBehavior = { startError?: Error; scanValue?: string };
+type FakeBehavior = { scanValue?: string; startError?: Error; stayStarting?: boolean };
 
 function fakeScanner(behavior: FakeBehavior = {}): QrScanner & { start: ReturnType<typeof vi.fn> } {
   const taps = new Set<(event: SigilEvent) => void>();
@@ -29,6 +29,10 @@ function fakeScanner(behavior: FakeBehavior = {}): QrScanner & { start: ReturnTy
     start: vi.fn(async () => {
       if (behavior.startError) throw behavior.startError;
       setStatus('starting');
+      // stayStarting models a camera that is still warming up: the view stays
+      // on the starting state, where the spinner (not the viewfinder) is the
+      // busy signal.
+      if (behavior.stayStarting) return;
       setStatus('scanning');
       if (behavior.scanValue !== undefined) {
         for (const handler of [...handlers]) handler({ value: behavior.scanValue });
@@ -117,6 +121,24 @@ describe('ore-qr-scanner', () => {
       expect(fixture.element.shadowRoot!.querySelector('[part="viewfinder"]')!.hasAttribute('hidden')).toBe(false);
     });
 
+    it('shows the stage spinner while the camera is starting and hides it once scanning', async () => {
+      const mounted = await mountScanner({ stayStarting: true });
+      fixture = mounted.fixture;
+
+      fixture.element.shadowRoot!.querySelector('ore-button')!.click();
+      await tick();
+
+      const spinner = fixture.element.shadowRoot!.querySelector('[part="spinner"]')!;
+
+      expect(spinner.hasAttribute('hidden')).toBe(false);
+
+      // Stop returns the view to idle: the spinner must not linger there.
+      fixture.element.shadowRoot!.querySelector('ore-button')!.click();
+      await tick();
+
+      expect(spinner.hasAttribute('hidden')).toBe(true);
+    });
+
     it('stops scanning via the Stop control', async () => {
       const mounted = await mountScanner();
       fixture = mounted.fixture;
@@ -149,6 +171,8 @@ describe('ore-qr-scanner', () => {
       expect(scans).toEqual(['mesh://offer/abc']);
       const state = fixture.element.shadowRoot!.querySelector('[part="state"]');
       expect(state?.getAttribute('data-state')).toBe('result');
+      // The result check carries the confirmation pop; the camera icon must not.
+      expect(state?.querySelector('.state-icon-result')).toBeTruthy();
       expect(fixture.element.shadowRoot!.querySelector('ore-button')!.textContent!.trim()).toBe('Scan again');
     });
   });
