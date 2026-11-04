@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/necromancer
 
-This log was last generated on Tue, 03 Nov 2026 18:42:43 GMT and should not be manually modified.
+This log was last generated on Wed, 04 Nov 2026 05:52:43 GMT and should not be manually modified.
 
+## 26.11.3
+Wed, 04 Nov 2026 05:52:43 GMT
+
+### Minor changes
+
+- Simplify AnimationResult to finished/cancelled, report owner dispose reasons, and fail stagger config before starting animations.
 ## 26.11.2
 Tue, 03 Nov 2026 18:42:43 GMT
 

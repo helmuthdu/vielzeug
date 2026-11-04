@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Simplify AnimationResult to finished/cancelled, report owner dispose reasons, and fail stagger config before starting animations.",
+            "commit": "3cd81cce5c39ecbfd18dda85d7d27848d5e60ed5"
+          }
+        ]
+      },
+      "date": "Wed, 04 Nov 2026 05:52:43 GMT",
+      "tag": "@vielzeug/necromancer_v26.11.3",
+      "version": "26.11.3"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

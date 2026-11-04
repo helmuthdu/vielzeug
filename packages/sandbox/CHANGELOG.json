@@ -6,6 +6,20 @@
           {
             "author": "release-train",
             "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "3cd81cce5c39ecbfd18dda85d7d27848d5e60ed5"
+          }
+        ]
+      },
+      "date": "Wed, 04 Nov 2026 05:52:43 GMT",
+      "tag": "@vielzeug/sandbox_v26.11.3",
+      "version": "26.11.3"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "17b3c4973b3ef699ffc073cfaba8160121d1f848"
           }
         ]

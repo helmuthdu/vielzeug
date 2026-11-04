@@ -1,7 +1,18 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Tue, 03 Nov 2026 18:42:43 GMT and should not be manually modified.
+This log was last generated on Wed, 04 Nov 2026 05:52:43 GMT and should not be manually modified.
 
+## 26.11.3
+Wed, 04 Nov 2026 05:52:43 GMT
+
+### Minor changes
+
+- MotionMode is re-exported from @vielzeug/necromancer instead of mirrored.
+- Add micro-interaction motion: combobox option reflow (animateReflow), alert enter animation, pagination press state, qr-scanner starting spinner and result pop, copy-command confirmation pop, async state-swap fade, slider thumb growth on hover/drag.
+
+### Patches
+
+- Keep sticky docks and detached pills clear of the viewport safe area.
 ## 26.11.2
 Tue, 03 Nov 2026 18:42:43 GMT
 

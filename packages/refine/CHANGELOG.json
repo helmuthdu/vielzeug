@@ -5,6 +5,32 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "MotionMode is re-exported from @vielzeug/necromancer instead of mirrored.",
+            "commit": "3cd81cce5c39ecbfd18dda85d7d27848d5e60ed5"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add micro-interaction motion: combobox option reflow (animateReflow), alert enter animation, pagination press state, qr-scanner starting spinner and result pop, copy-command confirmation pop, async state-swap fade, slider thumb growth on hover/drag.",
+            "commit": "3cd81cce5c39ecbfd18dda85d7d27848d5e60ed5"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Keep sticky docks and detached pills clear of the viewport safe area.",
+            "commit": "3cd81cce5c39ecbfd18dda85d7d27848d5e60ed5"
+          }
+        ]
+      },
+      "date": "Wed, 04 Nov 2026 05:52:43 GMT",
+      "tag": "@vielzeug/refine_v26.11.3",
+      "version": "26.11.3"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Replace the dock compact boolean with mobile-layout auto/full/compact; default mobile sizing now hugs and aligns single occupied zones while preserving full-width multi-zone and attached rows.",
             "commit": "17b3c4973b3ef699ffc073cfaba8160121d1f848"
           },
