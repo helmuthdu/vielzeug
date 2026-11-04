@@ -637,6 +637,46 @@ test.describe('Adaptive mobile layout', () => {
   });
 
   for (const side of ['top', 'bottom']) {
+    for (const attached of [false, true]) {
+      test(`centers ${attached ? 'attached tools' : 'a commit'} inside a pinned ${side} pill above the safe area`, async ({
+        page,
+        refinePage,
+      }) => {
+        await page.setViewportSize({ height: 700, width: 375 });
+        await fullBleed(page);
+        const session = await page.context().newCDPSession(page);
+
+        await session.send('Emulation.setSafeAreaInsetsOverride', {
+          insets: { bottom: 34, left: 0, right: 0, top: 44 },
+        });
+        const dock = `<ore-dock id="dock" side="${side}" ${attached ? 'attached' : ''}>
+          <ore-button ${attached ? '' : 'slot="commit"'}>Done</ore-button>
+        </ore-dock>`;
+
+        await refinePage.mountComponent(
+          side === 'bottom' ? scrolling(dock) : `<div>${dock}<div style="height:2000px"></div></div>`,
+        );
+        await scrollToPin(page, 'dock', 400);
+        const { bar } = await geometry(page, 'dock');
+        const button = await page.locator('#dock ore-button').boundingBox();
+
+        expect(button).not.toBeNull();
+        expect(button!.y - bar.top).toBeCloseTo(bar.bottom - button!.y - button!.height, 0);
+        if (side === 'top') expect(bar.top).toBeCloseTo(44, 0);
+        else expect(bar.bottom).toBeCloseTo(666, 0);
+        await expect(page.locator('#dock').locator('[part="bar"]')).toHaveCSS('padding-top', '8px');
+        await expect(page.locator('#dock').locator('[part="bar"]')).toHaveCSS('padding-bottom', '8px');
+
+        await page.evaluate((edge) => window.scrollTo(0, edge === 'top' ? 0 : document.body.scrollHeight), side);
+        await expect(page.locator('#dock')).not.toHaveAttribute('data-pinned');
+        await expect(page.locator('#dock').locator('[part="bar"]')).toHaveCSS(
+          side === 'top' ? 'padding-top' : 'padding-bottom',
+          side === 'top' ? '44px' : '34px',
+        );
+        await session.detach();
+      });
+    }
+
     test(`keeps a trailing adaptive bar aligned while pinning and releasing at the ${side}`, async ({
       page,
       refinePage,

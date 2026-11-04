@@ -217,11 +217,11 @@
     /* A phone bar lifts off the viewport's foot even before it pins, so the row never sits under the
        home indicator. */
     :host([sticky][side='bottom']) {
-      bottom: var(--_dock-offset);
+      bottom: max(var(--_dock-offset), env(safe-area-inset-bottom));
     }
 
     :host([sticky][side='top']) {
-      top: var(--_dock-offset);
+      top: max(var(--_dock-offset), env(safe-area-inset-top));
       bottom: auto;
     }
 
@@ -229,6 +229,8 @@
        like the iOS tab bar, carrying its own border. Unpinned it is resting in the flow, so it stays
        a full-width strip unless the mobile layout hugs its content. */
     :host([data-pinned]) .dock {
+      /* Detached pills clear the safe area through their offset, not asymmetric inner padding. */
+      padding-block: var(--_dock-padding);
       padding-inline: var(--_dock-padding);
       border: var(--border) solid var(--_dock-border-color);
       border-radius: var(--_dock-radius);

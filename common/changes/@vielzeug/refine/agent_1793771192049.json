@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Keep sticky docks and detached pills clear of the viewport safe area.",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}
