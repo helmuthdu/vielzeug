@@ -12,6 +12,8 @@ export type DragGestureDetail = Readonly<{
   pointerType: string;
   start: DragPoint;
   target: Element;
+  /** Pointer velocity in px/s on each axis, estimated over the trailing sample window. */
+  velocity: DragPoint;
 }>;
 
 export type DragGestureEndDetail = DragGestureDetail & Readonly<{ reason: GestureEndReason }>;
@@ -40,6 +42,7 @@ function toDragDetail(detail: PointerSessionDetail): DragGestureDetail {
     pointerType: detail.pointerType,
     start,
     target: detail.target,
+    velocity: { x: detail.velocityX, y: detail.velocityY },
   };
 }
 

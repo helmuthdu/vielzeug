@@ -104,4 +104,38 @@ describe('createDragGesture', () => {
     expect(gesture.active).toBe(false);
     expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ reason: 'cancel' }));
   });
+
+  it('reports pointer velocity on each axis in px/s', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const onMove = vi.fn();
+    const { dispatch } = createGesture({ activationDistance: 0, onMove });
+
+    dispatch('pointerdown', { clientX: 0, clientY: 0 });
+    vi.advanceTimersByTime(10);
+    dispatch('pointermove', { clientX: 10, clientY: 0 });
+    vi.advanceTimersByTime(10);
+    dispatch('pointermove', { clientX: 30, clientY: 0 });
+
+    // Trailing window spans the last two samples: 10→30px over 10ms = 2000 px/s on x, none on y.
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ velocity: { x: 2000, y: 0 } }));
+    vi.useRealTimers();
+  });
+
+  it('reads zero velocity when the pointer is paused before release', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const onEnd = vi.fn();
+    const { dispatch } = createGesture({ activationDistance: 0, onEnd });
+
+    dispatch('pointerdown', { clientX: 0, clientY: 0 });
+    vi.advanceTimersByTime(10);
+    dispatch('pointermove', { clientX: 20, clientY: 0 });
+    // Pause past the velocity window so the trailing samples prune to one.
+    vi.advanceTimersByTime(500);
+    dispatch('pointerup', { clientX: 20, clientY: 0 });
+
+    expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ reason: 'release', velocity: { x: 0, y: 0 } }));
+    vi.useRealTimers();
+  });
 });

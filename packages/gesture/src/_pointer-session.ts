@@ -23,6 +23,10 @@ export type PointerSessionDetail = Readonly<{
   startX: number;
   startY: number;
   target: Element;
+  /** Horizontal pointer velocity in px/s, estimated over the trailing sample window. */
+  velocityX: number;
+  /** Vertical pointer velocity in px/s, estimated over the trailing sample window. */
+  velocityY: number;
 }>;
 
 type PointerSessionOptions = Readonly<{
@@ -48,6 +52,15 @@ type PendingPointer = {
 
 type ActivePointer = PendingPointer & { captured: boolean };
 
+type VelocitySample = { t: number; x: number; y: number };
+
+/**
+ * Trailing window over which pointer velocity is estimated. A fling is a burst
+ * of movement, so velocity is the slope across only the most recent samples;
+ * a pause before release prunes the window to a single sample and reads as 0.
+ */
+const VELOCITY_WINDOW_MS = 90;
+
 const read = <T>(value: T | (() => T) | undefined, fallback: T): T =>
   typeof value === 'function' ? (value as () => T)() : (value ?? fallback);
 
@@ -66,23 +79,49 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
   let pending: PendingPointer | null = null;
   let active: ActivePointer | null = null;
   let disposed = false;
+  let samples: VelocitySample[] = [];
 
   const isDisabled = (): boolean => Boolean(read(disabled, false));
 
-  const createDetail = (event: PointerEvent): PointerSessionDetail | null =>
-    active
-      ? {
-          axis: active.axis,
-          currentX: event.clientX,
-          currentY: event.clientY,
-          event,
-          pointerId: active.pointerId,
-          pointerType: active.pointerType,
-          startX: active.startX,
-          startY: active.startY,
-          target,
-        }
-      : null;
+  const recordSample = (x: number, y: number): void => {
+    const t = performance.now();
+    samples.push({ t, x, y });
+    while (samples.length > 2 && t - samples[0].t > VELOCITY_WINDOW_MS) samples.shift();
+  };
+
+  // Velocity is the slope across the trailing window (recordSample keeps every
+  // sample within VELOCITY_WINDOW_MS of the newest). A pause since the last
+  // movement means the pointer is static at release, so the release reads a
+  // clean 0 px/s rather than a stale fling.
+  const readVelocity = (): { velocityX: number; velocityY: number } => {
+    const last = samples[samples.length - 1];
+    if (!last || performance.now() - last.t > VELOCITY_WINDOW_MS) return { velocityX: 0, velocityY: 0 };
+    const first = samples[0];
+    const dt = last.t - first.t;
+    if (dt <= 0) return { velocityX: 0, velocityY: 0 };
+    return {
+      velocityX: ((last.x - first.x) / dt) * 1000,
+      velocityY: ((last.y - first.y) / dt) * 1000,
+    };
+  };
+
+  const createDetail = (event: PointerEvent): PointerSessionDetail | null => {
+    if (!active) return null;
+    const { velocityX, velocityY } = readVelocity();
+    return {
+      axis: active.axis,
+      currentX: event.clientX,
+      currentY: event.clientY,
+      event,
+      pointerId: active.pointerId,
+      pointerType: active.pointerType,
+      startX: active.startX,
+      startY: active.startY,
+      target,
+      velocityX,
+      velocityY,
+    };
+  };
 
   const removeTrackingListeners = (): void => {
     if (!trackingDocument) return;
@@ -109,6 +148,7 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
     const previousActive = active;
     pending = null;
     active = null;
+    samples = [];
     removeTrackingListeners();
     if (previousActive) releaseCapture(previousActive);
   };
@@ -210,6 +250,7 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
     if (!active && !activate(event)) return true;
     if (!active) return true;
     active.event = event;
+    recordSample(event.clientX, event.clientY);
     const detail = createDetail(event);
     if (detail) onMove?.(detail);
     return true;

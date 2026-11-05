@@ -18,6 +18,8 @@ export type PanGestureDetail = Readonly<{
   pointerType: string;
   start: number;
   target: Element;
+  /** Pointer velocity along the pan axis in px/s; signed against the axis direction. */
+  velocity: number;
 }>;
 
 export type PanGestureEndDetail = PanGestureDetail & Readonly<{ reason: PanEndReason }>;
@@ -49,6 +51,7 @@ function toPanDetail(detail: PointerSessionDetail): PanGestureDetail {
     pointerType: detail.pointerType,
     start,
     target: detail.target,
+    velocity: axis === 'x' ? detail.velocityX : detail.velocityY,
   };
 }
 
