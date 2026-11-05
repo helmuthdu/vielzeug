@@ -18,6 +18,7 @@ export type {
   OreMenuItemType,
   OreMenuLayout,
   OreMenuProps,
+  OreMenuTrigger,
 } from './menu/menu';
 export { MENU_ITEM_TAG, MENU_TAG } from './menu/menu';
 export type { OrePopoverEvents, OrePopoverProps } from './popover/popover';

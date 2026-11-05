@@ -6,6 +6,37 @@
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
+const RING = /0px 0px 0px 4px/;
+
+test.describe('Focus', () => {
+  // Keyboard focus lands on the host, so the stylesheet suppresses the
+  // browser's own `outline: auto` ring. That is only safe while the themed
+  // `.box` ring still paints: this is the assertion that keeps a focused
+  // checkbox from ending up with no indicator at all (WCAG 2.4.7).
+  test('replaces the browser outline with the themed ring on keyboard focus', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent('<button id="tab-start">start</button><ore-checkbox>Accept terms</ore-checkbox>');
+    await page.waitForSelector('ore-checkbox');
+
+    await page.locator('#tab-start').focus();
+    await page.keyboard.press('Tab');
+
+    const focused = await page.evaluate(() => {
+      const host = document.activeElement as HTMLElement;
+      const box = host.shadowRoot?.querySelector<HTMLElement>('.box');
+      return {
+        host: host.tagName,
+        outlineStyle: getComputedStyle(host).outlineStyle,
+        ring: box ? getComputedStyle(box).boxShadow : '',
+      };
+    });
+
+    expect(focused.host).toBe('ORE-CHECKBOX');
+    expect(focused.outlineStyle).toBe('none');
+    expect(focused.ring).toMatch(RING);
+  });
+});
+
 test.describe('Accessibility', () => {
   // The slot is the labeling API (`@slot - Checkbox label text`): the host's
   // `aria-labelledby` points at the shadow `.label` span, which projects the

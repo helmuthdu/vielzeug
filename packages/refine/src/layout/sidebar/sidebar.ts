@@ -18,6 +18,7 @@ import { computed, fromSubscribable, type Readable, signal, watch } from '@vielz
 import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
 import { truncationRevealRef } from '../../core';
 import { createBackgroundLock } from '../../overlay/shared/background-lock';
+import { projectFling } from '../../shared/fling';
 import { touchTargetMixin } from '../../styles';
 import { computeSafeRel } from '../../utils';
 import { parseMaxWidthPx, readContainerWidth, resolveContainerElement } from '../shared';
@@ -135,7 +136,7 @@ export type OreSidebarProps = {
  * @attr {boolean} default-collapsed - Initial collapsed state for uncontrolled sidebars
  * @attr {boolean} collapsible - Show the collapse toggle button
  * @attr {boolean} drawer - Drawer-only mode: the sidebar exists solely as the overlay drawer
- * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
+ * @attr {string} backdrop - Backdrop style: none (default, click-to-close only) | 'opaque' | 'blur' | 'transparent'
  * @attr {boolean} close-on-select - Close the drawer after item activation (default: true)
  * @attr {string} variant - Visual variant: 'floating' | 'inset'
  * @attr {string} label - Accessible aria-label for the nav landmark
@@ -150,12 +151,12 @@ export type OreSidebarProps = {
  * @cssprop --sidebar-width - Expanded sidebar width (default: 16rem)
  * @cssprop --sidebar-collapsed-width - Collapsed sidebar width (default: 3.5rem)
  * @cssprop --sidebar-drawer-width - Drawer panel width (default: min(--sidebar-width, 85vw))
- * @cssprop --sidebar-drawer-backdrop-bg - Backdrop color behind the open drawer (default: var(--overlay-veil))
+ * @cssprop --sidebar-drawer-backdrop-bg - Backdrop color behind the open drawer (default: transparent; the dimming modes use var(--overlay-veil))
  * @cssprop --sidebar-drawer-shadow - Shadow on the open drawer panel (default: shadow-xl)
  * @cssprop --sidebar-bg - Sidebar background color
  * @cssprop --sidebar-border-color - Border color
  *
- * @part drawer-backdrop - Backdrop veil behind the open drawer (click closes it).
+ * @part drawer-backdrop - Backdrop behind the open drawer (click closes it; dimming is opt-in via `backdrop`).
  * @part drawer-close-btn - Close button shown in the header while the drawer is open.
  * @part swipe-handle - Grabber nub on the drawer edge that drag-closes it (touch/mouse pan).
  * @part nav - Navigation container.
@@ -435,12 +436,14 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         swipe = createPanGesture(swipeHandle, {
           axis: 'x',
           disabled: () => !isDrawerOpen.value,
-          onEnd: ({ distance, reason }) => {
+          onEnd: ({ distance, velocity, reason }) => {
             const panel = el.shadowRoot?.querySelector<HTMLElement>('nav');
 
             if (!panel) return;
 
-            if (reason === 'release' && closingDistance(distance) >= snapThreshold(panel)) {
+            // Velocity-aware commit: a flick counts like a long drag, a
+            // counter-flick cancels (see shared/fling).
+            if (reason === 'release' && closingDistance(projectFling(distance, velocity)) >= snapThreshold(panel)) {
               // Continue from the dragged position instead of snapping back to
               // rest: park the panel at its off-screen position (no transition),
               // close, then hand back to CSS once the closed attribute has

@@ -1,9 +1,74 @@
 ---
 title: Migration
-description: Migrate command palette categories and the item type, the mobile input font-size floor, the standardized overlay backdrop, toast statuses, the human-interface-guideline adoption, surface variants, tabs density, the tabs active pill, the sidebar drawer overlay, DataGrid sources, and framework type declarations to Refine.
+description: Migrate the async state container to ore-state, command palette categories and the item type, the mobile input font-size floor, the standardized overlay backdrop, the sidebar drawer backdrop default, toast statuses, the human-interface-guideline adoption, surface variants, tabs density, the tabs active pill, the sidebar drawer overlay, DataGrid sources, and framework type declarations to Refine.
 ---
 
 # Migration
+
+## Sidebar drawer backdrop no longer dims by default
+
+`ore-sidebar`'s overlay drawer keeps its backdrop as the tap-outside dismiss target, but the backdrop is now
+transparent unless you ask for a dim. A navigation drawer slides in from the edge the user just tapped and is
+meant to be read against the page it overlays; dimming that page read as a modal takeover, and the panel's own
+elevation already carries the separation. `ore-drawer` and `ore-dialog` keep dimming by default: they replace the
+page rather than slide in beside it.
+
+Dismissal is unchanged — backdrop tap, the header `×`, swipe-to-dismiss, `Escape`, the `inert` background, and the
+focus trap all behave exactly as before.
+
+```html
+<!-- Before: dimmed by default -->
+<ore-sidebar bottom-nav-at="(max-width: 640px)">…</ore-sidebar>
+
+<!-- After: same markup, no dim. Opt back in with either mode: -->
+<ore-sidebar bottom-nav-at="(max-width: 640px)" backdrop="opaque">…</ore-sidebar>
+<ore-sidebar bottom-nav-at="(max-width: 640px)" backdrop="blur">…</ore-sidebar>
+```
+
+`--sidebar-drawer-backdrop-bg` still overrides the color, and now resolves to `transparent` when unset. Set it
+directly to restore a dim without the attribute.
+
+## `ore-async` becomes `ore-state`
+
+The async state container is renamed `ore-state`. The old name described one of its five states rather than what it is: one element that owns the whole idle/loading/empty/error/success lifecycle for a data view. The rename touches the tag, the import subpath, the exported type, and the CSS custom properties. Two placeholder slots and an accessibility restructure come with it.
+
+```html
+<!-- Before -->
+<ore-async status="error" retryable error-label="Failed to load"></ore-async>
+
+<!-- After -->
+<ore-state status="error" retryable error-label="Failed to load"></ore-state>
+```
+
+```ts
+import '@vielzeug/refine/async'; // Before
+import '@vielzeug/refine/state'; // After
+
+import type { AsyncStatus } from '@vielzeug/refine/async'; // Before
+import type { StateStatus } from '@vielzeug/refine/state'; // After
+```
+
+| Old | New |
+| --- | --- |
+| `<ore-async>` | `<ore-state>` |
+| `@vielzeug/refine/async` | `@vielzeug/refine/state` |
+| `AsyncStatus` | `StateStatus` |
+| `--async-color` | `--state-color` |
+| `--async-gap` | `--state-gap` |
+| `--async-icon-size` | `--state-icon-size` |
+
+The `status` values, the `empty-label`/`empty-description`/`error-label`/`error-description`/`retryable` props, and the `retry` event are unchanged.
+
+Two slots are added to customize the built-in empty/error placeholder without replacing it whole: `illustration` swaps the artwork, and `actions` supplies recovery controls below the text.
+
+```html
+<ore-state status="empty" empty-label="Your inbox is empty">
+  <ore-icon slot="illustration" name="mail-open" aria-hidden="true"></ore-icon>
+  <ore-button slot="actions" variant="outline">Compose</ore-button>
+</ore-state>
+```
+
+Accessibility moved off the host onto the regions that carry a role. The host now exposes only `aria-busy` (`"true"` while loading); the loading and empty regions are `role="status"` and the error region is `role="alert"`, and the built-in retry button sits outside those live regions. Previously the host carried `aria-live`, which wrapped the default slot and announced every change inside your success content. If you styled or queried the old placeholder structure, target `.placeholder .message` (the announced text) and `.placeholder .actions` (the sibling action row).
 
 ## Dock mobile sizing follows occupied slots
 

@@ -56,6 +56,20 @@ Different input types for various use cases.
 
 </ComponentPreview>
 
+## Password Visibility
+
+A `type="password"` input shows a reveal toggle inside the field. Pressing it swaps the field to plain text so the user can check what they typed, then back to dots; it announces itself to screen readers with a `Show password` / `Hide password` label and an `aria-pressed` state, and returns focus to the field after each toggle. No extra attribute is needed: the toggle appears automatically for password fields and is hidden (and removed from the tab order) otherwise.
+
+<ComponentPreview center>
+
+```html
+<ore-input type="password" label="Password" value="s3cret"></ore-input>
+```
+
+</ComponentPreview>
+
+Style the toggle through the `pwd-toggle` [CSS part](#css-parts) if the default icon or spacing needs adjusting.
+
 ## Sizes
 
 Three sizes for different contexts.
@@ -263,6 +277,7 @@ For first-run forms, combine a visible label, helper text, and progressive valid
 | `helper`          | `string`                                                                    | `''`        | Helper text below input  |
 | `disabled`        | `boolean`                                                                   | `false`     | Disable the input        |
 | `readonly`        | `boolean`                                                                   | `false`     | Make the input read-only |
+| `clearable`       | `boolean`                                                                   | `false`     | Show a clear button when the field has a value |
 | `required`        | `boolean`                                                                   | `false`     | Participate in native form validation while blank (read-only inputs are exempt) |
 | `fullwidth`       | `boolean`                                                                   | `false`     | Expand to full width     |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`      | Input size               |
@@ -283,6 +298,21 @@ For first-run forms, combine a visible label, helper text, and progressive valid
 | -------- | ----------------------------------------- | ----------------------------------------------- |
 | `input`  | `{ value: string, originalEvent: Event }` | Emitted when the value changes (user input)     |
 | `change` | `{ value: string, originalEvent: Event }` | Emitted when value is committed (blur or Enter) |
+
+### CSS Parts
+
+| Part          | Element                                                            |
+| ------------- | ------------------------------------------------------------------ |
+| `wrapper`     | The outer wrapper element                                          |
+| `label`       | The label element (inset or outside)                               |
+| `field`       | The field container element                                        |
+| `input-row`   | The input row container element                                    |
+| `input`       | The inner `<input>` element                                        |
+| `status-icon` | The inline error/success icon shown inside the field               |
+| `spinner`     | The inline loading spinner shown while `loading`                   |
+| `pwd-toggle`  | The password visibility toggle (only for `type="password"`)        |
+| `clear`       | The clear button (only when `clearable` and the field has a value) |
+| `helper`      | The helper text element                                            |
 
 ### CSS Custom Properties
 

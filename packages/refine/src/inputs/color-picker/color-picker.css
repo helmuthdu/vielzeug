@@ -1,0 +1,135 @@
+@layer refine.base {
+  :host {
+    --_swatch-size: var(--color-picker-swatch-size, var(--_size));
+    --_swatch-radius: var(--color-picker-swatch-radius, var(--rounded-full));
+    --_gap: var(--color-picker-gap, var(--size-2));
+
+    display: inline-block;
+  }
+
+  fieldset {
+    display: grid;
+    gap: var(--size-2);
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    border: 0;
+  }
+
+  /* Field label, not a heading: the same weight and tone ore-input and
+     ore-radio-group give their labels. Fixed size (not --_font-size) so the
+     label stays stable while the swatches scale with `size`. */
+  legend {
+    padding: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-contrast-600);
+  }
+
+  legend[hidden] {
+    display: none;
+  }
+
+  .swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--_gap);
+    align-items: center;
+  }
+
+  /* The swatch is its own target: its diameter is the visual identity, so it
+     scales with `size` rather than being clamped to the 44px button target.
+     The floor is the WCAG 2.2 §2.5.8 AA minimum (24px), which the `sm` tier
+     sits on exactly. */
+  .swatch {
+    display: inline-flex;
+    width: var(--_swatch-size);
+    min-width: var(--size-6);
+    height: var(--_swatch-size);
+    min-height: var(--size-6);
+    padding: 0;
+    cursor: pointer;
+    background: var(--_swatch-color);
+    border: var(--border) solid var(--color-divider);
+    border-radius: var(--_swatch-radius);
+    transition:
+      transform var(--duration-100) var(--ease-spring),
+      outline-color var(--transition-fast);
+  }
+
+  /* The scale-up is a pointer affordance; the focus ring carries the same
+     affordance for keyboard users, where hover is not a real state. */
+  @media (hover: hover) {
+    .swatch:hover:not([disabled]) {
+      transform: scale(1.08);
+    }
+  }
+
+  .swatch:focus-visible:not([disabled]) {
+    transform: scale(1.08);
+  }
+
+  .swatch[aria-checked='true'] {
+    outline: var(--border-2) solid var(--text-color-heading);
+    outline-offset: var(--border-2);
+  }
+
+  .swatch:focus-visible {
+    outline: var(--border-2) solid var(--color-primary);
+    outline-offset: var(--border-2);
+  }
+
+  .swatch[aria-checked='true']:focus-visible {
+    outline-offset: var(--size-1);
+    box-shadow: 0 0 0 var(--border-2) var(--text-color-heading);
+  }
+
+  .swatch[disabled] {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  :host([disabled]) {
+    opacity: 0.5;
+  }
+
+  :host([disabled]) .swatch {
+    pointer-events: none;
+  }
+
+  .helper-text[hidden] {
+    display: none;
+  }
+
+  .helper-text {
+    width: 100%;
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    /* Plain --color-contrast-500: the theme's AA-compliant tertiary text token. */
+    color: var(--color-contrast-500);
+  }
+
+  .helper-text[role='alert'] {
+    color: var(--color-error);
+  }
+}
+
+@layer refine.utilities {
+  @media (forced-colors: active) {
+    /* A swatch's color is its label: keep the border and the selection ring
+       visible in system colors so state stays distinguishable. */
+    .swatch {
+      border: 1px solid ButtonText;
+    }
+
+    .swatch[aria-checked='true'] {
+      outline: 2px solid Highlight;
+      forced-color-adjust: none;
+    }
+
+    .swatch:focus-visible {
+      outline: 2px solid Highlight;
+      box-shadow: none;
+    }
+  }
+}

@@ -211,6 +211,37 @@ test.describe('Layout', () => {
   });
 });
 
+test.describe('Focus', () => {
+  test('a keyboard-focused item paints the themed highlight, not the UA blue ring', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<button id="before">Before</button><ore-menu default-open><ore-button slot="trigger">Open</ore-button><ore-menu-item value="a">Option A</ore-menu-item><ore-menu-item value="b">Option B</ore-menu-item></ore-menu>',
+    );
+
+    // Real keyboard navigation: Tab to the trigger, ArrowDown into the first
+    // item. Programmatic .focus() would not set :focus-visible, so the ring
+    // bug only reproduces through the keyboard.
+    await page.locator('#before').focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('ArrowDown');
+
+    const focused = await page.locator('ore-menu').evaluate((menu) => {
+      const item = menu.querySelector('ore-menu-item[value="a"]');
+      const inner = item?.shadowRoot?.querySelector<HTMLElement>('.item');
+      const cs = inner ? getComputedStyle(inner) : null;
+
+      return {
+        background: cs?.backgroundColor ?? '',
+        focused: inner?.matches(':focus-visible') ?? false,
+        outlineStyle: cs?.outlineStyle ?? '',
+      };
+    });
+
+    // The themed focus background paints (a resolved color, not transparent)...
+    expect(focused).toMatchObject({ focused: true, outlineStyle: 'none' });
+    expect(focused.background).not.toBe('rgba(0, 0, 0, 0)');
+  });
+});
+
 test.describe('Accessibility', () => {
   test('open menu passes axe checks', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
@@ -220,5 +251,42 @@ test.describe('Accessibility', () => {
     const results = await axeCheck(page);
 
     expect(results.violations).toEqual([]);
+  });
+});
+
+test.describe('Contextmenu trigger', () => {
+  test('opens the panel at the pointer on right-click', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-menu trigger="contextmenu"><p slot="trigger" style="padding:24px">Right-click me</p><ore-menu-item value="copy">Copy</ore-menu-item></ore-menu>',
+    );
+
+    await page.locator('ore-menu > [slot="trigger"]').click({ button: 'right' });
+
+    const state = await page.locator('ore-menu').evaluate((menu) => {
+      const panel = menu.shadowRoot?.querySelector<HTMLElement>('.menu-panel');
+      const rect = panel?.getBoundingClientRect();
+
+      return { open: panel?.hasAttribute('data-open'), x: rect?.left ?? 0, y: rect?.top ?? 0 };
+    });
+
+    expect(state.open).toBe(true);
+    // The panel is anchored to the click point, not the trigger's box: its
+    // top-left sits near the cursor inside the padded target.
+    expect(state.x).toBeGreaterThan(0);
+    expect(state.y).toBeGreaterThan(0);
+  });
+
+  test('a left-click does not open a contextmenu menu', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-menu trigger="contextmenu"><p slot="trigger">Target</p><ore-menu-item value="copy">Copy</ore-menu-item></ore-menu>',
+    );
+
+    await page.locator('ore-menu > [slot="trigger"]').click();
+
+    const open = await page
+      .locator('ore-menu')
+      .evaluate((menu) => menu.shadowRoot?.querySelector('.menu-panel')?.hasAttribute('data-open'));
+
+    expect(open).toBe(false);
   });
 });

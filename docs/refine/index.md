@@ -10,7 +10,6 @@ exports:
     ore-accordion,
     ore-accordion-item,
     ore-alert,
-    ore-async,
     ore-avatar,
     ore-avatar-group,
     ore-badge,
@@ -28,6 +27,7 @@ exports:
     ore-checkbox-group,
     ore-chip,
     ore-code-window,
+    ore-color-picker,
     ore-column,
     ore-combobox,
     ore-combobox-option,
@@ -66,6 +66,7 @@ exports:
     ore-password-strength,
     ore-popover,
     ore-progress,
+    ore-pull-to-refresh,
     ore-qr-code,
     ore-qr-scanner,
     ore-query-bar,
@@ -82,6 +83,7 @@ exports:
     ore-speech-player,
     ore-speed-reading,
     ore-spotlight,
+    ore-state,
     ore-stats,
     ore-step,
     ore-stepper,
@@ -230,9 +232,9 @@ Each entry below is a component with its own documentation page and registration
 
 **Content:** `ore-accordion`, `ore-avatar`, `ore-card`, `ore-carousel`, `ore-chat-message`, `ore-chat-panel`, `ore-code-window`, `ore-copy-command`, `ore-icon`, `ore-keyboard-key`, `ore-list`, `ore-marquee`, `ore-qr-code`, `ore-rank-list`, `ore-speech-player`, `ore-speed-reading`, `ore-stats`, `ore-table`, `ore-text`
 
-**Feedback:** `ore-alert`, `ore-async`, `ore-badge`, `ore-chip`, `ore-cookie-banner`, `ore-password-strength`, `ore-progress`, `ore-skeleton`, `ore-toast`, `ore-typing-indicator`
+**Feedback:** `ore-alert`, `ore-badge`, `ore-chip`, `ore-cookie-banner`, `ore-password-strength`, `ore-progress`, `ore-pull-to-refresh`, `ore-skeleton`, `ore-state`, `ore-toast`, `ore-typing-indicator`
 
-**Inputs:** `ore-button`, `ore-calendar`, `ore-checkbox`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-query-bar`, `ore-radio`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
+**Inputs:** `ore-button`, `ore-calendar`, `ore-checkbox`, `ore-color-picker`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-query-bar`, `ore-radio`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
 
 **Layout:** `ore-box`, `ore-dock`, `ore-grid`, `ore-navbar`, `ore-separator`, `ore-sidebar`
 

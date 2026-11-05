@@ -1,8 +1,8 @@
 @layer refine.base {
   :host {
-    --_color: var(--async-color, var(--color-contrast-500));
-    --_icon-size: var(--async-icon-size, var(--size-12));
-    --_gap: var(--async-gap, var(--size-3));
+    --_color: var(--state-color, var(--color-contrast-500));
+    --_icon-size: var(--state-icon-size, var(--size-12));
+    --_gap: var(--state-gap, var(--size-3));
 
     display: block;
   }
@@ -24,15 +24,15 @@
      Local keyframe: @keyframes do not cross the shadow boundary. */
   :host([status='idle']) .region-idle,
   :host([status='loading']) .region-loading,
-  :host([status='empty']) .region-empty,
-  :host([status='error']) .region-error,
+  :host([status='empty']) .region-placeholder,
+  :host([status='error']) .region-placeholder,
   :host([status='success']) .region-success,
   :host(:not([status])) .region-success {
     display: block;
-    animation: var(--_motion-animation, ore-async-fade-in var(--duration-200) var(--ease-out) both);
+    animation: var(--_motion-animation, ore-state-fade-in var(--duration-200) var(--ease-out) both);
   }
 
-  @keyframes ore-async-fade-in {
+  @keyframes ore-state-fade-in {
     from {
       opacity: 0;
     }
@@ -42,9 +42,25 @@
     }
   }
 
-  /* ── Empty state ─────────────────────────────────────────────────── */
+  /* ── Placeholder (empty + error) ─────────────────────────────────── */
 
-  .empty-state {
+  /* The empty and error states share one placeholder region so the
+     illustration and actions slots have a single host: a slotted node can only
+     land in one slot, so two same-named slots (one per state) would strand the
+     node in whichever region comes first. The override slots stay in the DOM
+     and swap by status; the built-in placeholder fills the gap when no
+     override is slotted for the active state. */
+  .override-empty,
+  .override-error {
+    display: none;
+  }
+
+  :host([status='empty']) .override-empty,
+  :host([status='error']) .override-error {
+    display: block;
+  }
+
+  .placeholder {
     display: flex;
     flex-direction: column;
     gap: var(--_gap);
@@ -55,86 +71,76 @@
     text-align: center;
   }
 
-  .empty-state .icon {
+  /* The announced half of the placeholder: artwork, title, and description. The actions row is its
+     sibling rather than its child, so the buttons are not inside the live region. Same gap, so the
+     stacked column reads as one group. */
+  .placeholder .message {
+    display: flex;
+    flex-direction: column;
+    gap: var(--_gap);
+    align-items: center;
+  }
+
+  :host([status='error']) .placeholder {
+    color: var(--color-error);
+  }
+
+  .placeholder .artwork {
     display: flex;
     align-items: center;
     justify-content: center;
     width: var(--_icon-size);
     height: var(--_icon-size);
+  }
+
+  .placeholder .artwork[hidden] {
+    display: none;
+  }
+
+  /* The default icon dims; a slotted illustration keeps its own colors. */
+  .placeholder .artwork-default {
     opacity: 0.4;
   }
 
-  .empty-state .icon svg {
-    width: 100%;
-    height: 100%;
+  :host([status='error']) .placeholder .artwork-default {
+    opacity: 0.7;
   }
 
-  .empty-state .icon ore-icon {
+  .placeholder .artwork ore-icon {
     display: flex;
     width: 100%;
     height: 100%;
   }
 
-  .empty-state .title {
+  .placeholder .title {
     font-size: var(--text-sm);
     font-weight: var(--font-semibold);
     color: var(--color-contrast-700);
   }
 
-  .empty-state .description {
-    max-width: 28ch;
+  :host([status='error']) .placeholder .title {
+    color: var(--color-error);
+  }
+
+  .placeholder .description {
+    max-width: 32ch;
     font-size: var(--text-sm);
     line-height: var(--leading-relaxed);
     opacity: 0.75;
   }
 
-  /* ── Error state ─────────────────────────────────────────────────── */
-
-  .error-state {
+  .placeholder .actions {
     display: flex;
-    flex-direction: column;
-    gap: var(--_gap);
+    gap: var(--size-2);
     align-items: center;
-    justify-content: center;
-    padding: var(--size-10) var(--size-6);
-    color: var(--color-error);
-    text-align: center;
+    margin-block-start: var(--size-1);
   }
 
-  .error-state .icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--_icon-size);
-    height: var(--_icon-size);
-    opacity: 0.7;
+  .placeholder .actions[hidden] {
+    display: none;
   }
 
-  .error-state .icon svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  .error-state .icon ore-icon {
-    display: flex;
-    width: 100%;
-    height: 100%;
-  }
-
-  .error-state .title {
-    font-size: var(--text-sm);
-    font-weight: var(--font-semibold);
-    color: var(--color-error);
-  }
-
-  .error-state .description {
-    max-width: 32ch;
-    font-size: var(--text-sm);
-    line-height: var(--leading-relaxed);
-    opacity: 0.85;
-  }
-
-  .error-state .retry-btn {
+  .placeholder .retry-btn {
     display: inline-flex;
     gap: var(--size-1-5);
     align-items: center;
@@ -144,20 +150,22 @@
     color: var(--color-error);
     cursor: pointer;
     background: none;
-    border: 1px solid currentcolor;
+    border: var(--border) solid currentcolor;
     border-radius: var(--rounded-md);
     transition: var(--_motion-transition, background var(--transition-fast), opacity var(--transition-fast));
   }
 
-  .error-state .retry-btn ore-icon {
+  .placeholder .retry-btn ore-icon {
     flex: none;
   }
 
-  .error-state .retry-btn:hover {
-    background: color-mix(in oklch, var(--color-error) 10%, transparent);
+  @media (hover: hover) {
+    .placeholder .retry-btn:hover {
+      background: color-mix(in oklch, var(--color-error) 10%, transparent);
+    }
   }
 
-  .error-state .retry-btn:focus-visible {
+  .placeholder .retry-btn:focus-visible {
     outline: var(--focus-ring-width) solid var(--color-error);
     outline-offset: var(--focus-ring-offset);
   }

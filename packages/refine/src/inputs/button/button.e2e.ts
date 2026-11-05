@@ -103,13 +103,17 @@ test.describe('Layout', () => {
 
 test.describe('Depth', () => {
   /** Reads a computed property off the visible part element. */
-  const partStyle = (page: Parameters<typeof axeCheck>[0], id: string, prop: 'boxShadow' | 'backgroundColor') =>
+  const partStyle = (
+    page: Parameters<typeof axeCheck>[0],
+    id: string,
+    prop: 'boxShadow' | 'backgroundColor' | 'color',
+  ) =>
     page.evaluate(
       ({ target, property }) => {
         const el = document.getElementById(target) as HTMLElement & { shadowRoot: ShadowRoot };
 
         return getComputedStyle(el.shadowRoot.querySelector('[part="button"]')!)[
-          property as 'boxShadow' | 'backgroundColor'
+          property as 'boxShadow' | 'backgroundColor' | 'color'
         ];
       },
       { property: prop, target: id },
@@ -270,6 +274,38 @@ test.describe('Depth', () => {
     await page.locator('#ghost').hover();
 
     expect(isVisuallyFlat(await partStyle(page, 'ghost', 'boxShadow'))).toBe(false);
+  });
+
+  test('pressing ghost or outline deepens the fill instead of inverting it', async ({ page, refinePage }) => {
+    // Ghost and outline rest transparent and hover to a light translucent
+    // backdrop. Their press used to reuse solid's tokens (theme-base mixed to
+    // near-black + contrast text), so a click flashed them into a dark solid
+    // button for the length of the press — it read as a glitch rather than
+    // feedback. Press must stay the same hue family as hover, only deeper, and
+    // must never flip the text to the contrast colour.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      '<ore-button id="ghost" variant="ghost">Ghost</ore-button><ore-button id="outline" variant="outline">Outline</ore-button>',
+    );
+    await page.waitForSelector('ore-button');
+
+    for (const id of ['ghost', 'outline']) {
+      const restColor = await partStyle(page, id, 'color');
+      const box = await page.locator(`#${id}`).boundingBox();
+      await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+      await page.mouse.down();
+      // Reduced motion zeroes the transition, so the settled press colour is
+      // readable immediately.
+      const pressedBg = await partStyle(page, id, 'backgroundColor');
+      const pressedColor = await partStyle(page, id, 'color');
+      await page.mouse.up();
+
+      // Still transparent-ish light fill, not solid's near-black...
+      expect(pressedBg).not.toBe('rgba(0, 0, 0, 0)');
+      expect(pressedBg).toMatch(/oklch\(0\.[89]/);
+      // ...and the label keeps its resting colour (no contrast inversion).
+      expect(pressedColor).toBe(restColor);
+    }
   });
 
   test('honours the --button-shadow and --button-bg overrides', async ({ page, refinePage }) => {

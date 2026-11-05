@@ -3,6 +3,7 @@ import { bind, define, getHost, html, onCleanup, onMounted, prop, useEmit } from
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { createElementSize } from '@vielzeug/sentinel';
 import { announce, createListControl, elementDirection, lifecycleSignal } from '../../core';
+import { projectFling } from '../../shared/fling';
 import { THEME_COLORS, type ThemeColor } from '../../types';
 import { clearCoverflow, syncCoverflow } from './_coverflow';
 import componentStyles from './carousel.css?inline';
@@ -484,14 +485,19 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       };
       const pan = createPanGesture(el, {
         axis: () => (isHorizontal.value ? 'x' : 'y'),
-        onEnd: ({ distance, reason }) => {
+        onEnd: ({ distance, velocity, reason }) => {
           if (reason !== 'release') {
             suppressClick = false;
             return;
           }
-          if (Math.abs(distance) < 48) return;
+          // Velocity-aware: a quick flick advances just like a slow drag past
+          // the threshold, and a flick back toward the start cancels it
+          // (see shared/fling).
+          const projected = projectFling(distance, velocity);
 
-          if (distance * (isRtl() ? -1 : 1) < 0) next();
+          if (Math.abs(projected) < 48) return;
+
+          if (projected * (isRtl() ? -1 : 1) < 0) next();
           else prev();
         },
         onStart: () => {

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(refine): neutral UA focus rings, non-dimming sidebar drawer backdrop default, ghost/outline press feedback, navbar external-drawer toggle",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

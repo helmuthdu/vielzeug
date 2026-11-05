@@ -1,11 +1,19 @@
-import { fireClick } from '@vielzeug/assay';
+import { fireClick, installPopoverPolyfill } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-tooltip', () => {
   let fixture: Fixture<HTMLElement>;
+  let uninstallPopover: (() => void) | undefined;
 
   beforeAll(async () => {
+    // Installed here for the whole file: the accessibility block below mounts the same component.
+    uninstallPopover = installPopoverPolyfill();
+
     await import('./tooltip');
+  });
+
+  afterAll(() => {
+    uninstallPopover?.();
   });
 
   afterEach(() => {
@@ -346,18 +354,6 @@ describe('ore-tooltip accessibility', () => {
   let fixture: Awaited<ReturnType<typeof mount>>;
 
   beforeAll(async () => {
-    if (!HTMLElement.prototype.showPopover) {
-      HTMLElement.prototype.showPopover = function () {
-        this.setAttribute('popover-open', '');
-      };
-    }
-
-    if (!HTMLElement.prototype.hidePopover) {
-      HTMLElement.prototype.hidePopover = function () {
-        this.removeAttribute('popover-open');
-      };
-    }
-
     await import('./tooltip');
   });
 

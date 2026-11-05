@@ -188,13 +188,10 @@
     border: none;
 
     /* display + overlay allow-discrete hold the element in the top layer during exit
-       and let @starting-style fire on entry via showModal(). Durations must be
-       --duration-* tokens, never --transition-*: those resolve to 'none' under
-       reduced motion, which makes the entire declaration syntactically invalid
-       if used here. A zeroed --duration-* stays a valid 0ms member. */
-    transition:
-      display var(--duration-200) allow-discrete,
-      overlay var(--duration-200) allow-discrete;
+       and let @starting-style fire on entry via showModal(). Timing comes from the shared
+       overlay vocabulary, which composes --duration-* tokens so reduced motion cannot invalidate
+       the hold (see `overlayMotionMixin`). */
+    transition: var(--_overlay-hold);
   }
 
   /* all:unset removes the UA stylesheet's dialog:not([open]){display:none}: restore it */
@@ -325,6 +322,11 @@
     margin: 0;
     overflow: auto;
     color: inherit;
+    /* The panel is focused on open (tabindex=-1), and a focused popover with no
+       outline override paints Chrome's default blue UA ring around the card,
+       which clashes with every theme. The card's own border is the visual edge,
+       so the panel takes no ring. */
+    outline: none;
     background: transparent;
     border: none;
 

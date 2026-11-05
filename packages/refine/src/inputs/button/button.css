@@ -249,8 +249,7 @@
     --_border-color: var(--button-border-color, var(--_theme-base));
     --_hover-bg: var(--_theme-backdrop);
     --_hover-border-color: var(--_theme-focus);
-    --_active-bg: color-mix(in oklch, var(--_theme-base) 85%, black);
-    --_active-color: var(--_theme-contrast);
+    --_active-bg: color-mix(in oklch, var(--_theme-base) 20%, var(--_theme-backdrop));
   }
 
   /* Ghost */
@@ -259,8 +258,7 @@
     --_color: var(--button-color, var(--_theme-base));
     --_border-color: var(--button-border-color, transparent);
     --_hover-bg: var(--_theme-backdrop);
-    --_active-bg: color-mix(in oklch, var(--_theme-base) 85%, black);
-    --_active-color: var(--_theme-contrast);
+    --_active-bg: color-mix(in oklch, var(--_theme-base) 20%, var(--_theme-backdrop));
   }
 
   :host([variant='ghost']) [part='button'] {
@@ -331,6 +329,34 @@
       --button-frost-active-border-color,
       color-mix(in oklch, var(--_theme-focus) 65%, transparent)
     );
+  }
+
+  /* ── Selected segment ─────────────────────────────────────────────────────
+     Inside a segmented `ore-button-group` (which carries a `value`), a valued
+     button is a `radio` and the group's selection marks it `aria-checked="true"`.
+     The selection has to read as a fill, not just a bolder label: HIG's segmented
+     control shows the chosen segment as the filled one. Lives in `refine.variants`
+     after every variant block, because that is the layer where `--_bg`/`--_color`
+     are assigned — an equal-specificity rule placed later wins, so the selection
+     outranks the variant without needing an `!important` or a deeper selector.
+     Only the resting tokens are replaced: `--_hover-bg`/`--_active-bg` stay the
+     variant's, so a selected segment still answers hover and press. */
+  :host([aria-checked='true']) {
+    --_bg: var(--button-selected-bg, var(--_theme-base));
+    --_color: var(--button-selected-color, var(--_theme-contrast));
+    --_border-color: var(--button-selected-border-color, var(--_theme-base));
+  }
+
+  /* Forced-colors mode discards the fill that carries the selection, so the
+     checked segment gets a system-color outline instead - the same treatment
+     `ore-tab-item` gives its active tab. `outline` cannot collide with the
+     unlayered `forcedColorsMixin` border (different property), so layer
+     placement is irrelevant here. */
+  @media (forced-colors: active) {
+    :host([aria-checked='true']) {
+      outline: 2px solid Highlight;
+      outline-offset: -2px;
+    }
   }
 
   /* ── Shared interactive states: all variants use --_* tokens set above ── */

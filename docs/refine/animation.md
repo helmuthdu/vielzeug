@@ -163,6 +163,41 @@ How it behaves:
 
 Run the mutation through `run()` only when it re-renders synchronously or in a microtask (Ore's render is a microtask): the committed layout is measured on the next frame.
 
+## Spring Physics
+
+Token-timed transitions have a fixed duration and easing curve. A gesture-driven surface — a drawer flung toward a detent, a pull-to-refresh indicator released mid-drag — has no fixed duration: it should carry the finger's release momentum and settle where the physics land it. That is a spring, and Refine delegates it to `@vielzeug/necromancer`'s `spring()`.
+
+`spring(from, to, onUpdate, options)` integrates a damped harmonic oscillator (`mass * x'' = -stiffness * (x - to) - damping * x'`) frame by frame and calls `onUpdate(value, velocity)` until both the distance to `to` and the velocity fall below `precision`. It returns a lifecycle-owned `SpringHandle` (`dispose()`, a `result` promise, `Symbol.dispose`).
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `stiffness` | `170` | Higher settles faster |
+| `damping` | `26` | Lower overshoots more; `2 * sqrt(k * mass)` is critically damped |
+| `mass` | `1` | Higher lags and overshoots |
+| `velocity` | `0` | Initial velocity in units/s — the finger velocity at release |
+| `precision` | `0.1` | Rest threshold on both distance and velocity |
+| `motion` | `'system'` | Reduced motion jumps straight to `to` |
+
+```ts
+import { spring } from '@vielzeug/necromancer';
+
+// Hand the panel off to a spring seeded with the release velocity.
+const handle = spring(currentOffset, targetOffset, (value) => paint(value), {
+  velocity: releaseVelocity,
+  signal: abortController.signal,
+});
+```
+
+### Velocity Handoff and Fling Projection
+
+The gesture layer measures velocity, the spring consumes it, and a small projection bridges the two:
+
+1. **Measure** — a `@vielzeug/gesture` drag/pan reports `velocity: { x, y }` in px/s, sampled over a short trailing window so a stale pointer position does not inflate it.
+2. **Project** — Refine's internal fling helper (`projectFling`) extrapolates where the panel would land if that velocity continued for ~250 ms. The projection decides *where* to settle; the spring reproduces the *feel*.
+3. **Settle** — the projected point is snapped to the nearest legal stop (a drawer detent, or fully open/closed), and `spring()` runs to it seeded with the release velocity. A quick flick carries through to the next stop; a slow release settles without overshoot.
+
+Because the spring takes `motion: 'system'` by default, a fling under reduced motion jumps straight to the target instead of animating — the same preference the token layer honors, reached through necromancer's own `motion` option rather than a CSS token.
+
 ## Working with Other Vielzeug Libraries
 
 `animateReflow` delegates the FLIP recipe to `@vielzeug/necromancer`'s `captureLayout`. Use necromancer directly when you need lower-level control — per-handle animation groups, `animate()`/`animateEach()` with explicit keyframes, or its `testing` entry (`installFakeAnimations`) for deterministic tests. Refine's helper adds only the house rules: token timing, motion mode, and never-throw degradation.

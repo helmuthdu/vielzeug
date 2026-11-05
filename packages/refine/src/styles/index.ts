@@ -15,6 +15,8 @@ export {
 } from './mixins/animation.css';
 // Field Variant Mixin (solid/flat/bordered/outline/ghost, shared by text-entry fields)
 export { type FieldVariantMixinOptions, fieldVariantMixin } from './mixins/field-variants.css';
+// Overlay present/dismiss motion vocabulary (shared by every floating surface)
+export { type OverlayMotionTier, overlayMotionMixin } from './mixins/overlay.css';
 // Shape Mixins (padding, rounded, size)
 export { paddingMixin, roundedVariantMixin, sizeVariantMixin } from './mixins/shape.css';
 // State Mixins

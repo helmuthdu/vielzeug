@@ -5,7 +5,7 @@ import type { OverlayOpenChangeDetail } from '../../core';
 
 import { createDropdownPositioner, createOutsidePointerDismissal, lifecycleSignal } from '../../core';
 import { disablableBundle } from '../../shared';
-import { touchTargetMixin } from '../../styles';
+import { overlayMotionMixin, touchTargetMixin } from '../../styles';
 import hostStyles from './navigation-menu.css?inline';
 import itemStyles from './navigation-menu-item.css?inline';
 import panelStyles from './navigation-menu-panel.css?inline';
@@ -84,7 +84,7 @@ define<{ for?: string }>(NAVIGATION_MENU_PANEL_TAG, {
       <div class="footer" part="footer" ?hidden=${() => !slots.has('footer').value}><slot name="footer"></slot></div>
     `;
   },
-  styles: [panelStyles],
+  styles: [overlayMotionMixin('panel'), panelStyles],
 });
 
 /**

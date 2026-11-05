@@ -119,6 +119,6 @@ export {
   type ListboxDropdownOptions,
   type ListboxDropdownPlacementOptions,
 } from './option-list';
-export { parseOptionalBool, parseStringTriggers } from './parse';
+export { parseDetents, parseOptionalBool, parseStringTriggers } from './parse';
 export { createDropdownPositioner, type DropdownPositionerOptions, type OverlayPositioner } from './positioner';
 export { syncedSignal } from './signals';

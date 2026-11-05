@@ -7,6 +7,7 @@ import {
   offset,
   type Placement,
   type Rect,
+  type ReferenceElement,
   type SizeData,
   shift,
   size,
@@ -18,7 +19,7 @@ import { elementDirection } from './direction';
 
 export type OverlayPositioner = {
   floating: () => HTMLElement | null;
-  reference: () => HTMLElement | null;
+  reference: () => ReferenceElement | null;
   /** Start continuous position auto-updates. Returns a stop function. */
   startAutoUpdate?: () => () => void;
   update: () => void;
@@ -47,8 +48,12 @@ export type DropdownPositionerOptions = {
   getFloating: () => HTMLElement | null;
   /** Getter for the current placement. Defaults to 'bottom-start' (RTL-aware: flips to 'bottom-end'). */
   getPlacement?: () => Placement;
-  /** Getter for the reference (trigger) element. */
-  getReference: () => HTMLElement | null;
+  /**
+   * Getter for the reference (trigger) element. May return a virtual reference
+   * (an object exposing `getBoundingClientRect()`) instead of a real element,
+   * which is how context menus anchor the panel to the pointer position.
+   */
+  getReference: () => ReferenceElement | null;
   /**
    * Whether to size the floating element from the reference: at least as wide as the reference,
    * growing to fit its own content, capped by the boundary. Default: true
@@ -110,7 +115,10 @@ export function createDropdownPositioner({
 }: DropdownPositionerOptions): OverlayPositioner {
   function resolvedPlacement(): Placement {
     const base = getPlacement?.() ?? 'bottom-start';
-    const dir = getDir?.() ?? elementDirection(getReference());
+    // A virtual reference (context-menu point) has no DOM ancestry to resolve a
+    // direction from, so direction falls back to the document's.
+    const ref = getReference();
+    const dir = getDir?.() ?? elementDirection(ref instanceof Element ? ref : null);
 
     return dir === 'rtl' ? rtlPlacement(base) : base;
   }

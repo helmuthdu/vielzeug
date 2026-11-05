@@ -296,7 +296,7 @@ A neon comet that sweeps the border using the button's own `color` token.
 
 ### Attached
 
-Removes spacing and connects buttons with shared borders: use for segmented controls.
+Removes spacing and connects buttons with shared borders. For a single-select toggle bar, add a `value` to make it a [segmented control](#segmented-control).
 
 <ComponentPreview center>
 
@@ -309,6 +309,41 @@ Removes spacing and connects buttons with shared borders: use for segmented cont
 ```
 
 </ComponentPreview>
+
+### Segmented Control
+
+Give the group a `value` and each child button a `value`, and the group becomes a segmented control (the web equivalent of a radio group styled as a button bar): exactly one option is selected, the container takes `role="radiogroup"`, and each button becomes a `radio`. Arrow keys move and select, `Home` / `End` jump to the ends, and the group emits `change` with the new value. Set `label` so screen readers announce what the group is for.
+
+<ComponentPreview center>
+
+```html
+<ore-button-group attached value="list" label="View mode" color="primary">
+  <ore-button value="list">List</ore-button>
+  <ore-button value="grid">Grid</ore-button>
+  <ore-button value="columns">Columns</ore-button>
+</ore-button-group>
+```
+
+</ComponentPreview>
+
+A `value` that names no usable button falls back to the first selectable option, so the control always has a selection. A button without `value` inside a segmented group stays a plain action (e.g. a "Reset" button) and is skipped by the selection. Without a `value` on the group, it stays a plain container with no selection semantics.
+
+Listen for the selection:
+
+```html
+<ore-button-group id="view" attached value="list" label="View mode">
+  <ore-button value="list">List</ore-button>
+  <ore-button value="grid">Grid</ore-button>
+</ore-button-group>
+
+<script type="module">
+  import '@vielzeug/refine/button';
+
+  document.getElementById('view').addEventListener('change', (e) => {
+    console.log('selected:', e.detail.values[0]); // 'list' | 'grid'
+  });
+</script>
+```
 
 ### Attribute Propagation
 
@@ -362,6 +397,7 @@ Removes spacing and connects buttons with shared borders: use for segmented cont
 | `href`      | `string`                                                                        | N/A | Renders a native, focusable `<a>` internally                                 |
 | `target`    | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | N/A | Link target (requires `href`)                                               |
 | `rel`       | `string`                                                                        | N/A | Link `rel` attribute (requires `href`)                                      |
+| `value`     | `string`                                                                        | N/A | Identifies this button as one option of a [segmented group](#segmented-control) |
 
 ### `ore-button-group` Attributes
 
@@ -371,6 +407,7 @@ Removes spacing and connects buttons with shared borders: use for segmented cont
 | `attached`    | `boolean`                                                                       | `false`        | Removes spacing and connects buttons with borders|
 | `fullwidth`   | `boolean`                                                                       | `false`        | Buttons expand equally to fill container         |
 | `label`       | `string`                                                                        | N/A | `aria-label` for the group container             |
+| `value`       | `string`                                                                        | N/A | Value of the selected button; enables [segmented selection](#segmented-control) |
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                          | N/A | Propagated to all child buttons                  |
 | `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | N/A | Propagated to all child buttons                  |
 | `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | N/A | Propagated to all child buttons                  |
@@ -395,7 +432,7 @@ Removes spacing and connects buttons with shared borders: use for segmented cont
 
 `ore-button` fires the native `click` (`MouseEvent`) event. No custom events.
 
-`ore-button-group` fires no events.
+`ore-button-group` fires `change` when its selection changes (only when it carries a `value`). Detail: `{ values: string[], labels: string[], originalEvent?: Event }`.
 
 ### CSS Parts
 
@@ -432,6 +469,9 @@ Removes spacing and connects buttons with shared borders: use for segmented cont
 | `--button-min-height`                | Minimum height floor                                         | `44px` touch target |
 | `--button-frost-active-bg`           | Background when hovered/pressed in frost variant             | Variant-dependent   |
 | `--button-frost-active-border-color` | Border color when hovered/pressed in frost variant           | Variant-dependent   |
+| `--button-selected-bg`               | Background of a selected segment in a segmented group        | Color family base   |
+| `--button-selected-color`            | Text color of a selected segment in a segmented group        | Color family contrast |
+| `--button-selected-border-color`     | Border color of a selected segment in a segmented group      | Color family base   |
 | `--button-shadow`                    | Elevated drop shadow (used when `elevation` is set)          | `var(--_shadow)`    |
 | `--button-shadow-contact`            | Tight shadow where the button meets the surface              | `var(--shadow-2xs)` |
 

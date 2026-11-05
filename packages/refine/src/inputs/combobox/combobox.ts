@@ -21,7 +21,7 @@ import {
   type OverlayOpenReason,
 } from '../../core';
 import { animateReflow } from '../../reflow';
-import { colorThemeMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
+import { colorThemeMixin, overlayMotionMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
 import { type AddEventListeners, COMPONENT_SIZES, FIELD_VARIANTS, ROUNDED_SIZES, THEME_COLORS } from '../../types';
 import { dispatchNativeFieldEvent } from '../shared/native-field-event';
 import componentStyles from './combobox.css?inline';
@@ -955,5 +955,5 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [colorThemeMixin, roundedVariantMixin, srOnlyMixin, componentStyles],
+  styles: [colorThemeMixin, roundedVariantMixin, srOnlyMixin, overlayMotionMixin('dropdown'), componentStyles],
 }) as unknown as AddEventListeners<OreComboboxEvents>;

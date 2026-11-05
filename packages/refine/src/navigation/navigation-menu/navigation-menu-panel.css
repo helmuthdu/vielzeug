@@ -15,22 +15,13 @@
     border-radius: var(--navigation-menu-radius, var(--rounded-lg));
     box-shadow: var(--navigation-menu-shadow, var(--shadow-xl));
 
-    /* Closed state doubles as the exit target. Durations must be --duration-*
-       tokens, never --transition-*: those resolve to 'none' under reduced
-       motion, and one 'none' member invalidates the entire transition
-       shorthand, which would drop the display/overlay allow-discrete hold and
-       teleport the panel out of the top layer mid-exit (same trap dialog.css
-       documents). A zeroed --duration-* stays a valid 0ms member, so the hold
-       survives and the cross-fade becomes instant. Ease tokens are never
-       zeroed. */
+    /* Closed state doubles as the exit target. Timing comes from the shared overlay vocabulary, which
+       composes --duration-* tokens precisely so reduced motion cannot invalidate the hold (see
+       `overlayMotionMixin`). */
     opacity: 0;
     backdrop-filter: blur(var(--navigation-menu-backdrop-blur, var(--blur-xl))) saturate(180%);
     transform: translateY(var(--overlay-enter-translate-y)) scale(var(--overlay-enter-scale));
-    transition:
-      opacity var(--duration-200) var(--ease-spring),
-      transform var(--duration-200) var(--ease-spring),
-      display var(--duration-200) allow-discrete,
-      overlay var(--duration-200) allow-discrete;
+    transition: var(--_overlay-dismiss);
   }
 
   :host([hidden]) {
@@ -42,6 +33,7 @@
     display: block;
     opacity: 1;
     transform: translateY(0) scale(1);
+    transition: var(--_overlay-present);
 
     @starting-style {
       opacity: 0;

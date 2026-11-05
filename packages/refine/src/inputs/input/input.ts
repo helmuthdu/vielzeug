@@ -117,6 +117,8 @@ const VALID_INPUT_TYPES = [
  * @part input - The input element
  * @part status-icon - The inline error/success icon shown inside the field
  * @part spinner - The inline loading spinner shown inside the field while `loading`
+ * @part pwd-toggle - The password visibility toggle, shown only when `type="password"`; it reveals the value as text while pressed (`aria-pressed`) and returns focus to the field
+ * @part clear - The clear button, shown when `clearable` and the field has a value
  * @part helper - The helper text element
  *
  * @cssprop --input-bg - Background color

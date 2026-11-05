@@ -9,7 +9,7 @@ import {
   parseStringTriggers,
 } from '../../core';
 import { disablableBundle, sizableBundle } from '../../shared';
-import { forcedColorsMixin } from '../../styles';
+import { forcedColorsMixin, overlayMotionMixin } from '../../styles';
 import type { ComponentSize } from '../../types';
 import { bindFloatingClick, useFloatingTrigger } from '../shared/use-floating-trigger';
 import styles from './tooltip.css?inline';
@@ -313,5 +313,5 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
       </div>
     `;
   },
-  styles: [forcedColorsMixin, styles],
+  styles: [forcedColorsMixin, overlayMotionMixin('panel'), styles],
 });

@@ -60,13 +60,14 @@ export const REFINE_CATEGORIES: RefineCategory[] = [
   {
     components: [
       'alert',
-      'async',
       'badge',
       'chip',
       'cookie-banner',
       'password-strength',
       'progress',
+      'pull-to-refresh',
       'skeleton',
+      'state',
       'toast',
       'typing-indicator',
     ],
@@ -77,6 +78,7 @@ export const REFINE_CATEGORIES: RefineCategory[] = [
       'button',
       'calendar',
       'checkbox',
+      'color-picker',
       'combobox',
       'counter',
       'datagrid',

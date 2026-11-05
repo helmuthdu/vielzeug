@@ -4,6 +4,7 @@ import { computed } from '@vielzeug/ripple';
 
 import { type OverlayOpenChangeDetail, parseOptionalBool, parseStringTriggers } from '../../core';
 import { disablableBundle } from '../../shared';
+import { overlayMotionMixin } from '../../styles';
 import { useFloatingTrigger } from '../shared/use-floating-trigger';
 import styles from './popover.css?inline';
 
@@ -151,5 +152,5 @@ define<OrePopoverProps>(POPOVER_TAG, {
       </div>
     `;
   },
-  styles: [styles],
+  styles: [overlayMotionMixin('panel'), styles],
 });

@@ -59,10 +59,10 @@ installFormInternalsPolyfill();
 
 const consoleError = globalThis.console.error;
 const consoleWarn = globalThis.console.warn;
-// ore-async intentionally renders no named slots when status="idle": the E10
+// ore-state intentionally renders no named slots when status="idle": the E10
 // warning is expected and harmless in that state.
 const isKnownAsyncSlotWarning = (args: unknown[]) =>
-  args.some((arg) => typeof arg === 'string' && arg.includes('[ore:E10]') && arg.includes('<ore-async>'));
+  args.some((arg) => typeof arg === 'string' && arg.includes('[ore:E10]') && arg.includes('<ore-state>'));
 
 globalThis.console.error = (...args: unknown[]) => {
   if (isKnownAsyncSlotWarning(args)) return;

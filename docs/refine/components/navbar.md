@@ -304,7 +304,7 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `label`                 | `string`                                                  | `'Main navigation'`       | Accessible nav landmark label                                                  |
 | `menu-icon`             | `string`                                                  | `'menu'`                  | Icon shown while the mobile menu is closed                                     |
 | `menu-open-label`       | `string`                                                  | `'Open navigation menu'`  | Accessible label for the closed mobile menu toggle                             |
-| `menu-close-icon`       | `string`                                                  | `'x'`                     | Icon shown while the mobile menu is open                                       |
+| `menu-close-icon`       | `string`                                                  | `'x'`                     | Icon shown while the navbar's own mobile menu is open. Not applied when the toggle drives an external `mobile-sidebar` drawer: its scrim covers the toggle, so the drawer keeps the single close button |
 | `menu-close-label`      | `string`                                                  | `'Close navigation menu'` | Accessible label for the open mobile menu toggle                               |
 | `sticky`                | `boolean`                                                 | `false`                   | Enables sticky mode                                                            |
 | `floating`              | `boolean`                                                 | `false`                   | Enables floating mode                                                          |

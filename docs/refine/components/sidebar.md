@@ -1,6 +1,6 @@
 # Sidebar
 
-A collapsible navigation sidebar with labelled groups and individual items. It uses the same frosted panel surface treatment as the drawer, while still supporting icon-only collapse mode, keyboard navigation, and full ARIA compliance. On small screens it switches to a bottom tab bar plus an overlay drawer with a dimming scrim, a close button, and swipe-to-dismiss.
+A collapsible navigation sidebar with labelled groups and individual items. It uses the same frosted panel surface treatment as the drawer, while still supporting icon-only collapse mode, keyboard navigation, and full ARIA compliance. On small screens it switches to a bottom tab bar plus an overlay drawer with tap-to-dismiss, a close button, and swipe-to-dismiss.
 
 ## Collapsible Sidebar
 
@@ -159,17 +159,17 @@ Use two breakpoints to get the full three-state behavior:
 
 ## Drawer Behavior
 
-When the sidebar enters bottom-nav mode (or you call `openDrawer()`), the panel becomes a modal overlay: the page behind it is dimmed with the theme scrim, background content becomes `inert`, and focus is trapped inside the drawer until it closes.
+When the sidebar enters bottom-nav mode (or you call `openDrawer()`), the panel becomes an overlay: background content becomes `inert` and focus is trapped inside the drawer until it closes. The page behind it is left undimmed by default — a navigation drawer slides in from the edge you just tapped and is meant to be read against its content, and the panel's own elevation carries the separation. Opt into a dimming scrim with `backdrop` (below) when you want the modal treatment.
 
 The drawer offers three ways to dismiss it, covering touch, pointer, and keyboard:
 
-- **Scrim tap** — clicking the dimmed backdrop closes the drawer.
+- **Backdrop tap** — clicking outside the panel closes the drawer.
 - **Close button** — an `×` button appears in the drawer header, labelled by `drawer-close-label`.
 - **Swipe** — dragging the grabber nub on the panel's trailing edge past a threshold closes the drawer; releasing early snaps back.
 
 `Escape` also closes the drawer, and focus returns to the element that opened it. Selecting a navigation item closes the drawer by default; set `close-on-select="false"` to keep it open.
 
-The backdrop style matches `ore-drawer`: `backdrop="opaque"` (default scrim veil), `backdrop="blur"` (adds a blur), or `backdrop="transparent"` (no veil, still click-to-close). The scrim is built from the theme's darkening veil, so it dims the page in both light and dark schemes.
+The backdrop is click-to-close only by default. `backdrop="opaque"` dims the page with the theme scrim and `backdrop="blur"` adds a blur behind the panel; both are built from the theme's darkening veil, so they dim in either light or dark scheme rather than inverting into a bright fog. `backdrop="transparent"` is the same as the default. The values match `ore-drawer`, whose backdrop dims by default because a dialog replaces the page rather than sliding in beside it.
 
 ```html
 <ore-sidebar bottom-nav-at="(max-width: 640px)" backdrop="blur" drawer-close-label="Close navigation">
@@ -177,7 +177,7 @@ The backdrop style matches `ore-drawer`: `backdrop="opaque"` (default scrim veil
 </ore-sidebar>
 ```
 
-In `drawer`-only mode the sidebar has no inline panel and no bottom bar: it exists solely as the API/navbar-driven overlay drawer, with the same scrim, close button, and swipe behavior.
+In `drawer`-only mode the sidebar has no inline panel and no bottom bar: it exists solely as the API/navbar-driven overlay drawer, with the same backdrop, close button, and swipe behavior.
 
 ## Groups
 
@@ -478,7 +478,7 @@ ore-sidebar-item {
 | `collapsible`       | `boolean` | `false`                | Shows the collapse/expand toggle button in the header        |
 | `responsive`        | `string`  | N/A | Media query that enables compact (collapsed) sidebar mode    |
 | `bottom-nav-at`     | `string`  | N/A | Media query that switches to mobile bottom-nav + drawer mode |
-| `backdrop`          | `string`  | `'opaque'`             | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` |
+| `backdrop`          | `string`  | N/A                    | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` (unset = click-to-close, no dim) |
 | `close-on-select`   | `boolean` | `true`                 | Closes the drawer after primary item activation             |
 | `collapse-label`    | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                    |
 | `expand-label`      | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                      |
@@ -531,7 +531,7 @@ ore-sidebar-item {
 | `--sidebar-toggle-hover-bg` | Toggle hover background     | contrast |
 | `--sidebar-toggle-hover-color` | Toggle hover icon color  | contrast |
 | `--sidebar-drawer-width`  | Open drawer panel width     | `min(--sidebar-width, 85vw)` |
-| `--sidebar-drawer-backdrop-bg` | Drawer backdrop color  | `--overlay-veil` |
+| `--sidebar-drawer-backdrop-bg` | Drawer backdrop color  | `transparent` (`--overlay-veil` in the dimming modes) |
 | `--sidebar-drawer-shadow` | Shadow on the open drawer panel | `--shadow-xl` |
 | `--sidebar-bottom-nav-height` | Bottom bar height        | `3.75rem` |
 
@@ -545,7 +545,7 @@ ore-sidebar-item {
 | `footer`            | Footer container                                   |
 | `toggle-btn`        | Collapse/expand toggle                             |
 | `drawer-close-btn`  | Close button shown while the drawer is open        |
-| `drawer-backdrop`   | Dimming veil behind the open drawer                |
+| `drawer-backdrop`   | Backdrop behind the open drawer (click closes it; dims only with `backdrop`) |
 | `swipe-handle`      | Grabber nub that drag-closes the open drawer       |
 | `bottom-bar`        | Mobile bottom tab bar                              |
 

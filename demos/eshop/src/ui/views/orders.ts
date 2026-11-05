@@ -1,4 +1,3 @@
-import '@vielzeug/refine/async';
 import '@vielzeug/refine/badge';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/chip';

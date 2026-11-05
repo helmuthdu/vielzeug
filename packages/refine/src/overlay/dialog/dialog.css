@@ -38,15 +38,13 @@
     border: none;
 
     /* display + overlay allow-discrete hold the element in the top layer during exit
-       and let @starting-style fire on entry via showModal(). The durations must
-       be --duration-* tokens, never --transition-*: those resolve to `none`
-       under reduced motion, which makes the entire declaration syntactically
-       invalid and teleports the dialog out of the top layer mid-exit. A
-       zeroed --duration-* stays a valid `0ms` member, so the hold survives and
-       the exit simply becomes instant - which is the point. */
-    transition:
-      display var(--duration-200) allow-discrete,
-      overlay var(--duration-200) allow-discrete;
+       and let @starting-style fire on entry via showModal(). The timing comes from the shared
+       overlay vocabulary: it composes --duration-* tokens, never --transition-*, because a
+       --transition-* token resolves to `none` under reduced motion and one `none` member makes the
+       entire declaration syntactically invalid, teleporting the dialog out of the top layer
+       mid-exit. A zeroed --duration-* stays a valid `0ms` member, so the hold survives and the exit
+       simply becomes instant - which is the point. */
+    transition: var(--_overlay-hold);
   }
 
   /* all:unset removes the UA stylesheet's dialog:not([open]){display:none}: restore it */

@@ -35,11 +35,7 @@
     backdrop-filter: blur(var(--_menu-panel-blur));
     transform: translateY(var(--overlay-enter-translate-y)) scale(var(--overlay-enter-scale));
     transform-origin: top left;
-    transition:
-      opacity var(--duration-100) var(--ease-spring),
-      transform var(--duration-100) var(--ease-spring),
-      display var(--duration-100) allow-discrete,
-      overlay var(--duration-100) allow-discrete;
+    transition: var(--_overlay-dismiss);
   }
 
   .menu-panel[data-placement='top-start'],
@@ -58,11 +54,7 @@
     pointer-events: auto;
     opacity: 1;
     transform: translateY(0) scale(1);
-    transition:
-      opacity var(--duration-150) var(--ease-spring),
-      transform var(--duration-150) var(--ease-spring),
-      display var(--duration-150) allow-discrete,
-      overlay var(--duration-150) allow-discrete;
+    transition: var(--_overlay-present);
 
     @starting-style {
       opacity: 0;

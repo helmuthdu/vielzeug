@@ -19,7 +19,7 @@ import {
   sizableBundle,
   themableBundle,
 } from '../../shared';
-import { colorThemeMixin } from '../../styles';
+import { colorThemeMixin, overlayMotionMixin } from '../../styles';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './date-picker.css?inline';
 
@@ -658,5 +658,5 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
   },
 
   shadow: { delegatesFocus: true },
-  styles: [colorThemeMixin, componentStyles],
+  styles: [colorThemeMixin, overlayMotionMixin('dropdown'), componentStyles],
 });

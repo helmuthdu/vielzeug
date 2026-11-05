@@ -36,7 +36,6 @@ import type { OreStatsProps } from '../content/stats/stats';
 import type { OreTableProps } from '../content/table/table';
 import type { OreTextProps } from '../content/text/text';
 import type { OreAlertEvents, OreAlertProps } from '../feedback/alert/alert';
-import type { OreAsyncEvents, OreAsyncProps } from '../feedback/async/async';
 import type { OreBadgeProps } from '../feedback/badge/badge';
 import type { OreChipEvents, OreChipProps } from '../feedback/chip/chip';
 import type {
@@ -46,14 +45,21 @@ import type {
 } from '../feedback/cookie-banner/cookie-banner';
 import type { OrePasswordStrengthProps } from '../feedback/password-strength/password-strength';
 import type { OreProgressProps } from '../feedback/progress/progress';
+import type {
+  OrePullToRefreshEvents,
+  OrePullToRefreshProps,
+  PullToRefreshElement,
+} from '../feedback/pull-to-refresh/pull-to-refresh';
 import type { OreSkeletonProps } from '../feedback/skeleton/skeleton';
+import type { OreStateEvents, OreStateProps } from '../feedback/state/state';
 import type { OreToastEvents, OreToastProps } from '../feedback/toast/toast';
 import type { OreTypingIndicatorProps } from '../feedback/typing-indicator/typing-indicator';
 import type { OreButtonProps } from '../inputs/button/button';
-import type { OreButtonGroupProps } from '../inputs/button-group/button-group';
+import type { OreButtonGroupEvents, OreButtonGroupProps } from '../inputs/button-group/button-group';
 import type { OreCalendarEvents, OreCalendarProps } from '../inputs/calendar/calendar';
 import type { OreCheckboxEvents, OreCheckboxProps } from '../inputs/checkbox/checkbox';
 import type { OreCheckboxGroupEvents, OreCheckboxGroupProps } from '../inputs/checkbox-group/checkbox-group';
+import type { OreColorPickerEvents, OreColorPickerProps } from '../inputs/color-picker/color-picker';
 import type { OreComboboxEvents, OreComboboxOptionProps, OreComboboxProps } from '../inputs/combobox/combobox.types';
 import type { OreCounterEvents, OreCounterProps } from '../inputs/counter/counter';
 import type { OreDataGridEvents, OreDataGridProps } from '../inputs/datagrid/datagrid';
@@ -118,7 +124,6 @@ export interface RefineElementMap {
   'ore-accordion-item': HTMLElement & OreAccordionItemProps & AddEventListeners<OreAccordionItemEvents>;
   // feedback
   'ore-alert': HTMLElement & OreAlertProps & AddEventListeners<OreAlertEvents>;
-  'ore-async': HTMLElement & OreAsyncProps & AddEventListeners<OreAsyncEvents>;
   // content
   'ore-avatar': HTMLElement & OreAvatarProps;
   'ore-avatar-group': HTMLElement & OreAvatarGroupProps;
@@ -129,7 +134,7 @@ export interface RefineElementMap {
   'ore-breadcrumb-item': HTMLElement & OreBreadcrumbItemProps;
   // inputs
   'ore-button': HTMLElement & OreButtonProps;
-  'ore-button-group': HTMLElement & OreButtonGroupProps;
+  'ore-button-group': HTMLElement & OreButtonGroupProps & AddEventListeners<OreButtonGroupEvents>;
   'ore-calendar': HTMLElement & OreCalendarProps & AddEventListeners<OreCalendarEvents>;
   'ore-card': HTMLElement & OreCardProps & AddEventListeners<OreCardEvents>;
   'ore-carousel': HTMLElement & OreCarouselProps & AddEventListeners<OreCarouselEvents>;
@@ -143,6 +148,7 @@ export interface RefineElementMap {
     AddEventListeners<OreCheckboxGroupEvents>;
   'ore-chip': HTMLElement & OreChipProps & AddEventListeners<OreChipEvents>;
   'ore-code-window': HTMLElement & OreCodeWindowProps;
+  'ore-color-picker': HTMLElement & OreColorPickerProps & FormValidityMethods & AddEventListeners<OreColorPickerEvents>;
   'ore-column': HTMLElement;
   'ore-combobox': HTMLElement & OreComboboxProps & FormValidityMethods & AddEventListeners<OreComboboxEvents>;
   'ore-combobox-option': HTMLElement & OreComboboxOptionProps;
@@ -185,6 +191,7 @@ export interface RefineElementMap {
   'ore-password-strength': HTMLElement & OrePasswordStrengthProps;
   'ore-popover': HTMLElement & OrePopoverProps & AddEventListeners<OrePopoverEvents>;
   'ore-progress': HTMLElement & OreProgressProps;
+  'ore-pull-to-refresh': PullToRefreshElement & OrePullToRefreshProps & AddEventListeners<OrePullToRefreshEvents>;
   'ore-qr-code': HTMLElement & OreQrCodeProps & AddEventListeners<OreQrCodeEvents>;
   'ore-qr-scanner': HTMLElement & OreQrScannerProps & AddEventListeners<OreQrScannerEvents>;
   'ore-query-bar': HTMLElement & OreQueryBarProps & AddEventListeners<OreQueryBarEvents>;
@@ -203,6 +210,7 @@ export interface RefineElementMap {
   'ore-speech-player': SpeechPlayerElement & AddEventListeners<OreSpeechPlayerEvents>;
   'ore-speed-reading': SpeedReadingElement & AddEventListeners<OreSpeedReadingEvents>;
   'ore-spotlight': HTMLElement & OreSpotlightProps;
+  'ore-state': HTMLElement & OreStateProps & AddEventListeners<OreStateEvents>;
   'ore-stats': HTMLElement & OreStatsProps;
   'ore-step': HTMLElement & OreStepProps;
   'ore-stepper': HTMLElement & OreStepperProps & AddEventListeners<OreStepperEvents>;

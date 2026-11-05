@@ -109,6 +109,16 @@
     --_focus-shadow: var(--_theme-shadow);
   }
 
+  /* Keyboard focus lands on the host (roving tabindex), so without this the
+     browser paints its own `outline: auto` ring around the whole control on
+     top of the themed `.circle` ring. Safe to suppress: the `.circle` ring is
+     proven to render (radio.e2e.ts), and `forcedColorsFormControlMixin` sets
+     `forced-color-adjust: none`, so that box-shadow ring survives forced-colors
+     mode where a plain one would be discarded. Same treatment as `ore-button`. */
+  :host(:focus-visible) {
+    outline: none;
+  }
+
   /* ========================================
        Checked State
        ======================================== */

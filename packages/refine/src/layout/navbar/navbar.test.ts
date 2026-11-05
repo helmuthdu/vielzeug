@@ -286,6 +286,54 @@ describe('ore-navbar', () => {
     }
   });
 
+  it('keeps the toggle a hamburger while it drives an external drawer open', async () => {
+    // The drawer's scrim covers the navbar, so the toggle cannot be clicked
+    // while the drawer is open. Flipping it to the × icon would paint a second
+    // close button that is a dead affordance; the drawer owns its own ×. The
+    // toggle must therefore keep the open (hamburger) icon and only report the
+    // open state through aria-expanded/aria-label.
+    const originalMatchMedia = window.matchMedia;
+    const sidebar = document.createElement('ore-sidebar') as HTMLElement & {
+      toggleDrawer?: () => void;
+    };
+
+    sidebar.id = 'external-sidebar-icon';
+    sidebar.toggleDrawer = vi.fn(() => {
+      sidebar.toggleAttribute('data-drawer-open');
+      sidebar.dispatchEvent(new CustomEvent('drawer-change', { detail: { open: true } }));
+    });
+    document.body.append(sidebar);
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-navbar', {
+        attrs: { 'mobile-sidebar': '#external-sidebar-icon' },
+      });
+      await fixture.flush();
+
+      const btn = fixture.query<HTMLButtonElement>('[part="mobile-toggle"]')!;
+      const icon = btn.querySelector('ore-icon');
+
+      expect(icon?.getAttribute('name')).toBe('menu');
+
+      fireClick(btn);
+      await fixture.flush();
+
+      // Open state is reported, but the icon never becomes the close glyph.
+      expect(btn.getAttribute('aria-expanded')).toBe('true');
+      expect(btn.getAttribute('aria-label')).toBe('Close navigation menu');
+      expect(icon?.getAttribute('name')).toBe('menu');
+    } finally {
+      sidebar.remove();
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('follows external sidebar mobile mode changes', async () => {
     const originalMatchMedia = window.matchMedia;
     const sidebar = document.createElement('ore-sidebar');

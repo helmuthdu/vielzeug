@@ -5,6 +5,7 @@ import { warn } from '../../_dev';
 
 import { announce, createListControl, lifecycleSignal, parseOptionalBool } from '../../core';
 import { animateReflow } from '../../reflow';
+import { overlayMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
 import componentStyles from './command-palette.css?inline';
 import type { CommandPaletteItem, OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
@@ -655,5 +656,5 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
       </dialog>
     `;
   },
-  styles: [componentStyles],
+  styles: [overlayMotionMixin('panel'), componentStyles],
 });

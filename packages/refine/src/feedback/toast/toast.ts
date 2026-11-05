@@ -5,6 +5,7 @@ import type { OreAvatarProps } from '../../content/avatar/avatar';
 import { lifecycleSignal } from '../../core';
 import type { ButtonEmphasis, ButtonVariant } from '../../inputs/button/button';
 import { animateReflow } from '../../reflow';
+import { projectFling } from '../../shared/fling';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './toast.css?inline';
 
@@ -669,8 +670,11 @@ define<OreToastProps>(TOAST_TAG, {
       return createPanGesture(wrapper, {
         axis: 'x',
         disabled: () => !isDismissible(),
-        onEnd: ({ distance, reason }) => {
-          if (reason !== 'release' || Math.abs(distance) < 48) {
+        onEnd: ({ distance, velocity, reason }) => {
+          // Velocity-aware: a short fast flick projects past the threshold just
+          // like a long drag (see shared/fling), while a counter-flick at the
+          // end pulls the projection back and cancels the dismiss.
+          if (reason !== 'release' || Math.abs(projectFling(distance, velocity)) < 48) {
             reset();
 
             return;

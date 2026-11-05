@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(refine): fling handoff, drawer detents, color-picker, pull-to-refresh, ore-state, nested submenus, shared overlay motion",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

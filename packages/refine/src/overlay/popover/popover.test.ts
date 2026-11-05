@@ -1,23 +1,18 @@
-import { fireClick } from '@vielzeug/assay';
+import { fireClick, installPopoverPolyfill } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-popover', () => {
   let fixture: Fixture<HTMLElement>;
+  let uninstallPopover: (() => void) | undefined;
 
   beforeAll(async () => {
-    if (!HTMLElement.prototype.showPopover) {
-      HTMLElement.prototype.showPopover = function () {
-        this.setAttribute('popover-open', '');
-      };
-    }
-
-    if (!HTMLElement.prototype.hidePopover) {
-      HTMLElement.prototype.hidePopover = function () {
-        this.removeAttribute('popover-open');
-      };
-    }
+    uninstallPopover = installPopoverPolyfill();
 
     await import('./popover');
+  });
+
+  afterAll(() => {
+    uninstallPopover?.();
   });
 
   afterEach(() => {

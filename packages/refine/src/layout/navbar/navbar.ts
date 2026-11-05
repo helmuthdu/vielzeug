@@ -728,7 +728,16 @@ define<OreNavbarProps>(NAVBAR_TAG, {
             @click="${toggleMobileMenu}">
             <ore-icon
               name="${() =>
-                (hasMobileMenu.value ? isMobileMenuOpen.value : isExternalMobileOpen.value)
+                // The × only belongs here when the toggle owns its own mobile-menu
+                // panel, which it can open *and* close. When it instead drives an
+                // external `ore-sidebar` drawer, the drawer's scrim covers the whole
+                // navbar (it sits above the navbar's z-index), so this button cannot
+                // be clicked while the drawer is open: flipping it to × would paint a
+                // second close button that is a dead affordance. The drawer owns its
+                // own close control, so the toggle stays a hamburger and the drawer's
+                // × is the single close button. aria-expanded/label below still report
+                // the real open state for assistive tech.
+                hasMobileMenu.value && isMobileMenuOpen.value
                   ? props['menu-close-icon'].value
                   : props['menu-icon'].value}"
               size="18"

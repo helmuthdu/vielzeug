@@ -104,6 +104,13 @@ export type OreButtonProps = {
   target?: LinkTarget;
   /** HTML button type attribute */
   type?: ButtonType;
+  /**
+   * The button's value, mirroring native `<button value>`: meaningful inside a
+   * segmented `ore-button-group`, where it identifies this button as one option
+   * of the group's selection. A button without `value` inside a segmented group
+   * stays a plain action and is skipped by the selection.
+   */
+  value?: string;
   /** Visual style variant */
   variant?: ButtonVariant;
 };
@@ -127,6 +134,7 @@ export type OreButtonProps = {
  * @attr {boolean} icon-only - Icon-only mode (square aspect ratio, no padding)
  * @attr {boolean} fullwidth - Full width button (100% of container)
  * @attr {boolean} fullheight - Full height button (100% of container)
+ * @attr {string} value - Button value; inside a segmented `ore-button-group` it identifies this button as one selectable option
  *
  * @fires click - Emitted when button is clicked (unless disabled/loading)
  *
@@ -149,6 +157,9 @@ export type OreButtonProps = {
  * @cssprop --button-min-height - Minimum height override (defaults to the 44px touch target)
  * @cssprop --button-frost-active-bg - Background when pressed (frost variant)
  * @cssprop --button-frost-active-border-color - Border color when pressed (frost variant)
+ * @cssprop --button-selected-bg - Background of a selected segment in a segmented `ore-button-group` (defaults to the color family's base)
+ * @cssprop --button-selected-color - Text color of a selected segment in a segmented `ore-button-group` (defaults to the color family's contrast)
+ * @cssprop --button-selected-border-color - Border color of a selected segment in a segmented `ore-button-group` (defaults to the color family's base)
  * @cssprop --button-shadow - Resting shadow for an elevated button (default: the color family's halo)
  * @cssprop --button-shadow-contact - Neutral contact shadow layered under --button-shadow
  *
@@ -177,6 +188,7 @@ define<OreButtonProps>(BUTTON_TAG, {
     rel: prop.string(),
     target: prop.oneOf(LINK_TARGETS),
     type: prop.oneOf(['button', 'submit', 'reset'] as const, 'button'),
+    value: prop.string(),
     variant: prop.oneOf(BUTTON_VARIANTS),
   },
   setup(props) {
@@ -259,16 +271,46 @@ define<OreButtonProps>(BUTTON_TAG, {
     };
 
     // ARIA attributes live on the host.
+    //
+    // Inside a segmented `ore-button-group`, a button that carries a `value` is
+    // one option of a single selection, so it takes `role="radio"` +
+    // `aria-checked` and a roving tabindex (only the checked option is in the
+    // tab order) — the same shape `ore-radio` binds from its group's context.
+    // The button derives all of it from the context rather than having the group
+    // write its attributes, and a button without `value` in the same group keeps
+    // plain `role="button"` semantics: it is an action, not an option.
+    const isSegment = computed(
+      () => !isLink.value && groupCtx?.segmented.value === true && props.value.value !== undefined,
+    );
+    const isCheckedSegment = computed(() => isSegment.value && groupCtx?.value.value === props.value.value);
+    const segmentTabbable = computed(() => isCheckedSegment.value && !isDisabled.value);
+    // The consumer's authored role, read once before this component's own bind
+    // ever writes the attribute: re-reading it live would let a segment's
+    // `role="radio"` feed back as the fallback once the group stops being
+    // segmented.
+    const authoredRole = el.getAttribute('role');
+
     bind({
       attr: {
         'aria-busy': computed(() => (isLink.value ? null : props.loading.value)),
+        'aria-checked': computed(() => (isSegment.value ? String(isCheckedSegment.value) : null)),
         'aria-disabled': computed(() => (isLink.value ? null : isDisabled.value)),
         'aria-label': computed(() => (isLink.value ? null : props.label.value)),
         color: effectiveColor,
         effect: props.effect,
-        role: computed(() => (isLink.value ? null : (el.getAttribute('role') ?? 'button'))),
+        role: computed(() => {
+          if (isLink.value) return null;
+          if (isSegment.value) return 'radio';
+
+          return authoredRole ?? 'button';
+        }),
         size: effectiveSize,
-        tabindex: computed(() => (isLink.value ? null : isDisabled.value ? '-1' : '0')),
+        tabindex: computed(() => {
+          if (isLink.value) return null;
+          if (isSegment.value) return segmentTabbable.value ? '0' : '-1';
+
+          return isDisabled.value ? '-1' : '0';
+        }),
         variant: effectiveVariant,
       },
       on: {

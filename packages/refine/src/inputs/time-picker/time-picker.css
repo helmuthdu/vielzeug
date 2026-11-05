@@ -57,18 +57,15 @@
     opacity: 0;
     backdrop-filter: blur(var(--blur-sm));
     transform: translateY(var(--overlay-enter-translate-y));
-    transition: var(
-      --_motion-transition,
-      opacity var(--transition-fast),
-      transform var(--transition-fast),
-      display var(--transition-fast) allow-discrete
-    );
+    /* Present/dismiss timing comes from the shared overlay vocabulary. */
+    transition: var(--_overlay-dismiss);
   }
 
   .dropdown[data-open] {
     pointer-events: auto;
     opacity: 1;
     transform: translateY(0);
+    transition: var(--_overlay-present);
 
     @starting-style {
       opacity: 0;

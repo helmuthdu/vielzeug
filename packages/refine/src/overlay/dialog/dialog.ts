@@ -2,7 +2,7 @@ import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmi
 
 import { warnMultiplePrimaryActions } from '../../_dev';
 import { type OverlayOpenChangeDetail, parseOptionalBool } from '../../core';
-import { roundedVariantMixin, touchTargetMixin } from '../../styles';
+import { overlayMotionMixin, roundedVariantMixin, touchTargetMixin } from '../../styles';
 import { PADDING_SIZES, type PaddingSize, ROUNDED_SIZES } from '../../types';
 import { useDialogControl } from '../shared/use-dialog';
 
@@ -215,5 +215,5 @@ define<OreDialogProps>(DIALOG_TAG, {
       </dialog>
     `;
   },
-  styles: [roundedVariantMixin, touchTargetMixin, componentStyles],
+  styles: [roundedVariantMixin, touchTargetMixin, overlayMotionMixin('panel'), componentStyles],
 });

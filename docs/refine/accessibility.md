@@ -93,6 +93,7 @@ Before each minor release:
 | `ore-switch`       | `switch`                  | Space                             | `aria-checked`                                                        |
 | `ore-slider`       | `slider`                  | Arrow keys                        | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext`   |
 | `ore-rating`       | `radiogroup` + `radio`    | Arrow keys                        | `aria-label` per star                                                 |
+| `ore-color-picker` | `radiogroup` + `radio`    | Arrow keys, Home/End             | `aria-checked` per swatch, roving `tabindex`, group `aria-label` from `label` |
 | `ore-counter`      | `group` + `spinbutton`    | Arrow keys, Home/End, Page Up/Down | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-live`        |
 | `ore-number-input` | `spinbutton`              | Arrow keys                        | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`                     |
 | `ore-otp-input`    | `group` of text inputs    | Arrow / Backspace / Tab           | `aria-label` per cell                                                 |
@@ -104,8 +105,9 @@ Before each minor release:
 | ------------------- | ------------------ | ----------------- | ----------------------------------------- |
 | `ore-alert`          | `alert` / `status` | Dismiss button    | `aria-live` via region                    |
 | `ore-toast`          | `alert` / `status` | Dismiss button    | `aria-live="polite"` or `"assertive"`     |
-| `ore-async`          | Dynamic            | N/A | `aria-busy`, `aria-live`, `role="alert"` in error |
+| `ore-state`          | `status` / `alert` (regions) | Retry button | Host `aria-busy` only; `role="status"` (loading/empty) or `role="alert"` (error) on the announced region, retry outside it |
 | `ore-progress`       | `progressbar`      | N/A | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` |
+| `ore-pull-to-refresh` | `status` (spinner) | Pointer only | `role="status"` on the persistent spinner; provide a separate refresh button for keyboard |
 | `ore-skeleton`       | None (decorative)  | N/A | `aria-hidden="true"` on bones             |
 | `ore-typing-indicator` | `status` (on a visually-hidden label) | N/A | `aria-live="polite"`; dots are `aria-hidden="true"` |
 | `ore-badge`          | None               | N/A | `aria-label` if meaningful                |

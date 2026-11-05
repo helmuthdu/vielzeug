@@ -40,3 +40,28 @@ export const parseStringTriggers = <T extends string>(
  */
 export const parseOptionalBool = (value: string | null): boolean | undefined =>
   value == null ? undefined : value === '' || value === 'true';
+
+// ── Detent list parser ────────────────────────────────────────────────────────
+
+/**
+ * Parses a comma-separated list of detent fractions into a sorted, deduplicated
+ * array of numbers in the open interval (0, 1): `detents="0.5,0.75"`. A detent
+ * fraction is the share of the panel that stays on-screen when a dragged panel
+ * comes to rest there (`0.5` = half-open). Entries outside (0, 1) are dropped;
+ * an absent or fully-invalid attribute yields `undefined` ("no detents"), which
+ * keeps the component two-state (fully open / fully closed).
+ */
+export const parseDetents = (value: string | null): readonly number[] | undefined => {
+  if (value == null) return undefined;
+
+  const fractions = [
+    ...new Set(
+      value
+        .split(',')
+        .map((entry) => Number.parseFloat(entry.trim()))
+        .filter((entry) => entry > 0 && entry < 1),
+    ),
+  ].sort((a, b) => a - b);
+
+  return fractions.length > 0 ? fractions : undefined;
+};

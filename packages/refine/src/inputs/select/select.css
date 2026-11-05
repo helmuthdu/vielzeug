@@ -141,22 +141,20 @@
     border-radius: var(--_radius);
     box-shadow: var(--shadow-lg);
 
-    /* Hidden by default */
+    /* Hidden by default (also the exit state). Present/dismiss timing comes from the shared
+       overlay vocabulary; the top-layer `overlay` hold it carries is what keeps the popover from
+       being torn out of the top layer mid-exit. */
     opacity: 0;
     backdrop-filter: blur(var(--blur-md));
     transform: translateY(var(--overlay-enter-translate-y));
-    transition: var(
-      --_motion-transition,
-      opacity var(--transition-fast),
-      transform var(--transition-fast),
-      display var(--transition-fast) allow-discrete
-    );
+    transition: var(--_overlay-dismiss);
   }
 
   .dropdown[data-open] {
     pointer-events: auto;
     opacity: 1;
     transform: translateY(0);
+    transition: var(--_overlay-present);
 
     @starting-style {
       opacity: 0;

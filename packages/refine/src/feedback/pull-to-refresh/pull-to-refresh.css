@@ -1,0 +1,88 @@
+@layer refine.base {
+  :host {
+    --_spinner-size: var(--pull-to-refresh-spinner-size, var(--size-6));
+    --_spinner-color: var(--pull-to-refresh-spinner-color, var(--color-primary));
+
+    display: block;
+    overflow: hidden;
+  }
+
+  .scroll {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    /* `none`, not `contain`: the pull gesture is the overscroll affordance here,
+       so the platform's own top bounce must be suppressed as well as scroll
+       chaining. Left on `contain`, a touch drag at the top rubber-bands natively
+       on top of the spring, and the two effects double up. */
+    overscroll-behavior-y: none;
+  }
+
+  /* Out of flow: the content's translateY is the only displacement, and the
+     indicator overlays the band it reveals. As a flex item it would also push
+     the content down by its own height, doubling the drag distance and opening
+     a blank gap between the band and the content. Purely decorative, so it must
+     not swallow pointer input from the content underneath while it holds open. */
+  .indicator {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .spinner {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  :host([data-phase='refreshing']) .spinner {
+    opacity: 1;
+  }
+
+  .spinner-ring {
+    width: var(--_spinner-size);
+    height: var(--_spinner-size);
+    border: var(--border-2) solid var(--_spinner-color);
+    border-top-color: transparent;
+    border-radius: var(--rounded-full);
+    /* The root --_motion-animation hatch stops the spin for the OS preference
+       and data-motion='reduced', and honors data-motion='full'. The cycle is
+       the effect's own speed, not a UI duration, so it stays a literal. */
+    animation: var(--_motion-animation, ore-pull-to-refresh-spin var(--duration-1000) var(--ease-linear) infinite);
+    animation-play-state: paused;
+  }
+
+  :host([data-phase='refreshing']) .spinner-ring {
+    animation-play-state: running;
+  }
+
+  @keyframes ore-pull-to-refresh-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .spinner-label {
+    font-size: var(--text-sm);
+    color: var(--color-contrast-500);
+  }
+
+  .content {
+    flex: 1 0 auto;
+    will-change: transform;
+  }
+
+  :host([disabled]) {
+    opacity: 0.5;
+  }
+}

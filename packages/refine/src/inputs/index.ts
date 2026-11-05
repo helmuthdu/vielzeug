@@ -1,7 +1,7 @@
 export type { BaseFormProps, SelectableFieldProps, TextFieldProps } from '../shared';
 export type { OreButtonProps } from './button/button';
 export { BUTTON_TAG } from './button/button';
-export type { ButtonGroupContext, OreButtonGroupProps } from './button-group/button-group';
+export type { ButtonGroupContext, OreButtonGroupEvents, OreButtonGroupProps } from './button-group/button-group';
 export { BUTTON_GROUP_CTX, BUTTON_GROUP_TAG } from './button-group/button-group';
 export type { CalendarEvent, OreCalendarEvents, OreCalendarProps } from './calendar/calendar';
 export { CALENDAR_TAG } from './calendar/calendar';
@@ -9,6 +9,8 @@ export type { OreCheckboxEvents, OreCheckboxProps } from './checkbox/checkbox';
 export { CHECKBOX_TAG } from './checkbox/checkbox';
 export type { OreCheckboxGroupEvents, OreCheckboxGroupProps } from './checkbox-group/checkbox-group';
 export { CHECKBOX_GROUP_CTX, CHECKBOX_GROUP_TAG } from './checkbox-group/checkbox-group';
+export type { OreColorPickerEvents, OreColorPickerOption, OreColorPickerProps } from './color-picker/color-picker';
+export { COLOR_PICKER_TAG } from './color-picker/color-picker';
 export type {
   ComboboxOptionInput,
   OreComboboxEvents,

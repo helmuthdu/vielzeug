@@ -45,11 +45,7 @@
     opacity: 0;
     backdrop-filter: blur(var(--blur-sm));
     transform: var(--_tooltip-closed-transform);
-    transition:
-      opacity var(--duration-150) var(--ease-in-out),
-      transform var(--duration-150) var(--ease-in-out),
-      display var(--duration-150) allow-discrete,
-      overlay var(--duration-150) allow-discrete;
+    transition: var(--_overlay-dismiss);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -90,11 +86,7 @@
   .tooltip[data-open] {
     opacity: 1;
     transform: translate(0, 0) scale(1);
-    transition:
-      opacity var(--duration-200) var(--ease-in-out),
-      transform var(--duration-300) var(--ease-spring),
-      display var(--duration-200) allow-discrete,
-      overlay var(--duration-200) allow-discrete;
+    transition: var(--_overlay-present);
     will-change: opacity, transform;
 
     @starting-style {

@@ -38,9 +38,7 @@
     pointer-events: none;
     background: transparent;
     border: none;
-    transition:
-      display var(--duration-200) allow-discrete,
-      overlay var(--duration-200) allow-discrete;
+    transition: var(--_overlay-hold);
   }
 
   dialog:not([open]) {

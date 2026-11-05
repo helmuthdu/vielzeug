@@ -96,8 +96,15 @@
     background: var(--_hover-bg);
   }
 
-  :host(:focus-visible) .item {
+  /* Focus lands on the inner div — it is the role=menuitem roving target the
+     menu focuses (`getItemFocusable`), while the host carries no tabindex — so
+     the selector must match the div itself. Matching only `:host(:focus-visible)`
+     left the themed highlight unpainted and Chrome's default blue UA ring
+     showing through. The host variant stays for a consumer that focuses it. */
+  :host(:focus-visible) .item,
+  .item:focus-visible {
     color: var(--_focus-color);
+    outline: none;
     background: var(--_focus-bg);
   }
 
@@ -162,6 +169,109 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* ── Submenu trigger affordance ─────────────────────────────────────────── */
+
+  .submenu-arrow {
+    flex: none;
+    color: var(--color-contrast-400);
+    /* Mirrors with the writing direction, the way native menu disclosure arrows do. */
+    transform: scaleX(1);
+  }
+
+  :host([dir='rtl']) .submenu-arrow,
+  :host(:dir(rtl)) .submenu-arrow {
+    transform: scaleX(-1);
+  }
+
+  .item.is-checked .submenu-arrow {
+    color: currentcolor;
+  }
+}
+
+/* ========================================
+   Submenu panel: Popover API UA resets.
+   Unlayered so they unconditionally beat the browser's [popover] UA stylesheet
+   (padding / inset / border / margin / color). Must NOT be inside @layer.
+   ======================================== */
+.submenu-panel {
+  inset: unset;
+  padding: var(--menu-panel-padding, var(--size-1));
+  margin: 0;
+  color: var(--color-contrast-900);
+  border: var(--border) solid var(--color-divider);
+}
+
+@layer refine.base {
+  /* ========================================
+     Submenu panel
+     ======================================== */
+
+  /* A submenu is a second menu surface, so it borrows the panel's visual language through the same
+     public `--menu-panel-*` hooks. It cannot read the parent menu's private `--_menu-panel-*`
+     variables: those are computed on the menu host, and while they do inherit into this shadow
+     tree, depending on another component's private contract is exactly what the token gate forbids.
+
+     The panel is `popover="manual"`, i.e. in the top layer. That is not cosmetic: the owning
+     `.menu-panel` carries an entrance `transform` (which makes it the containing block for any
+     `position: fixed` descendant) and `overflow-y: auto` (which clips one). A fixed flyout rendered
+     inside it would be positioned against the panel and clipped by its scroller. The top layer
+     escapes both, which is also why `position: fixed` here resolves against the viewport as the
+     positioner assumes. */
+  .submenu-panel {
+    position: fixed;
+    z-index: calc(var(--z-popover) + 1);
+    box-sizing: border-box;
+    min-width: var(--menu-panel-min-width, 10rem);
+    max-height: var(--menu-panel-max-height, min(70vh, 32rem));
+    overflow-y: auto;
+    pointer-events: none;
+    background: var(--menu-panel-bg, color-mix(in oklch, var(--surface-overlay) 85%, transparent));
+    border-radius: var(--menu-panel-radius, var(--rounded-lg));
+    box-shadow: var(--menu-panel-shadow, var(--shadow-xl));
+
+    /* Closed state doubles as the exit state. Visibility comes from the UA sheet's
+       `[popover]:not(:popover-open) { display: none }`, which also keeps the flyout's items out of
+       the tab order and the accessibility tree while closed; `[data-open]` below restores display for
+       the same reason `ore-tooltip` does — and so an environment without the Popover API, where
+       nothing ever matches `:popover-open`, still renders the panel. */
+    opacity: 0;
+    backdrop-filter: blur(var(--menu-panel-blur, var(--blur-md)));
+    transform: translateX(calc(var(--overlay-enter-translate-x, 4px) * -1)) scale(var(--overlay-enter-scale, 0.97));
+    transform-origin: left top;
+    transition: var(--_overlay-dismiss);
+  }
+
+  .submenu-panel[data-placement='left'],
+  .submenu-panel[data-placement='left-start'],
+  .submenu-panel[data-placement='left-end'] {
+    transform: translateX(var(--overlay-enter-translate-x, 4px)) scale(var(--overlay-enter-scale, 0.97));
+    transform-origin: right top;
+  }
+
+  .submenu-panel[data-placement='right-end'],
+  .submenu-panel[data-placement='left-end'] {
+    transform-origin: right bottom;
+  }
+
+  .submenu-panel[data-open] {
+    display: block;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    transition: var(--_overlay-present);
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  /* Slotted children render inside this shadow tree, so the block display the parent menu gives
+     them via `::slotted()` never reaches them here. They need it locally or rows collapse inline. */
+  .submenu-panel ::slotted(ore-menu-item),
+  .submenu-panel ::slotted(ore-menu-separator) {
+    display: block;
   }
 }
 

@@ -50,6 +50,12 @@
     height: 100%;
     min-height: 0;
     overflow: hidden;
+
+    /* Opening the drawer moves focus to this `tabindex="-1"` container so the
+       panel is reachable by keyboard. It is the whole panel, not a control, so
+       Chrome's default `outline: auto` ring would draw a blue border around the
+       entire sidebar. Neutral-container treatment, as in `ore-tour`'s `.float`. */
+    outline: none;
     background: var(--_panel-bg);
     border-inline-end: var(--border) solid var(--_panel-border-color);
     backdrop-filter: blur(var(--_panel-blur));
@@ -60,18 +66,23 @@
   }
 
   /*
-   * Drawer backdrop veil. --overlay-veil is the theme's dimming recipe (built
-   * from --color-scrim): unlike a contrast-ramp color it always darkens, so it
-   * never inverts into a bright fog in dark mode. Fades with the panel instead
-   * of popping (display is transitionable with allow-discrete, like
-   * ore-drawer's ::backdrop).
+   * Drawer backdrop. A navigation drawer slides in from the edge the user just
+   * tapped, so unlike a modal dialog it does not dim the page by default: the
+   * panel's own elevation carries the separation, and dimming the content a
+   * drawer is meant to be read against reads as a modal takeover. The layer
+   * still exists while open because it is what makes tap-outside dismiss the
+   * drawer. Opt into the dim with backdrop="opaque" or backdrop="blur"; those
+   * use --overlay-veil, the theme's dimming recipe (built from --color-scrim),
+   * which always darkens and never inverts into a bright fog in dark mode.
+   * Fades with the panel instead of popping (display is transitionable with
+   * allow-discrete, like ore-drawer's ::backdrop).
    */
   .drawer-backdrop {
     position: absolute;
     inset: 0;
     z-index: calc(var(--z-sticky) + 1);
     display: none;
-    background: var(--sidebar-drawer-backdrop-bg, var(--overlay-veil));
+    background: var(--sidebar-drawer-backdrop-bg, transparent);
     opacity: 0;
     transition:
       opacity var(--_sidebar-transition),
@@ -562,11 +573,19 @@
     --_panel-border-color: transparent;
   }
 
-  /* ── drawer backdrop styles (mirrors ore-drawer) ── */
+  /* ── drawer backdrop styles (mirrors ore-drawer, but opt-in: the default
+     backdrop is click-to-close only and does not dim the page) ── */
+  :host([backdrop='opaque']) .drawer-backdrop,
+  :host([backdrop='blur']) .drawer-backdrop {
+    background: var(--sidebar-drawer-backdrop-bg, var(--overlay-veil));
+  }
+
   :host([backdrop='blur']) .drawer-backdrop {
     backdrop-filter: blur(var(--blur-xs));
   }
 
+  /* Last in the layer: an explicit `transparent` always wins over the dimming
+     modes above, so the value stays meaningful now that it is also the default. */
   :host([backdrop='transparent']) .drawer-backdrop {
     background: transparent;
   }

@@ -151,6 +151,30 @@ Use `drag-handle-placement` to control whether the swipe handle sits outside the
 
 </ComponentPreview>
 
+## Detents (Snap Points)
+
+On a `bottom` or `top` drawer, `detents` turns the panel into a sheet that can rest partway open. Pass comma-separated fractions of the panel size — `"0.5,0.75"` means the dragged panel can snap to half-open and three-quarters-open on its way between fully open and closed.
+
+<ComponentPreview height="440px">
+
+```html
+<ore-button id="open-detents">Half / three-quarter sheet</ore-button>
+
+<ore-drawer id="drawer-detents" placement="bottom" label="Detented sheet" detents="0.5,0.75" dismissible>
+  <p>Drag the handle down: the sheet snaps to 75%, then 50%, then closes.</p>
+</ore-drawer>
+
+<script>
+  document.getElementById('open-detents').addEventListener('click', function () {
+    document.getElementById('drawer-detents').setAttribute('open', '');
+  });
+</script>
+```
+
+</ComponentPreview>
+
+A drag released between two snap points settles to the nearer one, and a fling is projected forward with its release velocity before choosing a stop — so a quick flick carries through to the next detent (or closes) while a slow release settles without overshoot. Every rest position, including each detent, stays fully opaque so the sheet is readable at any stop. Detents are the bottom-sheet pattern only: setting `detents` on a `left` or `right` drawer warns and is ignored.
+
 ## Backdrop Styles (`backdrop`)
 
 Use `backdrop` to match dialog behavior:
@@ -224,6 +248,7 @@ Use `backdrop` to match dialog behavior:
 | `default-open`          | `boolean`                                | `false`     | Initial visibility when `open` is not provided    |
 | `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`   | Edge the drawer slides in from                    |
 | `size`                  | `'sm' \| 'md' \| 'lg' \| 'full'`         | `'md'`      | Panel width (or height for top/bottom placements) |
+| `detents`               | `string`                                 | N/A | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only |
 | `label`                 | `string`                                 | N/A | Accessible title shown in the header bar          |
 | `drag-handle-placement` | `'outside' \| 'inset'`                   | `'outside'` | Position of the swipe drag handle                 |
 | `dismissible`           | `boolean`                                | `true`      | Shows a close (×) button in the header            |

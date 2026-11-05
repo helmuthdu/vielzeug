@@ -302,7 +302,7 @@ Refine uses an 11-step contrast scale driven by `light-dark()`. Values flip auto
 | `--color-divider`  | `color-mix(in oklch, var(--color-contrast-300) 85%, transparent)`  | Separator lines and borders       |
 | `--color-contrast` | `color-mix(in oklch, var(--color-contrast-900) 85%, transparent)`  | Maximum-contrast text/icon color  |
 | `--color-scrim`    | `light-dark(rgb(0 0 0 / 55%), rgb(0 0 0 / 72%))`                      | Overlay dim veil (never inverts)  |
-| `--overlay-veil`   | `color-mix(in oklch, var(--color-scrim) 70%, transparent)`             | The dimming backdrop behind every overlay (dialog, drawer, command palette, tour, sidebar drawer) |
+| `--overlay-veil`   | `color-mix(in oklch, var(--color-scrim) 70%, transparent)`             | The dimming backdrop behind every overlay (dialog, drawer, command palette, tour, and the sidebar drawer in its `backdrop="opaque"`/`"blur"` modes) |
 
 ### Semantic Text Colors
 

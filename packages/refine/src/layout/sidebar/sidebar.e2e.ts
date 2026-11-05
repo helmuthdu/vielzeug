@@ -190,31 +190,13 @@ test.describe('Interaction', () => {
     await expect(nav).toHaveAttribute('inert', '');
   });
 
-  test('drawer backdrop dims the page and closes on click or close button', async ({ page, refinePage }) => {
-    await refinePage.mountComponent(`
-      <div style="position:relative;width:360px;height:460px;overflow:hidden;">
-        <ore-sidebar id="sidebar" container-breakpoints bottom-nav-at="(max-width: 640px)">
-          <span slot="header">Workspace</span>
-          <ore-sidebar-item bottom-nav>Pipeline</ore-sidebar-item>
-        </ore-sidebar>
-      </div>
-    `);
-    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-bottom-nav'));
-
-    const sidebar = page.locator('#sidebar');
-    const backdrop = sidebar.locator('[part="drawer-backdrop"]');
-    const closeBtn = sidebar.locator('[part="drawer-close-btn"]');
-
-    await expect(backdrop).toBeHidden();
-    await expect(closeBtn).toBeHidden();
-
-    await sidebar.evaluate((el) => (el as { openDrawer(): void }).openDrawer());
-    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
-
-    // The veil must darken: paint the resolved background over white on a canvas
-    // and read the pixel back. This is format-independent (color-mix may compute
-    // to oklab) and proves a dark, semi-transparent fill rather than a bright fog.
-    const veil = await backdrop.evaluate((el) => {
+  /**
+   * Paints a resolved background over white on a canvas and reads the pixel
+   * back. Format-independent (color-mix may compute to oklab) and proves a
+   * dark, semi-transparent fill rather than a bright fog or no fill at all.
+   */
+  const compositeOverWhite = (page: Parameters<typeof axeCheck>[0], selector: string) =>
+    page.locator(selector).evaluate((el) => {
       const bg = getComputedStyle(el).backgroundColor;
       const canvas = document.createElement('canvas');
 
@@ -233,9 +215,38 @@ test.describe('Interaction', () => {
       return { bg, rgb: [r, g, b] as number[] };
     });
 
-    // Composited over white, a darkening veil pulls every channel well below 255.
+  const SHELL_DRAWER = (extra = '') => `
+      <div style="position:relative;width:360px;height:460px;overflow:hidden;">
+        <ore-sidebar id="sidebar" container-breakpoints bottom-nav-at="(max-width: 640px)" ${extra}>
+          <span slot="header">Workspace</span>
+          <ore-sidebar-item bottom-nav>Pipeline</ore-sidebar-item>
+        </ore-sidebar>
+      </div>
+    `;
+
+  test('drawer backdrop does not dim by default but still closes on click', async ({ page, refinePage }) => {
+    // A navigation drawer slides in from the edge the user just tapped, so it
+    // must not darken the content it is meant to be read against. The veil
+    // stays invisible while open, yet still covers the page so tap-outside
+    // dismisses the drawer.
+    await refinePage.mountComponent(SHELL_DRAWER());
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-bottom-nav'));
+
+    const sidebar = page.locator('#sidebar');
+    const backdrop = sidebar.locator('[part="drawer-backdrop"]');
+    const closeBtn = sidebar.locator('[part="drawer-close-btn"]');
+
+    await expect(backdrop).toBeHidden();
+    await expect(closeBtn).toBeHidden();
+
+    await sidebar.evaluate((el) => (el as { openDrawer(): void }).openDrawer());
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
+
+    const veil = await compositeOverWhite(page, '#sidebar [part="drawer-backdrop"]');
+
+    // Composited over white, a non-dimming backdrop leaves every channel at 255.
     for (const channel of veil.rgb) {
-      expect(channel).toBeLessThan(230);
+      expect(channel).toBe(255);
     }
 
     await expect(closeBtn).toBeVisible();
@@ -246,6 +257,24 @@ test.describe('Interaction', () => {
     await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
     await backdrop.click({ position: { x: 300, y: 20 } });
     await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
+  });
+
+  test('backdrop="opaque" dims the page while the drawer is open', async ({ page, refinePage }) => {
+    // The opt-in dimming mode must still darken: --overlay-veil is built from
+    // --color-scrim so it never inverts into a bright fog in dark mode.
+    await refinePage.mountComponent(SHELL_DRAWER('backdrop="opaque"'));
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-bottom-nav'));
+
+    const sidebar = page.locator('#sidebar');
+
+    await sidebar.evaluate((el) => (el as { openDrawer(): void }).openDrawer());
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
+
+    const veil = await compositeOverWhite(page, '#sidebar [part="drawer-backdrop"]');
+
+    for (const channel of veil.rgb) {
+      expect(channel).toBeLessThan(230);
+    }
   });
 
   test('drawer panel width honors the sidebar-drawer-width token', async ({ page, refinePage }) => {
@@ -266,6 +295,38 @@ test.describe('Interaction', () => {
 
     // 20rem = 320px, below the 85vw cap at this container width.
     expect(Math.round(width)).toBe(320);
+  });
+});
+
+test.describe('Focus', () => {
+  // Opening the drawer moves focus to the `tabindex="-1"` nav so the panel is
+  // reachable by keyboard. The nav is the whole panel, not a control, so the
+  // stylesheet suppresses the browser's default focus ring, which would
+  // otherwise draw a blue border around the entire sidebar.
+  test('shows no browser focus ring on the nav when the drawer opens', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<button id="tab-start">start</button><ore-sidebar id="sb" drawer></ore-sidebar>');
+    await page.waitForSelector('ore-sidebar');
+
+    // Real Tab first: Chromium only treats programmatic focus as
+    // keyboard-originated (and paints :focus-visible) once the user has shown
+    // keyboard modality.
+    await page.locator('#tab-start').focus();
+    await page.keyboard.press('Tab');
+
+    const nav = await page.evaluate(async () => {
+      const host = document.getElementById('sb') as HTMLElement & { openDrawer(): void };
+      host.openDrawer();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      const navEl = host.shadowRoot?.querySelector<HTMLElement>('nav');
+      if (!navEl) throw new Error('Missing nav');
+      return {
+        focused: host.shadowRoot?.activeElement === navEl,
+        outlineStyle: getComputedStyle(navEl).outlineStyle,
+      };
+    });
+
+    expect(nav.focused).toBe(true);
+    expect(nav.outlineStyle).toBe('none');
   });
 });
 

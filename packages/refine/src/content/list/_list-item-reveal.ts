@@ -1,5 +1,6 @@
 import { createPanGesture, type PanGesture, type PanGestureDetail } from '@vielzeug/gesture';
 import type { Readable } from '@vielzeug/ripple';
+import { projectFling } from '../../shared/fling';
 import type { ListItemRevealSide } from './list-item';
 
 /** Drag distance (px) past which the action panel snaps fully open on release. */
@@ -55,7 +56,10 @@ export function createRevealState(el: HTMLElement, target: Element, options: Rev
 
       const side = resolveSide(detail);
 
-      if (options.hasActions(side) && Math.abs(detail.distance) >= REVEAL_THRESHOLD) el.setAttribute('revealed', side);
+      // Velocity-aware: a flick to the threshold reveals just like a slow drag
+      // that reaches it (see shared/fling).
+      if (options.hasActions(side) && Math.abs(projectFling(detail.distance, detail.velocity)) >= REVEAL_THRESHOLD)
+        el.setAttribute('revealed', side);
     },
     onMove: (detail) => {
       const side = resolveSide(detail);

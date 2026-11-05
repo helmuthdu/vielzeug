@@ -36,6 +36,12 @@
     padding: var(--size-4) var(--size-5);
     overflow-y: auto;
     overscroll-behavior: contain;
+
+    /* `show()` moves focus here (`tabindex="-1"`) so screen readers announce
+       the dialog. The card is a neutral container, not a control: without this
+       Chrome paints its default `outline: auto` blue ring around the whole
+       banner. Same treatment as `ore-tour`'s `.float` and `ore-dialog`. */
+    outline: none;
     background: var(--color-contrast-50);
     border: 1px solid var(--color-divider);
     border-radius: var(--rounded-lg);

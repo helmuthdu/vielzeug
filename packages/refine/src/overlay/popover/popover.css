@@ -32,11 +32,7 @@
     opacity: 0;
     backdrop-filter: blur(var(--_panel-blur));
     transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
-    transition:
-      opacity var(--duration-150) var(--ease-in-out),
-      transform var(--duration-200) var(--ease-spring),
-      display var(--duration-150) allow-discrete,
-      overlay var(--duration-150) allow-discrete;
+    transition: var(--_overlay-dismiss);
   }
 
   .panel[data-open] {
@@ -47,6 +43,7 @@
   .panel[data-open] {
     opacity: 1;
     transform: scale(1) translateY(0);
+    transition: var(--_overlay-present);
 
     @starting-style {
       opacity: 0;

@@ -114,6 +114,42 @@ test.describe('Layout', () => {
   });
 });
 
+test.describe('Focus', () => {
+  // `show()` moves focus to the `tabindex="-1"` card so screen readers
+  // announce the dialog. The card is a neutral container, so the stylesheet
+  // suppresses the browser's default focus ring, which would otherwise draw a
+  // blue border around the whole banner (same treatment as `ore-tour`'s card).
+  test('shows no browser focus ring on the card after show()', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<button id="tab-start">start</button><ore-cookie-banner>Policy text.</ore-cookie-banner>',
+    );
+    await page.waitForSelector('ore-cookie-banner');
+
+    // Real Tab first: Chromium only treats programmatic focus as
+    // keyboard-originated (and paints :focus-visible) once the user has shown
+    // keyboard modality.
+    await page.locator('#tab-start').focus();
+    await page.keyboard.press('Tab');
+
+    const card = await page.evaluate(() => {
+      const host = document.querySelector('ore-cookie-banner') as HTMLElement & { show(): void };
+      // The banner is visible at mount; `show()` only moves focus when it
+      // transitions from hidden, so cycle it the way an app would.
+      host.hide();
+      host.show();
+      const banner = host.shadowRoot?.querySelector<HTMLElement>('.banner');
+      if (!banner) throw new Error('Missing .banner');
+      return {
+        focused: host.shadowRoot?.activeElement === banner,
+        outlineStyle: getComputedStyle(banner).outlineStyle,
+      };
+    });
+
+    expect(card.focused).toBe(true);
+    expect(card.outlineStyle).toBe('none');
+  });
+});
+
 test.describe('Accessibility', () => {
   // axe's color-contrast rule mis-parses oklch() tokens: for --color-neutral
   // (oklch 52%) it reports #808080 where Chrome actually renders #696969 :

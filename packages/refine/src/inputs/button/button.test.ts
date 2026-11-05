@@ -676,6 +676,74 @@ describe('ore-button', () => {
       expect(btn.getAttribute('variant')).toBe('bordered');
       destroy();
     });
+
+    it('becomes a radio when the group is segmented and it carries a value', async () => {
+      const { btn, destroy } = await mountInGroup({ value: 'item' }, { value: 'item' });
+
+      expect(btn.getAttribute('role')).toBe('radio');
+      expect(btn.getAttribute('aria-checked')).toBe('true');
+      expect(btn.getAttribute('tabindex')).toBe('0');
+      destroy();
+    });
+
+    it('stays a plain button when the group carries no value', async () => {
+      const { btn, destroy } = await mountInGroup({}, { value: 'item' });
+
+      expect(btn.getAttribute('role')).toBe('button');
+      expect(btn.hasAttribute('aria-checked')).toBe(false);
+      expect(btn.getAttribute('tabindex')).toBe('0');
+      destroy();
+    });
+
+    it('stays a plain button when it carries no value in a segmented group', async () => {
+      const { btn, destroy } = await mountInGroup({ value: 'other' });
+
+      expect(btn.getAttribute('role')).toBe('button');
+      expect(btn.hasAttribute('aria-checked')).toBe(false);
+      expect(btn.getAttribute('tabindex')).toBe('0');
+      destroy();
+    });
+
+    it('marks an unselected segment unchecked and out of the tab order', async () => {
+      const wrapper = document.createElement('div');
+
+      wrapper.innerHTML =
+        '<ore-button-group value="other"><ore-button value="item">Item</ore-button><ore-button value="other">Other</ore-button></ore-button-group>';
+      document.body.appendChild(wrapper);
+      await new Promise<void>((r) => setTimeout(r, 50));
+
+      const [item] = [...wrapper.querySelectorAll<HTMLElement>('ore-button')];
+
+      expect(item.getAttribute('role')).toBe('radio');
+      expect(item.getAttribute('aria-checked')).toBe('false');
+      expect(item.getAttribute('tabindex')).toBe('-1');
+      wrapper.remove();
+    });
+
+    it('drops the radio role from a segment when the group stops being segmented', async () => {
+      const { btn, destroy } = await mountInGroup({ value: 'item' }, { value: 'item' });
+
+      expect(btn.getAttribute('role')).toBe('radio');
+
+      const group = btn.closest<HTMLElement>('ore-button-group')!;
+
+      group.removeAttribute('value');
+      await new Promise<void>((r) => setTimeout(r, 50));
+
+      expect(btn.getAttribute('role')).toBe('button');
+      expect(btn.hasAttribute('aria-checked')).toBe(false);
+      expect(btn.getAttribute('tabindex')).toBe('0');
+      destroy();
+    });
+
+    it('keeps link semantics over segment semantics', async () => {
+      const { btn, destroy } = await mountInGroup({ value: 'item' }, { href: '/home', value: 'item' });
+
+      expect(btn.getAttribute('role')).toBeNull();
+      expect(btn.hasAttribute('aria-checked')).toBe(false);
+      expect(btn.getAttribute('tabindex')).toBeNull();
+      destroy();
+    });
   });
 
   // HIG button roles: the semantic emphasis picks the treatment, an explicit

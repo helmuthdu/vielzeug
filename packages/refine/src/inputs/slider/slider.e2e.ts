@@ -8,6 +8,37 @@ const SIZES = {
   sm: { rail: 8, thumb: 16 },
 } as const;
 
+test.describe('Focus', () => {
+  // Single-value sliders keep keyboard focus on the host, so the stylesheet
+  // suppresses the browser's own `outline: auto` ring. That is only safe while
+  // the themed thumb ring still paints: this is the assertion that keeps a
+  // focused slider from ending up with no indicator at all (WCAG 2.4.7).
+  test('replaces the browser outline with the themed ring on keyboard focus', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      '<button id="tab-start">start</button><ore-slider id="kb" value="30"></ore-slider>',
+    );
+    await page.waitForSelector('ore-slider');
+
+    await page.locator('#tab-start').focus();
+    await page.keyboard.press('Tab');
+
+    const focused = await page.evaluate(() => {
+      const host = document.activeElement as HTMLElement;
+      const thumb = host.shadowRoot?.querySelector<HTMLElement>('.slider-thumb-sole');
+      return {
+        host: host.tagName,
+        outlineStyle: getComputedStyle(host).outlineStyle,
+        ring: thumb ? getComputedStyle(thumb).boxShadow : '',
+      };
+    });
+
+    expect(focused.host).toBe('ORE-SLIDER');
+    expect(focused.outlineStyle).toBe('none');
+    expect(focused.ring).toMatch(/0px 0px 0px 4px/);
+  });
+});
+
 const getSliderGeometry = (page: Page, size: keyof typeof SIZES) =>
   page.locator(`#${size}`).evaluate((slider) => {
     const container = slider.shadowRoot?.querySelector('.slider-container');

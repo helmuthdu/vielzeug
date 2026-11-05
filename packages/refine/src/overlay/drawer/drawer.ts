@@ -1,4 +1,5 @@
 import { createPanGesture, type PanAxis, type PanGesture, type PanGestureEndDetail } from '@vielzeug/gesture';
+import { type SpringHandle, spring } from '@vielzeug/necromancer';
 import {
   createId,
   define,
@@ -13,11 +14,12 @@ import {
   useSlots,
 } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
+import { warn } from '../../_dev';
+import { type DialogCloseReason, type OverlayOpenChangeDetail, parseDetents, parseOptionalBool } from '../../core';
+import { getMotionMode } from '../../motion';
+import { projectFling } from '../../shared/fling';
 
-import { type OverlayOpenChangeDetail, parseOptionalBool } from '../../core';
-import { motionReduced } from '../../shared/motion-reduced';
-
-import { forcedColorsMixin, touchTargetMixin } from '../../styles';
+import { forcedColorsMixin, overlayMotionMixin, touchTargetMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
 import styles from './drawer.css?inline';
 
@@ -31,30 +33,38 @@ type DrawerBackdrop = (typeof DRAWER_BACKDROPS)[number];
 type DrawerDragHandlePlacement = 'outside' | 'inset';
 type DrawerSwipeConfig = {
   axis: PanAxis;
-  closingDistance: (distance: number) => number;
-  translate: (distance: number) => string;
+  /** Signed closing displacement for an unsnapped drag delta (negative opens past rest). */
+  rawClosing: (distance: number) => number;
+  /** Maps a pointer velocity along the axis to velocity toward closed. */
+  closingVelocity: (velocity: number) => number;
+  /** Transform placing the panel `closingDistance` px toward closed. */
+  translateClosing: (closingDistance: number) => string;
 };
 
 const drawerSwipeConfig: Record<DrawerPlacement, DrawerSwipeConfig> = {
   bottom: {
     axis: 'y',
-    closingDistance: (distance) => Math.max(0, distance),
-    translate: (distance) => `translateY(${distance}px)`,
+    closingVelocity: (velocity) => velocity,
+    rawClosing: (distance) => distance,
+    translateClosing: (closing) => `translateY(${closing}px)`,
   },
   left: {
     axis: 'x',
-    closingDistance: (distance) => Math.max(0, -distance),
-    translate: (distance) => `translateX(${distance}px)`,
+    closingVelocity: (velocity) => -velocity,
+    rawClosing: (distance) => -distance,
+    translateClosing: (closing) => `translateX(${-closing}px)`,
   },
   right: {
     axis: 'x',
-    closingDistance: (distance) => Math.max(0, distance),
-    translate: (distance) => `translateX(${distance}px)`,
+    closingVelocity: (velocity) => velocity,
+    rawClosing: (distance) => distance,
+    translateClosing: (closing) => `translateX(${closing}px)`,
   },
   top: {
     axis: 'y',
-    closingDistance: (distance) => Math.max(0, -distance),
-    translate: (distance) => `translateY(${distance}px)`,
+    closingVelocity: (velocity) => -velocity,
+    rawClosing: (distance) => -distance,
+    translateClosing: (closing) => `translateY(${-closing}px)`,
   },
 };
 
@@ -75,6 +85,13 @@ export type OreDrawerEvents = {
 export type OreDrawerProps = {
   /** Backdrop style: 'opaque' (default), 'blur', or 'transparent' */
   backdrop?: DrawerBackdrop;
+  /**
+   * Comma-separated drag snap points as fractions of the panel size, e.g.
+   * `'0.5,0.75'`. A dragged panel released near one of these settles there
+   * (0.5 = half-open). Requires a `bottom` or `top` placement; ignored
+   * elsewhere. When unset the drawer is two-state: fully open or closed.
+   */
+  detents?: string;
   /** Initial uncontrolled open state. Ignored when `open` is set. */
   'default-open'?: boolean;
   /** Show the close (×) button in the header (default: true) */
@@ -122,6 +139,7 @@ export type OreDrawerProps = {
  * @attr {boolean} default-open - Initial uncontrolled open state
  * @attr {string} placement - 'left' | 'right' (default) | 'top' | 'bottom'
  * @attr {string} size - 'sm' | 'lg' | 'full'
+ * @attr {string} detents - Comma-separated drag snap points as fractions of panel size ('0.5,0.75'); bottom/top placement only
  * @attr {string} title - Visible header title text
  * @attr {string} label - Invisible aria-label (for drawers without a visible title)
  * @attr {boolean} dismissible - Show the close (×) button (default: true)
@@ -167,6 +185,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
   props: {
     backdrop: prop.oneOf(DRAWER_BACKDROPS),
     'default-open': prop.bool(false),
+    detents: prop.string(),
     dismissible: prop.bool(true),
     'drag-handle-placement': prop.oneOf(['outside', 'inset'] as const, 'outside'),
     'initial-focus': prop.string(),
@@ -190,7 +209,15 @@ define<OreDrawerProps>(DRAWER_TAG, {
     // Drag-to-close state
     const isSwipeClosing = signal(false);
     let swipe: PanGesture | undefined;
-    let swipeCloseTimer: ReturnType<typeof setTimeout> | undefined;
+    let springHandle: SpringHandle | undefined;
+    // Current panel position along the closing axis (0 = fully open, panelSize
+    // = closed). Tracks the visual position every frame so a grab mid-spring or
+    // a drag from a detent continues from where the panel actually is.
+    let panelClosing = 0;
+    // Position the current drag gesture started from, so the panel tracks the
+    // finger relative to its resting spot, not the fully-open origin.
+    let dragBaseClosing = 0;
+    let detentsWarned = false;
 
     const getHeaderText = () => props.label.value ?? props.title.value ?? '';
     const hasHeaderTitle = () => slots.has('header').value || !!getHeaderText();
@@ -203,23 +230,96 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
     const getSwipeConfig = (): DrawerSwipeConfig => drawerSwipeConfig[getPlacement()];
 
-    const getSnapThreshold = (panel: HTMLElement, axis: PanAxis) => {
-      const panelSize = axis === 'x' ? panel.offsetWidth : panel.offsetHeight;
+    // Detents are the sheet pattern: a dragged panel can rest partway open.
+    // They only make sense where the panel slides along its own long axis
+    // (bottom/top); a side drawer half off-screen is not a usable stop.
+    const getDetentFractions = (): readonly number[] => {
+      const fractions = parseDetents(props.detents.value ?? null) ?? [];
+
+      if (fractions.length === 0) return fractions;
+
+      const placement = getPlacement();
+
+      if (placement !== 'bottom' && placement !== 'top') {
+        if (!detentsWarned) {
+          detentsWarned = true;
+          warn(`detents are only supported on bottom or top drawers, not "${placement}". Ignored.`);
+        }
+
+        return [];
+      }
+
+      return fractions;
+    };
+
+    /** Panel size along the swipe axis. */
+    const getPanelSize = (panel: HTMLElement): number =>
+      getSwipeConfig().axis === 'x' ? panel.offsetWidth : panel.offsetHeight;
+
+    /**
+     * Resting positions along the closing axis: 0 (fully open), each detent
+     * (a fraction of the panel still on-screen), and the full panel size
+     * (closed).
+     */
+    const getRestPositions = (panel: HTMLElement): number[] => {
+      const panelSize = getPanelSize(panel);
+
+      return [0, ...getDetentFractions().map((fraction) => panelSize * (1 - fraction)), panelSize];
+    };
+
+    /**
+     * How far a two-state panel must be dragged (or flung) before the release
+     * commits to closing. Biased toward closed: a sheet should dismiss with a
+     * short decisive drag, the way a real bottom sheet does, not only after
+     * crossing half its height.
+     */
+    const getCommitLine = (panel: HTMLElement): number => {
+      const panelSize = getPanelSize(panel);
 
       return Math.min(96, Math.max(36, panelSize * 0.18));
     };
 
-    const shouldCommitSwipeClose = (distance: number, threshold: number) => {
-      return getSwipeConfig().closingDistance(distance) >= threshold;
+    /**
+     * Where a released panel settles: the nearest rest position to the
+     * fling-projected position (see `shared/fling`). With detents the stops
+     * compete on distance; the two-state open/closed pair uses the commit line
+     * instead of the midpoint.
+     */
+    const projectRestPosition = (
+      closing: number,
+      velocityClosing: number,
+      restPositions: readonly number[],
+      commitLine: number,
+    ): number => {
+      const projected = projectFling(Math.max(0, closing), velocityClosing);
+
+      if (restPositions.length === 2) return projected >= commitLine ? restPositions[1] : restPositions[0];
+
+      return restPositions.reduce((nearest, position) =>
+        Math.abs(projected - position) < Math.abs(projected - nearest) ? position : nearest,
+      );
     };
 
-    const finalizeSwipeClose = (panel: HTMLElement) => {
-      if (!isSwipeClosing.value) return;
+    const applyDragPosition = (panel: HTMLElement, closing: number, panelSize: number): void => {
+      // The panel fades out only as it travels below its lowest resting point toward dismissal.
+      // With detents that point is the most-closed detent, so every rest position (fully open and
+      // each detent) stays fully opaque — a sheet you can read at any stop. Without detents the
+      // only rest below open is closed, so the fade keeps its original “last stretch” shape from
+      // 60% closed. Clamped to [0, 1] so a drag that overshoots the closed edge can't drive the
+      // opacity negative.
+      const fractions = getDetentFractions();
+      const fadeStart = fractions.length > 0 ? panelSize * (1 - Math.min(...fractions)) : panelSize * 0.6;
 
-      if (swipeCloseTimer) {
-        clearTimeout(swipeCloseTimer);
-        swipeCloseTimer = undefined;
-      }
+      const fade = Math.min(Math.max((closing - fadeStart) / (panelSize - fadeStart), 0), 1);
+
+      panelClosing = closing;
+      panel.style.transition = 'none';
+      panel.style.transform = getSwipeConfig().translateClosing(closing);
+      panel.style.opacity = String(1 - fade * 0.8);
+    };
+
+    const finalizeDragClose = (panel: HTMLElement, reason: DialogCloseReason) => {
+      if (!isSwipeClosing.value) return;
 
       const dialog = dialogRef.value;
 
@@ -234,85 +334,124 @@ define<OreDrawerProps>(DRAWER_TAG, {
       panel.style.visibility = 'hidden';
       void dialog.offsetWidth;
 
-      requestClose('swipe');
+      if (reason === 'swipe') {
+        // The gesture itself never closes the dialog: it asks, so a consumer
+        // can preventDefault() the close-request and keep the drawer open.
+        requestClose(reason);
+      } else {
+        // Escape/backdrop/trigger: the close-request already fired and was
+        // allowed before performClose ran. Complete it directly; the close
+        // reason was already recorded by the overlay controller.
+        dialog.close();
+      }
+
       if (dialog.open) {
+        // The close was prevented (a consumer cancelled the swipe close-request), so the drawer
+        // stays open: undo the exit state the settle spring applied. `settlePanel` added `.closing`
+        // to fade the backdrop in sync with the panel; leaving it here would keep the veil faded
+        // and hide the panel via `.closing .panel`. Drop it alongside the inline drag styles.
+        dialog.classList.remove('closing');
         dialog.style.transition = '';
         resetPanelDragStyles(panel);
       }
     };
 
-    const startSwipeClose = (panel: HTMLElement, swipe: DrawerSwipeConfig, committedDistance: number) => {
-      if (isSwipeClosing.value) return;
+    /**
+     * Animate the panel from its dragged position to a rest position on a
+     * physical spring seeded with the finger's release velocity: a fling
+     * continues from the momentum, a slow release settles without overshoot.
+     * Under reduced motion the spring jumps to the target in one step.
+     */
+    const settlePanel = (
+      panel: HTMLElement,
+      fromClosing: number,
+      toClosing: number,
+      velocityClosing: number,
+      closeReason: DialogCloseReason = 'swipe',
+    ) => {
+      const panelSize = getPanelSize(panel);
+      const closing = toClosing >= panelSize;
 
-      isSwipeClosing.value = true;
+      if (closing) {
+        isSwipeClosing.value = true;
 
-      const panelSize = swipe.axis === 'x' ? panel.offsetWidth : panel.offsetHeight;
-      // Preserve overshoot so closing continues from the dragged position instead of snapping back.
-      const exitDistance =
-        committedDistance >= 0 ? Math.max(committedDistance, panelSize) : Math.min(committedDistance, -panelSize);
-      const exitTransform = swipe.translate(exitDistance);
+        // Drive the backdrop fade from the same moment the panel starts springing closed. The
+        // CSS exit (`dialog.closing::backdrop { opacity: 0 }`) is what the close-button path uses;
+        // without it here the veil would sit at full opacity for the whole spring and only vanish
+        // when `dialog.close()` runs, so the panel slides away leaving a lingering dark veil. The
+        // panel's own inline transform/opacity/`transition: none` from `applyDragPosition` still
+        // win over `.closing .panel`, so this only affects the backdrop.
+        dialogRef.value?.classList.add('closing');
+      }
 
-      // Commit the current drag position first so the magnetic snap continues
-      // from the finger instead of jumping back to rest.
-      //
-      // The inline transition below bypasses the token layer, so the motion
-      // mode has to be asked directly: under reduction the panel is placed at
-      // its exit position with no transition, and the duration-derived fallback
-      // timer (0s + 50ms) finalizes the close. Dragging itself stays live: it
-      // is direct manipulation, not animation.
-      const snap = motionReduced() ? 'none' : 'transform 180ms var(--ease-move), opacity 180ms ease-out';
+      // Detaching the previous flight is what keeps a settle-to-detent spring from writing
+      // panel.style.transform every frame alongside this one: the `springHandle !== handle` guard
+      // below only protects the completion callback, not the per-frame update.
+      springHandle?.dispose();
 
-      panel.style.transition = snap;
-      void panel.offsetWidth;
+      const handle = spring(fromClosing, toClosing, (value) => applyDragPosition(panel, value, panelSize), {
+        motion: getMotionMode(),
+        velocity: velocityClosing,
+      });
+      springHandle = handle;
 
-      const onExitTransitionEnd = (ev: TransitionEvent) => {
-        if (ev.target !== panel || ev.propertyName !== 'transform') return;
+      void handle.result.then((outcome) => {
+        // A disposed spring means something else took over (a reopen, a new
+        // drag, component teardown): that owner owns the panel now.
+        if (outcome.status !== 'finished' || springHandle !== handle) return;
 
-        panel.removeEventListener('transitionend', onExitTransitionEnd);
-        finalizeSwipeClose(panel);
-      };
+        springHandle = undefined;
 
-      panel.addEventListener('transitionend', onExitTransitionEnd);
+        if (closing) {
+          finalizeDragClose(panel, closeReason);
+        } else if (toClosing <= 0) {
+          // Fully open again: drop the inline styles so the panel returns to
+          // its pure CSS state (and a later close animates from there).
+          resetPanelDragStyles(panel);
+        } else {
+          applyDragPosition(panel, toClosing, panelSize);
+          // Re-enable the CSS transition so a later close animates from here.
+          panel.style.transition = '';
+        }
+      });
+    };
 
-      const durationMs = parseFloat(getComputedStyle(panel).transitionDuration) * 1000;
+    const handleSwipeEnd = ({ distance, reason, velocity }: PanGestureEndDetail): void => {
+      const panel = panelRef.value;
 
-      swipeCloseTimer = setTimeout(() => {
-        panel.removeEventListener('transitionend', onExitTransitionEnd);
-        finalizeSwipeClose(panel);
-      }, durationMs + 50);
+      // A close already committed (Escape/backdrop mid-drag): it owns the panel.
+      if (!panel || isSwipeClosing.value) return;
 
-      panel.style.transform = exitTransform;
-      panel.style.opacity = '0.2';
+      const swipeConfig = getSwipeConfig();
+      const from = Math.max(0, dragBaseClosing + swipeConfig.rawClosing(distance));
+
+      // A platform cancel is not a dismissal: the user never released, so the
+      // panel returns to where the drag began (its detent or fully open) with
+      // no momentum. A release projects the fling forward onto the rest
+      // positions (fully open, detents, closed).
+      if (reason !== 'release') {
+        settlePanel(panel, from, dragBaseClosing, 0);
+
+        return;
+      }
+
+      const velocityClosing = swipeConfig.closingVelocity(velocity);
+      const rest = projectRestPosition(from, velocityClosing, getRestPositions(panel), getCommitLine(panel));
+
+      settlePanel(panel, from, rest, velocityClosing);
     };
 
     const resetPanelDragStyles = (panel: HTMLElement) => {
-      if (swipeCloseTimer) {
-        clearTimeout(swipeCloseTimer);
-        swipeCloseTimer = undefined;
-      }
+      springHandle?.dispose();
+      springHandle = undefined;
 
       // Re-enable transitions so the snap-back or exit animates.
       panel.style.transition = '';
       panel.style.transform = '';
       panel.style.opacity = '';
       panel.style.visibility = '';
+      panelClosing = 0;
       isSwipeClosing.value = false;
-    };
-
-    const handleSwipeEnd = ({ distance, reason }: PanGestureEndDetail): void => {
-      const panel = panelRef.value;
-
-      if (!panel) return;
-
-      const threshold = getSnapThreshold(panel, getSwipeConfig().axis);
-
-      if (reason === 'release' && shouldCommitSwipeClose(distance, threshold)) {
-        startSwipeClose(panel, getSwipeConfig(), distance);
-
-        return;
-      }
-
-      resetPanelDragStyles(panel);
     };
 
     // ────────────────────────────────────────────────────────────────
@@ -320,14 +459,12 @@ define<OreDrawerProps>(DRAWER_TAG, {
     // ────────────────────────────────────────────────────────────────
 
     const { closeWithAnimation, mount, overlay, requestClose } = useDialogControl({
-      beforeOpen: (dialog) => {
+      beforeOpen: () => {
         // Clear any inline drag styles from a previous swipe-close so the CSS
         // entry animation starts from the correct base state.
         const panel = panelRef.value;
 
         if (panel) resetPanelDragStyles(panel);
-
-        void dialog;
       },
       closeRequestDetail: (_reason) => ({ placement: props.placement.value ?? 'right' }),
       defaultOpen: props['default-open'],
@@ -355,11 +492,27 @@ define<OreDrawerProps>(DRAWER_TAG, {
       onOpen: (reason) => emit('open-change', { open: true, reason }),
       openProp: props.open,
       performClose: (dialog, reason) => {
-        if (reason === 'swipe') {
+        // A committed spring close (swipe, or a detent panel closed by
+        // Escape/backdrop/programmatic hide) has already moved the panel
+        // off-screen: the native close completes it with no CSS exit.
+        if (isSwipeClosing.value) {
           dialog.close();
-        } else {
-          closeWithAnimation();
+
+          return;
         }
+
+        const panel = panelRef.value;
+
+        // A panel resting at a detent carries an inline transform the CSS exit
+        // cannot override: spring it the rest of the way closed first.
+        if (panel && panelClosing > 0) {
+          isSwipeClosing.value = true;
+          settlePanel(panel, panelClosing, getPanelSize(panel), 0, reason);
+
+          return;
+        }
+
+        closeWithAnimation();
       },
       returnFocus: props['return-focus'],
     });
@@ -425,14 +578,22 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
             if (!currentPanel) return;
 
-            const swipeConfig = getSwipeConfig();
-            const threshold = getSnapThreshold(currentPanel, swipeConfig.axis);
-            const closingDistance = swipeConfig.closingDistance(distance);
-            const progress = Math.min(closingDistance / threshold, 1);
-
-            currentPanel.style.transition = 'none';
-            currentPanel.style.transform = swipeConfig.translate(distance);
-            currentPanel.style.opacity = String(1 - progress * 0.4);
+            // Dragging is direct manipulation: the panel tracks the finger
+            // exactly (overshoot past the closed edge included, the way a
+            // real sheet pulls past its dismissal point). Spring motion only
+            // starts at release.
+            applyDragPosition(
+              currentPanel,
+              Math.max(0, dragBaseClosing + getSwipeConfig().rawClosing(distance)),
+              getPanelSize(currentPanel),
+            );
+          },
+          onStart: () => {
+            // Grab the panel wherever it currently is: mid-spring or resting
+            // at a detent. The drag then tracks the finger relative to here.
+            springHandle?.dispose();
+            springHandle = undefined;
+            dragBaseClosing = panelClosing;
           },
         });
       }
@@ -440,6 +601,11 @@ define<OreDrawerProps>(DRAWER_TAG, {
       return () => {
         swipe?.dispose();
         swipe = undefined;
+        // Stop any in-flight settle spring before the controller tears the dialog down: the spring
+        // is not tied to the mount signal, so without this it keeps requesting frames and writing
+        // styles on the detached panel until it happens to rest.
+        springHandle?.dispose();
+        springHandle = undefined;
         overlay.dispose();
       };
     });
@@ -476,5 +642,5 @@ define<OreDrawerProps>(DRAWER_TAG, {
       </dialog>
     `;
   },
-  styles: [forcedColorsMixin, touchTargetMixin, styles],
+  styles: [forcedColorsMixin, touchTargetMixin, overlayMotionMixin('panel'), styles],
 });

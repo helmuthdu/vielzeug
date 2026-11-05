@@ -125,6 +125,63 @@ Any element works as the trigger: including icon-only buttons. Always provide a 
 
 </ComponentPreview>
 
+## Context Menu
+
+Set `trigger="contextmenu"` to turn any element into a right-click (or long-press) target. The panel opens at the pointer instead of anchored to the trigger, and a left-click passes through to the page untouched.
+
+<ComponentPreview align="start" justify="start" height="400px" vertical>
+
+```html
+<ore-menu trigger="contextmenu">
+  <p slot="trigger" style="padding: 1rem; border: 1px dashed var(--color-divider)">
+    Right-click this area
+  </p>
+  <ore-menu-item value="copy">Copy</ore-menu-item>
+  <ore-menu-item value="cut">Cut</ore-menu-item>
+  <ore-menu-item value="paste">Paste</ore-menu-item>
+</ore-menu>
+```
+
+</ComponentPreview>
+
+Keyboard users still get the menu: `Enter`, `Space`, or `ArrowDown` on a focused trigger opens it anchored to the trigger element, exactly as in `click` mode.
+
+## Submenus
+
+Slot `ore-menu-item` elements into another item's `submenu` slot to turn it into a submenu trigger. The trigger grows a trailing chevron and flies out a nested panel on hover, `ArrowRight`, `Enter`, `Space`, or a click. Submenus nest to any depth — a submenu item can itself carry a `submenu` slot.
+
+<ComponentPreview align="start" justify="start" height="400px" vertical>
+
+```html
+<ore-menu>
+  <ore-button slot="trigger">File</ore-button>
+  <ore-menu-item value="new">New</ore-menu-item>
+  <ore-menu-item>
+    Open Recent
+    <ore-menu-item slot="submenu" value="report">report.pdf</ore-menu-item>
+    <ore-menu-item slot="submenu" value="notes">notes.md</ore-menu-item>
+    <ore-menu-item slot="submenu">
+      More
+      <ore-menu-item slot="submenu" value="archive">archive.zip</ore-menu-item>
+    </ore-menu-item>
+  </ore-menu-item>
+  <ore-menu-item value="close">Close</ore-menu-item>
+</ore-menu>
+```
+
+</ComponentPreview>
+
+A submenu trigger is deliberately **not selectable**: it emits no `select` and carries no `value`, because its press opens the flyout rather than choosing an action. Its children stay out of the parent's arrow navigation, so the parent's rows always match what the pointer sees. Only one submenu in a sibling group stays open at a time — opening another closes its siblings, while ancestors stay open, matching native menus. Selecting a leaf closes the whole chain.
+
+Keyboard model:
+
+- `ArrowRight` / `Enter` / `Space` on a trigger opens its flyout and moves focus into it.
+- `ArrowDown` / `ArrowUp` walk the open flyout's items.
+- `Escape` / `ArrowLeft` close the flyout and hand focus back to the trigger.
+- A hover dwell of ~120 ms opens a flyout as the pointer crosses a row; a ~300 ms grace keeps it open while the pointer crosses the gap into the flyout.
+
+Checkable items work inside a flyout, and radio groups scope to their own panel — a submenu's radios are a separate group from the root menu's.
+
 ## Separator
 
 Use `ore-menu-separator` to add a horizontal divider between groups of related items.
@@ -279,6 +336,7 @@ Use `value` on each item to handle selection in a single `select` listener rathe
 | `default-open` | `boolean`                                                                         | `false`          | Initial visibility when `open` is not provided                              |
 | `layout`       | `'list' \| 'grid'`                                                                | `'list'`         | Panel layout: rows or a grid of cards                                       |
 | `columns`      | `number`                                                                          | `3`              | Cards per row in `grid` layout; sets both the tracks and the arrow-key rows |
+| `trigger`      | `'click' \| 'contextmenu'`                                                        | `'click'`        | How the menu opens: a left-click, or right-click / long-press at the pointer |
 
 **`ore-menu`** Slots
 
@@ -301,6 +359,7 @@ Use `value` on each item to handle selection in a single `select` listener rathe
 | Slot      | Description                         |
 | --------- | ----------------------------------- |
 | `icon`    | Optional leading icon or decoration |
+| `submenu` | Nested `ore-menu-item` elements that turn this item into a submenu trigger |
 | (default) | Item label text                     |
 
 **Events**
@@ -308,7 +367,7 @@ Use `value` on each item to handle selection in a single `select` listener rathe
 | Event         | Detail                                 | Description                                                                                                  |
 | ------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `select`      | `{ value: string, checked?: boolean }` | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items    |
-| `open-change` | `{ open: boolean, reason: string }`    | Emitted whenever the panel opens or closes. Closing after a plain item is chosen reports `reason: "select"`. |
+| `open-change` | `{ open: boolean, reason: string }`    | Emitted whenever the panel opens or closes. Opening reports `reason: "click"`, `"contextmenu"`, `"keyboard"`, or `"programmatic"`; closing after a plain item is chosen reports `reason: "select"`. |
 
 **CSS Custom Properties (`ore-menu`)**
 
@@ -342,3 +401,7 @@ The menu component follows WAI-ARIA Menu Button Pattern best practices.
 Arrow keys move focus between items; `Enter` / `Space` activates the focused item; `Escape` closes the panel and returns focus to the trigger. `Home` / `End` jump to the first or last item. Opening with `Enter`, `Space`, or `ArrowDown` moves focus to the first usable item. Outside clicks and `Tab` also close the menu and restore focus to the trigger. In `grid` layout the arrow keys follow the two-dimensional layout instead: left/right step one card, up/down step one row.
 
 The panel has `role="menu"` and `aria-orientation="vertical"`. The trigger element receives `aria-haspopup="menu"`, `aria-expanded`, and `aria-controls` pointing to the menu panel. Each item has `role="menuitem"` and `aria-disabled` when disabled. Checkable items automatically switch to `role="menuitemcheckbox"` or `role="menuitemradio"` with the appropriate `aria-checked` value.
+
+A submenu trigger also reports `aria-haspopup="menu"` and `aria-expanded`, and its flyout is a nested `role="menu"`. Because the trigger opens a flyout instead of choosing an action, it stays a plain `role="menuitem"` with no `value`, so assistive technology never announces it as selectable.
+
+A `trigger="contextmenu"` menu suppresses the browser's native context menu on its trigger. Because a right-click is pointer-only, keep the same actions reachable by keyboard: the trigger still opens the menu with `Enter` / `Space` / `ArrowDown`, so give it focus (a focusable element, not a bare `<p>`) when the menu is the primary way to reach those actions.

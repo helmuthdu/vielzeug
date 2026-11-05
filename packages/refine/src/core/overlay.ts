@@ -1,13 +1,15 @@
 /**
  * Why an overlay was opened.
  * - `'click'`: user clicked the trigger element
+ * - `'contextmenu'`: user right-clicked (or long-pressed) the trigger — a
+ *   context menu opens at the pointer rather than anchored to the element
  * - `'focus'`: focus entered the trigger (tooltip, popover)
  * - `'hover'`: pointer entered the trigger (tooltip)
  * - `'keyboard'`: keyboard shortcut or Enter/Space on a trigger
  * - `'programmatic'`: opened via the JS API without a user gesture
  * - `'trigger'`: opened via the Invoker Commands API (`command="show-modal"`)
  */
-export type OverlayOpenReason = 'click' | 'focus' | 'hover' | 'keyboard' | 'programmatic' | 'trigger';
+export type OverlayOpenReason = 'click' | 'contextmenu' | 'focus' | 'hover' | 'keyboard' | 'programmatic' | 'trigger';
 
 /** Close reasons valid for modal dialogs (includes 'swipe' for drawer). */
 export type DialogCloseReason = 'escape' | 'outsideClick' | 'programmatic' | 'swipe' | 'trigger';

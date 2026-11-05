@@ -178,6 +178,16 @@
     --_fill: var(--slider-fill, var(--_theme-base));
     --_shadow: var(--_theme-shadow);
   }
+
+  /* Single-value sliders keep keyboard focus on the host, so without this the
+     browser paints its own `outline: auto` ring around the whole control on top
+     of the themed thumb ring. Range thumbs are focusable themselves and keep
+     their own outline: focus on them never matches `:host(:focus-visible)`.
+     In forced-colors mode the unlayered media query above puts a system-colour
+     outline back on the thumb. Same treatment as `ore-button`. */
+  :host(:focus-visible) {
+    outline: none;
+  }
 }
 
 /* ========================================

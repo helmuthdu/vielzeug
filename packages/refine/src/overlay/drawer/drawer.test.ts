@@ -4,6 +4,23 @@ import type { DrawerElement } from './drawer';
 
 const pointer = { bubbles: true, composed: true, isPrimary: true, pointerType: 'touch' } as const;
 
+/**
+ * Drive the drawer's release spring to rest. Vitest fake timers would freeze
+ * performance.now() (the spring's clock) while still firing animation frames,
+ * so frames are driven synchronously with an advancing timestamp instead: the
+ * mock runs each callback inline, recursing until the spring settles.
+ */
+function driveFrames(stepMs = 16): void {
+  let now = 0;
+
+  vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+    now += stepMs;
+    cb(now);
+
+    return 1;
+  });
+}
+
 describe('ore-drawer', () => {
   let fixture: Fixture<HTMLElement>;
 
@@ -26,6 +43,7 @@ describe('ore-drawer', () => {
 
   afterEach(() => {
     fixture?.dispose();
+    vi.restoreAllMocks();
   });
 
   // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -170,8 +188,9 @@ describe('ore-drawer', () => {
       expect(fixture.query('dialog[open]')).toBeFalsy();
     });
 
-    it('keeps outward drag position when swipe-close overshoots panel size', async () => {
+    it('springs the panel closed and closes the dialog when a swipe crosses the commit line', async () => {
       fixture = await mount('ore-drawer', { attrs: { open: '' } });
+      driveFrames();
 
       const panel = fixture.query<HTMLElement>('.panel');
       const dragHandle = fixture.query<HTMLElement>('.drag-handle');
@@ -185,37 +204,46 @@ describe('ore-drawer', () => {
       });
 
       dragHandle?.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 1 }));
-      dragHandle?.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 300, pointerId: 1 }));
-      dragHandle?.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 300, pointerId: 1 }));
+      dragHandle?.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 120, pointerId: 1 }));
+
+      // The panel tracks the finger exactly during the drag, before release.
+      expect(panel?.style.transform).toBe('translateX(120px)');
+
+      dragHandle?.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 120, pointerId: 1 }));
+
       await fixture.flush();
 
-      expect(panel?.style.transform).toBe('translateX(300px)');
-      expect(panel?.style.opacity).toBe('0.2');
+      expect(fixture.query('dialog[open]')).toBeFalsy();
+      // The closed panel stays parked off-screen until the next open cycle.
+      expect(panel?.style.visibility).toBe('hidden');
     });
 
-    it('restores the visible panel when a swipe close is prevented', async () => {
+    it('keeps the drawer open when a swipe close is prevented', async () => {
       fixture = await mount('ore-drawer', { attrs: { open: '' } });
       fixture.element.addEventListener('close-request', (event) => event.preventDefault());
+      driveFrames();
+
       const panel = fixture.query<HTMLElement>('.panel')!;
       const handle = fixture.query<HTMLElement>('.drag-handle')!;
       expect(handle.getAttribute('aria-hidden')).toBe('true');
       expect(handle.hasAttribute('role')).toBe(false);
       Object.defineProperty(panel, 'offsetWidth', { configurable: true, get: () => 200 });
       handle.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 8 }));
-      handle.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 100, pointerId: 8 }));
-      handle.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 100, pointerId: 8 }));
-      const end = new Event('transitionend', { bubbles: true });
-      Object.defineProperty(end, 'propertyName', { value: 'transform' });
-      panel.dispatchEvent(end);
+      handle.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 150, pointerId: 8 }));
+      handle.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 150, pointerId: 8 }));
       await fixture.flush();
+
       expect(fixture.query('dialog')?.hasAttribute('open')).toBe(true);
+      // A prevented close must undo the exit state: the settle spring adds `.closing` to fade the
+      // backdrop, so leaving it here would keep the veil faded and hide the panel while open.
+      expect(fixture.query('dialog')?.classList.contains('closing')).toBe(false);
       expect(panel.style.visibility).toBe('');
       expect(panel.style.transform).toBe('');
-      expect(panel.style.opacity).toBe('');
     });
 
-    it('commits close on pointerup when release crosses swipe threshold', async () => {
+    it('commits close on pointerup when release crosses the swipe commit line', async () => {
       fixture = await mount('ore-drawer', { attrs: { open: '' } });
+      driveFrames();
 
       const panel = fixture.query<HTMLElement>('.panel');
       const dragHandle = fixture.query<HTMLElement>('.drag-handle');
@@ -231,14 +259,20 @@ describe('ore-drawer', () => {
       dragHandle?.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 7 }));
       dragHandle?.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 20, pointerId: 7 }));
       dragHandle?.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 90, pointerId: 7 }));
+
       await fixture.flush();
 
-      expect(panel?.style.transform).toBe('translateX(200px)');
-      expect(panel?.style.opacity).toBe('0.2');
+      expect(fixture.query('dialog[open]')).toBeFalsy();
+      // The swipe-close must fade the backdrop in sync with the panel, exactly like the close
+      // button: it does so by adding `.closing` (which drives `dialog.closing::backdrop`), the
+      // same exit class the CSS animation path uses. Without it the veil lingers at full opacity
+      // for the whole spring and only disappears when the dialog finally closes.
+      expect(fixture.query('dialog')?.classList.contains('closing')).toBe(true);
     });
 
     it('snaps back instead of closing when the platform cancels a swipe', async () => {
       fixture = await mount('ore-drawer', { attrs: { open: '' } });
+      driveFrames();
 
       const panel = fixture.query<HTMLElement>('.panel');
       const dragHandle = fixture.query<HTMLElement>('.drag-handle');
@@ -256,9 +290,82 @@ describe('ore-drawer', () => {
       dragHandle?.dispatchEvent(new PointerEvent('pointercancel', { ...pointer, clientX: 120, pointerId: 8 }));
       await fixture.flush();
 
+      // The cancel springs back to the open rest position, not closed.
       expect(panel?.style.transform).toBe('');
       expect(panel?.style.opacity).toBe('');
       expect(fixture.query('dialog[open]')).toBeTruthy();
+    });
+
+    it('closes on a short flick: release velocity projects past the commit line', async () => {
+      fixture = await mount('ore-drawer', { attrs: { open: '' } });
+      // Controlled clock: the gesture layer samples performance.now() for its
+      // velocity window, so the pointer timeline is scripted explicitly.
+      let clock = 0;
+      const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => clock);
+      driveFrames();
+
+      const dragHandle = fixture.query<HTMLElement>('.drag-handle');
+      const pointer = { bubbles: true, composed: true, isPrimary: true, pointerType: 'mouse' };
+
+      dragHandle?.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 9 }));
+      clock += 10;
+      dragHandle?.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 10, pointerId: 9 }));
+      clock += 10;
+      // 20px in 10ms = 2000 px/s fling: the drag itself never crosses the
+      // 36px commit line, but the projection (20 + 2000 * 0.25) does.
+      dragHandle?.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 20, pointerId: 9 }));
+
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeFalsy();
+      nowSpy.mockRestore();
+    });
+
+    it('settles a dragged panel at a detent instead of fully open or closed', async () => {
+      fixture = await mount('ore-drawer', { attrs: { detents: '0.5', open: '', placement: 'bottom' } });
+      driveFrames();
+
+      const panel = fixture.query<HTMLElement>('.panel');
+      const dragHandle = fixture.query<HTMLElement>('.drag-handle');
+
+      Object.defineProperty(panel!, 'offsetHeight', { configurable: true, get: () => 400 });
+
+      // Drag down to 180px closed: nearest rest is the 0.5 detent at 200px.
+      dragHandle?.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, clientY: 0, pointerId: 3 }));
+      dragHandle?.dispatchEvent(
+        new PointerEvent('pointermove', { ...pointer, clientX: 0, clientY: 180, pointerId: 3 }),
+      );
+      dragHandle?.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 0, clientY: 180, pointerId: 3 }));
+
+      await fixture.flush();
+
+      expect(panel?.style.transform).toBe('translateY(200px)');
+      // A detent is a reading position, so the panel must not be faded there: the fade begins only
+      // below the most-closed detent (here 200px of 400px, exactly where the panel rests).
+      expect(panel?.style.opacity).toBe('1');
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+    });
+
+    it('ignores detents on a side placement and warns once', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      fixture = await mount('ore-drawer', { attrs: { detents: '0.5', open: '', placement: 'right' } });
+      driveFrames();
+
+      const panel = fixture.query<HTMLElement>('.panel');
+      const dragHandle = fixture.query<HTMLElement>('.drag-handle');
+
+      Object.defineProperty(panel!, 'offsetWidth', { configurable: true, get: () => 200 });
+
+      dragHandle?.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 4 }));
+      dragHandle?.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 100, pointerId: 4 }));
+      dragHandle?.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 100, pointerId: 4 }));
+
+      await fixture.flush();
+
+      // No detent stop: the two-state commit line (36px) was crossed, so it closed.
+      expect(fixture.query('dialog[open]')).toBeFalsy();
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy.mock.calls[0]?.[0]).toContain('detents are only supported on bottom or top drawers');
     });
   });
 
