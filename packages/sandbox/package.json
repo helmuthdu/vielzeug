@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/sandbox",
-  "version": "26.11.4",
+  "version": "26.11.5",
   "description": "Sandboxed iframe runtime with typed postMessage state bridge",
   "repository": {
     "type": "git",

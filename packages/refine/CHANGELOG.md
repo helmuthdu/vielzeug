@@ -1,7 +1,18 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 04 Nov 2026 16:49:50 GMT and should not be manually modified.
+This log was last generated on Thu, 05 Nov 2026 21:44:45 GMT and should not be manually modified.
 
+## 26.11.5
+Thu, 05 Nov 2026 21:44:45 GMT
+
+### Minor changes
+
+- feat(refine): segmented selection for ore-button-group, contextmenu trigger for ore-menu, document password reveal
+- feat(refine): fling handoff, drawer detents, color-picker, pull-to-refresh, ore-state, nested submenus, shared overlay motion
+
+### Patches
+
+- fix(refine): neutral UA focus rings, non-dimming sidebar drawer backdrop default, ghost/outline press feedback, navbar external-drawer toggle
 ## 26.11.4
 Wed, 04 Nov 2026 16:49:50 GMT
 

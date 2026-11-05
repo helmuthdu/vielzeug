@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/keymap
 
-This log was last generated on Wed, 04 Nov 2026 16:49:50 GMT and should not be manually modified.
+This log was last generated on Thu, 05 Nov 2026 21:44:45 GMT and should not be manually modified.
 
+## 26.11.5
+Thu, 05 Nov 2026 21:44:45 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.4
 Wed, 04 Nov 2026 16:49:50 GMT
 

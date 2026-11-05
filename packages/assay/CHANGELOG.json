@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat(assay): installPopoverPolyfill for jsdom Popover API",
+            "commit": "3cf9b9410b938280df91080c8ee5f9682cce9e21"
+          }
+        ]
+      },
+      "date": "Thu, 05 Nov 2026 21:44:45 GMT",
+      "tag": "@vielzeug/assay_v26.11.5",
+      "version": "26.11.5"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",
