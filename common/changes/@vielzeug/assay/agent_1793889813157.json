@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(assay): installPopoverPolyfill for jsdom Popover API",
+      "packageName": "@vielzeug/assay",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/assay"
+}

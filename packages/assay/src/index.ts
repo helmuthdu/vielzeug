@@ -13,6 +13,7 @@ export {
   fireSubmit,
 } from './events';
 export { installFormInternalsPolyfill } from './form-internals';
+export { installPopoverPolyfill } from './popover';
 export { getSlotted, type QueryScope, queryAllInShadow, queryInShadow, queryPart, within } from './query';
 export {
   type DelayOptions,
