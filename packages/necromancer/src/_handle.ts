@@ -4,7 +4,7 @@ import type { AnimationGroup, AnimationHandle, AnimationResult } from './types';
  * Attaches an abort listener to a signal and returns a function that removes it.
  * When the signal aborts, calls the dispose function with the signal's reason.
  */
-function attachAbortSignalListener(signal: AbortSignal, dispose: (reason?: unknown) => void): () => void {
+export function attachAbortSignalListener(signal: AbortSignal, dispose: (reason?: unknown) => void): () => void {
   const abort = () => dispose(signal.reason);
 
   signal.addEventListener('abort', abort, { once: true });

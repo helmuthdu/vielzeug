@@ -3,6 +3,7 @@ export { animateEach } from './animate-each';
 export { NecromancerConfigError, NecromancerError, NecromancerUnsupportedError } from './errors';
 export { captureLayout } from './layout';
 export { shouldReduceMotion } from './motion';
+export { type SpringHandle, type SpringOptions, type SpringUpdate, spring } from './spring';
 export type {
   AnimateEachOptions,
   AnimateOptions,
