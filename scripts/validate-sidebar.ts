@@ -6,8 +6,9 @@
  * removed (the reader gets a dead route, and `ignoreDeadLinks` means the build never
  * complains), and new pages never get a link (the reader cannot navigate to them at all).
  *
- * Two rules:
+ * Three rules:
  *   sidebar/link-missing  every internal sidebar link resolves to a documentation page.
+ *   sidebar/anchor-missing a sidebar link's #anchor matches a heading that page renders.
  *   page/unlinked         every page of a `standard`-contract package is reachable from
  *                         that package's sidebar. Catalog and component-library packages
  *                         are exempt: their leaf pages are navigation, not destinations
@@ -22,10 +23,12 @@
  *   bun run validate:sidebar -- --package=ripple
  */
 
+import { readFileSync } from 'node:fs';
 import { dirname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { isMain } from './lib/cli.mjs';
+import { headingSlugs, parseMarkdownDocument } from './lib/markdown.ts';
 import { type Diagnostic, runValidator, type ValidationResult } from './lib/validator.ts';
 import { type DocsWorkspace, loadDocsWorkspace } from './validate-docs.ts';
 
@@ -57,6 +60,15 @@ function collectLinks(items: readonly SidebarItem[], found: string[]): string[] 
     if (item.items) collectLinks(item.items, found);
   }
   return found;
+}
+
+/**
+ * The `#anchor` on a sidebar link, or null when it has none. Kept separate from
+ * `pagePathForLink` (which drops it) so the page rules stay anchor-agnostic.
+ */
+function linkAnchor(link: string): string | null {
+  const hash = link.indexOf('#');
+  return hash === -1 ? null : link.slice(hash + 1);
 }
 
 /** Every internal sidebar link, normalised to `slug -> set of page paths`. */
@@ -108,7 +120,8 @@ export async function validateSidebar({
   workspace,
 }: SidebarValidationInput): Promise<ValidationResult> {
   const diagnostics: Diagnostic[] = [];
-  const linksBySlug = indexSidebarLinks(await loadSidebar(configPath));
+  const sidebar = await loadSidebar(configPath);
+  const linksBySlug = indexSidebarLinks(sidebar);
   const checkedPackages = [...workspace.packageDocs.keys()].filter((slug) => !filterPackage || slug === filterPackage).sort();
 
   // Rule 1: every internal sidebar link (any section) resolves to a page on disk.
@@ -118,6 +131,36 @@ export async function validateSidebar({
       if (workspace.knownFiles.has(normalize(join(docsDir, slug, page)))) continue;
       diagnostics.push(
         sidebarDiagnostic(slug, join(docsDir, slug, page), 'sidebar/link-missing', `Sidebar links /${slug}/${page}, but that page does not exist.`),
+      );
+    }
+  }
+
+  // Rule 1b: a sidebar link's #anchor must match a heading the page actually renders.
+  // pagePathForLink drops the anchor, so without this a renamed or removed heading leaves a
+  // link that loads the page but never scrolls, and the build never complains.
+  const anchorsByPage = new Map<string, ReadonlySet<string>>();
+  for (const groups of Object.values(sidebar)) {
+    for (const link of collectLinks(groups, [])) {
+      const anchor = linkAnchor(link);
+      const mapped = pagePathForLink(link);
+      if (!anchor || !mapped) continue;
+      if (filterPackage && mapped.slug !== filterPackage) continue;
+      const path = normalize(join(docsDir, mapped.slug, mapped.page));
+      if (!workspace.knownFiles.has(path)) continue;
+      let anchors = anchorsByPage.get(path);
+      if (!anchors) {
+        anchors = headingSlugs(pageHeadings(workspace, docsDir, mapped.slug, mapped.page));
+        anchorsByPage.set(path, anchors);
+      }
+      if (anchors.has(anchor)) continue;
+      diagnostics.push(
+        sidebarDiagnostic(
+          mapped.slug,
+          path,
+          'sidebar/anchor-missing',
+          `Sidebar links /${mapped.slug}/${mapped.page}#${anchor}, but that page has no heading producing #${anchor}.`,
+          `Point the link at an existing heading's anchor on /${mapped.slug}/${mapped.page}, or add a heading that slugs to ${anchor}.`,
+        ),
       );
     }
   }
@@ -144,6 +187,17 @@ export async function validateSidebar({
   }
 
   return { checkedPackages, diagnostics };
+}
+
+/**
+ * A page's headings: reuse the workspace's parsed document when it owns the page (every
+ * package doc), else read the file so non-package sections like /guide/ still validate.
+ */
+function pageHeadings(workspace: DocsWorkspace, docsDir: string, slug: string, page: string) {
+  const headings = workspace.packageDocs.get(slug)?.files.get(page)?.headings;
+  if (headings) return headings;
+  const path = join(docsDir, slug, page);
+  return parseMarkdownDocument(path, readFileSync(path, 'utf8')).headings;
 }
 
 function sidebarDiagnostic(pkg: string, file: string, rule: string, message: string, hint?: string): Diagnostic {

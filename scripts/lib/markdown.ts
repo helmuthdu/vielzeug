@@ -167,3 +167,49 @@ export function parseMarkdownDocument(path: string, source: string): MarkdownDoc
 export function parseFrontmatter(source: string): Record<string, FrontmatterValue> {
   return { ...parseMarkdownDocument('', source).frontmatter };
 }
+
+/**
+ * VitePress's heading slug: the `@mdit-vue` `slugify` its anchor plugin applies to every
+ * heading, ported verbatim. A documentation link's `#anchor` only scrolls somewhere when it
+ * matches this exactly, so validation has to derive the same value rather than approximate it.
+ */
+export function headingSlug(text: string): string {
+  return text
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036F]/g, '')
+    .replace(/[\u0000-\u001f]/g, '')
+    .replace(/[\s~`!@#$%^&*()\-_+=[\]{}|\\;:"\u201C\u201D\u2018\u2019<>,.?/]+/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/^(\d)/, '_$1')
+    .toLowerCase();
+}
+
+/**
+ * The heading text VitePress actually slugifies. Its anchor plugin reads only the `text` and
+ * `code_inline` tokens, so inline-code backticks, link markup, and inline HTML all drop out
+ * while the visible label stays.
+ */
+function headingSlugText(text: string): string {
+  return text
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]*>/g, '')
+    .replaceAll('`', '');
+}
+
+/**
+ * Every heading anchor a page generates, in document order, with duplicates disambiguated the
+ * way the anchor plugin does (`base`, then `base-1`, `base-2`, …). A `{#custom-id}` suffix wins
+ * over the derived slug.
+ */
+export function headingSlugs(headings: readonly MarkdownHeading[]): ReadonlySet<string> {
+  const used = new Set<string>();
+  for (const heading of headings) {
+    const explicit = /\{#([^}]+)\}\s*$/.exec(heading.text);
+    const base = explicit?.[1] ?? headingSlug(headingSlugText(heading.text));
+    let slug = base;
+    for (let suffix = 1; used.has(slug); suffix += 1) slug = `${base}-${suffix}`;
+    used.add(slug);
+  }
+  return used;
+}

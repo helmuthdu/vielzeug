@@ -1,6 +1,6 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, normalize } from 'node:path';
+import { dirname, join, normalize } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { type DocsContractName } from '../validate-docs.ts';
@@ -171,5 +171,96 @@ describe('validateSidebar', () => {
     });
     expect(result.checkedPackages).toEqual(['ripple']);
     expect(result.diagnostics.every((d) => d.package === 'ripple')).toBe(true);
+  });
+});
+
+describe('validateSidebar anchors', () => {
+  /** Write real pages so the anchor rule can read their headings off disk. */
+  function pagesOnDisk(docsDir: string, pagesBySlug: Readonly<Record<string, Readonly<Record<string, string>>>>): void {
+    for (const [slug, pages] of Object.entries(pagesBySlug)) {
+      for (const [page, source] of Object.entries(pages)) {
+        const path = join(docsDir, slug, page);
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, source);
+      }
+    }
+  }
+
+  it('flags a sidebar anchor whose heading is absent', async () => {
+    const docsDir = tempDir();
+    pagesOnDisk(docsDir, { ripple: { 'usage.md': '# Usage\n\n## Basic Usage\n' } });
+    const configPath = stubConfig({ '/ripple/': [{ link: '/ripple/usage#installation', text: 'Install' }] });
+    const result = await validateSidebar({
+      configPath,
+      docsDir,
+      workspace: workspace({ docsDir, pagesBySlug: { ripple: ['usage.md'] } }),
+    });
+    const anchors = result.diagnostics.filter((d) => d.rule === 'sidebar/anchor-missing');
+    expect(anchors).toHaveLength(1);
+    expect(anchors[0]?.message).toContain('#installation');
+    expect(anchors[0]?.package).toBe('ripple');
+  });
+
+  it('accepts an anchor that matches a heading, including inline-code and duplicate slugs', async () => {
+    const docsDir = tempDir();
+    pagesOnDisk(docsDir, {
+      ripple: { 'usage.md': '# Usage\n\n## List Reflow: `animateReflow`\n\n## Vite Setup\n\n## Vite Setup\n' },
+    });
+    const configPath = stubConfig({
+      '/ripple/': [
+        { link: '/ripple/usage#list-reflow-animatereflow', text: 'Reflow' },
+        { link: '/ripple/usage#vite-setup', text: 'Vite' },
+        { link: '/ripple/usage#vite-setup-1', text: 'Vite again' },
+      ],
+    });
+    const result = await validateSidebar({
+      configPath,
+      docsDir,
+      workspace: workspace({ docsDir, pagesBySlug: { ripple: ['usage.md'] } }),
+    });
+    expect(result.diagnostics.filter((d) => d.rule === 'sidebar/anchor-missing')).toHaveLength(0);
+  });
+
+  it('honours a {#custom-id} heading suffix', async () => {
+    const docsDir = tempDir();
+    pagesOnDisk(docsDir, { ripple: { 'usage.md': '# Usage\n\n## Overview {#the-start}\n' } });
+    const configPath = stubConfig({ '/ripple/': [{ link: '/ripple/usage#the-start', text: 'Start' }] });
+    const result = await validateSidebar({
+      configPath,
+      docsDir,
+      workspace: workspace({ docsDir, pagesBySlug: { ripple: ['usage.md'] } }),
+    });
+    expect(result.diagnostics.filter((d) => d.rule === 'sidebar/anchor-missing')).toHaveLength(0);
+  });
+
+  it('skips anchors on links whose page is already reported missing', async () => {
+    const docsDir = tempDir();
+    const configPath = stubConfig({ '/ripple/': [{ link: '/ripple/ghost#nowhere', text: 'Ghost' }] });
+    const result = await validateSidebar({
+      configPath,
+      docsDir,
+      workspace: workspace({ docsDir, pagesBySlug: { ripple: ['index.md'] } }),
+    });
+    expect(result.diagnostics.filter((d) => d.rule === 'sidebar/link-missing')).toHaveLength(1);
+    expect(result.diagnostics.filter((d) => d.rule === 'sidebar/anchor-missing')).toHaveLength(0);
+  });
+
+  it('restricts anchor checks to the filter package', async () => {
+    const docsDir = tempDir();
+    pagesOnDisk(docsDir, {
+      ripple: { 'usage.md': '# Usage\n\n## Basic Usage\n' },
+      vault: { 'usage.md': '# Usage\n\n## Basic Usage\n' },
+    });
+    const configPath = stubConfig({
+      '/ripple/': [{ link: '/ripple/usage#basic-usage', text: 'Basic' }],
+      '/vault/': [{ link: '/vault/usage#gone', text: 'Gone' }],
+    });
+    const result = await validateSidebar({
+      configPath,
+      docsDir,
+      filterPackage: 'ripple',
+      workspace: workspace({ docsDir, pagesBySlug: { ripple: ['usage.md'], vault: ['usage.md'] } }),
+    });
+    expect(result.diagnostics).toHaveLength(0);
   });
 });
