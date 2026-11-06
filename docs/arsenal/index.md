@@ -29,13 +29,13 @@ const parsed = tryParseJson(raw);
 const users = parsed.ok ? fuzzyFilter(parsed.value as User[], query, { select: (user) => user.name }) : [];
 ```
 
-| Feature | Arsenal | lodash-es | Remeda |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="arsenal" type="size" /> | ~72 kB | ~18 kB |
-| Typed root utilities | <ore-icon name="check" size="16"></ore-icon> | Partial | <ore-icon name="check" size="16"></ore-icon> |
-| Category entry points | <ore-icon name="check" size="16"></ore-icon> | Partial | Partial |
-| Async task pool and cache | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Feature                   | Arsenal                                       | lodash-es                                    | Remeda                                       |
+| ------------------------- | --------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size               | <PackageInfo package="arsenal" type="size" /> | ~72 kB                                       | ~18 kB                                       |
+| Typed root utilities      | <ore-icon name="check" size="16"></ore-icon>  | Partial                                      | <ore-icon name="check" size="16"></ore-icon> |
+| Category entry points     | <ore-icon name="check" size="16"></ore-icon>  | Partial                                      | Partial                                      |
+| Async task pool and cache | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Zero dependencies         | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
@@ -73,7 +73,9 @@ import { taskPool } from '@vielzeug/arsenal/async';
 const byRole = groupBy([{ role: 'admin' }, { role: 'user' }], (user) => user.role);
 
 const pool = taskPool({ concurrency: 2 });
-const health = await pool.run((signal) => retry(() => fetch('/health', { signal }).then((response) => response.json())));
+const health = await pool.run((signal) =>
+  retry(() => fetch('/health', { signal }).then((response) => response.json())),
+);
 
 const responses = cache<string, unknown>({ ttlMs: 60_000 });
 const profile = await responses.getOrLoad('/profile', () => fetch('/profile').then((response) => response.json()));

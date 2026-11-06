@@ -325,7 +325,7 @@ Icons inherit the option's state color: muted by default, the theme color when t
 | `disabled`        | `boolean`                                                                              | `false`     | Disable the control                        |
 | `required`        | `boolean`                                                                              | `false`     | Mark field as required for form validation |
 | `fullwidth`       | `boolean`                                                                              | `false`     | Expand to full width                       |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                             | N/A | Override border-radius                     |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                             | N/A         | Override border-radius                     |
 | `loading`         | `boolean`                                                                              | `false`     | Show loading indicator in the dropdown     |
 
 ### Slots
@@ -336,10 +336,10 @@ Icons inherit the option's state color: muted by default, the theme color when t
 
 ### Events
 
-| Event    | Detail                                                                         | Description                               |
-| -------- | ------------------------------------------------------------------------------ | ----------------------------------------- |
-| `change` | `{ value: string, values: string[], labels: string[], originalEvent?: Event }` | Emitted when the selected value(s) change |
-| `open-change` | `{ open: boolean, reason: string }`                                        | Emitted whenever the dropdown opens or closes |
+| Event         | Detail                                                                         | Description                                   |
+| ------------- | ------------------------------------------------------------------------------ | --------------------------------------------- |
+| `change`      | `{ value: string, values: string[], labels: string[], originalEvent?: Event }` | Emitted when the selected value(s) change     |
+| `open-change` | `{ open: boolean, reason: string }`                                            | Emitted whenever the dropdown opens or closes |
 
 ### CSS Custom Properties
 

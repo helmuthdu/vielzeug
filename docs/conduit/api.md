@@ -7,21 +7,21 @@ description: Reference for Conduit tokens, immutable provider arrays, dependency
 
 ## API Overview
 
-| Symbol | Purpose | Mode | Common gotcha |
-| --- | --- | --- | --- |
-| `token` | Create typed dependency identity | Sync | Same description does not mean same token |
-| `createContainer` | Build root container from an immutable provider array | Sync | Validates the full graph at construction |
-| `valueProvider` / `factoryProvider` | Build type-safe immutable registrations | Sync | Prefer over unannotated object literals |
-| `Provider` | Value or factory registration type | Sync | One local registration per token |
-| `has` | Check registration visibility | Sync | Walks parent containers |
-| `resolve` | Resolve one token or typed composition-root map | Async | Undeclared map tokens fail at resolution |
-| `createScope` | Create child container | Sync | Child providers shadow parent registrations |
-| `dispose` | Release owned resources | Async | May throw `ConduitDisposeError` after cleanup attempts |
+| Symbol                              | Purpose                                               | Mode  | Common gotcha                                          |
+| ----------------------------------- | ----------------------------------------------------- | ----- | ------------------------------------------------------ |
+| `token`                             | Create typed dependency identity                      | Sync  | Same description does not mean same token              |
+| `createContainer`                   | Build root container from an immutable provider array | Sync  | Validates the full graph at construction               |
+| `valueProvider` / `factoryProvider` | Build type-safe immutable registrations               | Sync  | Prefer over unannotated object literals                |
+| `Provider`                          | Value or factory registration type                    | Sync  | One local registration per token                       |
+| `has`                               | Check registration visibility                         | Sync  | Walks parent containers                                |
+| `resolve`                           | Resolve one token or typed composition-root map       | Async | Undeclared map tokens fail at resolution               |
+| `createScope`                       | Create child container                                | Sync  | Child providers shadow parent registrations            |
+| `dispose`                           | Release owned resources                               | Async | May throw `ConduitDisposeError` after cleanup attempts |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import              | Purpose              |
+| ------------------- | -------------------- |
 | `@vielzeug/conduit` | Complete Conduit API |
 
 ## Tokens

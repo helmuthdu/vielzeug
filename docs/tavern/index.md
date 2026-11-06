@@ -1,10 +1,23 @@
 ---
 title: Tavern
-description: "Table sessions over mesh: host-owned state replication with guest command forwarding"
+description: 'Table sessions over mesh: host-owned state replication with guest command forwarding'
 package: tavern
 category: utilities
 keywords: [session, host, guest, replication, mesh, commands, snapshots, collaboration, peer-to-peer]
-exports: [hostTavern, joinTavern, TavernHost, TavernGuest, TavernHostEvent, TavernGuestEvent, TavernCommands, TavernNotices, TavernError, TavernPairingError, TavernDisposedError]
+exports:
+  [
+    hostTavern,
+    joinTavern,
+    TavernHost,
+    TavernGuest,
+    TavernHostEvent,
+    TavernGuestEvent,
+    TavernCommands,
+    TavernNotices,
+    TavernError,
+    TavernPairingError,
+    TavernDisposedError,
+  ]
 related: [mesh, ledger, herald]
 environments: [browser, node]
 ---
@@ -20,14 +33,28 @@ Peer-to-peer apps share one arrangement problem: the canonical state of somethin
 ```ts
 // Before: hand-rolled session orchestration: pairing, protocol validation,
 // command routing, snapshot broadcasting, notice relaying, presence tracking.
-const host = createMeshHost({ /* ... */ });
+const host = createMeshHost({
+  /* ... */
+});
 host.on('command', ({ peerId, payload }) => {
   const command = mySchema.safeParse(payload);
-  if (!command.success) { host.send(peerId, 'rejected', { /* ... */ }); return; }
-  try { applySubjectCommand(command.data.name, subject, command.data.args); }
-  catch (error) { host.send(peerId, 'rejected', { /* ... */ }); }
+  if (!command.success) {
+    host.send(peerId, 'rejected', {
+      /* ... */
+    });
+    return;
+  }
+  try {
+    applySubjectCommand(command.data.name, subject, command.data.args);
+  } catch (error) {
+    host.send(peerId, 'rejected', {
+      /* ... */
+    });
+  }
 });
-bus.on('subject:updated', () => { host.broadcast('snapshot', snapshotFor(subject)); });
+bus.on('subject:updated', () => {
+  host.broadcast('snapshot', snapshotFor(subject));
+});
 // ... 40+ more lines of plumbing
 
 // After: tavern owns the protocol, the validation, the broadcasting.
@@ -42,14 +69,14 @@ const host = hostTavern({
 });
 ```
 
-| Feature | Tavern | Raw mesh | Socket.io rooms |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="tavern" type="size" /> | <PackageInfo package="mesh" type="size" /> | N/A |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Host-authoritative commands | <ore-icon name="check" size="16"></ore-icon>: same table as local UI | <ore-icon name="triangle-alert" size="16"></ore-icon>: wire it yourself | <ore-icon name="triangle-alert" size="16"></ore-icon>: wire it yourself |
-| Snapshot replication | <ore-icon name="check" size="16"></ore-icon>: microtask-coalesced | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Out-of-band pairing (QR / copy-paste) | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>: needs a server |
-| Notice relaying | <ore-icon name="check" size="16"></ore-icon>: consumer-defined wire shape | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon>: server-mediated |
+| Feature                               | Tavern                                                                    | Raw mesh                                                                | Socket.io rooms                                                         |
+| ------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Bundle size                           | <PackageInfo package="tavern" type="size" />                              | <PackageInfo package="mesh" type="size" />                              | N/A                                                                     |
+| Zero dependencies                     | <ore-icon name="check" size="16"></ore-icon>                              | <ore-icon name="check" size="16"></ore-icon>                            | <ore-icon name="x" size="16"></ore-icon>                                |
+| Host-authoritative commands           | <ore-icon name="check" size="16"></ore-icon>: same table as local UI      | <ore-icon name="triangle-alert" size="16"></ore-icon>: wire it yourself | <ore-icon name="triangle-alert" size="16"></ore-icon>: wire it yourself |
+| Snapshot replication                  | <ore-icon name="check" size="16"></ore-icon>: microtask-coalesced         | <ore-icon name="x" size="16"></ore-icon>                                | <ore-icon name="x" size="16"></ore-icon>                                |
+| Out-of-band pairing (QR / copy-paste) | <ore-icon name="check" size="16"></ore-icon>                              | <ore-icon name="check" size="16"></ore-icon>                            | <ore-icon name="x" size="16"></ore-icon>: needs a server                |
+| Notice relaying                       | <ore-icon name="check" size="16"></ore-icon>: consumer-defined wire shape | <ore-icon name="x" size="16"></ore-icon>                                | <ore-icon name="triangle-alert" size="16"></ore-icon>: server-mediated  |
 
 <div class="decision-callout">
 

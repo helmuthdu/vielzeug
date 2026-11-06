@@ -31,10 +31,9 @@ const responses = await Promise.all([
 await pool.idle();
 pool.dispose();
 
-const resilient = await retry(
-  (signal) => fetch('/api/health', { signal }).then((response) => response.json()),
-  { times: 4 },
-);
+const resilient = await retry((signal) => fetch('/api/health', { signal }).then((response) => response.json()), {
+  times: 4,
+});
 
 const profiles = cache<string, unknown>({ ttlMs: 60_000 });
 const profile = await profiles.getOrLoad('user:1', () => fetch('/api/users/1').then((response) => response.json()));

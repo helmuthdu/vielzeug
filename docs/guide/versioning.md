@@ -22,12 +22,12 @@ Pin exact versions rather than caret ranges:
 ```jsonc
 {
   "dependencies": {
-    "@vielzeug/ripple": "26.10.0", // not "^26.10.0"
-  },
+    "@vielzeug/ripple": "26.10.0" // not "^26.10.0"
+  }
 }
 ```
 
-Exact pinning matters more under CalVer than you might expect: `^26.10.0` means `>=26.10.0 <27.0.0`, which spans *months*: `26.11.x`, `26.12.x` and every later train in 2026 all match. And because a breaking change rides the next train like any other change, a caret range can silently pull a breaking train into your lockfile. Upgrade deliberately: move every `@vielzeug/*` dependency to the same train, read the changed packages' changelog entries, and each changed package's migration guide first.
+Exact pinning matters more under CalVer than you might expect: `^26.10.0` means `>=26.10.0 <27.0.0`, which spans _months_: `26.11.x`, `26.12.x` and every later train in 2026 all match. And because a breaking change rides the next train like any other change, a caret range can silently pull a breaking train into your lockfile. Upgrade deliberately: move every `@vielzeug/*` dependency to the same train, read the changed packages' changelog entries, and each changed package's migration guide first.
 
 ## Where to read about a train
 

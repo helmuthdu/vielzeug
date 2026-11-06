@@ -40,9 +40,9 @@ const render = () => {
   if (!results.length) return console.log('No results');
 
   for (const { item, matches } of results) {
-    const labelMatch = matches.find(m => m.field === 'label');
+    const labelMatch = matches.find((m) => m.field === 'label');
     const parts = highlight(item.label, labelMatch?.ranges ?? []);
-    console.log(parts.map(p => p.highlighted ? `[${p.text}]` : p.text).join(''), `(${item.category})`);
+    console.log(parts.map((p) => (p.highlighted ? `[${p.text}]` : p.text)).join(''), `(${item.category})`);
   }
 };
 

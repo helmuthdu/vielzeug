@@ -4,13 +4,13 @@ description: Install Node, pnpm, Rush, root workspace tools and restore caches. 
 inputs:
   rush-install:
     description: Run rush install after cache restore (installs each package's workspace deps)
-    default: 'true'
+    default: "true"
   root-install:
     description: Run pnpm install for the root workspace (packages/*, demos/*, repo tooling), which Rush does not manage
-    default: 'true'
+    default: "true"
   trusted-publishing:
     description: Prepare npm for Trusted Publishing (OIDC). Only jobs that run `npm publish` need this.
-    default: 'false'
+    default: "false"
 
 runs:
   using: composite
@@ -21,7 +21,7 @@ runs:
     - name: Setup Node.js
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
-        node-version-file: '.nvmrc'
+        node-version-file: ".nvmrc"
 
     # Reads the version from root package.json#packageManager.
     - name: Setup pnpm

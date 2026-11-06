@@ -35,10 +35,12 @@ const machine = defineMachine<{ items: string[] }, Event>()({
   states: {
     idle: { on: { FETCH: { target: 'loading' } } },
     loading: {
-      invoke: [{
-        src: ({ signal }) => fetch('/api/items', { signal }).then((response) => response.json() as Promise<string[]>),
-        onDone: ({ result }) => ({ items: result, type: 'DONE' }),
-      }],
+      invoke: [
+        {
+          src: ({ signal }) => fetch('/api/items', { signal }).then((response) => response.json() as Promise<string[]>),
+          onDone: ({ result }) => ({ items: result, type: 'DONE' }),
+        },
+      ],
       on: { DONE: { reduce: ({ event }) => ({ items: event.items }), target: 'ready' } },
     },
     ready: {},
@@ -46,13 +48,13 @@ const machine = defineMachine<{ items: string[] }, Event>()({
 });
 ```
 
-| Feature | Clockwork | XState | Zustand |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="clockwork" type="size" /> | Larger actor/statechart runtime | Smaller store runtime |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Pure transition API | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> Statechart-focused | <ore-icon name="x" size="16"></ore-icon> |
-| Owned cancellation | <ore-icon name="check" size="16"></ore-icon> Actor disposal | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Framework coupling | <ore-icon name="check" size="16"></ore-icon> None | <ore-icon name="check" size="16"></ore-icon> None | <ore-icon name="check" size="16"></ore-icon> None |
+| Feature             | Clockwork                                                   | XState                                                                   | Zustand                                           |
+| ------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------- |
+| Bundle size         | <PackageInfo package="clockwork" type="size" />             | Larger actor/statechart runtime                                          | Smaller store runtime                             |
+| Zero dependencies   | <ore-icon name="check" size="16"></ore-icon>                | <ore-icon name="x" size="16"></ore-icon>                                 | <ore-icon name="check" size="16"></ore-icon>      |
+| Pure transition API | <ore-icon name="check" size="16"></ore-icon>                | <ore-icon name="triangle-alert" size="16"></ore-icon> Statechart-focused | <ore-icon name="x" size="16"></ore-icon>          |
+| Owned cancellation  | <ore-icon name="check" size="16"></ore-icon> Actor disposal | <ore-icon name="check" size="16"></ore-icon>                             | <ore-icon name="x" size="16"></ore-icon>          |
+| Framework coupling  | <ore-icon name="check" size="16"></ore-icon> None           | <ore-icon name="check" size="16"></ore-icon> None                        | <ore-icon name="check" size="16"></ore-icon> None |
 
 <div class="decision-callout">
 

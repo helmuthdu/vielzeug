@@ -237,14 +237,14 @@ pulse.tap((event) => {
 });
 ```
 
-| Error | When |
-| --- | --- |
-| `PulseConnectionError` | Transport failure, send while disconnected, room join rejected on close. |
-| `PulseProtocolError` | Malformed frame or server error frame. |
-| `PulseTimeoutError` | `wait()` times out. |
-| `PulseRoomTimeoutError` | Room scope `joined` times out. |
-| `PulseAbortError` | `wait()` or room `joined` aborted via AbortSignal. |
-| `PulseDisposedError` | Operation attempted after disposal. |
+| Error                   | When                                                                     |
+| ----------------------- | ------------------------------------------------------------------------ |
+| `PulseConnectionError`  | Transport failure, send while disconnected, room join rejected on close. |
+| `PulseProtocolError`    | Malformed frame or server error frame.                                   |
+| `PulseTimeoutError`     | `wait()` times out.                                                      |
+| `PulseRoomTimeoutError` | Room scope `joined` times out.                                           |
+| `PulseAbortError`       | `wait()` or room `joined` aborted via AbortSignal.                       |
+| `PulseDisposedError`    | Operation attempted after disposal.                                      |
 
 ## Working with Other Vielzeug Libraries
 

@@ -44,9 +44,7 @@ Top-level tokens that are not static factory dependencies cannot be checked duri
 `'transient'` creates one value per resolution and assigns cleanup to the requesting container. A child container caches its own singletons, which is how request, job, and test ownership is spelled.
 
 ```ts
-const root = createContainer([
-  factoryProvider(Attempt, [], () => ({}), { lifetime: 'transient' }),
-]);
+const root = createContainer([factoryProvider(Attempt, [], () => ({}), { lifetime: 'transient' })]);
 
 const request = root.createScope({
   providers: [factoryProvider(RequestId, [], () => ({ id: crypto.randomUUID() }))],

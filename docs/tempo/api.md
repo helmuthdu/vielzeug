@@ -7,24 +7,24 @@ description: Reference for Tempo Temporal parsing, conversion, arithmetic, compa
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `parse()` | Parse ISO text to an explicit Temporal kind | Sync | `as` is required |
-| `isValid()` | Narrow an unknown runtime value to `TimeInput` | Sync | Does not parse strings |
-| `toInstant()` | Resolve a value as an absolute instant | Sync | Plain values require `timeZone` |
-| `inTimeZone()` | Project a value to a zone | Sync | Preserves instant, changes wall-clock fields |
-| `shift()` / `difference()` | Timezone-aware arithmetic | Sync | Calendar operations require a timezone |
-| `isBefore()` / `isAfter()` / `isSame()` | Compare absolute values or calendar units | Sync | Plain values require `timeZone` |
-| `contains()` / `clamp()` | Compare normalized ranges | Sync | Bounds normalize automatically |
-| `startOf()` / `endOf()` | Resolve calendar boundaries | Sync | Weeks default to Monday |
-| `dateRange()` / `recurrence()` | Generate lazy zoned sequences | Sync | Steps and intervals must advance |
-| `classifyExpiry()` | Classify fixed elapsed-time thresholds | Sync | Months and years are rejected |
-| `format()` family | Localized and machine formatting | Sync | Use `timeZone`, not `tz` |
+| Symbol                                  | Purpose                                        | Execution mode | Common gotcha                                |
+| --------------------------------------- | ---------------------------------------------- | -------------- | -------------------------------------------- |
+| `parse()`                               | Parse ISO text to an explicit Temporal kind    | Sync           | `as` is required                             |
+| `isValid()`                             | Narrow an unknown runtime value to `TimeInput` | Sync           | Does not parse strings                       |
+| `toInstant()`                           | Resolve a value as an absolute instant         | Sync           | Plain values require `timeZone`              |
+| `inTimeZone()`                          | Project a value to a zone                      | Sync           | Preserves instant, changes wall-clock fields |
+| `shift()` / `difference()`              | Timezone-aware arithmetic                      | Sync           | Calendar operations require a timezone       |
+| `isBefore()` / `isAfter()` / `isSame()` | Compare absolute values or calendar units      | Sync           | Plain values require `timeZone`              |
+| `contains()` / `clamp()`                | Compare normalized ranges                      | Sync           | Bounds normalize automatically               |
+| `startOf()` / `endOf()`                 | Resolve calendar boundaries                    | Sync           | Weeks default to Monday                      |
+| `dateRange()` / `recurrence()`          | Generate lazy zoned sequences                  | Sync           | Steps and intervals must advance             |
+| `classifyExpiry()`                      | Classify fixed elapsed-time thresholds         | Sync           | Months and years are rejected                |
+| `format()` family                       | Localized and machine formatting               | Sync           | Use `timeZone`, not `tz`                     |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import            | Purpose                                                         |
+| ----------------- | --------------------------------------------------------------- |
 | `@vielzeug/tempo` | Tempo utilities, errors, types, and shared `Temporal` namespace |
 
 ## Core Functions
@@ -42,9 +42,9 @@ Parses an ISO 8601 string as the requested temporal kind.
 
 **Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `input` | `string` | ISO 8601 input |
+| Parameter    | Type      | Description          |
+| ------------ | --------- | -------------------- |
+| `input`      | `string`  | ISO 8601 input       |
 | `options.as` | `ParseAs` | Required result kind |
 
 **Returns:** Requested Temporal value.
@@ -298,14 +298,31 @@ type CalendarUnit = 'day' | 'month' | 'week' | 'year';
 type BoundaryUnit = 'day' | 'hour' | 'minute' | 'month' | 'week' | 'year';
 type WeekStartDay = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type FormatPattern = 'date-only' | 'long' | 'medium' | 'short' | 'time-only';
-type TempoUnit = 'day' | 'hour' | 'microsecond' | 'millisecond' | 'minute' | 'month' | 'nanosecond' | 'second' | 'week' | 'year';
-type FixedDuration = Pick<Temporal.DurationLike, 'days' | 'hours' | 'microseconds' | 'milliseconds' | 'minutes' | 'nanoseconds' | 'seconds' | 'weeks'>;
+type TempoUnit =
+  | 'day'
+  | 'hour'
+  | 'microsecond'
+  | 'millisecond'
+  | 'minute'
+  | 'month'
+  | 'nanosecond'
+  | 'second'
+  | 'week'
+  | 'year';
+type FixedDuration = Pick<
+  Temporal.DurationLike,
+  'days' | 'hours' | 'microseconds' | 'milliseconds' | 'minutes' | 'nanoseconds' | 'seconds' | 'weeks'
+>;
 type ExpiryThresholds<K extends string> = Record<K, FixedDuration>;
 type TimeDiffUnit = Exclude<TempoUnit, 'microsecond' | 'nanosecond'>;
 type TimeDiffResult = { unit: TimeDiffUnit; value: number };
 
-interface TimeZoneOptions { timeZone?: string }
-interface DisambiguationOptions { disambiguation?: Disambiguation }
+interface TimeZoneOptions {
+  timeZone?: string;
+}
+interface DisambiguationOptions {
+  disambiguation?: Disambiguation;
+}
 interface ShiftOptions extends DisambiguationOptions, TimeZoneOptions {}
 interface DifferenceInput extends DisambiguationOptions, TimeZoneOptions {
   end: TimeInput;
@@ -315,10 +332,23 @@ interface DifferenceInput extends DisambiguationOptions, TimeZoneOptions {
   smallestUnit?: Temporal.DateTimeUnit;
   start: TimeInput;
 }
-interface BoundaryOptions extends TimeZoneOptions { weekStartsOn?: WeekStartDay }
-interface CompareOptions extends TimeZoneOptions { unit?: BoundaryUnit; weekStartsOn?: WeekStartDay }
-interface ContainsInput extends CompareOptions { end: TimeInput; start: TimeInput; value: TimeInput }
-interface ClampInput extends CompareOptions { end: TimeInput; start: TimeInput; value: TimeInput }
+interface BoundaryOptions extends TimeZoneOptions {
+  weekStartsOn?: WeekStartDay;
+}
+interface CompareOptions extends TimeZoneOptions {
+  unit?: BoundaryUnit;
+  weekStartsOn?: WeekStartDay;
+}
+interface ContainsInput extends CompareOptions {
+  end: TimeInput;
+  start: TimeInput;
+  value: TimeInput;
+}
+interface ClampInput extends CompareOptions {
+  end: TimeInput;
+  start: TimeInput;
+  value: TimeInput;
+}
 type FormatOptions =
   | { intl: Intl.DateTimeFormatOptions; locale?: Intl.LocalesArgument; pattern?: never; timeZone?: string }
   | { intl?: never; locale?: Intl.LocalesArgument; pattern?: FormatPattern; timeZone?: string };
@@ -337,18 +367,20 @@ interface ClassifyExpiryInput<K extends string> extends TimeZoneOptions {
   thresholds: ExpiryThresholds<K>;
   relativeTo?: Temporal.Instant;
 }
-type RecurrenceRule = { frequency: 'daily' | 'monthly' | 'weekly' | 'yearly'; interval?: number } &
-  ({ count: number; until?: TimeInput } | { count?: number; until: TimeInput });
+type RecurrenceRule = { frequency: 'daily' | 'monthly' | 'weekly' | 'yearly'; interval?: number } & (
+  | { count: number; until?: TimeInput }
+  | { count?: number; until: TimeInput }
+);
 ```
 
 ## Errors
 
-| Error | Trigger | Notable properties |
-| --- | --- | --- |
-| `TempoError` | Base Tempo error | `instanceof TempoError` narrows every subtype |
-| `TempoInvalidInputError` | Invalid parse, duration, or fixed-threshold input | Extends `TempoError` |
-| `TempoInvalidTzError` | Invalid IANA zone or offset | Extends `TempoError` |
-| `TempoMissingTzError` | Wall time without required `timeZone` | Extends `TempoError` |
-| `TempoUnsupportedInputError` | Non-Temporal input passed to conversion | Extends `TempoError` |
+| Error                        | Trigger                                           | Notable properties                            |
+| ---------------------------- | ------------------------------------------------- | --------------------------------------------- |
+| `TempoError`                 | Base Tempo error                                  | `instanceof TempoError` narrows every subtype |
+| `TempoInvalidInputError`     | Invalid parse, duration, or fixed-threshold input | Extends `TempoError`                          |
+| `TempoInvalidTzError`        | Invalid IANA zone or offset                       | Extends `TempoError`                          |
+| `TempoMissingTzError`        | Wall time without required `timeZone`             | Extends `TempoError`                          |
+| `TempoUnsupportedInputError` | Non-Temporal input passed to conversion           | Extends `TempoError`                          |
 
 Every Tempo error thrown from `parse()`, `parseDuration()`, and timezone validation carries the original Temporal error on its `cause` property (ES2022). Inspect `err.cause` for root-cause details when debugging.

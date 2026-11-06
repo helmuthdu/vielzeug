@@ -1,6 +1,6 @@
 ---
 title: 'Sigil: QR code generation and scanning'
-description: "QR code generation and scanning: pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning"
+description: 'QR code generation and scanning: pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning'
 package: sigil
 category: utilities
 keywords: [qr, qrcode, barcode, encoder, scanner, svg, canvas, barcodedetector, pairing]
@@ -29,14 +29,14 @@ const matrix = encodeQr(text); // smallest version that fits, auto mask
 element.innerHTML = toSvg(matrix); // currentColor modules: themes with CSS
 ```
 
-| Feature | Sigil | `qrcode` (node-style) | `jsqr` |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="sigil" type="size" /> | ~100 kB+ | decoder only |
+| Feature              | Sigil                                             | `qrcode` (node-style)                    | `jsqr`                                            |
+| -------------------- | ------------------------------------------------- | ---------------------------------------- | ------------------------------------------------- |
+| Bundle size          | <PackageInfo package="sigil" type="size" />       | ~100 kB+                                 | decoder only                                      |
 | Runtime dependencies | <ore-icon name="check" size="16"></ore-icon> none | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> none |
-| Output | Matrix, SVG string, canvas | Canvas/DataURL/UTF-8 | N/A |
-| Themeable output | `currentColor` by default | Hardcoded color strings | N/A |
-| Scanning | Native `BarcodeDetector` wrapper | <ore-icon name="x" size="16"></ore-icon> | Pure-JS decoder |
-| SSR-safe import | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Output               | Matrix, SVG string, canvas                        | Canvas/DataURL/UTF-8                     | N/A                                               |
+| Themeable output     | `currentColor` by default                         | Hardcoded color strings                  | N/A                                               |
+| Scanning             | Native `BarcodeDetector` wrapper                  | <ore-icon name="x" size="16"></ore-icon> | Pure-JS decoder                                   |
+| SSR-safe import      | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>      |
 
 <div class="decision-callout">
 

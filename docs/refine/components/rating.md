@@ -103,19 +103,19 @@ When a user selects a star, a burst of particle sparks radiates from the chosen 
 
 ### Attributes
 
-| Attribute  | Type                                                                      | Default    | Description                                  |
-| ---------- | ------------------------------------------------------------------------- | ---------- | -------------------------------------------- |
-| `value`    | `number`                                                                  | `0`        | Current selected rating                      |
-| `max`      | `number`                                                                  | `5`        | Total number of stars                        |
-| `readonly` | `boolean`                                                                 | `false`    | Prevents user interaction; shows value only  |
-| `solid`    | `boolean`                                                                 | `false`    | Fills selected stars instead of outline-only |
-| `disabled` | `boolean`                                                                 | `false`    | Disables the rating input                    |
+| Attribute  | Type                                                                      | Default    | Description                                                                                                                                |
+| ---------- | ------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `value`    | `number`                                                                  | `0`        | Current selected rating                                                                                                                    |
+| `max`      | `number`                                                                  | `5`        | Total number of stars                                                                                                                      |
+| `readonly` | `boolean`                                                                 | `false`    | Prevents user interaction; shows value only                                                                                                |
+| `solid`    | `boolean`                                                                 | `false`    | Fills selected stars instead of outline-only                                                                                               |
+| `disabled` | `boolean`                                                                 | `false`    | Disables the rating input                                                                                                                  |
 | `label`    | `string`                                                                  | `'Rating'` | Accessible label for the rating group. Always provide a meaningful value (e.g. `"Product rating"`) so screen readers announce the context. |
-| `name`     | `string`                                                                  | N/A | Form field name                              |
-| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Star highlight color                         |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Star size                                    |
-| `helper`   | `string`                                                                  | N/A | Helper text shown below the stars            |
-| `error`    | `string`                                                                  | N/A | Error message shown below the stars (renders with `role="alert"` and takes precedence over `helper`) |
+| `name`     | `string`                                                                  | N/A        | Form field name                                                                                                                            |
+| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A        | Star highlight color                                                                                                                       |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Star size                                                                                                                                  |
+| `helper`   | `string`                                                                  | N/A        | Helper text shown below the stars                                                                                                          |
+| `error`    | `string`                                                                  | N/A        | Error message shown below the stars (renders with `role="alert"` and takes precedence over `helper`)                                       |
 
 ### Events
 
@@ -125,10 +125,10 @@ When a user selects a star, a burst of particle sparks radiates from the chosen 
 
 ### Parts
 
-| Part          | Description               |
-| ------------- | -------------------------- |
-| `stars`       | Stars container element    |
-| `star`        | Individual star button     |
+| Part          | Description                   |
+| ------------- | ----------------------------- |
+| `stars`       | Stars container element       |
+| `star`        | Individual star button        |
 | `helper-text` | The helper/error text element |
 
 ### CSS Custom Properties

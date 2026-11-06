@@ -242,18 +242,18 @@ Use `backdrop` to match dialog behavior:
 
 ### Attributes
 
-| Attribute               | Type                                     | Default     | Description                                       |
-| ----------------------- | ---------------------------------------- | ----------- | ------------------------------------------------- |
-| `open`                  | `boolean`                                | N/A | Controlled visibility                             |
-| `default-open`          | `boolean`                                | `false`     | Initial visibility when `open` is not provided    |
-| `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`   | Edge the drawer slides in from                    |
-| `size`                  | `'sm' \| 'md' \| 'lg' \| 'full'`         | `'md'`      | Panel width (or height for top/bottom placements) |
-| `detents`               | `string`                                 | N/A | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only |
-| `label`                 | `string`                                 | N/A | Accessible title shown in the header bar          |
-| `drag-handle-placement` | `'outside' \| 'inset'`                   | `'outside'` | Position of the swipe drag handle                 |
-| `dismissible`           | `boolean`                                | `true`      | Shows a close (×) button in the header            |
-| `backdrop`              | `'opaque' \| 'blur' \| 'transparent'`    | `'opaque'`  | Backdrop style, matching `ore-dialog`              |
-| `persistent`            | `boolean`                                | `false`     | Prevents backdrop click from requesting close     |
+| Attribute               | Type                                     | Default     | Description                                                                                                    |
+| ----------------------- | ---------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------- |
+| `open`                  | `boolean`                                | N/A         | Controlled visibility                                                                                          |
+| `default-open`          | `boolean`                                | `false`     | Initial visibility when `open` is not provided                                                                 |
+| `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`   | Edge the drawer slides in from                                                                                 |
+| `size`                  | `'sm' \| 'md' \| 'lg' \| 'full'`         | `'md'`      | Panel width (or height for top/bottom placements)                                                              |
+| `detents`               | `string`                                 | N/A         | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only |
+| `label`                 | `string`                                 | N/A         | Accessible title shown in the header bar                                                                       |
+| `drag-handle-placement` | `'outside' \| 'inset'`                   | `'outside'` | Position of the swipe drag handle                                                                              |
+| `dismissible`           | `boolean`                                | `true`      | Shows a close (×) button in the header                                                                         |
+| `backdrop`              | `'opaque' \| 'blur' \| 'transparent'`    | `'opaque'`  | Backdrop style, matching `ore-dialog`                                                                          |
+| `persistent`            | `boolean`                                | `false`     | Prevents backdrop click from requesting close                                                                  |
 
 ### Slots
 
@@ -265,20 +265,20 @@ Use `backdrop` to match dialog behavior:
 
 ### Events
 
-| Event           | Detail                                                                                                                      | Description                             |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `open-change`   | `{ open: boolean, reason: string }`                                                                                          | Fired whenever the drawer opens or closes |
-| `close-request` | `{ placement: 'left' \| 'right' \| 'top' \| 'bottom', reason: 'trigger' \| 'escape' \| 'outside-click' }`                   | Fired before close and can be prevented |
+| Event           | Detail                                                                                                    | Description                               |
+| --------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `open-change`   | `{ open: boolean, reason: string }`                                                                       | Fired whenever the drawer opens or closes |
+| `close-request` | `{ placement: 'left' \| 'right' \| 'top' \| 'bottom', reason: 'trigger' \| 'escape' \| 'outside-click' }` | Fired before close and can be prevented   |
 
 ### CSS Custom Properties
 
-| Property               | Description                                   |
-| ---------------------- | --------------------------------------------- |
-| `--drawer-backdrop-bg` | Backdrop veil color (default `--overlay-veil`)   |
-| `--drawer-bg`          | Panel background color                        |
-| `--drawer-size`        | Panel width (horizontal) or height (vertical) |
-| `--drawer-shadow`      | Panel box shadow                              |
-| `--drawer-panel-blur`  | Panel backdrop blur amount                    |
+| Property               | Description                                    |
+| ---------------------- | ---------------------------------------------- |
+| `--drawer-backdrop-bg` | Backdrop veil color (default `--overlay-veil`) |
+| `--drawer-bg`          | Panel background color                         |
+| `--drawer-size`        | Panel width (horizontal) or height (vertical)  |
+| `--drawer-shadow`      | Panel box shadow                               |
+| `--drawer-panel-blur`  | Panel backdrop blur amount                     |
 
 ## Accessibility
 

@@ -53,12 +53,12 @@ Six semantic colors communicate intent.
 
 </ComponentPreview>
 
-| Emphasis      | Renders as                       | Use for                                                    |
-| ------------- | -------------------------------- | ---------------------------------------------------------- |
-| `normal`      | default treatment (unchanged)    | secondary actions with no special weight                   |
-| `primary`     | accent fill (solid)              | the one action most people will choose                     |
-| `cancel`      | neutral ghost                    | dismiss without changing anything                          |
-| `destructive` | error ink, no filled background  | deletes or actions that are hard to undo                   |
+| Emphasis      | Renders as                      | Use for                                  |
+| ------------- | ------------------------------- | ---------------------------------------- |
+| `normal`      | default treatment (unchanged)   | secondary actions with no special weight |
+| `primary`     | accent fill (solid)             | the one action most people will choose   |
+| `cancel`      | neutral ghost                   | dismiss without changing anything        |
+| `destructive` | error ink, no filled background | deletes or actions that are hard to undo |
 
 Destructive uses red text rather than a filled red slab: a filled error button can be mistaken for a primary action. Keep one `primary` per view. In development, an `ore-dialog` footer or `ore-alert` actions row with more than one `emphasis="primary"` button logs a warning.
 
@@ -151,7 +151,7 @@ The `rounded` attribute sets the border radius from the theme scale. Used withou
 
 By default a button sits flat on the page: depth is a hierarchy signal, so it is opt-in.
 `elevation` takes the same `0`-`5` scale as the rest of the system and lifts a button off
-the surface. Depth is *composed*, not assigned, so it survives every interactive state:
+the surface. Depth is _composed_, not assigned, so it survives every interactive state:
 hovering, pressing, and keyboard focus all keep the elevation the button was given.
 
 <ComponentPreview center>
@@ -378,55 +378,55 @@ Listen for the selection:
 
 ### `ore-button` Attributes
 
-| Attribute   | Type                                                                            | Default    | Description                                                                 |
-| ----------- | ------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- |
-| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`  | Visual style; renders solid when omitted                                    |
-| `emphasis`  | `'normal' \| 'primary' \| 'cancel' \| 'destructive'`                           | `'normal'` | Semantic role that picks a `color`/`variant` default; an explicit one wins  |
-| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | N/A | Semantic color; uncolored neutral when omitted                              |
-| `size`      | `'sm' \| 'md' \| 'lg'`                                                          | `'md'`     | Button size                                                                 |
-| `type`      | `'button' \| 'submit' \| 'reset'`                                               | `'button'` | HTML button type for form association                                       |
-| `disabled`  | `boolean`                                                                       | `false`    | Disables the button                                                         |
-| `loading`   | `boolean`                                                                       | `false`    | Shows spinner; also disables interaction                                    |
-| `effect`    | `'shine' \| 'rainbow'`                                                          | N/A | Animated border effect                                                      |
-| `icon-only` | `boolean`                                                                       | `false`    | Square aspect ratio, no padding: pair with `label`                         |
-| `label`     | `string`                                                                        | N/A | Sets the accessible label: required for icon-only buttons                   |
-| `fullwidth` | `boolean`                                                                       | `false`    | Expands to full container width                                             |
-| `fullheight` | `boolean`                                                                      | `false`    | Expands to full container height (see [List's swipe actions](./list.md))    |
-| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`          | N/A | Border radius; omit value or use `'full'` for pill shape                    |
-| `elevation` | `0 \| 1 \| 2 \| 3 \| 4 \| 5`                                                | N/A | Resting depth; omitted keeps the button flat (see [Elevation](#elevation))  |
-| `href`      | `string`                                                                        | N/A | Renders a native, focusable `<a>` internally                                 |
-| `target`    | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | N/A | Link target (requires `href`)                                               |
-| `rel`       | `string`                                                                        | N/A | Link `rel` attribute (requires `href`)                                      |
-| `value`     | `string`                                                                        | N/A | Identifies this button as one option of a [segmented group](#segmented-control) |
+| Attribute    | Type                                                                           | Default    | Description                                                                     |
+| ------------ | ------------------------------------------------------------------------------ | ---------- | ------------------------------------------------------------------------------- |
+| `variant`    | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`  | Visual style; renders solid when omitted                                        |
+| `emphasis`   | `'normal' \| 'primary' \| 'cancel' \| 'destructive'`                           | `'normal'` | Semantic role that picks a `color`/`variant` default; an explicit one wins      |
+| `color`      | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | N/A        | Semantic color; uncolored neutral when omitted                                  |
+| `size`       | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`     | Button size                                                                     |
+| `type`       | `'button' \| 'submit' \| 'reset'`                                              | `'button'` | HTML button type for form association                                           |
+| `disabled`   | `boolean`                                                                      | `false`    | Disables the button                                                             |
+| `loading`    | `boolean`                                                                      | `false`    | Shows spinner; also disables interaction                                        |
+| `effect`     | `'shine' \| 'rainbow'`                                                         | N/A        | Animated border effect                                                          |
+| `icon-only`  | `boolean`                                                                      | `false`    | Square aspect ratio, no padding: pair with `label`                              |
+| `label`      | `string`                                                                       | N/A        | Sets the accessible label: required for icon-only buttons                       |
+| `fullwidth`  | `boolean`                                                                      | `false`    | Expands to full container width                                                 |
+| `fullheight` | `boolean`                                                                      | `false`    | Expands to full container height (see [List's swipe actions](./list.md))        |
+| `rounded`    | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`           | N/A        | Border radius; omit value or use `'full'` for pill shape                        |
+| `elevation`  | `0 \| 1 \| 2 \| 3 \| 4 \| 5`                                                   | N/A        | Resting depth; omitted keeps the button flat (see [Elevation](#elevation))      |
+| `href`       | `string`                                                                       | N/A        | Renders a native, focusable `<a>` internally                                    |
+| `target`     | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | N/A        | Link target (requires `href`)                                                   |
+| `rel`        | `string`                                                                       | N/A        | Link `rel` attribute (requires `href`)                                          |
+| `value`      | `string`                                                                       | N/A        | Identifies this button as one option of a [segmented group](#segmented-control) |
 
 ### `ore-button-group` Attributes
 
-| Attribute     | Type                                                                            | Default        | Description                                      |
-| ------------- | ------------------------------------------------------------------------------- | -------------- | ------------------------------------------------ |
-| `orientation` | `'horizontal' \| 'vertical'`                                                    | `'horizontal'` | Layout direction                                 |
-| `attached`    | `boolean`                                                                       | `false`        | Removes spacing and connects buttons with borders|
-| `fullwidth`   | `boolean`                                                                       | `false`        | Buttons expand equally to fill container         |
-| `label`       | `string`                                                                        | N/A | `aria-label` for the group container             |
-| `value`       | `string`                                                                        | N/A | Value of the selected button; enables [segmented selection](#segmented-control) |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                          | N/A | Propagated to all child buttons                  |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | N/A | Propagated to all child buttons                  |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | N/A | Propagated to all child buttons                  |
+| Attribute     | Type                                                                           | Default        | Description                                                                     |
+| ------------- | ------------------------------------------------------------------------------ | -------------- | ------------------------------------------------------------------------------- |
+| `orientation` | `'horizontal' \| 'vertical'`                                                   | `'horizontal'` | Layout direction                                                                |
+| `attached`    | `boolean`                                                                      | `false`        | Removes spacing and connects buttons with borders                               |
+| `fullwidth`   | `boolean`                                                                      | `false`        | Buttons expand equally to fill container                                        |
+| `label`       | `string`                                                                       | N/A            | `aria-label` for the group container                                            |
+| `value`       | `string`                                                                       | N/A            | Value of the selected button; enables [segmented selection](#segmented-control) |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                         | N/A            | Propagated to all child buttons                                                 |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | N/A            | Propagated to all child buttons                                                 |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | N/A            | Propagated to all child buttons                                                 |
 
 ### Slots
 
 **`ore-button`**
 
-| Slot        | Description                        |
-| ----------- | ---------------------------------- |
-| *(default)* | Button label, text, or content     |
-| `prefix`    | Content before the label           |
-| `suffix`    | Content after the label            |
+| Slot        | Description                    |
+| ----------- | ------------------------------ |
+| _(default)_ | Button label, text, or content |
+| `prefix`    | Content before the label       |
+| `suffix`    | Content after the label        |
 
 **`ore-button-group`**
 
 | Slot        | Description           |
 | ----------- | --------------------- |
-| *(default)* | Child button elements |
+| _(default)_ | Child button elements |
 
 ### Events
 
@@ -454,33 +454,33 @@ Listen for the selection:
 
 **`ore-button`**
 
-| Property                             | Description                                                  | Default             |
-| ------------------------------------ | ------------------------------------------------------------ | ------------------- |
-| `--button-bg`                        | Background color                                             | Variant-dependent   |
-| `--button-color`                     | Text color                                                   | Variant-dependent   |
-| `--button-border`                    | Border width                                                 | `var(--border)`     |
-| `--button-border-color`              | Border color                                                 | Variant-dependent   |
-| `--button-border-top`                | Top border width (used by attached groups)                   | N/A |
-| `--button-border-start`              | Inline-start border width (used by attached groups)          | N/A |
-| `--button-radius`                    | Border radius                                                | `var(--rounded-lg)` |
-| `--button-padding`                   | Inner padding                                                | Size-dependent      |
-| `--button-gap`                       | Gap between icon and text                                    | Size-dependent      |
-| `--button-font-size`                 | Font size                                                    | Size-dependent      |
-| `--button-min-height`                | Minimum height floor                                         | `44px` touch target |
-| `--button-frost-active-bg`           | Background when hovered/pressed in frost variant             | Variant-dependent   |
-| `--button-frost-active-border-color` | Border color when hovered/pressed in frost variant           | Variant-dependent   |
-| `--button-selected-bg`               | Background of a selected segment in a segmented group        | Color family base   |
-| `--button-selected-color`            | Text color of a selected segment in a segmented group        | Color family contrast |
-| `--button-selected-border-color`     | Border color of a selected segment in a segmented group      | Color family base   |
-| `--button-shadow`                    | Elevated drop shadow (used when `elevation` is set)          | `var(--_shadow)`    |
-| `--button-shadow-contact`            | Tight shadow where the button meets the surface              | `var(--shadow-2xs)` |
+| Property                             | Description                                             | Default               |
+| ------------------------------------ | ------------------------------------------------------- | --------------------- |
+| `--button-bg`                        | Background color                                        | Variant-dependent     |
+| `--button-color`                     | Text color                                              | Variant-dependent     |
+| `--button-border`                    | Border width                                            | `var(--border)`       |
+| `--button-border-color`              | Border color                                            | Variant-dependent     |
+| `--button-border-top`                | Top border width (used by attached groups)              | N/A                   |
+| `--button-border-start`              | Inline-start border width (used by attached groups)     | N/A                   |
+| `--button-radius`                    | Border radius                                           | `var(--rounded-lg)`   |
+| `--button-padding`                   | Inner padding                                           | Size-dependent        |
+| `--button-gap`                       | Gap between icon and text                               | Size-dependent        |
+| `--button-font-size`                 | Font size                                               | Size-dependent        |
+| `--button-min-height`                | Minimum height floor                                    | `44px` touch target   |
+| `--button-frost-active-bg`           | Background when hovered/pressed in frost variant        | Variant-dependent     |
+| `--button-frost-active-border-color` | Border color when hovered/pressed in frost variant      | Variant-dependent     |
+| `--button-selected-bg`               | Background of a selected segment in a segmented group   | Color family base     |
+| `--button-selected-color`            | Text color of a selected segment in a segmented group   | Color family contrast |
+| `--button-selected-border-color`     | Border color of a selected segment in a segmented group | Color family base     |
+| `--button-shadow`                    | Elevated drop shadow (used when `elevation` is set)     | `var(--_shadow)`      |
+| `--button-shadow-contact`            | Tight shadow where the button meets the surface         | `var(--shadow-2xs)`   |
 
 **`ore-button-group`**
 
-| Property         | Description                                                   | Default             |
-| ---------------- | ------------------------------------------------------------- | ------------------- |
-| `--group-gap`    | Spacing between buttons (non-attached)                        | `var(--size-2)`     |
-| `--group-radius` | Border radius on first/last buttons in attached mode          | `var(--rounded-lg)` |
+| Property         | Description                                          | Default             |
+| ---------------- | ---------------------------------------------------- | ------------------- |
+| `--group-gap`    | Spacing between buttons (non-attached)               | `var(--size-2)`     |
+| `--group-radius` | Border radius on first/last buttons in attached mode | `var(--rounded-lg)` |
 
 ## Accessibility
 

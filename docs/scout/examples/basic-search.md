@@ -47,7 +47,7 @@ for (const { item, score, matches } of results) {
     const value = item[field as keyof User];
     const parts = highlight(value, ranges);
 
-    const displayText = parts.map(p => p.highlighted ? `[${p.text}]` : p.text).join('');
+    const displayText = parts.map((p) => (p.highlighted ? `[${p.text}]` : p.text)).join('');
 
     console.log(`  ${field}: ${displayText}`);
   }

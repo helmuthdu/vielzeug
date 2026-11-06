@@ -18,14 +18,14 @@ import { en } from '@vielzeug/illusionist/locales';
 
 const illusion = createIllusion({ seed: 12345, locale: en });
 
-illusion.person.fullName();      // "Ashley Harris"
-illusion.internet.email();       // "samantha.sanchez@mail.com"
-illusion.commerce.price();       // Money<USD>
+illusion.person.fullName(); // "Ashley Harris"
+illusion.internet.email(); // "samantha.sanchez@mail.com"
+illusion.commerce.price(); // Money<USD>
 illusion.date.past({ years: 5 }); // Temporal.ZonedDateTime
-illusion.finance.iban();         // "IT0649896243786776403271206"
-illusion.location.city();        // "Denver"
-illusion.lorem.paragraph();      // "Dolor in fugiat anim dolor aute officia irure sunt..."
-illusion.system.semver();        // "7.4.0"
+illusion.finance.iban(); // "IT0649896243786776403271206"
+illusion.location.city(); // "Denver"
+illusion.lorem.paragraph(); // "Dolor in fugiat anim dolor aute officia irure sunt..."
+illusion.system.semver(); // "7.4.0"
 ```
 
 ## Documentation

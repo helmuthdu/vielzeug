@@ -53,11 +53,13 @@ Inspect `event.composedPath()` when global undo and redo must yield to browser b
 
 ```ts
 const isTypingInField = (event: KeyboardEvent): boolean =>
-  event.composedPath().some(
-    (target) =>
-      target instanceof HTMLElement &&
-      (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
-  );
+  event
+    .composedPath()
+    .some(
+      (target) =>
+        target instanceof HTMLElement &&
+        (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
+    );
 
 const editingMap = createKeymap(
   [

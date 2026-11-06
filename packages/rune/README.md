@@ -18,10 +18,7 @@ import { consoleTransport, createLogger, jsonTransport, lazy } from '@vielzeug/r
 const log = createLogger({
   logLevel: 'debug',
   namespace: 'server',
-  transports: [
-    consoleTransport({ timestamp: true }),
-    jsonTransport({ level: 'error' }),
-  ],
+  transports: [consoleTransport({ timestamp: true }), jsonTransport({ level: 'error' })],
 });
 
 const requestLog = log.withBindings({

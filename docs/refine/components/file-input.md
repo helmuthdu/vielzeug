@@ -257,24 +257,24 @@ fileInput.addEventListener('remove', ({ detail }) => {
 
 ### Attributes
 
-| Attribute   | Type                                                                      | Default   | Description                                         |
-| ----------- | ------------------------------------------------------------------------- | --------- | --------------------------------------------------- |
-| `accept`    | `string`                                                                  | `''`      | Accepted MIME types or extensions (comma-separated) |
-| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Color theme                                         |
-| `disabled`  | `boolean`                                                                 | `false`   | Disable all interaction                             |
-| `error`     | `string`                                                                  | `''`      | Error message (replaces helper text)                |
-| `fullwidth` | `boolean`                                                                 | `false`   | Expand to full width                                |
+| Attribute   | Type                                                                      | Default   | Description                                                              |
+| ----------- | ------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------ |
+| `accept`    | `string`                                                                  | `''`      | Accepted MIME types or extensions (comma-separated)                      |
+| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A       | Color theme                                                              |
+| `disabled`  | `boolean`                                                                 | `false`   | Disable all interaction                                                  |
+| `error`     | `string`                                                                  | `''`      | Error message (replaces helper text)                                     |
+| `fullwidth` | `boolean`                                                                 | `false`   | Expand to full width                                                     |
 | `gallery`   | `boolean`                                                                 | `false`   | Show selected files as an image thumbnail/preview grid instead of a list |
-| `helper`    | `string`                                                                  | `''`      | Helper text below the dropzone                      |
-| `label`     | `string`                                                                  | `''`      | Label text displayed above the dropzone             |
-| `max-files` | `number`                                                                  | `0`       | Maximum number of files (0 = unlimited)             |
-| `max-size`  | `number`                                                                  | `0`       | Maximum file size in bytes (0 = unlimited)          |
-| `multiple`  | `boolean`                                                                 | `false`   | Allow selecting multiple files                      |
-| `name`      | `string`                                                                  | `''`      | Form field name                                     |
-| `required`  | `boolean`                                                                 | `false`   | Mark as required                                    |
-| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl'`                | N/A | Border radius                                       |
-| `size`      | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`    | Component size                                      |
-| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'` | Visual variant                                      |
+| `helper`    | `string`                                                                  | `''`      | Helper text below the dropzone                                           |
+| `label`     | `string`                                                                  | `''`      | Label text displayed above the dropzone                                  |
+| `max-files` | `number`                                                                  | `0`       | Maximum number of files (0 = unlimited)                                  |
+| `max-size`  | `number`                                                                  | `0`       | Maximum file size in bytes (0 = unlimited)                               |
+| `multiple`  | `boolean`                                                                 | `false`   | Allow selecting multiple files                                           |
+| `name`      | `string`                                                                  | `''`      | Form field name                                                          |
+| `required`  | `boolean`                                                                 | `false`   | Mark as required                                                         |
+| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl'`                | N/A       | Border radius                                                            |
+| `size`      | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`    | Component size                                                           |
+| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'` | Visual variant                                                           |
 
 ### Events
 
@@ -285,15 +285,15 @@ fileInput.addEventListener('remove', ({ detail }) => {
 
 ### CSS Parts
 
-| Part       | Description                              |
-| ---------- | ---------------------------------------- |
-| `wrapper`  | The outer wrapper `<div>`                |
-| `label`    | The `<label>` element above the dropzone |
-| `dropzone` | The interactive drag-and-drop zone       |
-| `input`    | The hidden native `<input type="file">`  |
+| Part       | Description                                                                            |
+| ---------- | -------------------------------------------------------------------------------------- |
+| `wrapper`  | The outer wrapper `<div>`                                                              |
+| `label`    | The `<label>` element above the dropzone                                               |
+| `dropzone` | The interactive drag-and-drop zone                                                     |
+| `input`    | The hidden native `<input type="file">`                                                |
 | `gallery`  | The preview grid `<ul>` (present instead of the plain file list when `gallery` is set) |
-| `helper`   | The helper text `<div>`                  |
-| `error`    | The error text `<div>`                   |
+| `helper`   | The helper text `<div>`                                                                |
+| `error`    | The error text `<div>`                                                                 |
 
 ### CSS Custom Properties
 

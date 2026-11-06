@@ -34,7 +34,13 @@ export function UserList() {
 
   if (state.loading && state.items.length === 0) return <p>Loading</p>;
   if (state.error) return <p>{state.error.message}</p>;
-  return <ul>{state.items.map((user) => <li key={user.id}>{user.name}</li>)}</ul>;
+  return (
+    <ul>
+      {state.items.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
 }
 ```
 

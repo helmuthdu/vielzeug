@@ -1,6 +1,6 @@
 ---
 title: 'Archive Examples: Moderate Content'
-description: "Page report queues, resolve report IDs, hide content and inspect atomic moderation audit records."
+description: 'Page report queues, resolve report IDs, hide content and inspect atomic moderation audit records.'
 ---
 
 ## Moderate Content
@@ -18,8 +18,11 @@ registered publisher identity; page unresolved reports before acting.
 
 ```ts
 import {
-  archiveIdentitySchema, archiveModerationLogSchema, archiveReportsSchema,
-  PUBLISHER_HEADER, REQUEST_MARKER_HEADER,
+  archiveIdentitySchema,
+  archiveModerationLogSchema,
+  archiveReportsSchema,
+  PUBLISHER_HEADER,
+  REQUEST_MARKER_HEADER,
 } from '@vielzeug/archive';
 
 const identityResponse = await fetch('/api/v1/me', { credentials: 'same-origin' });
@@ -29,7 +32,9 @@ if (!identity?.operator) throw new Error('A registered operator is required');
 const headers = { [PUBLISHER_HEADER]: identity.id, [REQUEST_MARKER_HEADER]: '1' };
 async function call(path: string, method = 'GET'): Promise<Response> {
   const response = await fetch(`/api/v1${path}`, {
-    credentials: 'same-origin', headers, method,
+    credentials: 'same-origin',
+    headers,
+    method,
   });
   if (!response.ok) throw new Error(`Moderation failed (${response.status})`);
   return response;
@@ -50,9 +55,7 @@ if (report !== undefined) {
   await call(`/collections/notes/entries/${report.entryId}/hidden`, 'PUT');
   await call(`/collections/notes/reports/${report.id}/resolved`, 'PUT');
 }
-const page = archiveModerationLogSchema.parse(
-  await (await call('/moderation-log?limit=50')).json(),
-);
+const page = archiveModerationLogSchema.parse(await (await call('/moderation-log?limit=50')).json());
 console.log(page.actions, page.cursor);
 ```
 

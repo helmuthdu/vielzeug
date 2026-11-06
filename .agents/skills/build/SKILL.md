@@ -34,7 +34,7 @@ Use the required post-change validation as the default; do not rerun the same te
 - Add or update behavior-focused contract tests before or alongside implementation.
 - Implement the smallest coherent change; update source, exports, types, and error/disposal contracts together.
 - Update documentation, README, recipes, and REPL examples when public use changes.
-- For an approved breaking change, replace incompatible behavior across implementation, exports, types, errors, lifecycle, tests, docs, examples, and internal call sites. Remove compatibility shims and dead implementation, add migration guidance, report dependent impact, and mark affected packages for a major release.
+- For an approved breaking change, replace incompatible behavior across implementation, exports, types, errors, lifecycle, tests, docs, examples, and internal call sites. Remove compatibility shims and dead implementation, add migration guidance, report dependent impact, and create change files for affected packages using the appropriate changelog section; change-file types do not change the CalVer version.
 
 ## Test maintenance
 
@@ -72,7 +72,7 @@ After renaming a path or prefix, search for the old name with hidden files inclu
 | Changed surface                | Run                                                                                                                                       |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Package source                 | `pnpm vitest run packages/<name>/src/__tests__/`, `pnpm --filter @vielzeug/<name> lint`, `pnpm --filter @vielzeug/<name> build` (subtree `AGENTS.md` may add package-local gates to `build`: they fail this row) |
-| Real-browser behavior (packages declaring `test:e2e` in their manifest; find with `rg '"test:e2e"' packages/*/package.json`) | `pnpm --filter @vielzeug/<name> run test:e2e` scoped to the affected component or module; some packages build internally, refine requires a prior `build` (see `packages/refine/AGENTS.md`) |
+| Real-browser behavior (packages declaring `test:e2e` in their manifest; find with `rg '"test:e2e"' packages/*/package.json`) | `pnpm --filter @vielzeug/<name> run test:e2e` scoped to the affected component or module. Some packages build internally first; refine needs a prior `build:e2e` (full `build` only when validating the shipped artifact). Each package's `AGENTS.md`/`test:e2e` script is authoritative |
 | Public API                     | package validation above, plus the docs/REPL rows of the `document` skill                                                                 |
 | Tests only                     | focused tests; lint/build only when config or imports changed                                                                             |
 | Cross-package call sites       | focused tests, lint, and build for every affected package                                                                                 |

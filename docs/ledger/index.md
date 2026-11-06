@@ -4,7 +4,17 @@ description: Serialized reversible command history with cancellation ownership a
 package: ledger
 category: utilities
 keywords: [undo, redo, history, commands, async, reactive, ripple]
-exports: [compose, createLedger, LedgerError, LedgerCancelledError, LedgerConfigError, LedgerDisposedError, LedgerExecutionError, LedgerRollbackError]
+exports:
+  [
+    compose,
+    createLedger,
+    LedgerError,
+    LedgerCancelledError,
+    LedgerConfigError,
+    LedgerDisposedError,
+    LedgerExecutionError,
+    LedgerRollbackError,
+  ]
 related: [ripple, keymap, forge, vault]
 environments: [browser, node, ssr, deno]
 ---
@@ -29,14 +39,14 @@ await ledger.do({ apply: saveNext, revert: restorePrevious });
 await ledger.undo();
 ```
 
-| Feature | Roll your own | Ledger |
-| --- | --- | --- |
-| Bundle size | 0 B | <PackageInfo package="ledger" type="size" /> |
-| Reversible history | Manual arrays | <ore-icon name="check" size="16"></ore-icon> |
-| Serialized async work | Manual queue | <ore-icon name="check" size="16"></ore-icon> |
-| Queue cancellation | Manual ownership | Abort-aware lifecycle |
-| Framework-neutral state | Manual events | Structural `Subscribable<LedgerState>` |
-| Composition | Custom transaction code | `compose()` |
+| Feature                 | Roll your own           | Ledger                                       |
+| ----------------------- | ----------------------- | -------------------------------------------- |
+| Bundle size             | 0 B                     | <PackageInfo package="ledger" type="size" /> |
+| Reversible history      | Manual arrays           | <ore-icon name="check" size="16"></ore-icon> |
+| Serialized async work   | Manual queue            | <ore-icon name="check" size="16"></ore-icon> |
+| Queue cancellation      | Manual ownership        | Abort-aware lifecycle                        |
+| Framework-neutral state | Manual events           | Structural `Subscribable<LedgerState>`       |
+| Composition             | Custom transaction code | `compose()`                                  |
 
 <div class="decision-callout">
 
@@ -75,9 +85,13 @@ let value = 'before';
 const ledger = createLedger();
 
 await ledger.do({
-  apply: () => { value = 'after'; },
+  apply: () => {
+    value = 'after';
+  },
   label: 'Rename value',
-  revert: () => { value = 'before'; },
+  revert: () => {
+    value = 'before';
+  },
 });
 
 await ledger.undo();

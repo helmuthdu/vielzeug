@@ -7,22 +7,22 @@ description: API reference for module-worker pools and worker-side protocol regi
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createWorker()` | Create single-result module-worker pool | Sync | Worker must call `exposeTask()` |
-| `createStreamWorker()` | Create stream-only module-worker pool | Sync | Worker must call `exposeStream()` |
-| `runBatch()` | Yield ordered results with shared cancellation | Async iterable | Transferables need a per-input selector |
-| `createTestWorker()` | Create an in-process task-pool test double | Sync | Task modules are not executed |
-| `exposeTask()` | Register worker task handler | Sync | Worker-only import |
-| `exposeStream()` | Register worker stream handler | Sync | Worker-only import |
+| Symbol                 | Purpose                                        | Execution mode | Common gotcha                           |
+| ---------------------- | ---------------------------------------------- | -------------- | --------------------------------------- |
+| `createWorker()`       | Create single-result module-worker pool        | Sync           | Worker must call `exposeTask()`         |
+| `createStreamWorker()` | Create stream-only module-worker pool          | Sync           | Worker must call `exposeStream()`       |
+| `runBatch()`           | Yield ordered results with shared cancellation | Async iterable | Transferables need a per-input selector |
+| `createTestWorker()`   | Create an in-process task-pool test double     | Sync           | Task modules are not executed           |
+| `exposeTask()`         | Register worker task handler                   | Sync           | Worker-only import                      |
+| `exposeStream()`       | Register worker stream handler                 | Sync           | Worker-only import                      |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/familiar` | Pool factories, types, and errors |
+| Import                        | Purpose                                            |
+| ----------------------------- | -------------------------------------------------- |
+| `@vielzeug/familiar`          | Pool factories, types, and errors                  |
 | `@vielzeug/familiar/protocol` | Versioned worker protocol and registration helpers |
-| `@vielzeug/familiar/testing` | Task-pool testing adapter |
+| `@vielzeug/familiar/testing`  | Task-pool testing adapter                          |
 
 ## Pool Factories
 
@@ -34,10 +34,10 @@ function createWorker<TInput, TOutput>(url: URL | string, options?: WorkerOption
 
 Creates a task pool for a worker module registered with `exposeTask()`.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `url` | `URL \| string` | Module-worker URL, usually `new URL('./task.worker.ts', import.meta.url)` |
-| `options` | `WorkerOptions` | Pool concurrency, queue, timeout, and worker-error policy |
+| Parameter | Type            | Description                                                               |
+| --------- | --------------- | ------------------------------------------------------------------------- |
+| `url`     | `URL \| string` | Module-worker URL, usually `new URL('./task.worker.ts', import.meta.url)` |
+| `options` | `WorkerOptions` | Pool concurrency, queue, timeout, and worker-error policy                 |
 
 **Returns:** `WorkerPool<TInput, TOutput>`.
 
@@ -58,7 +58,10 @@ try {
 ### `createStreamWorker()`
 
 ```ts
-function createStreamWorker<TInput, TChunk>(url: URL | string, options?: WorkerOptions): StreamWorkerPool<TInput, TChunk>;
+function createStreamWorker<TInput, TChunk>(
+  url: URL | string,
+  options?: WorkerOptions,
+): StreamWorkerPool<TInput, TChunk>;
 ```
 
 Creates a stream-only pool for a worker module registered with `exposeStream()`.
@@ -210,9 +213,7 @@ type WorkerStats = {
 ### `FamiliarTapEvent`
 
 ```ts
-type FamiliarTapEvent =
-  | { error: FamiliarRuntimeError; type: 'worker-error' }
-  | { type: 'dispose' };
+type FamiliarTapEvent = { error: FamiliarRuntimeError; type: 'worker-error' } | { type: 'dispose' };
 ```
 
 `tap()` observes the pool: `worker-error` fires when a slot fails with an unhandled runtime error (the slot is replaced regardless), and `dispose` fires once when the pool terminates. Handler errors are swallowed; `tap()` returns an unsubscribe function and honors an optional `signal`.
@@ -294,12 +295,12 @@ type StreamHandler<TInput, TChunk> = (input: TInput) => AsyncIterable<TChunk> | 
 
 ## Errors
 
-| Error | Trigger | Notable property |
-| --- | --- | --- |
-| `FamiliarError` | Base class for all Familiar errors | Use `instanceof FamiliarError` to narrow |
-| `FamiliarInvalidOptionsError` | Invalid factory or test options | N/A |
-| `FamiliarQueueFullError` | Queue limit reached with `onFull: 'reject'` | `maxQueue` |
-| `FamiliarTaskError` | Worker handler throws or payload cannot clone | `cause` |
-| `FamiliarTimeoutError` | Task or drain deadline expires | `timeoutMs` |
-| `FamiliarTerminatedError` | Pool is disposed or draining | N/A |
-| `FamiliarRuntimeError` | Worker API or worker process fails | `cause` |
+| Error                         | Trigger                                       | Notable property                         |
+| ----------------------------- | --------------------------------------------- | ---------------------------------------- |
+| `FamiliarError`               | Base class for all Familiar errors            | Use `instanceof FamiliarError` to narrow |
+| `FamiliarInvalidOptionsError` | Invalid factory or test options               | N/A                                      |
+| `FamiliarQueueFullError`      | Queue limit reached with `onFull: 'reject'`   | `maxQueue`                               |
+| `FamiliarTaskError`           | Worker handler throws or payload cannot clone | `cause`                                  |
+| `FamiliarTimeoutError`        | Task or drain deadline expires                | `timeoutMs`                              |
+| `FamiliarTerminatedError`     | Pool is disposed or draining                  | N/A                                      |
+| `FamiliarRuntimeError`        | Worker API or worker process fails            | `cause`                                  |

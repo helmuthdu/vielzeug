@@ -162,11 +162,17 @@ cart.value = { items: 5 };
 
 ```ts
 // Before
-if (isSignal(value)) { /* ... */ }
-if (isComputed(value)) { /* ... */ }
+if (isSignal(value)) {
+  /* ... */
+}
+if (isComputed(value)) {
+  /* ... */
+}
 
 // After
-if (isReactive(value)) { /* read value.value, value.peek(), or value.subscribe() */ }
+if (isReactive(value)) {
+  /* read value.value, value.peek(), or value.subscribe() */
+}
 ```
 
 `isReactive()` checks a structural marker and readable contract, not trusted provenance.

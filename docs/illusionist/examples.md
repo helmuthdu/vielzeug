@@ -22,7 +22,6 @@ const users = Array.from({ length: 10 }, () => ({
   city: illusion.location.city(),
   zip: illusion.location.zipCode(),
 }));
-
 ```
 
 ## Seeded Test Data for Snapshot Testing
@@ -44,7 +43,7 @@ test('order receipt snapshot', () => {
   };
 
   expect(order).toMatchInlineSnapshot();
-  });
+});
 ```
 
 ## Locale-Specific Data (German)
@@ -57,12 +56,11 @@ import { de } from '@vielzeug/illusionist/locales';
 
 const illusion = createIllusion({ seed: 42, locale: de });
 
-illusion.person.fullName();  // 'Mathilda Scholz'
-illusion.location.city();    // 'Nürnberg'
+illusion.person.fullName(); // 'Mathilda Scholz'
+illusion.location.city(); // 'Nürnberg'
 illusion.location.zipCode(); // '15268'
-illusion.date.weekday();     // 'Donnerstag'
-illusion.date.month();       // 'März'
-
+illusion.date.weekday(); // 'Donnerstag'
+illusion.date.month(); // 'März'
 ```
 
 ## E-commerce Mock Data
@@ -117,5 +115,4 @@ const customers = Array.from({ length: 100 }, () => ({
   email: illusion.internet.email(),
   createdAt: illusion.date.past({ years: 2 }),
 }));
-
 ```

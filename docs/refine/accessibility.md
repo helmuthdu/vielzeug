@@ -81,83 +81,83 @@ Before each minor release:
 
 ### Inputs
 
-| Component         | Role                      | Keyboard                          | Key ARIA attrs                                                        |
-| ----------------- | ------------------------- | --------------------------------- | --------------------------------------------------------------------- |
-| `ore-button`       | `button` (implicit)       | Enter / Space                     | `aria-disabled`, `aria-busy`                                          |
-| `ore-input`        | `textbox` (native)        | Standard                          | `aria-describedby`, `aria-invalid`, `aria-required`                   |
-| `ore-textarea`     | `textbox` (native)        | Standard                          | `aria-describedby`, `aria-invalid`, `aria-required`                   |
-| `ore-select`       | `combobox`                | Arrow / Enter / Escape            | `aria-expanded`, `aria-activedescendant`                              |
-| `ore-combobox`     | `combobox`                | Arrow / Enter / Escape            | `aria-expanded`, `aria-activedescendant`                              |
-| `ore-checkbox`     | `checkbox` (native)       | Space                             | `aria-checked`, `aria-required`                                       |
-| `ore-radio`        | `radio` (native)          | Arrow keys (group nav)            | `aria-checked`                                                        |
-| `ore-switch`       | `switch`                  | Space                             | `aria-checked`                                                        |
-| `ore-slider`       | `slider`                  | Arrow keys                        | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext`   |
-| `ore-rating`       | `radiogroup` + `radio`    | Arrow keys                        | `aria-label` per star                                                 |
-| `ore-color-picker` | `radiogroup` + `radio`    | Arrow keys, Home/End             | `aria-checked` per swatch, roving `tabindex`, group `aria-label` from `label` |
-| `ore-counter`      | `group` + `spinbutton`    | Arrow keys, Home/End, Page Up/Down | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-live`        |
-| `ore-number-input` | `spinbutton`              | Arrow keys                        | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`                     |
-| `ore-otp-input`    | `group` of text inputs    | Arrow / Backspace / Tab           | `aria-label` per cell                                                 |
-| `ore-file-input`   | `button`-triggered native | Standard                          | `aria-label`                                                          |
+| Component          | Role                      | Keyboard                           | Key ARIA attrs                                                                |
+| ------------------ | ------------------------- | ---------------------------------- | ----------------------------------------------------------------------------- |
+| `ore-button`       | `button` (implicit)       | Enter / Space                      | `aria-disabled`, `aria-busy`                                                  |
+| `ore-input`        | `textbox` (native)        | Standard                           | `aria-describedby`, `aria-invalid`, `aria-required`                           |
+| `ore-textarea`     | `textbox` (native)        | Standard                           | `aria-describedby`, `aria-invalid`, `aria-required`                           |
+| `ore-select`       | `combobox`                | Arrow / Enter / Escape             | `aria-expanded`, `aria-activedescendant`                                      |
+| `ore-combobox`     | `combobox`                | Arrow / Enter / Escape             | `aria-expanded`, `aria-activedescendant`                                      |
+| `ore-checkbox`     | `checkbox` (native)       | Space                              | `aria-checked`, `aria-required`                                               |
+| `ore-radio`        | `radio` (native)          | Arrow keys (group nav)             | `aria-checked`                                                                |
+| `ore-switch`       | `switch`                  | Space                              | `aria-checked`                                                                |
+| `ore-slider`       | `slider`                  | Arrow keys                         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext`           |
+| `ore-rating`       | `radiogroup` + `radio`    | Arrow keys                         | `aria-label` per star                                                         |
+| `ore-color-picker` | `radiogroup` + `radio`    | Arrow keys, Home/End               | `aria-checked` per swatch, roving `tabindex`, group `aria-label` from `label` |
+| `ore-counter`      | `group` + `spinbutton`    | Arrow keys, Home/End, Page Up/Down | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-live`                |
+| `ore-number-input` | `spinbutton`              | Arrow keys                         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`                             |
+| `ore-otp-input`    | `group` of text inputs    | Arrow / Backspace / Tab            | `aria-label` per cell                                                         |
+| `ore-file-input`   | `button`-triggered native | Standard                           | `aria-label`                                                                  |
 
 ### Feedback
 
-| Component           | Role               | Keyboard          | Key ARIA attrs                            |
-| ------------------- | ------------------ | ----------------- | ----------------------------------------- |
-| `ore-alert`          | `alert` / `status` | Dismiss button    | `aria-live` via region                    |
-| `ore-toast`          | `alert` / `status` | Dismiss button    | `aria-live="polite"` or `"assertive"`     |
-| `ore-state`          | `status` / `alert` (regions) | Retry button | Host `aria-busy` only; `role="status"` (loading/empty) or `role="alert"` (error) on the announced region, retry outside it |
-| `ore-progress`       | `progressbar`      | N/A | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` |
-| `ore-pull-to-refresh` | `status` (spinner) | Pointer only | `role="status"` on the persistent spinner; provide a separate refresh button for keyboard |
-| `ore-skeleton`       | None (decorative)  | N/A | `aria-hidden="true"` on bones             |
-| `ore-typing-indicator` | `status` (on a visually-hidden label) | N/A | `aria-live="polite"`; dots are `aria-hidden="true"` |
-| `ore-badge`          | None               | N/A | `aria-label` if meaningful                |
-| `ore-chip`           | `button` (interactive) | Enter         | `aria-pressed`, `aria-label`              |
+| Component              | Role                                  | Keyboard       | Key ARIA attrs                                                                                                             |
+| ---------------------- | ------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `ore-alert`            | `alert` / `status`                    | Dismiss button | `aria-live` via region                                                                                                     |
+| `ore-toast`            | `alert` / `status`                    | Dismiss button | `aria-live="polite"` or `"assertive"`                                                                                      |
+| `ore-state`            | `status` / `alert` (regions)          | Retry button   | Host `aria-busy` only; `role="status"` (loading/empty) or `role="alert"` (error) on the announced region, retry outside it |
+| `ore-progress`         | `progressbar`                         | N/A            | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext`                                                        |
+| `ore-pull-to-refresh`  | `status` (spinner)                    | Pointer only   | `role="status"` on the persistent spinner; provide a separate refresh button for keyboard                                  |
+| `ore-skeleton`         | None (decorative)                     | N/A            | `aria-hidden="true"` on bones                                                                                              |
+| `ore-typing-indicator` | `status` (on a visually-hidden label) | N/A            | `aria-live="polite"`; dots are `aria-hidden="true"`                                                                        |
+| `ore-badge`            | None                                  | N/A            | `aria-label` if meaningful                                                                                                 |
+| `ore-chip`             | `button` (interactive)                | Enter          | `aria-pressed`, `aria-label`                                                                                               |
 
 ### Content
 
-| Component       | Role                      | Keyboard      | Key ARIA attrs               |
-| --------------- | ------------------------- | ------------- | ---------------------------- |
-| `ore-accordion`  | `button` + region         | Enter / Space | `aria-expanded`, `aria-controls` |
-| `ore-card`       | `button` (interactive)    | Enter / Space | `aria-disabled`, `aria-busy` |
-| `ore-stats` | `article`                 | N/A | `aria-disabled`, `aria-busy` |
-| `ore-chat-message` | `article` (on the bubble) | N/A | `aria-label` describing sender; failed sends also announced via an assertive live region |
-| `ore-list`       | `list` or `listbox` (`selectable`) | Arrow / Home / End / Enter / Space (`selectable` only) | `aria-disabled`; needs `aria-label`/`aria-labelledby` in listbox mode | Manual activation: arrow keys move focus, Enter/Space commits selection |
-| `ore-list-item`  | `listitem` or `option` (`selectable`) | Enter / Space (activation); Tab reaches slotted `actions-left`/`actions-right` content | `aria-selected`, `aria-disabled` | Swipe-revealed action panels stay reachable via `:focus-within`, independent of the gesture |
-| `ore-table`      | `table` (native)          | Standard      | `aria-label`, `aria-busy`    |
-| `ore-text`       | heading (`as="h1"`–`h6`) or `button` (`expandable`) | Enter / Space (`expandable`) | `role="heading"` + `aria-level`; `role="button"` + `aria-expanded` when `expandable` | Clipped text mirrors its full content into `title` while truncated |
-| `ore-avatar`     | None                      | N/A | `alt` or `aria-label`        |
+| Component          | Role                                                | Keyboard                                                                               | Key ARIA attrs                                                                           |
+| ------------------ | --------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `ore-accordion`    | `button` + region                                   | Enter / Space                                                                          | `aria-expanded`, `aria-controls`                                                         |
+| `ore-card`         | `button` (interactive)                              | Enter / Space                                                                          | `aria-disabled`, `aria-busy`                                                             |
+| `ore-stats`        | `article`                                           | N/A                                                                                    | `aria-disabled`, `aria-busy`                                                             |
+| `ore-chat-message` | `article` (on the bubble)                           | N/A                                                                                    | `aria-label` describing sender; failed sends also announced via an assertive live region |
+| `ore-list`         | `list` or `listbox` (`selectable`)                  | Arrow / Home / End / Enter / Space (`selectable` only)                                 | `aria-disabled`; needs `aria-label`/`aria-labelledby` in listbox mode                    | Manual activation: arrow keys move focus, Enter/Space commits selection                     |
+| `ore-list-item`    | `listitem` or `option` (`selectable`)               | Enter / Space (activation); Tab reaches slotted `actions-left`/`actions-right` content | `aria-selected`, `aria-disabled`                                                         | Swipe-revealed action panels stay reachable via `:focus-within`, independent of the gesture |
+| `ore-table`        | `table` (native)                                    | Standard                                                                               | `aria-label`, `aria-busy`                                                                |
+| `ore-text`         | heading (`as="h1"`–`h6`) or `button` (`expandable`) | Enter / Space (`expandable`)                                                           | `role="heading"` + `aria-level`; `role="button"` + `aria-expanded` when `expandable`     | Clipped text mirrors its full content into `title` while truncated                          |
+| `ore-avatar`       | None                                                | N/A                                                                                    | `alt` or `aria-label`                                                                    |
 
 ### Navigation
 
-| Component              | Role                           | Keyboard                          | Key ARIA attrs                                      |
-| ---------------------- | ------------------------------ | --------------------------------- | --------------------------------------------------- |
-| `ore-tabs`             | `tablist` + `tab` + `tabpanel` | Arrow keys                        | `aria-selected`, `aria-controls`, `aria-labelledby` |
-| `ore-stepper`          | `navigation` + `list`          | Arrow / Home / End (when `clickable`) | `aria-current="step"`, `aria-disabled`         | Roving `tabindex` over navigable steps; message region uses `role="status"` + `aria-live="polite"` |
-| `ore-pagination`       | `navigation`                   | Standard                          | `aria-label`, `aria-current`                        |
-| `ore-breadcrumb`       | `navigation`                   | Standard                          | `aria-label`, `aria-current`                        |
-| `ore-navigation-menu`  | `navigation` + disclosure      | Arrow / Enter / Escape            | `aria-expanded`, `aria-controls`, `aria-haspopup`   | Panel opens on hover/focus and closes on Escape or outside pointer |
+| Component             | Role                           | Keyboard                              | Key ARIA attrs                                      |
+| --------------------- | ------------------------------ | ------------------------------------- | --------------------------------------------------- |
+| `ore-tabs`            | `tablist` + `tab` + `tabpanel` | Arrow keys                            | `aria-selected`, `aria-controls`, `aria-labelledby` |
+| `ore-stepper`         | `navigation` + `list`          | Arrow / Home / End (when `clickable`) | `aria-current="step"`, `aria-disabled`              | Roving `tabindex` over navigable steps; message region uses `role="status"` + `aria-live="polite"` |
+| `ore-pagination`      | `navigation`                   | Standard                              | `aria-label`, `aria-current`                        |
+| `ore-breadcrumb`      | `navigation`                   | Standard                              | `aria-label`, `aria-current`                        |
+| `ore-navigation-menu` | `navigation` + disclosure      | Arrow / Enter / Escape                | `aria-expanded`, `aria-controls`, `aria-haspopup`   | Panel opens on hover/focus and closes on Escape or outside pointer                                 |
 
 ### Overlay
 
-| Component    | Role              | Keyboard                   | Key ARIA attrs                    | Notes                   |
-| ------------ | ----------------- | -------------------------- | --------------------------------- | ----------------------- |
-| `ore-command-palette` | `dialog` + `combobox` + `listbox` | Arrow / Enter / Escape, focus trap | `aria-modal`, `aria-activedescendant`, `aria-expanded` | Focus restored on close; global shortcut via keymap |
-| `ore-dialog`  | `dialog`          | Escape, focus trap         | `aria-modal`, `aria-labelledby`   | Focus restored on close |
-| `ore-drawer`  | `dialog`          | Escape, focus trap         | `aria-modal`, `aria-labelledby`   | Focus restored on close |
-| `ore-popover` | `dialog` / `menu` | Escape                     | `aria-expanded`, `aria-haspopup`  |                         |
-| `ore-menu`    | `menu` + `menuitem` | Arrow / Enter / Escape   | `aria-orientation`                |                         |
-| `ore-tooltip` | `tooltip`         | Escape                     | `aria-describedby` on trigger     |                         |
-| `ore-tour`    | `dialog`          | Escape, ArrowLeft / ArrowRight | `aria-modal` (dialog modes), `aria-valuetext` on progress | Popover mode: focus on open, restored on close; dialog modes: native focus trap + background lock |
-| `ore-spotlight` | decorative      | N/A                        | `aria-hidden` on overlay          | Never captures pointer events |
+| Component             | Role                              | Keyboard                           | Key ARIA attrs                                            | Notes                                                                                             |
+| --------------------- | --------------------------------- | ---------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `ore-command-palette` | `dialog` + `combobox` + `listbox` | Arrow / Enter / Escape, focus trap | `aria-modal`, `aria-activedescendant`, `aria-expanded`    | Focus restored on close; global shortcut via keymap                                               |
+| `ore-dialog`          | `dialog`                          | Escape, focus trap                 | `aria-modal`, `aria-labelledby`                           | Focus restored on close                                                                           |
+| `ore-drawer`          | `dialog`                          | Escape, focus trap                 | `aria-modal`, `aria-labelledby`                           | Focus restored on close                                                                           |
+| `ore-popover`         | `dialog` / `menu`                 | Escape                             | `aria-expanded`, `aria-haspopup`                          |                                                                                                   |
+| `ore-menu`            | `menu` + `menuitem`               | Arrow / Enter / Escape             | `aria-orientation`                                        |                                                                                                   |
+| `ore-tooltip`         | `tooltip`                         | Escape                             | `aria-describedby` on trigger                             |                                                                                                   |
+| `ore-tour`            | `dialog`                          | Escape, ArrowLeft / ArrowRight     | `aria-modal` (dialog modes), `aria-valuetext` on progress | Popover mode: focus on open, restored on close; dialog modes: native focus trap + background lock |
+| `ore-spotlight`       | decorative                        | N/A                                | `aria-hidden` on overlay                                  | Never captures pointer events                                                                     |
 
 ### Layout
 
-| Component    | Notes                                                          |
-| ------------ | -------------------------------------------------------------- |
-| `ore-sidebar` | Navigation landmark: provide `aria-label` for screen readers  |
-| `ore-navbar`  | Navigation landmark: provide `aria-label` for screen readers  |
-| `ore-grid`    | Layout only, no interactive semantics                          |
-| `ore-box`     | Layout only, no interactive semantics                          |
+| Component     | Notes                                                        |
+| ------------- | ------------------------------------------------------------ |
+| `ore-sidebar` | Navigation landmark: provide `aria-label` for screen readers |
+| `ore-navbar`  | Navigation landmark: provide `aria-label` for screen readers |
+| `ore-grid`    | Layout only, no interactive semantics                        |
+| `ore-box`     | Layout only, no interactive semantics                        |
 
 ## Built-in Guarantees
 
@@ -176,30 +176,30 @@ Before each minor release:
 
 Every published component must satisfy:
 
-| Requirement                                        | Standard                            |
-| -------------------------------------------------- | ----------------------------------- |
-| Keyboard navigability                              | WCAG 2.2 AA §2.1                    |
-| Visible focus indicator                            | WCAG 2.2 AA §2.4.7                  |
-| Focus not obscured by sticky content                | WCAG 2.2 §2.4.11                    |
-| Pointer-gesture cancellation (no down-event actuation) | WCAG 2.2 §2.5.2                 |
-| Drag alternatives (single-pointer where draggable)  | WCAG 2.2 §2.5.7                    |
-| Target size ≥ 24×24 (Refine exceeds at 44×44)      | WCAG 2.2 §2.5.8                     |
-| Accessible name contains visible label              | WCAG 2.2 §2.5.3                     |
-| Motion pause (hover / keyboard)                    | WCAG 2.2 §2.2.2                     |
-| Colour contrast ≥ 4.5:1 (normal text)              | WCAG 2.2 AA §1.4.3                  |
-| Colour contrast ≥ 3:1 (large text / UI components) | WCAG 2.2 AA §1.4.11                 |
-| Orientation-independent layout                     | WCAG 2.2 §1.3.4                     |
-| Autofill for personal-data inputs                  | WCAG 2.2 §1.3.5                     |
-| Accessible name on every interactive control       | WCAG 2.2 AA §4.1.2                  |
-| Correct ARIA roles and states (valid, non-duplicate) | WCAG 2.2 AA §4.1.2 / §4.1.4        |
-| Live region announcements for dynamic changes      | WCAG 2.2 AA §4.1.3                  |
-| Forced-colors / Windows High Contrast              | WCAG §1.4.3 enhanced                |
-| Reduced-motion fallback                            | WCAG 2.1 §2.3.3                     |
+| Requirement                                            | Standard                    |
+| ------------------------------------------------------ | --------------------------- |
+| Keyboard navigability                                  | WCAG 2.2 AA §2.1            |
+| Visible focus indicator                                | WCAG 2.2 AA §2.4.7          |
+| Focus not obscured by sticky content                   | WCAG 2.2 §2.4.11            |
+| Pointer-gesture cancellation (no down-event actuation) | WCAG 2.2 §2.5.2             |
+| Drag alternatives (single-pointer where draggable)     | WCAG 2.2 §2.5.7             |
+| Target size ≥ 24×24 (Refine exceeds at 44×44)          | WCAG 2.2 §2.5.8             |
+| Accessible name contains visible label                 | WCAG 2.2 §2.5.3             |
+| Motion pause (hover / keyboard)                        | WCAG 2.2 §2.2.2             |
+| Colour contrast ≥ 4.5:1 (normal text)                  | WCAG 2.2 AA §1.4.3          |
+| Colour contrast ≥ 3:1 (large text / UI components)     | WCAG 2.2 AA §1.4.11         |
+| Orientation-independent layout                         | WCAG 2.2 §1.3.4             |
+| Autofill for personal-data inputs                      | WCAG 2.2 §1.3.5             |
+| Accessible name on every interactive control           | WCAG 2.2 AA §4.1.2          |
+| Correct ARIA roles and states (valid, non-duplicate)   | WCAG 2.2 AA §4.1.2 / §4.1.4 |
+| Live region announcements for dynamic changes          | WCAG 2.2 AA §4.1.3          |
+| Forced-colors / Windows High Contrast                  | WCAG §1.4.3 enhanced        |
+| Reduced-motion fallback                                | WCAG 2.1 §2.3.3             |
 
 ## Known Gaps
 
-| Area                     | Gap                                                 | Planned                         |
-| ------------------------ | --------------------------------------------------- | ------------------------------- |
-| Visual regression        | No snapshot CI yet                                  | Playwright visual diff in vNext |
-| NVDA + JAWS parity       | Not systematically tested                           | Manual audit before 2.0 stable  |
+| Area                      | Gap                                                 | Planned                         |
+| ------------------------- | --------------------------------------------------- | ------------------------------- |
+| Visual regression         | No snapshot CI yet                                  | Playwright visual diff in vNext |
+| NVDA + JAWS parity        | Not systematically tested                           | Manual audit before 2.0 stable  |
 | `ore-select` virtual list | Virtual items need `aria-setsize` / `aria-posinset` | Tracked                         |

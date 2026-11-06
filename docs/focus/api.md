@@ -7,19 +7,19 @@ description: API reference for @vielzeug/focus navigation and restoration primit
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createListNavigation()` | Build keyboard navigation for composite widgets | Sync | Apply returned changes to DOM focus |
-| `createGridNavigation()` | Build two-dimensional arrow-key navigation for grids | Sync | Columns resolve per navigation: responsive grids need a getter |
-| `createQuickLookGrid()` | Build arrow-key tile browsing with a preview key for card grids | Sync | The preview key consumes Space: the focused button never activates |
-| `restoreFocus()` | Restore focus to a target or fallback | Sync | Returns `false` when neither target can receive focus |
-| `rescueFocus()` | Re-home focus after the focused element unmounts | Sync | Returns `false` when focus is already on a real element |
-| `captureFocus()` | Capture active focus for one later restoration | Sync | The returned function is one-shot |
+| Symbol                   | Purpose                                                         | Execution mode | Common gotcha                                                      |
+| ------------------------ | --------------------------------------------------------------- | -------------- | ------------------------------------------------------------------ |
+| `createListNavigation()` | Build keyboard navigation for composite widgets                 | Sync           | Apply returned changes to DOM focus                                |
+| `createGridNavigation()` | Build two-dimensional arrow-key navigation for grids            | Sync           | Columns resolve per navigation: responsive grids need a getter     |
+| `createQuickLookGrid()`  | Build arrow-key tile browsing with a preview key for card grids | Sync           | The preview key consumes Space: the focused button never activates |
+| `restoreFocus()`         | Restore focus to a target or fallback                           | Sync           | Returns `false` when neither target can receive focus              |
+| `rescueFocus()`          | Re-home focus after the focused element unmounts                | Sync           | Returns `false` when focus is already on a real element            |
+| `captureFocus()`         | Capture active focus for one later restoration                  | Sync           | The returned function is one-shot                                  |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import            | Purpose                                           |
+| ----------------- | ------------------------------------------------- |
 | `@vielzeug/focus` | List navigation and focus restoration primitives. |
 
 ## Core Functions
@@ -32,8 +32,8 @@ function createListNavigation<T>(options: ListNavigationOptions<T>): ListNavigat
 
 Creates a keyboard navigation controller with an internal active index.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
+| Parameter | Type                       | Description                                                                                 |
+| --------- | -------------------------- | ------------------------------------------------------------------------------------------- |
 | `options` | `ListNavigationOptions<T>` | Item lookup, key mapping, navigation, dynamic direction/orientation, and typeahead options. |
 
 **Returns:** `ListNavigation<T>`.
@@ -52,14 +52,14 @@ const result = nav.handleKeydown(event);
 result?.change?.item.focus();
 ```
 
-| Member | Return | Contract |
-| --- | --- | --- |
-| `handleKeydown(event)` | `ListKeyResult<T> \| null` | Returns explicit handled/change state for navigation and typeahead keys. |
-| `navigate(action)` | `ListNavigationChange<T> \| null` | Moves programmatically and returns the committed change. |
-| `set(index)` | `number` | Sets an integer usable index, or resets to `-1`. |
-| `reset()` | `void` | Clears the active index and typeahead sequence. |
-| `getIndex()` | `number` | Returns the current usable index, or `-1`. |
-| `getActiveItem()` | `T \| undefined` | Returns the item at the current usable index. |
+| Member                 | Return                            | Contract                                                                 |
+| ---------------------- | --------------------------------- | ------------------------------------------------------------------------ |
+| `handleKeydown(event)` | `ListKeyResult<T> \| null`        | Returns explicit handled/change state for navigation and typeahead keys. |
+| `navigate(action)`     | `ListNavigationChange<T> \| null` | Moves programmatically and returns the committed change.                 |
+| `set(index)`           | `number`                          | Sets an integer usable index, or resets to `-1`.                         |
+| `reset()`              | `void`                            | Clears the active index and typeahead sequence.                          |
+| `getIndex()`           | `number`                          | Returns the current usable index, or `-1`.                               |
+| `getActiveItem()`      | `T \| undefined`                  | Returns the item at the current usable index.                            |
 
 Boundary navigation keys return `{ handled: true, change: null }` and remain consumed. Unrecognized, already-prevented, composing, and disabled events return `null`. Successful typeahead returns a change and follows `typeahead.preventDefault`.
 
@@ -75,8 +75,8 @@ function createGridNavigation<T>(options: GridNavigationOptions<T>): GridNavigat
 
 Creates a two-dimensional keyboard navigation controller: horizontal arrows step one item, vertical arrows step one row (the column count), Home/End jump to the grid's ends.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
+| Parameter | Type                       | Description                                                                             |
+| --------- | -------------------------- | --------------------------------------------------------------------------------------- |
 | `options` | `GridNavigationOptions<T>` | Item lookup, column resolution, active-index source, key mapping, and wrapping options. |
 
 **Returns:** `GridNavigation<T>`.
@@ -96,14 +96,14 @@ const result = grid.handleKeydown(event);
 if (result?.change) result.change.item.focus();
 ```
 
-| Member | Return | Contract |
-| --- | --- | --- |
-| `handleKeydown(event)` | `GridKeyResult<T> \| null` | Returns handled state for navigation keys; recognized keys are always consumed, even at clamped edges. |
-| `navigate(action)` | `GridNavigationChange<T> \| null` | Moves programmatically and returns the committed change. |
-| `set(index)` | `void` | Sets the tracked index for grids without `getActiveIndex`. |
-| `reset()` | `void` | Clears the tracked index. |
-| `getIndex()` | `number` | Returns the active index: derived from `getActiveIndex` when provided, or `-1`. |
-| `getActiveItem()` | `T \| undefined` | Returns the item at the active index. |
+| Member                 | Return                            | Contract                                                                                               |
+| ---------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `handleKeydown(event)` | `GridKeyResult<T> \| null`        | Returns handled state for navigation keys; recognized keys are always consumed, even at clamped edges. |
+| `navigate(action)`     | `GridNavigationChange<T> \| null` | Moves programmatically and returns the committed change.                                               |
+| `set(index)`           | `void`                            | Sets the tracked index for grids without `getActiveIndex`.                                             |
+| `reset()`              | `void`                            | Clears the tracked index.                                                                              |
+| `getIndex()`           | `number`                          | Returns the active index: derived from `getActiveIndex` when provided, or `-1`.                        |
+| `getActiveItem()`      | `T \| undefined`                  | Returns the item at the active index.                                                                  |
 
 Unlike `createListNavigation`, items are not skipped when disabled: skipping in two dimensions would break row alignment. With no active index, forward moves start at the first item and backward moves at the last. `columns` may be a getter resolved on every navigation, so responsive grids can read a media query and measured grids can read the rendered row length. `FocusConfigError` is thrown when `columns` resolves below `1`.
 
@@ -117,8 +117,8 @@ function createQuickLookGrid(options: QuickLookGridOptions): QuickLookGrid;
 
 Creates keyboard browsing over a tile grid with a Quick Look key: arrows and Home/End move focus through the items (delegating to `createGridNavigation()`) and `inspectKey` previews the item under the event instead of activating it: the pair every card picker needs.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
+| Parameter | Type                   | Description                                                                                          |
+| --------- | ---------------------- | ---------------------------------------------------------------------------------------------------- |
 | `options` | `QuickLookGridOptions` | Item lookup, active-index source, column resolution, preview key, wrapping, and inspection callback. |
 
 **Returns:** `QuickLookGrid`.
@@ -136,8 +136,8 @@ const quickLook = createQuickLookGrid({
 grid.addEventListener('keydown', (event) => quickLook.handleKeydown(event));
 ```
 
-| Member | Return | Contract |
-| --- | --- | --- |
+| Member                 | Return | Contract                                                                                                                                                                                                                                                |
+| ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `handleKeydown(event)` | `void` | Routes one `keydown`: navigation keys move focus to the reported item, `inspectKey` calls `preventDefault()`/`stopPropagation()` then `onInspect(item, index)`. Unrecognized, already-prevented, composing, modifier, and disabled events pass through. |
 
 `columns` defaults to the rendered row length at the active item (items sharing its top edge), which follows the grid's own responsive wrapping without a media query; supply `columns` to read a track list instead. `getActiveIndex` defaults to the item that is or contains `document.activeElement`; supply it when focus sits on a wrapper around the item. `inspectKey` defaults to `' '` (Space), the platform preview key. The recognizer pairs with a pointer long-press at the call site as the touch counterpart of `onInspect`.
@@ -152,10 +152,10 @@ function restoreFocus(target: FocusTarget, options?: RestoreFocusOptions): boole
 
 Attempts to focus a connected target that is neither disabled nor inert. Throwing target getters or `focus()` implementations count as failed attempts and fall through to the configured fallback.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `target` | `FocusTarget` | Element or getter resolved when `restoreFocus()` is called. |
-| `options` | `RestoreFocusOptions` | Optional lazy fallback and `preventScroll` flag. |
+| Parameter | Type                  | Description                                                 |
+| --------- | --------------------- | ----------------------------------------------------------- |
+| `target`  | `FocusTarget`         | Element or getter resolved when `restoreFocus()` is called. |
+| `options` | `RestoreFocusOptions` | Optional lazy fallback and `preventScroll` flag.            |
 
 **Returns:** `boolean`: `true` when focus moved to the target or fallback.
 
@@ -180,9 +180,9 @@ function rescueFocus(target: FocusTarget, options?: RestoreFocusOptions): boolea
 
 Hands focus to `target` when focus has been lost to the document body: the state left behind when the focused element unmounts mid-swap, where keydown never reaches a handler.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `target` | `FocusTarget` | Element or getter resolved when the rescue runs. |
+| Parameter | Type                  | Description                                                              |
+| --------- | --------------------- | ------------------------------------------------------------------------ |
+| `target`  | `FocusTarget`         | Element or getter resolved when the rescue runs.                         |
 | `options` | `RestoreFocusOptions` | Optional lazy fallback and `preventScroll` flag, as in `restoreFocus()`. |
 
 **Returns:** `boolean`: `true` when focus was rescued; `false` when focus is already on a real element or neither target can receive focus.
@@ -206,8 +206,8 @@ function captureFocus(options?: CaptureFocusOptions): FocusRestorer;
 
 Captures the deepest active element immediately and returns a one-shot restoration function.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
+| Parameter | Type                  | Description                                                       |
+| --------- | --------------------- | ----------------------------------------------------------------- |
 | `options` | `CaptureFocusOptions` | Optional lazy fallback, `preventScroll`, and cancellation signal. |
 
 **Returns:** `FocusRestorer`. Its first call attempts restoration; later calls return `false`.
@@ -336,7 +336,7 @@ type FocusRestorer = () => boolean;
 
 ## Errors
 
-| Error | Trigger | Notable properties |
-| --- | --- | --- |
-| `FocusError` | Base class for every focus-originated error | `instanceof FocusError` catches any focus error |
-| `FocusConfigError` | Invalid navigation configuration | Extends `FocusError`. Thrown for a key assigned to two actions, a non-positive `typeahead.delayMs`, or grid `columns` resolving below `1` |
+| Error              | Trigger                                     | Notable properties                                                                                                                        |
+| ------------------ | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `FocusError`       | Base class for every focus-originated error | `instanceof FocusError` catches any focus error                                                                                           |
+| `FocusConfigError` | Invalid navigation configuration            | Extends `FocusError`. Thrown for a key assigned to two actions, a non-positive `typeahead.delayMs`, or grid `columns` resolving below `1` |

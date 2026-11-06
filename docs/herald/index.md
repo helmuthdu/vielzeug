@@ -39,14 +39,14 @@ bus.on('user:login', ({ id }) => loadProfile(id));
 
 Delivery is synchronous and temporal: events are not retained or replayed. Listener failures do not stop later listeners; `emit()` rethrows the first failure after dispatch, while `tap()` exposes every failure for diagnostics.
 
-| Feature | Herald | mitt | EventEmitter3 |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="herald" type="size" /> | ~200 B | ~1.5 kB |
-| Typed payloads | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
-| One-shot async wait | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| AbortSignal lifecycle | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Runtime activity tracing | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Feature                  | Herald                                       | mitt                                                  | EventEmitter3                                         |
+| ------------------------ | -------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| Bundle size              | <PackageInfo package="herald" type="size" /> | ~200 B                                                | ~1.5 kB                                               |
+| Typed payloads           | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| One-shot async wait      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>              |
+| AbortSignal lifecycle    | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>              |
+| Runtime activity tracing | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>              |
+| Zero dependencies        | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon>          |
 
 <div class="decision-callout">
 

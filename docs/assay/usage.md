@@ -65,9 +65,12 @@ import { delay, eventually, waitForEvent, waitUntil } from '@vielzeug/assay';
 
 await waitUntil(() => panel.querySelector('.status')?.textContent === 'Ready');
 
-await eventually(() => {
-  expect(onSave).toHaveBeenCalledOnce();
-}, { message: 'save callback did not run' });
+await eventually(
+  () => {
+    expect(onSave).toHaveBeenCalledOnce();
+  },
+  { message: 'save callback did not run' },
+);
 
 const completed = waitForEvent<CustomEvent<{ id: string }>>(panel, 'save-complete', {
   signal: AbortSignal.timeout(1000),

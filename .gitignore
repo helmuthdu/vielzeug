@@ -93,8 +93,10 @@ jspm_packages/
 .idea/
 *.iml
 
-# Visual Studio Code
-.vscode/
+# Visual Studio Code. Ignore the directory's contents, not the directory itself:
+# a directory-level exclusion stops git descending into it, which makes the
+# negations below unreachable and silently untracks the shared files.
+.vscode/*
 !.vscode/tasks.json
 !.vscode/launch.json
 

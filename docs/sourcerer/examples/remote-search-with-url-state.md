@@ -17,7 +17,10 @@ Validate URL values and hand page plus params to the source in one call.
 import { createPageSource } from '@vielzeug/sourcerer';
 
 type Item = { id: number; name: string };
-const items: Item[] = [{ id: 1, name: 'Ada' }, { id: 2, name: 'Grace' }];
+const items: Item[] = [
+  { id: 1, name: 'Ada' },
+  { id: 2, name: 'Grace' },
+];
 const source = createPageSource({
   load: async ({ page, pageSize, params: search }) => {
     const matching = items.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()));
@@ -33,7 +36,11 @@ const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
 await source.apply({ page, params: url.searchParams.get('search') ?? '' });
 
-history.replaceState(null, '', `?page=${source.state.pagination.page}&search=${encodeURIComponent(source.state.params)}`);
+history.replaceState(
+  null,
+  '',
+  `?page=${source.state.pagination.page}&search=${encodeURIComponent(source.state.params)}`,
+);
 source.dispose();
 ```
 

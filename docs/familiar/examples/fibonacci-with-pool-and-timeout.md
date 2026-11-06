@@ -27,7 +27,10 @@ exposeTask(fib);
 ```ts
 import { createWorker } from '@vielzeug/familiar';
 
-const pool = createWorker<number, number>(new URL('./fib.worker.ts', import.meta.url), { concurrency: 4, timeout: 5_000 });
+const pool = createWorker<number, number>(new URL('./fib.worker.ts', import.meta.url), {
+  concurrency: 4,
+  timeout: 5_000,
+});
 
 try {
   const result = await pool.run(35);

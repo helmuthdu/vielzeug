@@ -47,16 +47,16 @@ const zone = createDropZone({
 });
 ```
 
-| Feature             | DND                                                      | SortableJS                                 | dnd-kit                                    |
-| ------------------- | -------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
-| Bundle size         | <PackageInfo package="dnd" type="size" />                | ~15 kB                                     | ~30 kB                                     |
-| Framework agnostic  | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| MIME type filtering | <ore-icon name="check" size="16"></ore-icon> Pre-validated | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Counter-based hover | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>     | N/A |
-| Sortable lists      | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Drag handles        | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| `using` support     | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Touch support        | <ore-icon name="check" size="16"></ore-icon> Scoped opt-in | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Feature                       | DND                                                        | SortableJS                                   | dnd-kit                                      |
+| ----------------------------- | ---------------------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size                   | <PackageInfo package="dnd" type="size" />                  | ~15 kB                                       | ~30 kB                                       |
+| Framework agnostic            | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| MIME type filtering           | <ore-icon name="check" size="16"></ore-icon> Pre-validated | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Counter-based hover           | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>     | N/A                                          |
+| Sortable lists                | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Drag handles                  | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| `using` support               | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Touch support                 | <ore-icon name="check" size="16"></ore-icon> Scoped opt-in | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | Zero third-party dependencies | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">

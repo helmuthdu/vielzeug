@@ -150,18 +150,18 @@ Set `open` to control visibility. When a click-enabled tooltip requests dismissa
 
 ### Attributes
 
-| Attribute     | Type                                     | Default         | Description                                                                                         |
-| ------------- | ---------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------- |
-| `content`     | `string`                                 | `''`            | Tooltip text                                                                                        |
-| `placement`   | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`         | Preferred placement (auto-flips near viewport edges)                                                |
-| `trigger`     | `string`                                 | `'hover,focus'` | Trigger mode(s), comma-separated                                                                    |
-| `delay`       | `number`                                 | 300 hover / immediate focus·click | Show delay in ms: 300 on hover, immediate on focus/click when unset          |
-| `close-delay` | `number`                                 | 100 pointer-leave / immediate focus-out | Hide delay in ms: 100 on pointer leave, immediate on focus out when unset |
-| `open`        | `boolean`                                | N/A | Controlled open state; when set, trigger events are ignored                                         |
-| `default-open`| `boolean`                                | `false`         | Initial visibility when `open` is not provided                                                       |
-| `variant`     | `'dark' \| 'light'`                      | N/A | Visual style (`dark` appearance is the unset default)                                               |
-| `size`        | `'sm' \| 'md' \| 'lg'`                   | N/A | Tooltip bubble size (medium appearance is the unset default)                                        |
-| `disabled`    | `boolean`                                | `false`         | Disable the tooltip entirely                                                                        |
+| Attribute      | Type                                     | Default                                 | Description                                                               |
+| -------------- | ---------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------- |
+| `content`      | `string`                                 | `''`                                    | Tooltip text                                                              |
+| `placement`    | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`                                 | Preferred placement (auto-flips near viewport edges)                      |
+| `trigger`      | `string`                                 | `'hover,focus'`                         | Trigger mode(s), comma-separated                                          |
+| `delay`        | `number`                                 | 300 hover / immediate focus·click       | Show delay in ms: 300 on hover, immediate on focus/click when unset       |
+| `close-delay`  | `number`                                 | 100 pointer-leave / immediate focus-out | Hide delay in ms: 100 on pointer leave, immediate on focus out when unset |
+| `open`         | `boolean`                                | N/A                                     | Controlled open state; when set, trigger events are ignored               |
+| `default-open` | `boolean`                                | `false`                                 | Initial visibility when `open` is not provided                            |
+| `variant`      | `'dark' \| 'light'`                      | N/A                                     | Visual style (`dark` appearance is the unset default)                     |
+| `size`         | `'sm' \| 'md' \| 'lg'`                   | N/A                                     | Tooltip bubble size (medium appearance is the unset default)              |
+| `disabled`     | `boolean`                                | `false`                                 | Disable the tooltip entirely                                              |
 
 ### Slots
 

@@ -407,17 +407,17 @@ Disabled tabs are skipped during keyboard navigation.
 
 **`ore-tabs` Attributes**
 
-| Attribute     | Type                                                                      | Default        | Description                                                           |
-| ------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------- |
-| `value`       | `string`                                                                  | N/A | Value of the currently selected tab                                   |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'frost'`        | `'solid'`      | Visual style of the tab bar                                           |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Size applied to all tab items                                         |
-| `density`     | `'default' \| 'compact'`                                                    | `'default'`    | Spatial density; compact tightens padding (24px minimum height, 44px on coarse pointers) |
-| `fullwidth`   | `boolean`                                                               | `false`        | Fill the container width and distribute horizontal tabs evenly          |
-| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`         | `'lg'`         | Corner radius of the tablist and every tab item                       |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color propagated to all tab items                               |
-| `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Tab list layout direction                                             |
-| `activation`  | `'auto' \| 'manual'`                                                      | `'auto'`       | `auto`: arrow keys select immediately; `manual`: Enter/Space confirms |
+| Attribute     | Type                                                                      | Default        | Description                                                                              |
+| ------------- | ------------------------------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------------- |
+| `value`       | `string`                                                                  | N/A            | Value of the currently selected tab                                                      |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'frost'`                   | `'solid'`      | Visual style of the tab bar                                                              |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Size applied to all tab items                                                            |
+| `density`     | `'default' \| 'compact'`                                                  | `'default'`    | Spatial density; compact tightens padding (24px minimum height, 44px on coarse pointers) |
+| `fullwidth`   | `boolean`                                                                 | `false`        | Fill the container width and distribute horizontal tabs evenly                           |
+| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'lg'`         | Corner radius of the tablist and every tab item                                          |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A            | Theme color propagated to all tab items                                                  |
+| `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Tab list layout direction                                                                |
+| `activation`  | `'auto' \| 'manual'`                                                      | `'auto'`       | `auto`: arrow keys select immediately; `manual`: Enter/Space confirms                    |
 
 **`ore-tabs` Events**
 
@@ -427,20 +427,20 @@ Disabled tabs are skipped during keyboard navigation.
 
 **`ore-tabs` Slots**
 
-| Slot      | Description                        |
-| --------- | ---------------------------------- |
+| Slot      | Description                         |
+| --------- | ----------------------------------- |
 | `tabs`    | Place `ore-tab-item` elements here  |
 | (default) | Place `ore-tab-panel` elements here |
 
 **`ore-tab-item` Attributes**
 
-| Attribute  | Type                                                                      | Default   | Description                                                     |
-| ---------- | ------------------------------------------------------------------------- | --------- | --------------------------------------------------------------- |
-| `value`    | `string`                                                                  | N/A | **Required.** Must match the corresponding `ore-tab-panel` value |
+| Attribute  | Type                                                                      | Default   | Description                                                      |
+| ---------- | ------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------- |
+| `value`    | `string`                                                                  | N/A       | **Required.** Must match the corresponding `ore-tab-panel` value |
 | `active`   | `boolean`                                                                 | `false`   | Whether this tab is selected (managed by `ore-tabs`)             |
-| `disabled` | `boolean`                                                                 | `false`   | Prevents the tab from being selected                            |
-| `density`  | `'default' \| 'compact'`                                                   | inherited | Inherited from parent `ore-tabs`                                |
-| `rounded`  | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`         | inherited | Inherited from parent `ore-tabs`                                 |
+| `disabled` | `boolean`                                                                 | `false`   | Prevents the tab from being selected                             |
+| `density`  | `'default' \| 'compact'`                                                  | inherited | Inherited from parent `ore-tabs`                                 |
+| `rounded`  | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | inherited | Inherited from parent `ore-tabs`                                 |
 | `size`     | `'sm' \| 'md' \| 'lg'`                                                    | inherited | Inherited from parent `ore-tabs`                                 |
 | `variant`  | `string`                                                                  | inherited | Inherited from parent `ore-tabs`                                 |
 | `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | inherited | Inherited from parent `ore-tabs`                                 |
@@ -457,28 +457,28 @@ Disabled tabs are skipped during keyboard navigation.
 
 | Attribute | Type      | Default | Description                                                     |
 | --------- | --------- | ------- | --------------------------------------------------------------- |
-| `value`   | `string`  | N/A | **Required.** Must match the corresponding `ore-tab-item` value  |
-| `active`  | `boolean` | `false` | Whether this panel is visible (managed by `ore-tabs`)            |
+| `value`   | `string`  | N/A     | **Required.** Must match the corresponding `ore-tab-item` value |
+| `active`  | `boolean` | `false` | Whether this panel is visible (managed by `ore-tabs`)           |
 | `lazy`    | `boolean` | `false` | Defer rendering slot content until the panel is first activated |
 
 **CSS Custom Properties**
 
-| Property                      | Default                    | Description                                               |
-| ----------------------------- | -------------------------- | --------------------------------------------------------- |
-| `--tabs-radius`               | `var(--rounded-lg)`        | Border radius of the tablist container and panels         |
-| `--tabs-transition`           | `var(--transition-normal)` | Transition duration/easing for the sliding active pill    |
-| `--tabs-indicator-color`      | Variant-dependent          | Background of the sliding active pill                     |
-| `--tabs-bg`                   | Theme-dependent            | Background of the host element (flat variant)             |
-| `--tabs-tablist-bg`           | Theme-dependent            | Tablist container background (solid/frost variants) |
-| `--tabs-tablist-border-color` | Theme-dependent            | Tablist container border color                            |
-| `--tab-panel-padding`         | `var(--size-4)`            | Padding inside each tab panel                             |
-| `--tab-item-radius`           | `var(--rounded-lg)`        | Tab button border radius (follows `rounded`)              |
-| `--tab-item-padding`          | size-dependent             | Tab button padding                                        |
-| `--tab-item-font-size`        | size-dependent             | Tab button font size (owned by `size`, never by density)  |
-| `--tab-item-color`            | Theme-dependent            | Default tab text color                                    |
-| `--tab-item-hover-bg`         | Theme-dependent            | Tab background on hover                                   |
-| `--tab-item-active-bg`        | Unset (pill paints it)     | Opt-in item fill when active; unset lets the sliding pill show |
-| `--tab-item-active-color`     | Theme-dependent            | Tab text color when active/selected                       |
+| Property                      | Default                    | Description                                                         |
+| ----------------------------- | -------------------------- | ------------------------------------------------------------------- |
+| `--tabs-radius`               | `var(--rounded-lg)`        | Border radius of the tablist container and panels                   |
+| `--tabs-transition`           | `var(--transition-normal)` | Transition duration/easing for the sliding active pill              |
+| `--tabs-indicator-color`      | Variant-dependent          | Background of the sliding active pill                               |
+| `--tabs-bg`                   | Theme-dependent            | Background of the host element (flat variant)                       |
+| `--tabs-tablist-bg`           | Theme-dependent            | Tablist container background (solid/frost variants)                 |
+| `--tabs-tablist-border-color` | Theme-dependent            | Tablist container border color                                      |
+| `--tab-panel-padding`         | `var(--size-4)`            | Padding inside each tab panel                                       |
+| `--tab-item-radius`           | `var(--rounded-lg)`        | Tab button border radius (follows `rounded`)                        |
+| `--tab-item-padding`          | size-dependent             | Tab button padding                                                  |
+| `--tab-item-font-size`        | size-dependent             | Tab button font size (owned by `size`, never by density)            |
+| `--tab-item-color`            | Theme-dependent            | Default tab text color                                              |
+| `--tab-item-hover-bg`         | Theme-dependent            | Tab background on hover                                             |
+| `--tab-item-active-bg`        | Unset (pill paints it)     | Opt-in item fill when active; unset lets the sliding pill show      |
+| `--tab-item-active-color`     | Theme-dependent            | Tab text color when active/selected                                 |
 | `--tab-item-active-shadow`    | Unset (pill paints it)     | Opt-in item shadow when active; unset lets the pill carry elevation |
 
 ## Accessibility

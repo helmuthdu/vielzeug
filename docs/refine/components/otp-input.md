@@ -136,9 +136,9 @@ Use `separator` to add a visual divider between cells.
 | `masked`    | `boolean`                                                                 | `false`     | Render cells as hidden characters                |
 | `separator` | `boolean`                                                                 | `false`     | Show a visual divider between cells              |
 | `disabled`  | `boolean`                                                                 | `false`     | Disable all cells                                |
-| `label`     | `string`                                                                  | N/A | Accessible label for the group                   |
-| `name`      | `string`                                                                  | N/A | Form field name                                  |
-| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Focus ring / active cell color                   |
+| `label`     | `string`                                                                  | N/A         | Accessible label for the group                   |
+| `name`      | `string`                                                                  | N/A         | Form field name                                  |
+| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A         | Focus ring / active cell color                   |
 | `size`      | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`      | Cell size                                        |
 | `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'`   | Visual style variant                             |
 

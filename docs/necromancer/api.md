@@ -7,19 +7,19 @@ description: API reference for @vielzeug/necromancer animation ownership, groups
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `animate()` | Animate one element | Sync | Omitted timing fields use native WAAPI behavior |
-| `animateEach()` | Animate a unique element group | Sync | Non-zero `stagger` needs numeric `delay` |
-| `captureLayout()` | Capture positions and create a one-shot FLIP transition | Sync | Capture before changing layout |
-| `shouldReduceMotion()` | Report whether a motion mode reduces visible movement | Sync | `'system'` reads `prefers-reduced-motion`; false without `matchMedia` |
-| `NecromancerError` | Base package error | Sync | Use `instanceof NecromancerError` to narrow unknown errors |
+| Symbol                 | Purpose                                                 | Execution mode | Common gotcha                                                         |
+| ---------------------- | ------------------------------------------------------- | -------------- | --------------------------------------------------------------------- |
+| `animate()`            | Animate one element                                     | Sync           | Omitted timing fields use native WAAPI behavior                       |
+| `animateEach()`        | Animate a unique element group                          | Sync           | Non-zero `stagger` needs numeric `delay`                              |
+| `captureLayout()`      | Capture positions and create a one-shot FLIP transition | Sync           | Capture before changing layout                                        |
+| `shouldReduceMotion()` | Report whether a motion mode reduces visible movement   | Sync           | `'system'` reads `prefers-reduced-motion`; false without `matchMedia` |
+| `NecromancerError`     | Base package error                                      | Sync           | Use `instanceof NecromancerError` to narrow unknown errors            |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/necromancer` | Animation functions, types, and errors |
+| Import                          | Purpose                                                                |
+| ------------------------------- | ---------------------------------------------------------------------- |
+| `@vielzeug/necromancer`         | Animation functions, types, and errors                                 |
 | `@vielzeug/necromancer/testing` | jsdom test fakes for `Element.animate()` and `getBoundingClientRect()` |
 
 ## Animation Functions
@@ -32,11 +32,11 @@ function animate(element: Element, keyframes: Keyframes, options?: AnimateOption
 
 Starts a lifecycle-owned native Web Animation. Native timing options, including an omitted or zero `duration`, are preserved.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `element` | `Element` | Element animated through its native `animate()` method. |
-| `keyframes` | `Keyframes` | Native keyframe array or property-indexed keyframes. |
-| `options` | `AnimateOptions` | Native timing plus motion and cancellation ownership. |
+| Parameter   | Type             | Description                                             |
+| ----------- | ---------------- | ------------------------------------------------------- |
+| `element`   | `Element`        | Element animated through its native `animate()` method. |
+| `keyframes` | `Keyframes`      | Native keyframe array or property-indexed keyframes.    |
+| `options`   | `AnimateOptions` | Native timing plus motion and cancellation ownership.   |
 
 **Returns:** An `AnimationHandle` with native playback access and explicit disposal.
 
@@ -65,11 +65,11 @@ function animateEach<ElementType extends Element>(
 
 Starts animations for unique elements in first-seen order. Necromancer resolves every keyframe factory before starting the first native animation.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `elements` | `Iterable<ElementType>` | Elements animated once in first-seen order. |
+| Parameter   | Type                                        | Description                                       |
+| ----------- | ------------------------------------------- | ------------------------------------------------- |
+| `elements`  | `Iterable<ElementType>`                     | Elements animated once in first-seen order.       |
 | `keyframes` | `Keyframes \| KeyframeFactory<ElementType>` | Shared keyframes or a subtype-preserving factory. |
-| `options` | `AnimateEachOptions` | Animation options plus a stagger interval. |
+| `options`   | `AnimateEachOptions`                        | Animation options plus a stagger interval.        |
 
 **Returns:** An `AnimationGroup` containing child handles and ordered results.
 
@@ -112,10 +112,10 @@ function captureLayout<ElementType extends Element>(
 
 Captures unique elements' positions and sizes and returns a one-shot transition. Rotation and other transforms are not captured or compensated.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `elements` | `Iterable<ElementType>` | Elements measured before a layout change. |
-| `options` | `LayoutCaptureOptions<ElementType>` | Optional stable key mapping for replacement nodes. |
+| Parameter  | Type                                | Description                                        |
+| ---------- | ----------------------------------- | -------------------------------------------------- |
+| `elements` | `Iterable<ElementType>`             | Elements measured before a layout change.          |
+| `options`  | `LayoutCaptureOptions<ElementType>` | Optional stable key mapping for replacement nodes. |
 
 **Returns:** A `LayoutTransition<ElementType>` that measures committed layout once and creates an `AnimationGroup`.
 
@@ -152,9 +152,7 @@ type MotionMode = 'full' | 'reduced' | 'system';
 ### `AnimationResult`
 
 ```ts
-type AnimationResult =
-  | { readonly status: 'finished' }
-  | { readonly reason?: unknown; readonly status: 'cancelled' };
+type AnimationResult = { readonly status: 'finished' } | { readonly reason?: unknown; readonly status: 'cancelled' };
 ```
 
 A reduced animation finishes: reduction is decided at call time and `shouldReduceMotion()` answers it, so the result reports only what the caller could not know. `cancelled` carries the reason the animation was cancelled: the value passed to `dispose()`, the abort reason of the owning `signal`, or the native rejection reason when something outside Necromancer cancelled the animation. A bare `dispose()` carries no reason. The independent `disposed` property becomes `true` only when the lifecycle owner is explicitly disposed.
@@ -225,13 +223,13 @@ interface AnimationHandle {
 }
 ```
 
-| Member | Description |
-| --- | --- |
-| `animation` | Owned native animation used for playback control. |
-| `result` | Resolves with the first terminal outcome. |
-| `disposed` | Reports explicit owner disposal. |
-| `dispose(reason?)` | Cancels the animation and releases its abort listener. |
-| `[Symbol.dispose]()` | Delegates to `dispose()`. |
+| Member               | Description                                            |
+| -------------------- | ------------------------------------------------------ |
+| `animation`          | Owned native animation used for playback control.      |
+| `result`             | Resolves with the first terminal outcome.              |
+| `disposed`           | Reports explicit owner disposal.                       |
+| `dispose(reason?)`   | Cancels the animation and releases its abort listener. |
+| `[Symbol.dispose]()` | Delegates to `dispose()`.                              |
 
 ### `AnimationGroup`
 
@@ -245,13 +243,13 @@ interface AnimationGroup {
 }
 ```
 
-| Member | Description |
-| --- | --- |
-| `handles` | Child handles in input order. |
-| `results` | Resolves with every child outcome in handle order. |
-| `disposed` | Reports explicit group disposal. |
-| `dispose(reason?)` | Disposes every child. |
-| `[Symbol.dispose]()` | Delegates to `dispose()`. |
+| Member               | Description                                        |
+| -------------------- | -------------------------------------------------- |
+| `handles`            | Child handles in input order.                      |
+| `results`            | Resolves with every child outcome in handle order. |
+| `disposed`           | Reports explicit group disposal.                   |
+| `dispose(reason?)`   | Disposes every child.                              |
+| `[Symbol.dispose]()` | Delegates to `dispose()`.                          |
 
 ### `LayoutTransition`
 
@@ -261,17 +259,17 @@ interface LayoutTransition<ElementType extends Element = Element> {
 }
 ```
 
-| Method | Description |
-| --- | --- |
+| Method              | Description                                                                     |
+| ------------------- | ------------------------------------------------------------------------------- |
 | `animate(options?)` | Measures committed elements and creates the one allowed layout animation group. |
 
 ## Errors
 
-| Error | Trigger |
-| --- | --- |
-| `NecromancerError` | Base class for package errors |
-| `NecromancerConfigError` | Invalid stagger, incompatible delay, or reused layout transition |
-| `NecromancerUnsupportedError` | `Element.animate()` is unavailable |
+| Error                         | Trigger                                                          |
+| ----------------------------- | ---------------------------------------------------------------- |
+| `NecromancerError`            | Base class for package errors                                    |
+| `NecromancerConfigError`      | Invalid stagger, incompatible delay, or reused layout transition |
+| `NecromancerUnsupportedError` | `Element.animate()` is unavailable                               |
 
 ## Testing (`@vielzeug/necromancer/testing`)
 

@@ -23,7 +23,10 @@ document.body.append(notice);
 
 const handle = animate(
   notice,
-  [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
+  [
+    { opacity: 0, transform: 'translateY(8px)' },
+    { opacity: 1, transform: 'translateY(0)' },
+  ],
   { duration: 180, easing: 'ease-out', fill: 'both' },
 );
 

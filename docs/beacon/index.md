@@ -1,6 +1,6 @@
 ---
 title: 'Beacon: Product tours and coachmarks'
-description: "Guided onboarding and contextual product tours for web applications"
+description: 'Guided onboarding and contextual product tours for web applications'
 package: beacon
 category: ui-interaction
 keywords: [onboarding, product-tour, coachmark, walkthrough, step-by-step, spotlight, headless]
@@ -34,14 +34,14 @@ tour.current.subscribe(() => renderCard(tour.current.value)); // rect is the liv
 tour.start();
 ```
 
-| Feature | Beacon | Shepherd.js | Intro.js |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="beacon" type="size" /> | ~50 kB | ~25 kB |
-| External dependencies | <ore-icon name="check" size="16"></ore-icon> (none) | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Headless (you own the UI) | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Resumable persisted progress | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
-| Versioned re-offers | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Coachmarks (single hints) | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| Feature                      | Beacon                                              | Shepherd.js                                  | Intro.js                                              |
+| ---------------------------- | --------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------- |
+| Bundle size                  | <PackageInfo package="beacon" type="size" />        | ~50 kB                                       | ~25 kB                                                |
+| External dependencies        | <ore-icon name="check" size="16"></ore-icon> (none) | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>          |
+| Headless (you own the UI)    | <ore-icon name="check" size="16"></ore-icon>        | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>              |
+| Resumable persisted progress | <ore-icon name="check" size="16"></ore-icon>        | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| Versioned re-offers          | <ore-icon name="check" size="16"></ore-icon>        | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>              |
+| Coachmarks (single hints)    | <ore-icon name="check" size="16"></ore-icon>        | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="triangle-alert" size="16"></ore-icon> |
 
 <div class="decision-callout">
 

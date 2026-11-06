@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.5/schema.json",
   "assist": {
     "actions": {
       "source": {
@@ -93,6 +93,15 @@
       }
     }
   },
+  "markdown": {
+    "parser": {
+      // Opt-in, and required: without it the Markdown formatter reads `---` as a
+      // thematic break, so a VitePress frontmatter block becomes prose (a blank line
+      // after the opening `---`, and a `title:` line that ends at the closing `---`
+      // turns into a setext `## title: ...` heading). Upstream: biomejs/biome#12537.
+      "frontmatter": true
+    }
+  },
   "overrides": [
     {
       "assist": {
@@ -117,12 +126,6 @@
             // (no focusable content, pure click area). Re-enable when Biome supports dismiss-role.
             "useSemanticElements": "off"
           },
-          "correctness": {
-            // Biome doesn't track Vue `ref="binding"` string attributes as references yet :
-            // only `:prop="binding"` and `{{ binding }}` are seen. Re-enable when upstream lands.
-            // https://github.com/biomejs/biome/issues/2973
-            "noUnusedVariables": "off"
-          },
           "style": {
             // Scoped styles in Vue SFCs routinely need descending specificity for overrides.
             "noDescendingSpecificity": "off",
@@ -140,6 +143,19 @@
           "style": {
             "noDescendingSpecificity": "off"
           }
+        }
+      }
+    },
+    {
+      // YAML embedded in Markdown frontmatter keeps the authored style (single
+      // quotes, no bracket padding), matching the 791 existing frontmatter values.
+      // Scoped here so the real .yml/.yaml files keep Biome's defaults.
+      "includes": ["docs/**/*.md", "packages/**/skills/**/SKILL.md"],
+      "yaml": {
+        "formatter": {
+          "bracketSpacing": false,
+          "lineWidth": 120,
+          "quoteStyle": "single"
         }
       }
     }

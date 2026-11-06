@@ -30,15 +30,15 @@ list.addEventListener('keydown', (event) => {
 });
 ```
 
-| Feature | Per-component navigation | Focus |
-| --- | --- | --- |
-| Bundle size | n/a | <PackageInfo package="focus" type="size" /> |
-| Zero dependencies | n/a | <ore-icon name="check" size="16"></ore-icon> |
-| RTL mirroring | Manual | Built in |
-| Grid navigation | Flat only | `createGridNavigation()` |
-| Quick Look grids | Manual Space handling | `createQuickLookGrid()` |
-| Typeahead | Manual | Optional via `typeahead` |
-| Focus restoration | Manual capture | `captureFocus()` / `restoreFocus()` |
+| Feature           | Per-component navigation | Focus                                        |
+| ----------------- | ------------------------ | -------------------------------------------- |
+| Bundle size       | n/a                      | <PackageInfo package="focus" type="size" />  |
+| Zero dependencies | n/a                      | <ore-icon name="check" size="16"></ore-icon> |
+| RTL mirroring     | Manual                   | Built in                                     |
+| Grid navigation   | Flat only                | `createGridNavigation()`                     |
+| Quick Look grids  | Manual Space handling    | `createQuickLookGrid()`                      |
+| Typeahead         | Manual                   | Optional via `typeahead`                     |
+| Focus restoration | Manual capture           | `captureFocus()` / `restoreFocus()`          |
 
 <div class="decision-callout">
 

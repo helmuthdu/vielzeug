@@ -3,174 +3,203 @@
 This log was last generated on Thu, 05 Nov 2026 21:44:45 GMT and should not be manually modified.
 
 ## 26.11.5
+
 Thu, 05 Nov 2026 21:44:45 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.4
+
 Wed, 04 Nov 2026 16:49:50 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.3
+
 Wed, 04 Nov 2026 05:52:43 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.2
+
 Tue, 03 Nov 2026 18:42:43 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.1
+
 Tue, 03 Nov 2026 17:00:37 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.0
+
 Tue, 03 Nov 2026 16:30:26 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.22
+
 Fri, 30 Oct 2026 19:07:28 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.21
+
 Tue, 27 Oct 2026 08:39:39 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.20
+
 Sun, 25 Oct 2026 05:13:02 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.19
+
 Sat, 24 Oct 2026 19:56:28 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.18
+
 Fri, 23 Oct 2026 14:23:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.17
+
 Fri, 23 Oct 2026 07:29:16 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.16
+
 Wed, 21 Oct 2026 07:30:45 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.15
+
 Mon, 19 Oct 2026 10:13:34 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.14
+
 Sun, 18 Oct 2026 09:46:30 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.13
+
 Sat, 17 Oct 2026 06:46:08 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.12
+
 Sat, 17 Oct 2026 05:06:33 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.11
+
 Thu, 15 Oct 2026 13:45:48 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.10
+
 Thu, 15 Oct 2026 05:00:39 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.9
+
 Wed, 14 Oct 2026 21:26:14 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.8
+
 Tue, 13 Oct 2026 07:49:18 GMT
 
 ### Minor changes
 
 - greenfield API reduction: remove tap()/RippleEvent/errorPolicy in favor of a single onError option; collapse error classes to RippleError/RippleCycleError/RippleDisposedError; report flush-loop breaches through onError instead of throwing from the write site; throw RippleDisposedError from peek() on a never-evaluated disposed computed
 ## 26.10.7
+
 Mon, 12 Oct 2026 20:24:11 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.6
+
 Mon, 12 Oct 2026 18:44:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.5
+
 Thu, 08 Oct 2026 07:48:38 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.4
+
 Wed, 07 Oct 2026 14:13:11 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.3
+
 Wed, 07 Oct 2026 11:33:21 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.2
+
 Wed, 07 Oct 2026 10:50:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.1
+
 Wed, 07 Oct 2026 07:25:55 GMT
 
 ### Patches
 
 - Standardize package text punctuation
 ## 26.10.0
+
 Fri, 02 Oct 2026 18:01:51 GMT
 
 ### Minor changes
@@ -182,6 +211,7 @@ Fri, 02 Oct 2026 18:01:51 GMT
 
 - fix: unify error naming on new.target.name
 ## 3.0.0
+
 Wed, 09 Sep 2026 22:15:14 GMT
 
 ### Breaking changes
@@ -189,6 +219,7 @@ Wed, 09 Sep 2026 22:15:14 GMT
 - refactor!: add disposable structural bridges and runtime tracing while preserving isolated graph correctness and ownership
 
 ## 2.3.0
+
 Sun, 30 Aug 2026 13:16:08 GMT
 
 ### Minor changes
@@ -196,6 +227,7 @@ Sun, 30 Aug 2026 13:16:08 GMT
 - refactor: Ripple extends Disposable. Add disposalSignal and [Symbol.dispose] to Ripple interface. Remove redundant disposed flag in resource (use stop.disposed). Document computed peek behavior.
 
 ## 2.2.4
+
 Wed, 26 Aug 2026 17:29:55 GMT
 
 ### Patches
@@ -203,6 +235,7 @@ Wed, 26 Aug 2026 17:29:55 GMT
 - chore: add sideEffects: false for tree-shaking.
 
 ## 2.2.3
+
 Fri, 21 Aug 2026 16:02:58 GMT
 
 ### Patches
@@ -210,6 +243,7 @@ Fri, 21 Aug 2026 16:02:58 GMT
 - fix: resolve TypeScript type errors in test files
 
 ## 2.2.2
+
 Wed, 19 Aug 2026 06:57:36 GMT
 
 ### Patches
@@ -217,6 +251,7 @@ Wed, 19 Aug 2026 06:57:36 GMT
 - fix: computed nodes recover from first-run derivation failures: collect() commits partial dependencies when observer.dependencies is empty so a later source change can trigger refresh; ComputedNode.get value tracks itself before refresh so a consumer that reads a failing computed still depends on it and re-runs when the computed recovers
 
 ## 2.2.1
+
 Sun, 16 Aug 2026 09:15:39 GMT
 
 ### Patches
@@ -224,6 +259,7 @@ Sun, 16 Aug 2026 09:15:39 GMT
 - fix: recognize Signals, computed values, and Resources across duplicate Ripple module graphs
 
 ## 2.2.0
+
 Sat, 15 Aug 2026 06:26:02 GMT
 
 ### Minor changes
@@ -231,6 +267,7 @@ Sat, 15 Aug 2026 06:26:02 GMT
 - refactor: collapse subpaths to root export, remove Store primitive (signal.update replaces it), simplify Resource disposal, remove dead isSignal/isComputed
 
 ## 2.1.0
+
 Mon, 10 Aug 2026 21:21:35 GMT
 
 ### Minor changes
@@ -238,6 +275,7 @@ Mon, 10 Aug 2026 21:21:35 GMT
 - refactor: make isolated graph disposal terminal: writes, subscriptions, graph factories, and batch/untrack now throw RippleDisposedRuntimeError after dispose; Ripple exposes disposed
 
 ## 2.0.1
+
 Thu, 06 Aug 2026 07:20:49 GMT
 
 ### Patches
@@ -245,6 +283,7 @@ Thu, 06 Aug 2026 07:20:49 GMT
 - publish clean export metadata and classic TypeScript subpath mappings
 
 ## 2.0.0
+
 Wed, 05 Aug 2026 16:48:52 GMT
 
 ### Breaking changes
@@ -256,6 +295,7 @@ Wed, 05 Aug 2026 16:48:52 GMT
 - fix: fix sub-path export packaging, add disposalSignal lifecycle contract, deep-freeze store state, redesign SSR provider API, compile-time lens path validation
 
 ## 1.3.0
+
 Sun, 26 Jul 2026 06:43:54 GMT
 
 ### Minor changes
@@ -263,6 +303,7 @@ Sun, 26 Jul 2026 06:43:54 GMT
 - refactor(ripple): move storeWithHistory to /history sub-path; tighten readonly()/resource() typing
 
 ## 1.2.3
+
 Fri, 24 Jul 2026 05:28:41 GMT
 
 ### Patches
@@ -270,6 +311,7 @@ Fri, 24 Jul 2026 05:28:41 GMT
 - chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement
 
 ## 1.2.2
+
 Fri, 17 Jul 2026 14:17:07 GMT
 
 ### Patches
@@ -277,6 +319,7 @@ Fri, 17 Jul 2026 14:17:07 GMT
 - fix(ripple): correct disposed state for top-level store lenses
 
 ## 1.2.1
+
 Tue, 07 Jul 2026 09:20:39 GMT
 
 ### Patches
@@ -285,6 +328,7 @@ Tue, 07 Jul 2026 09:20:39 GMT
 - docs: align devtools.ts header comment style with the rest of the ecosystem
 
 ## 1.2.0
+
 Sun, 05 Jul 2026 06:22:27 GMT
 
 ### Minor changes
@@ -292,6 +336,7 @@ Sun, 05 Jul 2026 06:22:27 GMT
 - feat(ripple): store.replace()/reset() now remove omitted keys instead of nulling them, add resource().refresh() for manual refetch
 
 ## 1.1.0
+
 Fri, 03 Jul 2026 06:00:47 GMT
 
 ### Minor changes
@@ -303,9 +348,9 @@ Fri, 03 Jul 2026 06:00:47 GMT
 - chore(ripple): rename internal _warn.ts to _dev.ts
 
 ## 1.0.0
+
 Wed, 01 Jul 2026 16:10:37 GMT
 
 ### Breaking changes
 
 - Initial public release
-

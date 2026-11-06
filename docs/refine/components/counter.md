@@ -160,21 +160,21 @@ Override `--counter-value-size` and `--counter-button-size` to turn a counter in
 
 ### Attributes
 
-| Attribute    | Type                                                                      | Default | Description                                            |
-| ------------ | ------------------------------------------------------------------------- | ------- | ------------------------------------------------------ |
-| `value`      | `number`                                                                  | `0`     | Current value                                          |
-| `min`        | `number`                                                                  | `0`     | Minimum value                                          |
-| `max`        | `number`                                                                  | N/A | Maximum value                                          |
-| `step`       | `number`                                                                  | `1`     | Increment/decrement step                               |
-| `large-step` | `number`                                                                  | `10 × step` | Step for `Page Up` / `Page Down` and the quick-step buttons |
-| `quick-steps` | `boolean`                                                                | `false` | Adds an outer −/+ pair that moves by `large-step`      |
-| `label`      | `string`                                                                  | N/A | Visible label and accessible name                      |
-| `hint`       | `string`                                                                  | N/A | One-line hint under the controls                       |
-| `readonly`   | `boolean`                                                                 | `false` | Hides the buttons and shows the value only             |
-| `disabled`   | `boolean`                                                                 | `false` | Disables the control                                   |
-| `color`      | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color for the value and slotted icon             |
-| `size`       | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Component size                                         |
-| `variant`    | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'frost'`      | N/A | Surface variant; `frost` blurs the panel over artwork   |
+| Attribute     | Type                                                                      | Default     | Description                                                 |
+| ------------- | ------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------- |
+| `value`       | `number`                                                                  | `0`         | Current value                                               |
+| `min`         | `number`                                                                  | `0`         | Minimum value                                               |
+| `max`         | `number`                                                                  | N/A         | Maximum value                                               |
+| `step`        | `number`                                                                  | `1`         | Increment/decrement step                                    |
+| `large-step`  | `number`                                                                  | `10 × step` | Step for `Page Up` / `Page Down` and the quick-step buttons |
+| `quick-steps` | `boolean`                                                                 | `false`     | Adds an outer −/+ pair that moves by `large-step`           |
+| `label`       | `string`                                                                  | N/A         | Visible label and accessible name                           |
+| `hint`        | `string`                                                                  | N/A         | One-line hint under the controls                            |
+| `readonly`    | `boolean`                                                                 | `false`     | Hides the buttons and shows the value only                  |
+| `disabled`    | `boolean`                                                                 | `false`     | Disables the control                                        |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A         | Theme color for the value and slotted icon                  |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`      | Component size                                              |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'frost'`      | N/A         | Surface variant; `frost` blurs the panel over artwork       |
 
 ### Events
 
@@ -184,38 +184,38 @@ Override `--counter-value-size` and `--counter-button-size` to turn a counter in
 
 ### Slots
 
-| Slot   | Description                                              |
-| ------ | -------------------------------------------------------- |
-| `icon` | Leading icon or token artwork shown before the label     |
-| `hint` | Custom hint content (replaces the `hint` attribute text) |
-| `header-end` | Trailing header action beside the label |
+| Slot         | Description                                              |
+| ------------ | -------------------------------------------------------- |
+| `icon`       | Leading icon or token artwork shown before the label     |
+| `hint`       | Custom hint content (replaces the `hint` attribute text) |
+| `header-end` | Trailing header action beside the label                  |
 
 ### Parts
 
-| Part            | Description            |
-| --------------- | ---------------------- |
-| `counter`       | Root container         |
-| `header`        | Icon and label row     |
-| `label`         | Label element          |
-| `controls`      | Buttons and value row  |
+| Part                  | Description                                      |
+| --------------------- | ------------------------------------------------ |
+| `counter`             | Root container                                   |
+| `header`              | Icon and label row                               |
+| `label`               | Label element                                    |
+| `controls`            | Buttons and value row                            |
 | `decrement-large-btn` | Quick-step decrement button (`quick-steps` only) |
-| `decrement-btn` | Decrement button       |
-| `value`         | Value output           |
-| `increment-btn` | Increment button       |
+| `decrement-btn`       | Decrement button                                 |
+| `value`               | Value output                                     |
+| `increment-btn`       | Increment button                                 |
 | `increment-large-btn` | Quick-step increment button (`quick-steps` only) |
-| `hint`          | Hint element           |
+| `hint`                | Hint element                                     |
 
 ### CSS Custom Properties
 
-| Property                 | Default                       | Description                        |
-| ------------------------ | ----------------------------- | ---------------------------------- |
-| `--counter-value-size`   | `var(--text-2xl)` (sized)     | Font size of the value             |
-| `--counter-button-size`  | `var(--size-11)` (sized)      | Width and height of the −/+ buttons |
-| `--counter-gap`          | `var(--size-3)`               | Gap between the buttons and value  |
-| `--counter-bg`           | `var(--color-contrast-100)`   | Background of the control          |
-| `--counter-border-color` | `var(--color-divider)`        | Border color of the control        |
-| `--counter-radius`       | `var(--rounded-lg)`           | Border radius of the control       |
-| `--counter-icon-size`    | `var(--size-6)` (sized)       | Size of the slotted icon           |
+| Property                 | Default                     | Description                         |
+| ------------------------ | --------------------------- | ----------------------------------- |
+| `--counter-value-size`   | `var(--text-2xl)` (sized)   | Font size of the value              |
+| `--counter-button-size`  | `var(--size-11)` (sized)    | Width and height of the −/+ buttons |
+| `--counter-gap`          | `var(--size-3)`             | Gap between the buttons and value   |
+| `--counter-bg`           | `var(--color-contrast-100)` | Background of the control           |
+| `--counter-border-color` | `var(--color-divider)`      | Border color of the control         |
+| `--counter-radius`       | `var(--rounded-lg)`         | Border radius of the control        |
+| `--counter-icon-size`    | `var(--size-6)` (sized)     | Size of the slotted icon            |
 
 ## Accessibility
 

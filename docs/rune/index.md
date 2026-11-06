@@ -43,25 +43,22 @@ import { consoleTransport, createLogger, jsonTransport } from '@vielzeug/rune';
 
 const api = createLogger({
   namespace: 'api',
-  transports: [
-    consoleTransport({ level: 'debug' }),
-    jsonTransport({ level: 'error' }),
-  ],
+  transports: [consoleTransport({ level: 'debug' }), jsonTransport({ level: 'error' })],
 });
 
 api.info('request', { method: 'GET', path });
 ```
 
-| Feature              | Rune                                                          | Winston                                               | Pino                                               | console                                    |
-| -------------------- | ------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------- | ------------------------------------------ |
-| Bundle size          | <PackageInfo package="rune" type="size" />                    | ~44 kB                                                | ~4 kB                                              | 0 kB                                       |
+| Feature              | Rune                                                            | Winston                                                 | Pino                                                 | console                                      |
+| -------------------- | --------------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------- |
+| Bundle size          | <PackageInfo package="rune" type="size" />                      | ~44 kB                                                  | ~4 kB                                                | 0 kB                                         |
 | Browser support      | <ore-icon name="check" size="16"></ore-icon>                    | <ore-icon name="x" size="16"></ore-icon>                | <ore-icon name="x" size="16"></ore-icon>             | <ore-icon name="check" size="16"></ore-icon> |
-| Scoped loggers       | <ore-icon name="check" size="16"></ore-icon>                    | Manual                                                | Child                                              | <ore-icon name="x" size="16"></ore-icon>     |
+| Scoped loggers       | <ore-icon name="check" size="16"></ore-icon>                    | Manual                                                  | Child                                                | <ore-icon name="x" size="16"></ore-icon>     |
 | Pluggable transports | <ore-icon name="check" size="16"></ore-icon> Built-in factories | <ore-icon name="check" size="16"></ore-icon> Transports | <ore-icon name="check" size="16"></ore-icon> Streams | <ore-icon name="x" size="16"></ore-icon>     |
-| Structured log entry | <ore-icon name="check" size="16"></ore-icon> `LogEntry` type    | Partial                                               | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="x" size="16"></ore-icon>     |
+| Structured log entry | <ore-icon name="check" size="16"></ore-icon> `LogEntry` type    | Partial                                                 | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="x" size="16"></ore-icon>     |
 | Lazy bindings        | <ore-icon name="check" size="16"></ore-icon> `lazy(fn)`         | <ore-icon name="x" size="16"></ore-icon>                | <ore-icon name="x" size="16"></ore-icon>             | <ore-icon name="x" size="16"></ore-icon>     |
-| Styled output        | <ore-icon name="check" size="16"></ore-icon> CSS badges         | Text only                                             | Text only                                          | Manual                                     |
-| Zero dependencies    | <ore-icon name="check" size="16"></ore-icon>                    | <ore-icon name="x" size="16"></ore-icon> (15+)          | <ore-icon name="x" size="16"></ore-icon> (5+)        | N/A |
+| Styled output        | <ore-icon name="check" size="16"></ore-icon> CSS badges         | Text only                                               | Text only                                            | Manual                                       |
+| Zero dependencies    | <ore-icon name="check" size="16"></ore-icon>                    | <ore-icon name="x" size="16"></ore-icon> (15+)          | <ore-icon name="x" size="16"></ore-icon> (5+)        | N/A                                          |
 
 <div class="decision-callout">
 
@@ -97,10 +94,7 @@ import { consoleTransport, createLogger, jsonTransport, lazy } from '@vielzeug/r
 const log = createLogger({
   logLevel: 'debug',
   namespace: 'server',
-  transports: [
-    consoleTransport({ timestamp: true }),
-    jsonTransport({ level: 'error' }),
-  ],
+  transports: [consoleTransport({ timestamp: true }), jsonTransport({ level: 'error' })],
 });
 
 const requestLog = log.withBindings({

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.head_ref || github.ref }}
@@ -22,7 +22,7 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          root-install: 'false'
+          root-install: "false"
 
       - run: node common/scripts/install-run-rush.js change --verify
 
@@ -50,7 +50,7 @@ jobs:
 
       - name: Archive integration tests
         env:
-          WRANGLER_SEND_METRICS: 'false'
+          WRANGLER_SEND_METRICS: "false"
         run: pnpm --filter @vielzeug/archive test:integration
 
       # Real-browser tests against the built dist IIFE bundles (rush rebuild above produced
@@ -68,7 +68,7 @@ jobs:
       # build their workspace dependencies themselves.
       - name: Validate demo APIs
         env:
-          WRANGLER_SEND_METRICS: 'false'
+          WRANGLER_SEND_METRICS: "false"
         run: |
           for dir in demos/*/; do
             [ -f "${dir}package.json" ] || continue
@@ -99,7 +99,7 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          rush-install: 'false'
+          rush-install: "false"
 
       - name: Biome
         run: pnpm lint
@@ -115,7 +115,8 @@ jobs:
       - name: AI metadata
         run: pnpm check:ai-data
 
-      - name: Docs and README structure
+      - name: Docs, README, and sidebar structure
         run: |
           pnpm validate:docs
           pnpm validate:readme
+          pnpm validate:sidebar

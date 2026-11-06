@@ -70,13 +70,13 @@ Set `disabled` to turn off the pull gesture while keeping the content scrollable
 
 The current phase is reflected on the host as `data-phase`, so you can restyle per stage or drive a status line.
 
-| `data-phase`   | Meaning                                                       |
-| -------------- | ------------------------------------------------------------- |
-| _(absent)_     | At rest, nothing pending                                      |
-| `pulling`      | An active drag, not yet past the threshold                    |
-| `ready`        | An active drag past the threshold: releasing starts the refresh |
-| `refreshing`   | A refresh is in flight; the indicator holds at the threshold  |
-| `done`         | The refresh ended; the indicator springs back to rest         |
+| `data-phase` | Meaning                                                         |
+| ------------ | --------------------------------------------------------------- |
+| _(absent)_   | At rest, nothing pending                                        |
+| `pulling`    | An active drag, not yet past the threshold                      |
+| `ready`      | An active drag past the threshold: releasing starts the refresh |
+| `refreshing` | A refresh is in flight; the indicator holds at the threshold    |
+| `done`       | The refresh ended; the indicator springs back to rest           |
 
 ## API Reference
 
@@ -89,15 +89,15 @@ The current phase is reflected on the host as `data-phase`, so you can restyle p
 
 ### Properties and Methods
 
-| Member       | Kind     | Description                                                        |
-| ------------ | -------- | ------------------------------------------------------------------ |
-| `refreshed()` | method  | End the in-flight refresh and retract the indicator                |
+| Member        | Kind   | Description                                         |
+| ------------- | ------ | --------------------------------------------------- |
+| `refreshed()` | method | End the in-flight refresh and retract the indicator |
 
 ### Events
 
-| Event     | Detail | Description                                                        |
-| --------- | ------ | ------------------------------------------------------------------ |
-| `refresh` | N/A | Fired when a pull commits. Call `refreshed()` when the load finishes |
+| Event     | Detail | Description                                                          |
+| --------- | ------ | -------------------------------------------------------------------- |
+| `refresh` | N/A    | Fired when a pull commits. Call `refreshed()` when the load finishes |
 
 ### Parts
 
@@ -109,10 +109,10 @@ The current phase is reflected on the host as `data-phase`, so you can restyle p
 
 ### CSS Custom Properties
 
-| Property                        | Default            | Description                 |
-| ------------------------------- | ------------------ | --------------------------- |
-| `--pull-to-refresh-spinner-size`  | `var(--size-6)`    | Spinner diameter            |
-| `--pull-to-refresh-spinner-color` | `var(--color-primary)` | Spinner color           |
+| Property                          | Default                | Description      |
+| --------------------------------- | ---------------------- | ---------------- |
+| `--pull-to-refresh-spinner-size`  | `var(--size-6)`        | Spinner diameter |
+| `--pull-to-refresh-spinner-color` | `var(--color-primary)` | Spinner color    |
 
 ## Behavior Notes
 

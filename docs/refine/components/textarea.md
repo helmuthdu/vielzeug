@@ -133,28 +133,28 @@ Control the resize handle with the `resize` attribute. Avoid `resize="horizontal
 
 ### Attributes
 
-| Attribute         | Type                                                                      | Default      | Description                                        |
-| ----------------- | ------------------------------------------------------------------------- | ------------ | -------------------------------------------------- |
-| `label`           | `string`                                                                  | `''`         | Label text                                         |
-| `label-placement` | `'inset' \| 'outside'`                                                    | `'inset'`    | Label placement                                    |
-| `value`           | `string`                                                                  | `''`         | Current value                                      |
-| `name`            | `string`                                                                  | `''`         | Form field name                                    |
-| `placeholder`     | `string`                                                                  | `''`         | Placeholder text                                   |
-| `rows`            | `number`                                                                  | -            | Visible row count (sets minimum height)            |
+| Attribute         | Type                                                                      | Default      | Description                                       |
+| ----------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------- |
+| `label`           | `string`                                                                  | `''`         | Label text                                        |
+| `label-placement` | `'inset' \| 'outside'`                                                    | `'inset'`    | Label placement                                   |
+| `value`           | `string`                                                                  | `''`         | Current value                                     |
+| `name`            | `string`                                                                  | `''`         | Form field name                                   |
+| `placeholder`     | `string`                                                                  | `''`         | Placeholder text                                  |
+| `rows`            | `number`                                                                  | -            | Visible row count (sets minimum height)           |
 | `maxlength`       | `number`                                                                  | -            | Maximum character count: enables counter when set |
-| `helper`          | `string`                                                                  | `''`         | Helper text below the field                        |
-| `error`           | `string`                                                                  | `''`         | Error message (marks field invalid)                |
-| `disabled`        | `boolean`                                                                 | `false`      | Disable the textarea                               |
-| `readonly`        | `boolean`                                                                 | `false`      | Make the textarea read-only                        |
-| `required`        | `boolean`                                                                 | `false`      | Mark the field as required                         |
-| `fullwidth`       | `boolean`                                                                 | `false`      | Expand to full width                               |
-| `auto-resize`     | `boolean`                                                                 | `false`      | Grow vertically with content                       |
-| `no-resize`       | `boolean`                                                                 | `false`      | Disable the manual resize handle                   |
-| `resize`          | `'none' \| 'vertical' \| 'horizontal' \| 'both'`                          | `'vertical'` | Resize direction                                   |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'`    | Visual style variant                               |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -            | Color theme                                        |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`       | Component size                                     |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                | -            | Border radius override                             |
+| `helper`          | `string`                                                                  | `''`         | Helper text below the field                       |
+| `error`           | `string`                                                                  | `''`         | Error message (marks field invalid)               |
+| `disabled`        | `boolean`                                                                 | `false`      | Disable the textarea                              |
+| `readonly`        | `boolean`                                                                 | `false`      | Make the textarea read-only                       |
+| `required`        | `boolean`                                                                 | `false`      | Mark the field as required                        |
+| `fullwidth`       | `boolean`                                                                 | `false`      | Expand to full width                              |
+| `auto-resize`     | `boolean`                                                                 | `false`      | Grow vertically with content                      |
+| `no-resize`       | `boolean`                                                                 | `false`      | Disable the manual resize handle                  |
+| `resize`          | `'none' \| 'vertical' \| 'horizontal' \| 'both'`                          | `'vertical'` | Resize direction                                  |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'`    | Visual style variant                              |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -            | Color theme                                       |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`       | Component size                                    |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                | -            | Border radius override                            |
 
 ### Slots
 

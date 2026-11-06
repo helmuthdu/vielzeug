@@ -26,10 +26,7 @@ export const router = createRouter({
   notFound: { data: () => ({ message: 'Not found' }) },
 });
 
-export const views = router.createViewRegistry(
-  { home: HomePage, settings: SettingsPage },
-  { notFound: NotFoundPage },
-);
+export const views = router.createViewRegistry({ home: HomePage, settings: SettingsPage }, { notFound: NotFoundPage });
 
 // Wraps the router in a Svelte-compatible readable store.
 // `readable` calls set(initialValue) immediately, then router.subscribe drives updates.

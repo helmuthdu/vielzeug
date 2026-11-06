@@ -48,14 +48,14 @@ import type { AsyncStatus } from '@vielzeug/refine/async'; // Before
 import type { StateStatus } from '@vielzeug/refine/state'; // After
 ```
 
-| Old | New |
-| --- | --- |
-| `<ore-async>` | `<ore-state>` |
+| Old                      | New                      |
+| ------------------------ | ------------------------ |
+| `<ore-async>`            | `<ore-state>`            |
 | `@vielzeug/refine/async` | `@vielzeug/refine/state` |
-| `AsyncStatus` | `StateStatus` |
-| `--async-color` | `--state-color` |
-| `--async-gap` | `--state-gap` |
-| `--async-icon-size` | `--state-icon-size` |
+| `AsyncStatus`            | `StateStatus`            |
+| `--async-color`          | `--state-color`          |
+| `--async-gap`            | `--state-gap`            |
+| `--async-icon-size`      | `--state-icon-size`      |
 
 The `status` values, the `empty-label`/`empty-description`/`error-label`/`error-description`/`retryable` props, and the `retry` event are unchanged.
 
@@ -164,10 +164,10 @@ all five surfaces. Two behavior changes follow from the alignment:
 
 CSS custom properties renamed to the `--<component>-backdrop-bg` convention:
 
-| Old                             | New                                 |
-| ------------------------------- | ----------------------------------- |
-| `--dialog-backdrop`             | `--dialog-backdrop-bg`              |
-| `--command-palette-backdrop`    | `--command-palette-backdrop-bg`     |
+| Old                          | New                             |
+| ---------------------------- | ------------------------------- |
+| `--dialog-backdrop`          | `--dialog-backdrop-bg`          |
+| `--command-palette-backdrop` | `--command-palette-backdrop-bg` |
 
 `--drawer-backdrop-bg`, `--sidebar-drawer-backdrop-bg`, and `--spotlight-dim` keep their names; all
 of them now default to the shared veil (`--spotlight-dim` to `--color-scrim` directly, since the
@@ -219,11 +219,11 @@ toast.add({ color: 'success', message: 'Saved', variant: 'flat' });
 toast.add({ status: 'success', message: 'Saved' });
 ```
 
-| Old option              | New option                                   |
-| ----------------------- | -------------------------------------------- |
-| `color: 'success'`      | `status: 'success'`                          |
-| `color: 'error'`        | `status: 'danger'`                           |
-| `color: 'primary'` / unset | leave `status` unset (`neutral`, no icon) |
+| Old option                               | New option                                        |
+| ---------------------------------------- | ------------------------------------------------- |
+| `color: 'success'`                       | `status: 'success'`                               |
+| `color: 'error'`                         | `status: 'danger'`                                |
+| `color: 'primary'` / unset               | leave `status` unset (`neutral`, no icon)         |
 | `variant: 'solid' / 'flat' / 'bordered'` | removed: toasts always render the neutral surface |
 
 - `status` takes `'neutral' | 'info' | 'success' | 'warning' | 'danger'` (exported as
@@ -285,7 +285,7 @@ Internally, the per-component reduced-motion mixin was removed; reduced motion i
 
 ## Card interaction, responsiveness, and radius
 
-`ore-card` tightens its interactive contract. Pressing Enter or Space on a control nested in an interactive card (a slotted button or link) now activates that control alone instead of the control *and* the card. `disabled` no longer sets `pointer-events: none` on the whole card: the card stops activating and dims, but a click on a slotted control reaches that control, so disable nested controls yourself to keep pointer and keyboard behavior identical. The hover lift and the colored-card hover tint now apply only to `interactive` cards, and only where hover is a real state (`@media (hover: hover)`), so a resting card no longer looks clickable and a tapped card no longer stays lifted on touch. The card's own transitions now honor `prefers-reduced-motion`.
+`ore-card` tightens its interactive contract. Pressing Enter or Space on a control nested in an interactive card (a slotted button or link) now activates that control alone instead of the control _and_ the card. `disabled` no longer sets `pointer-events: none` on the whole card: the card stops activating and dims, but a click on a slotted control reaches that control, so disable nested controls yourself to keep pointer and keyboard behavior identical. The hover lift and the colored-card hover tint now apply only to `interactive` cards, and only where hover is a real state (`@media (hover: hover)`), so a resting card no longer looks clickable and a tapped card no longer stays lifted on touch. The card's own transitions now honor `prefers-reduced-motion`.
 
 `rounded` is now a registered prop (the radius variants it drives already shipped), so `card.rounded = 'xl'` works and is typed. Horizontal cards wrap to the stacked layout whenever the card itself is narrower than roughly 28rem, tracked on the card's own width rather than the viewport.
 

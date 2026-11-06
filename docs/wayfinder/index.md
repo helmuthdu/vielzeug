@@ -5,7 +5,20 @@ package: wayfinder
 category: routing
 keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
 related: [ripple, ward, herald]
-exports: [createRouter, createBrowserHistory, createHashHistory, createMemoryHistory, redirectTo, WayfinderError, WayfinderApiError, WayfinderConfigError, WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError]
+exports:
+  [
+    createRouter,
+    createBrowserHistory,
+    createHashHistory,
+    createMemoryHistory,
+    redirectTo,
+    WayfinderError,
+    WayfinderApiError,
+    WayfinderConfigError,
+    WayfinderDisposedError,
+    WayfinderRedirectLoopError,
+    WayfinderRouteError,
+  ]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -58,21 +71,21 @@ router.subscribe((state) => {
 
 </div>
 
-| Feature                              | Wayfinder                                       | page.js                                    | Navigo                                     |
-| ------------------------------------ | ----------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
-| Bundle size                          | <PackageInfo package="wayfinder" type="size" /> | ~1 kB                                      | ~5 kB                                      |
-| History mode                         | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Memory history (tests / non-browser) | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Typed path params                    | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Named navigation                     | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | Partial                                    |
-| Middleware                           | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Data loaders with AbortSignal        | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Declarative redirects                | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Search param validation              | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Error in state                       | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| History state in context             | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Leave guards                         | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Zero dependencies                    | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Feature                              | Wayfinder                                       | page.js                                      | Navigo                                       |
+| ------------------------------------ | ----------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size                          | <PackageInfo package="wayfinder" type="size" /> | ~1 kB                                        | ~5 kB                                        |
+| History mode                         | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Memory history (tests / non-browser) | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Typed path params                    | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Named navigation                     | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>     | Partial                                      |
+| Middleware                           | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Data loaders with AbortSignal        | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Declarative redirects                | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Search param validation              | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Error in state                       | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| History state in context             | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Leave guards                         | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Zero dependencies                    | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 ## Installation
 

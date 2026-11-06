@@ -16,13 +16,20 @@ yarn add @vielzeug/keymap
 import { createKeymap, formatShortcut } from '@vielzeug/keymap';
 
 const isEditableTarget = (target: EventTarget | null): boolean =>
-  target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLElement && target.isContentEditable;
+  target instanceof HTMLInputElement ||
+  target instanceof HTMLTextAreaElement ||
+  (target instanceof HTMLElement && target.isContentEditable);
 
 const map = createKeymap([
   { id: 'save', shortcut: 'mod+k mod+s', handler: () => console.log('save') },
   { id: 'palette', shortcut: 'mod+shift+p', handler: () => console.log('open palette') },
   { id: 'top', shortcut: 'g g', handler: () => window.scrollTo({ top: 0 }) },
-  { id: 'close', shortcut: 'escape', handler: () => console.log('close panel'), when: (event) => !isEditableTarget(event.target) },
+  {
+    id: 'close',
+    shortcut: 'escape',
+    handler: () => console.log('close panel'),
+    when: (event) => !isEditableTarget(event.target),
+  },
   { id: 'play', shortcut: 'space', handler: () => console.log('toggle playback'), trigger: 'keyup' },
 ]);
 

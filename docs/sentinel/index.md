@@ -3,9 +3,33 @@ title: 'Sentinel: Subscribable environment snapshots'
 description: Subscribable browser and DOM snapshots for viewport, network, media query, element size, intersection state, and screen wake lock.
 package: sentinel
 category: Environment
-keywords: [subscribable, browser, viewport, network, media-query, resize-observer, intersection-observer, wake-lock, screen, fullscreen]
+keywords:
+  [
+    subscribable,
+    browser,
+    viewport,
+    network,
+    media-query,
+    resize-observer,
+    intersection-observer,
+    wake-lock,
+    screen,
+    fullscreen,
+  ]
 related: [ripple, ore, focus, gesture]
-exports: [createViewport, createNetwork, createMediaQuery, createElementSize, createIntersection, createWakeLock, createFullscreen, SentinelError, SentinelUnavailableError, Sentinel]
+exports:
+  [
+    createViewport,
+    createNetwork,
+    createMediaQuery,
+    createElementSize,
+    createIntersection,
+    createWakeLock,
+    createFullscreen,
+    SentinelError,
+    SentinelUnavailableError,
+    Sentinel,
+  ]
 environments: [browser]
 ---
 
@@ -50,14 +74,14 @@ import { createElementSize } from '@vielzeug/sentinel';
 }
 ```
 
-| Feature | Sentinel | Native observer APIs | Ad hoc event listeners |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="sentinel" type="size" /> | Built in | Application-defined |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Subscribable current snapshot | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Consistent disposable handle | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Shared abort ownership | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
-| Ripple composition | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Feature                       | Sentinel                                       | Native observer APIs                                  | Ad hoc event listeners                                |
+| ----------------------------- | ---------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| Bundle size                   | <PackageInfo package="sentinel" type="size" /> | Built in                                              | Application-defined                                   |
+| Zero dependencies             | <ore-icon name="check" size="16"></ore-icon>   | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon>          |
+| Subscribable current snapshot | <ore-icon name="check" size="16"></ore-icon>   | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>              |
+| Consistent disposable handle  | <ore-icon name="check" size="16"></ore-icon>   | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>              |
+| Shared abort ownership        | <ore-icon name="check" size="16"></ore-icon>   | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| Ripple composition            | <ore-icon name="check" size="16"></ore-icon>   | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>              |
 
 <div class="decision-callout">
 

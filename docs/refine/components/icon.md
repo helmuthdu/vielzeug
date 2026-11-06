@@ -21,9 +21,11 @@ registerIcons({
     presentation: { fill: 'currentColor' },
     children: [
       { tag: 'path', attrs: { d: 'M0 0h16v16H0z' } },
-      { tag: 'g', attrs: { fill: 'none', stroke: 'currentColor' }, children: [
-        { tag: 'circle', attrs: { cx: 24, cy: 8, r: 6 } },
-      ] },
+      {
+        tag: 'g',
+        attrs: { fill: 'none', stroke: 'currentColor' },
+        children: [{ tag: 'circle', attrs: { cx: 24, cy: 8, r: 6 } }],
+      },
     ],
   },
 });
@@ -164,11 +166,11 @@ registerIcons({
 
 Install only the data packages you choose. `@iconify-icons/<prefix>/<name>` exports a default individual data object; `@iconify-json/<prefix>/icons.json` exports collection JSON. Enable `resolveJsonModule` for TypeScript JSON imports. Selecting names from collection JSON limits registration, but your bundler may still include the entire imported collection: individual icon modules are the smallest option.
 
-| Library | Iconify prefix | Data packages | Upstream license |
-| --- | --- | --- | --- |
-| [Heroicons](https://github.com/tailwindlabs/heroicons) | `heroicons` | `@iconify-icons/heroicons`, `@iconify-json/heroicons` | MIT |
-| [Tabler Icons](https://github.com/tabler/tabler-icons) | `tabler` | `@iconify-icons/tabler`, `@iconify-json/tabler` | MIT |
-| [Material Design Icons](https://github.com/Templarian/MaterialDesign) | `mdi` | `@iconify-icons/mdi`, `@iconify-json/mdi` | Apache-2.0 |
+| Library                                                               | Iconify prefix | Data packages                                         | Upstream license |
+| --------------------------------------------------------------------- | -------------- | ----------------------------------------------------- | ---------------- |
+| [Heroicons](https://github.com/tailwindlabs/heroicons)                | `heroicons`    | `@iconify-icons/heroicons`, `@iconify-json/heroicons` | MIT              |
+| [Tabler Icons](https://github.com/tabler/tabler-icons)                | `tabler`       | `@iconify-icons/tabler`, `@iconify-json/tabler`       | MIT              |
+| [Material Design Icons](https://github.com/Templarian/MaterialDesign) | `mdi`          | `@iconify-icons/mdi`, `@iconify-json/mdi`             | Apache-2.0       |
 
 These three families are tested with upstream Iconify data. Preserve their license/attribution requirements when redistributing SVGs. Refine's curated defaults and test-fixture licenses are in `THIRD_PARTY_NOTICES`.
 

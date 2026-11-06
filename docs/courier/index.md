@@ -27,14 +27,14 @@ const user = await response.json();
 const user = await courier.get<User>('/users/{id}', { params: { id: userId } });
 ```
 
-| Feature | Courier | ky | ofetch |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="courier" type="size" /> | Separate package | Separate package |
-| Zero runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Native fetch transport | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Explicit parsed-value cache and prefetch | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Immutable middleware at construction | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Structured error taxonomy | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| Feature                                  | Courier                                       | ky                                                    | ofetch                                                |
+| ---------------------------------------- | --------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| Bundle size                              | <PackageInfo package="courier" type="size" /> | Separate package                                      | Separate package                                      |
+| Zero runtime dependencies                | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="x" size="16"></ore-icon>              |
+| Native fetch transport                   | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon>          |
+| Explicit parsed-value cache and prefetch | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>              |
+| Immutable middleware at construction     | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>              |
+| Structured error taxonomy                | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
 
 <div class="decision-callout">
 

@@ -22,10 +22,7 @@ const users = [
   { address: { city: 'Berlin' }, age: 41, name: 'Ada' },
 ];
 
-const ordered = sort(users, [
-  { key: 'address.city' },
-  { key: 'age', direction: 'desc' },
-]);
+const ordered = sort(users, [{ key: 'address.city' }, { key: 'age', direction: 'desc' }]);
 ordered.map((user) => `${user.name} (${user.address.city})`);
 // [
 //   'Grace (Aachen)',

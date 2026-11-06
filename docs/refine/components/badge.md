@@ -259,8 +259,8 @@ Stack multiple badges to show different types of information.
 | `count`      | `number`                                                                  | -         | Numeric count to display                                                            |
 | `max`        | `number`                                                                  | `99`      | Maximum count before showing `{max}+`                                               |
 | `dot`        | `boolean`                                                                 | `false`   | Show as a dot indicator (no label)                                                  |
-| `anchor`     | `'top-end' \| 'top-start' \| 'bottom-end' \| 'bottom-start'`              | N/A | Pin badge to a corner of the `target` slot content                                  |
-| `aria-label` | `string`                                                                  | N/A | Accessible label for assistive technology. Recommended for count-only and dot mode. |
+| `anchor`     | `'top-end' \| 'top-start' \| 'bottom-end' \| 'bottom-start'`              | N/A       | Pin badge to a corner of the `target` slot content                                  |
+| `aria-label` | `string`                                                                  | N/A       | Accessible label for assistive technology. Recommended for count-only and dot mode. |
 
 ### Slots
 

@@ -7,23 +7,23 @@ description: Exact money, currency definitions, exchange, formatting, serializat
 
 ## API Overview
 
-| Symbol | Purpose | Execution | Common gotcha |
-| --- | --- | --- | --- |
-| `money` | Construct validated money | Sync | Bigint requires `{ unit: 'minor' }` |
-| `currency` | Resolve built-in or construct custom | Sync | Unknown codes throw |
-| `add` / `subtract` | Combine matching currencies | Sync | Mismatches throw |
-| `multiply` / `divide` | Exact decimal scaling | Sync | Use decimal strings |
-| `sum` | Aggregate with inferred currency | Sync | Empty iterable requires `{ currency }` |
-| `allocate` | Split without losing minor units | Sync | Weights must be non-negative |
-| `clamp` | Bound to min/max range | Sync | Min must not exceed max |
-| `exchange` | Convert through an exact rate | Sync | Rate source must match value currency |
-| `format` | Present money with `Intl` | Sync | Formatting does not define currency scale |
-| `toJSON` / `decodeMoney` | Cross serialization or realm boundary | Sync | Persisted amount uses minor units |
+| Symbol                   | Purpose                               | Execution | Common gotcha                             |
+| ------------------------ | ------------------------------------- | --------- | ----------------------------------------- |
+| `money`                  | Construct validated money             | Sync      | Bigint requires `{ unit: 'minor' }`       |
+| `currency`               | Resolve built-in or construct custom  | Sync      | Unknown codes throw                       |
+| `add` / `subtract`       | Combine matching currencies           | Sync      | Mismatches throw                          |
+| `multiply` / `divide`    | Exact decimal scaling                 | Sync      | Use decimal strings                       |
+| `sum`                    | Aggregate with inferred currency      | Sync      | Empty iterable requires `{ currency }`    |
+| `allocate`               | Split without losing minor units      | Sync      | Weights must be non-negative              |
+| `clamp`                  | Bound to min/max range                | Sync      | Min must not exceed max                   |
+| `exchange`               | Convert through an exact rate         | Sync      | Rate source must match value currency     |
+| `format`                 | Present money with `Intl`             | Sync      | Formatting does not define currency scale |
+| `toJSON` / `decodeMoney` | Cross serialization or realm boundary | Sync      | Persisted amount uses minor units         |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import            | Purpose                   |
+| ----------------- | ------------------------- |
 | `@vielzeug/coins` | Complete public Coins API |
 
 ## Construction
@@ -219,14 +219,14 @@ type RoundingMode = 'awayFromZero' | 'ceil' | 'floor' | 'halfAwayFromZero' | 'ha
 
 `CurrencyCode`, `Decimal`, and `Money` carry phantom brand symbols that prevent unbranded values from being assigned where canonical values are required. `ExchangeRate.value` exposes a normalized exact `Decimal` numerator and denominator.
 
-| Rounding mode | Behavior |
-| --- | --- |
-| `awayFromZero` | Always increase a non-exact magnitude |
-| `ceil` | Toward positive infinity |
-| `floor` | Toward negative infinity |
-| `halfAwayFromZero` | Nearest; midpoint away from zero |
-| `halfEven` | Nearest; midpoint to an even retained unit |
-| `towardZero` | Truncate toward zero |
+| Rounding mode      | Behavior                                   |
+| ------------------ | ------------------------------------------ |
+| `awayFromZero`     | Always increase a non-exact magnitude      |
+| `ceil`             | Toward positive infinity                   |
+| `floor`            | Toward negative infinity                   |
+| `halfAwayFromZero` | Nearest; midpoint away from zero           |
+| `halfEven`         | Nearest; midpoint to an even retained unit |
+| `towardZero`       | Truncate toward zero                       |
 
 ## Errors
 

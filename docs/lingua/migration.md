@@ -8,19 +8,19 @@ Lingua 3.0 simplifies the constructor surface to two entry points and adds expli
 
 ## Summary of changes
 
-| Before | After |
-| --- | --- |
-| `createCatalogTranslator(catalog, { locale })` | `createTranslator(catalog, { locale })` |
-| `createTranslator(catalogs, { locale, fallback })` | Removed: use `createI18n` for multi-locale |
-| `createTranslationStore({ catalogs, locale })` | `createI18n({ catalogs, locale, loadCatalog? })` |
-| `hydrateTranslationStore(state)` | `createI18n({ state })` |
-| `TranslationStore` / `TranslationSnapshot` | `I18n` / `I18nSnapshot` |
-| `segments()` / `segmentsDynamic()` | `parts()` / `partsDynamic()` |
-| `onMissingKey` / `onMissingValue` options | `missing: 'throw' \| 'key' \| handler` |
-| `@vielzeug/lingua/format` (`createFormatter`) | Retained as an optional standalone Intl facade |
-| `TranslationState` version `3` | version `4` |
-| `LinguaMissingResourceError` (2.x) | `LinguaMissingCatalogError` (unchanged from 2.x) |
-| N/A | `LinguaMissingKeyError`, `LinguaMissingValueError` (new) |
+| Before                                             | After                                                    |
+| -------------------------------------------------- | -------------------------------------------------------- |
+| `createCatalogTranslator(catalog, { locale })`     | `createTranslator(catalog, { locale })`                  |
+| `createTranslator(catalogs, { locale, fallback })` | Removed: use `createI18n` for multi-locale               |
+| `createTranslationStore({ catalogs, locale })`     | `createI18n({ catalogs, locale, loadCatalog? })`         |
+| `hydrateTranslationStore(state)`                   | `createI18n({ state })`                                  |
+| `TranslationStore` / `TranslationSnapshot`         | `I18n` / `I18nSnapshot`                                  |
+| `segments()` / `segmentsDynamic()`                 | `parts()` / `partsDynamic()`                             |
+| `onMissingKey` / `onMissingValue` options          | `missing: 'throw' \| 'key' \| handler`                   |
+| `@vielzeug/lingua/format` (`createFormatter`)      | Retained as an optional standalone Intl facade           |
+| `TranslationState` version `3`                     | version `4`                                              |
+| `LinguaMissingResourceError` (2.x)                 | `LinguaMissingCatalogError` (unchanged from 2.x)         |
+| N/A                                                | `LinguaMissingKeyError`, `LinguaMissingValueError` (new) |
 
 ## Replace constructor calls
 

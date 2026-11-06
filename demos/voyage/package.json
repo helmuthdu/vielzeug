@@ -21,10 +21,10 @@
     "@vielzeug/ripple": "workspace:*",
     "@vielzeug/tempo": "workspace:*",
     "@vielzeug/wayfinder": "workspace:*",
-    "lucide": "^1.59.0"
+    "lucide": "^1.69.0"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
-    "vite": "^8.3.4"
+    "vite": "^8.3.6"
   }
 }

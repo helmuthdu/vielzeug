@@ -14,11 +14,7 @@ Retry, load shedding, and shutdown require different worker failure handling.
 Branch on Familiar's typed errors.
 
 ```ts
-import {
-  FamiliarQueueFullError,
-  FamiliarTaskError,
-  FamiliarTimeoutError,
-} from '@vielzeug/familiar';
+import { FamiliarQueueFullError, FamiliarTaskError, FamiliarTimeoutError } from '@vielzeug/familiar';
 
 function handleWorkerError(error: unknown): void {
   if (error instanceof FamiliarTimeoutError) console.log('retry later');

@@ -18,9 +18,7 @@ import { createForm } from '@vielzeug/forge';
 const form = createForm({
   initialValues: { profile: { email: '', name: '' } },
   validate: (value) =>
-    value.profile.email.includes('@')
-      ? undefined
-      : [{ path: ['profile', 'email'], message: 'Enter a valid email' }],
+    value.profile.email.includes('@') ? undefined : [{ path: ['profile', 'email'], message: 'Enter a valid email' }],
 });
 
 const email = form.field('profile').field('email');

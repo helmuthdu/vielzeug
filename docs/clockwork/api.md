@@ -7,37 +7,37 @@ description: Reference for Clockwork machine definitions, actors, and types.
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `defineMachine()` | Define a typed flat machine | Sync | Call the generic factory before supplying the definition |
-| `Machine.transition()` | Resolve a pure next snapshot | Sync | Does not run effects, invokes, or timers |
-| `Machine.createActor()` | Create a runtime owner | Sync | Fresh and restored actors have different entry behavior |
-| `Actor.send()` | Dispatch an event | Sync | Returns `void`; re-entrant events queue internally |
-| `Actor.subscribe()` | Observe committed snapshots | Sync | Observes only; it does not trace sends or errors |
-| `Actor.tap()` | Observe transitions, ignores, errors, disposal | Sync | Handler errors are swallowed; it cannot control disposition |
-| `ClockworkError` | Report definition, snapshot, and transition-limit failures | Sync | Narrow with the error subtypes, not message text |
+| Symbol                  | Purpose                                                    | Execution mode | Common gotcha                                               |
+| ----------------------- | ---------------------------------------------------------- | -------------- | ----------------------------------------------------------- |
+| `defineMachine()`       | Define a typed flat machine                                | Sync           | Call the generic factory before supplying the definition    |
+| `Machine.transition()`  | Resolve a pure next snapshot                               | Sync           | Does not run effects, invokes, or timers                    |
+| `Machine.createActor()` | Create a runtime owner                                     | Sync           | Fresh and restored actors have different entry behavior     |
+| `Actor.send()`          | Dispatch an event                                          | Sync           | Returns `void`; re-entrant events queue internally          |
+| `Actor.subscribe()`     | Observe committed snapshots                                | Sync           | Observes only; it does not trace sends or errors            |
+| `Actor.tap()`           | Observe transitions, ignores, errors, disposal             | Sync           | Handler errors are swallowed; it cannot control disposition |
+| `ClockworkError`        | Report definition, snapshot, and transition-limit failures | Sync           | Narrow with the error subtypes, not message text            |
 
 ## Package Entry Points
 
-| Import | Purpose |
-| --- | --- |
+| Import                | Purpose                                           |
+| --------------------- | ------------------------------------------------- |
 | `@vielzeug/clockwork` | Machine factory, actor runtime, errors, and types |
 
 ## Exported Surface
 
 Callback parameter types are inferred for inline definitions. Clockwork also exports reusable callback, transition, state-node, actor-option, result, and error-context types for shared helpers.
 
-| Primary export | Kind |
-| --- | --- |
-| `defineMachine` | Function |
-| `Machine` | Type |
-| `Actor` | Type |
-| `MachineSnapshot` | Type |
-| `MachineConfig` | Type |
-| `ClockworkError` | Class |
-| `ClockworkDefinitionError` | Class |
-| `ClockworkSnapshotError` | Class |
-| `ClockworkTransitionLimitError` | Class |
+| Primary export                  | Kind     |
+| ------------------------------- | -------- |
+| `defineMachine`                 | Function |
+| `Machine`                       | Type     |
+| `Actor`                         | Type     |
+| `MachineSnapshot`               | Type     |
+| `MachineConfig`                 | Type     |
+| `ClockworkError`                | Class    |
+| `ClockworkDefinitionError`      | Class    |
+| `ClockworkSnapshotError`        | Class    |
+| `ClockworkTransitionLimitError` | Class    |
 
 Additional exported types: `ActorErrorContext`, `ActorOptions`, `ActorTapEvent`, `After`, `Effect`, `EffectArgs`, `EventByType`, `EventType`, `Guard`, `Invoke`, `InvokeArgs`, `MachineEvent`, `Reducer`, `StateNode`, `Transition`, `TransitionInput`, and `TransitionResult`.
 
@@ -113,10 +113,10 @@ transition(
 
 Resolves a snapshot for one user event without actor runtime work.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
+| Parameter  | Type                              | Description             |
+| ---------- | --------------------------------- | ----------------------- |
 | `snapshot` | `MachineSnapshot<State, Context>` | Input state and context |
-| `event` | `Event` | User event to evaluate |
+| `event`    | `Event`                           | User event to evaluate  |
 
 **Returns:** A `TransitionResult` with `transition` or `ignored` type.
 
@@ -148,8 +148,8 @@ createActor(options?: ActorOptions<State, Context>): Actor<State, Context, Event
 
 Creates an independent actor for event dispatch, timers, invokes, effects, subscriptions, and disposal. A fresh actor starts the initial state's entry effects and resources. An actor restored with `options.snapshot` starts only the restored state's resources: invokes and timers, not entry effects.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
+| Parameter          | Type                              | Description                      |
+| ------------------ | --------------------------------- | -------------------------------- |
 | `options.snapshot` | `MachineSnapshot<State, Context>` | Optional restored actor snapshot |
 
 **Returns:** Disposable `Actor`.
@@ -248,11 +248,14 @@ Clockwork shallow-clones and freezes each snapshot and its context record. Neste
 ### `MachineConfig<State, Context, Event>`
 
 ```ts
-type MachineConfig<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> =
-  (keyof Context extends never ? { readonly context?: Context } : { readonly context: Context }) & {
-    readonly initial: State;
-    readonly states: Record<State, StateNode<State, Context, Event>>;
-  };
+type MachineConfig<
+  State extends string,
+  Context extends Record<string, unknown>,
+  Event extends MachineEvent,
+> = (keyof Context extends never ? { readonly context?: Context } : { readonly context: Context }) & {
+  readonly initial: State;
+  readonly states: Record<State, StateNode<State, Context, Event>>;
+};
 ```
 
 A flat machine definition. State nodes cannot contain child states. The `StateNode`, `Transition`, `After`, `Invoke`, `Effect`, `Guard`, and `Reducer` shapes are inferred inline and exported for reusable helpers. `After.delay` must be finite and between 0 and 2,147,483,647 milliseconds; delayed guards and reducers receive `event: undefined`.
@@ -316,11 +319,11 @@ A reusable machine. Its state and event lookups are own-property guarded, so unk
 
 `ClockworkError` is the base class for every Clockwork failure, with `details` and standard `Error` fields. Use `instanceof ClockworkError` to narrow an unknown error. Three subtypes carry the failure category:
 
-| Subtype | Raised when |
-| --- | --- |
-| `ClockworkDefinitionError` | `defineMachine()` rejects a definition footgun types cannot express: a timer delay outside `0..2,147,483,647` ms, an empty transition array, or a context that is not a plain record |
-| `ClockworkSnapshotError` | A snapshot, its context, or a reducer result is not a plain object record, or names an undeclared state |
-| `ClockworkTransitionLimitError` | An actor exceeds the fixed queued-transition limit and disposes itself |
+| Subtype                         | Raised when                                                                                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ClockworkDefinitionError`      | `defineMachine()` rejects a definition footgun types cannot express: a timer delay outside `0..2,147,483,647` ms, an empty transition array, or a context that is not a plain record |
+| `ClockworkSnapshotError`        | A snapshot, its context, or a reducer result is not a plain object record, or names an undeclared state                                                                              |
+| `ClockworkTransitionLimitError` | An actor exceeds the fixed queued-transition limit and disposes itself                                                                                                               |
 
 ```ts
 if (error instanceof ClockworkDefinitionError) {

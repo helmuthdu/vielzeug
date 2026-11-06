@@ -7,20 +7,20 @@ description: Snapshot, catalog, MCP server, and local HTTP host APIs.
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `loadSnapshot` | Read validated snapshot metadata | Sync | Content chunks load lazily |
-| `SnapshotCatalog` | Query package corpus | Sync | Construct from loaded snapshot |
-| `createMcpServer` | MCP adapter factory (generic tools) | Sync | Requires catalog and version |
-| `createMcpServerWithRefine` | MCP adapter factory (all package and Refine tools) | Sync | Import from `@vielzeug/codex/refine` |
-| `startHttpHost` | Loopback Streamable HTTP host | Async | HTTP remains local-only |
+| Symbol                      | Purpose                                            | Execution mode | Common gotcha                        |
+| --------------------------- | -------------------------------------------------- | -------------- | ------------------------------------ |
+| `loadSnapshot`              | Read validated snapshot metadata                   | Sync           | Content chunks load lazily           |
+| `SnapshotCatalog`           | Query package corpus                               | Sync           | Construct from loaded snapshot       |
+| `createMcpServer`           | MCP adapter factory (generic tools)                | Sync           | Requires catalog and version         |
+| `createMcpServerWithRefine` | MCP adapter factory (all package and Refine tools) | Sync           | Import from `@vielzeug/codex/refine` |
+| `startHttpHost`             | Loopback Streamable HTTP host                      | Async          | HTTP remains local-only              |
 
 ## Package Entry Points
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/codex` | `Catalog`, `SnapshotCatalog`, `loadSnapshot`, MCP server, and HTTP host |
-| `@vielzeug/codex/refine` | Refine catalog and MCP server with component tools |
+| Import                   | Purpose                                                                 |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `@vielzeug/codex`        | `Catalog`, `SnapshotCatalog`, `loadSnapshot`, MCP server, and HTTP host |
+| `@vielzeug/codex/refine` | Refine catalog and MCP server with component tools                      |
 
 ## Snapshot
 

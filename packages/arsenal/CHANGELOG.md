@@ -3,138 +3,161 @@
 This log was last generated on Thu, 05 Nov 2026 21:44:45 GMT and should not be manually modified.
 
 ## 26.11.5
+
 Thu, 05 Nov 2026 21:44:45 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.4
+
 Wed, 04 Nov 2026 16:49:50 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.3
+
 Wed, 04 Nov 2026 05:52:43 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.2
+
 Tue, 03 Nov 2026 18:42:43 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.1
+
 Tue, 03 Nov 2026 17:00:37 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.0
+
 Tue, 03 Nov 2026 16:30:26 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.22
+
 Fri, 30 Oct 2026 19:07:28 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.21
+
 Tue, 27 Oct 2026 08:39:39 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.20
+
 Sun, 25 Oct 2026 05:13:02 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.19
+
 Sat, 24 Oct 2026 19:56:28 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.18
+
 Fri, 23 Oct 2026 14:23:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.17
+
 Fri, 23 Oct 2026 07:29:16 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.16
+
 Wed, 21 Oct 2026 07:30:45 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.15
+
 Mon, 19 Oct 2026 10:13:34 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.14
+
 Sun, 18 Oct 2026 09:46:30 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.13
+
 Sat, 17 Oct 2026 06:46:08 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.12
+
 Sat, 17 Oct 2026 05:06:33 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.11
+
 Thu, 15 Oct 2026 13:45:48 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.10
+
 Thu, 15 Oct 2026 05:00:39 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.9
+
 Wed, 14 Oct 2026 21:26:14 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.8
+
 Tue, 13 Oct 2026 07:49:18 GMT
 
 ### Minor changes
 
 - add paginate and criteria-based sort
 ## 26.10.7
+
 Mon, 12 Oct 2026 20:24:11 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.6
+
 Mon, 12 Oct 2026 18:44:06 GMT
 
 ### Minor changes
@@ -145,30 +168,35 @@ Mon, 12 Oct 2026 18:44:06 GMT
 
 - Reject unsupported or unserializable share-code payloads with typed errors rather than producing invalid codes.
 ## 26.10.5
+
 Thu, 08 Oct 2026 07:48:38 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.4
+
 Wed, 07 Oct 2026 14:13:11 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.3
+
 Wed, 07 Oct 2026 11:33:21 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.2
+
 Wed, 07 Oct 2026 10:50:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.1
+
 Wed, 07 Oct 2026 07:25:55 GMT
 
 ### Patches
@@ -176,6 +204,7 @@ Wed, 07 Oct 2026 07:25:55 GMT
 - Standardize package text punctuation
 - Clarify assertion and array example documentation
 ## 26.10.0
+
 Fri, 02 Oct 2026 18:01:51 GMT
 
 ### Minor changes
@@ -184,6 +213,7 @@ Fri, 02 Oct 2026 18:01:51 GMT
 - Expose taskPool, waitFor, cache, and memo from the root barrel
 - Add encoding/base64url: environment-independent base64url text and byte codecs
 ## 3.0.0
+
 Wed, 09 Sep 2026 22:15:14 GMT
 
 ### Breaking changes
@@ -191,13 +221,15 @@ Wed, 09 Sep 2026 22:15:14 GMT
 - refactor!: consolidate reusable random primitives, narrow obsolete utility exports, and expose live cache entry snapshots
 
 ## 2.1.0
+
 Sun, 16 Aug 2026 09:15:39 GMT
 
 ### Minor changes
 
-- refactor: remove ArsenalError.is() type guard; use instanceof ArsenalError. Export abortable from async subpath. Remove side effect from cache.size getter. Simplify backoff to 2 ** n. Replace Reflect.apply in pipe with direct call.
+- refactor: remove ArsenalError.is() type guard; use instanceof ArsenalError. Export abortable from async subpath. Remove side effect from cache.size getter. Simplify backoff to 2 \*\* n. Replace Reflect.apply in pipe with direct call.
 
 ## 2.0.1
+
 Thu, 06 Aug 2026 07:20:49 GMT
 
 ### Patches
@@ -205,6 +237,7 @@ Thu, 06 Aug 2026 07:20:49 GMT
 - publish clean export metadata and classic TypeScript subpath mappings
 
 ## 2.0.0
+
 Wed, 05 Aug 2026 16:48:52 GMT
 
 ### Breaking changes
@@ -212,6 +245,7 @@ Wed, 05 Aug 2026 16:48:52 GMT
 - Redesign Arsenal around focused category entry points
 
 ## 1.1.2
+
 Fri, 24 Jul 2026 05:28:41 GMT
 
 ### Patches
@@ -219,6 +253,7 @@ Fri, 24 Jul 2026 05:28:41 GMT
 - chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement
 
 ## 1.1.1
+
 Tue, 07 Jul 2026 09:20:39 GMT
 
 ### Patches
@@ -226,6 +261,7 @@ Tue, 07 Jul 2026 09:20:39 GMT
 - chore: declare minimum supported Node.js version (>=18) in package.json engines
 
 ## 1.1.0
+
 Sun, 05 Jul 2026 05:52:18 GMT
 
 ### Minor changes
@@ -233,6 +269,7 @@ Sun, 05 Jul 2026 05:52:18 GMT
 - feat(arsenal): harden prototype-pollution guards, fix concurrency/caching edge cases, add error subclass hierarchy, and reorganize random utilities
 
 ## 1.0.1
+
 Fri, 03 Jul 2026 06:00:47 GMT
 
 ### Patches
@@ -240,9 +277,9 @@ Fri, 03 Jul 2026 06:00:47 GMT
 - chore(arsenal): rename internal _warn.ts to _dev.ts
 
 ## 1.0.0
+
 Wed, 01 Jul 2026 16:10:37 GMT
 
 ### Breaking changes
 
 - Initial public release
-

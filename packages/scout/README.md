@@ -21,10 +21,7 @@ const users = [
 ];
 
 const index = createIndex(users, {
-  fields: [
-    { field: 'name', weight: 2 },
-    { field: 'email' },
-  ],
+  fields: [{ field: 'name', weight: 2 }, { field: 'email' }],
 });
 
 console.log(index.search('ada')[0]?.item.name); // Ada Lovelace

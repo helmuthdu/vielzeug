@@ -102,15 +102,15 @@ Override `--code-window-body-padding` for a more compact look:
 | ---------- | ------------------ | ----------------- | ----------------------------------------------------------- |
 | `variant`  | `'code' \| 'chat'` | `'code'`          | Switches the header chrome between code and chat mode       |
 | `lang`     | `string`           | `'ts'`            | Language badge text (`variant="code"` only)                 |
-| `filename` | `string`           | N/A | Filename shown next to the badge (`variant="code"` only)    |
+| `filename` | `string`           | N/A               | Filename shown next to the badge (`variant="code"` only)    |
 | `title`    | `string`           | `'MCP tool call'` | Label beside the traffic-light dots (`variant="chat"` only) |
 
 ### Slots
 
-| Slot        | Description                                                        |
-| ----------- | ------------------------------------------------------------------ |
-| *(default)* | Main body content: code blocks, conversation turns, or any markup |
-| `header-end`| Content pinned to the trailing edge of the header bar             |
+| Slot         | Description                                                       |
+| ------------ | ----------------------------------------------------------------- |
+| _(default)_  | Main body content: code blocks, conversation turns, or any markup |
+| `header-end` | Content pinned to the trailing edge of the header bar             |
 
 ### CSS Parts
 
@@ -126,14 +126,14 @@ Override `--code-window-body-padding` for a more compact look:
 
 ### CSS Custom Properties
 
-| Property                     | Default              | Description             |
-| ---------------------------- | -------------------- | ----------------------- |
-| `--code-window-bg`           | `--color-canvas`     | Window background color |
+| Property                     | Default                | Description             |
+| ---------------------------- | ---------------------- | ----------------------- |
+| `--code-window-bg`           | `--color-canvas`       | Window background color |
 | `--code-window-header-bg`    | `--color-contrast-100` | Header background color |
 | `--code-window-border-color` | `--color-contrast-300` | Border color            |
-| `--code-window-radius`       | `--rounded-lg`       | Border radius           |
-| `--code-window-shadow`       | `--shadow-sm`        | Box shadow              |
-| `--code-window-body-padding` | `--size-5 --size-6`  | Body slot padding       |
+| `--code-window-radius`       | `--rounded-lg`         | Border radius           |
+| `--code-window-shadow`       | `--shadow-sm`          | Box shadow              |
+| `--code-window-body-padding` | `--size-5 --size-6`    | Body slot padding       |
 
 ## Accessibility
 

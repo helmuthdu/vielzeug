@@ -42,10 +42,10 @@ Omit `rect` (or pass a zero-size one) to dim the whole page without a cutout.
 
 ### Attributes
 
-| Attribute | Type    | Default | Description                                        |
-| --------- | ------- | ------- | -------------------------------------------------- |
-| `radius`  | `number` | `8`     | Cutout corner radius in px                         |
-| `visible` | `boolean` | `true`  | Show the dim layer                                 |
+| Attribute | Type      | Default | Description                |
+| --------- | --------- | ------- | -------------------------- |
+| `radius`  | `number`  | `8`     | Cutout corner radius in px |
+| `visible` | `boolean` | `true`  | Show the dim layer         |
 
 The `rect` prop is JS-only (no attribute): assign a `DOMRect` or a plain `{ x, y, width, height }` in viewport pixels.
 
@@ -56,19 +56,19 @@ spotlight.rect = null; // dim the whole page
 
 ### CSS Custom Properties
 
-| Property             | Description                                     |
-| -------------------- | ----------------------------------------------- |
-| `--spotlight-dim`    | Dim color (default `--color-scrim`) |
-| `--spotlight-ring`   | Ring drawn around the cutout (default: `none`)  |
-| `--spotlight-radius` | Cutout corner radius                            |
+| Property                 | Description                                                             |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `--spotlight-dim`        | Dim color (default `--color-scrim`)                                     |
+| `--spotlight-ring`       | Ring drawn around the cutout (default: `none`)                          |
+| `--spotlight-radius`     | Cutout corner radius                                                    |
 | `--spotlight-transition` | Geometry transition (default: `var(--duration-250) var(--ease-spring)`) |
 
 ### Parts
 
-| Part      | Description                  |
-| --------- | ---------------------------- |
-| `overlay` | The fixed dim layer          |
-| `cutout`  | The highlighted rectangle    |
+| Part      | Description               |
+| --------- | ------------------------- |
+| `overlay` | The fixed dim layer       |
+| `cutout`  | The highlighted rectangle |
 
 ## Accessibility
 

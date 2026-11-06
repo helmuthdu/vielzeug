@@ -15,12 +15,11 @@ import { en } from '@vielzeug/illusionist/locales';
 
 const illusion = createIllusion({ seed: 12345, locale: en });
 
-illusion.person.firstName();       // 'Ashley'
-illusion.internet.username();      // 'fVEv9zc638m'
-illusion.commerce.productName();   // 'Intelligent Granite Table'
+illusion.person.firstName(); // 'Ashley'
+illusion.internet.username(); // 'fVEv9zc638m'
+illusion.commerce.productName(); // 'Intelligent Granite Table'
 illusion.date.recent({ days: 7 }); // Temporal.ZonedDateTime within the last week
-illusion.lorem.sentence();         // 'Enim ex non ea minim amet sint laborum proident nisi anim officia.'
-
+illusion.lorem.sentence(); // 'Enim ex non ea minim amet sint laborum proident nisi anim officia.'
 ```
 
 ## Seeded Determinism
@@ -64,13 +63,13 @@ const english = createIllusion({ seed: 1, locale: en });
 const german = createIllusion({ seed: 1, locale: de });
 
 english.person.firstName(); // 'Mary'
-german.person.firstName();  // 'Mia'
+german.person.firstName(); // 'Mia'
 
 english.location.city(); // 'Austin'
-german.location.city();  // 'Bremen'
+german.location.city(); // 'Bremen'
 
 english.date.month(); // 'December'
-german.date.month();  // 'Dezember'
+german.date.month(); // 'Dezember'
 ```
 
 The locale is fixed for the lifetime of an instance. Each locale is a separate subpath, so locale data ships only when that subpath is imported; the root package does not statically include English or German data. Create a new instance to switch locales.
@@ -104,7 +103,7 @@ const fr: IllusionistLocale = {
   location: {
     cities: ['Paris', 'Lyon', 'Marseille'],
     countries: ['France', 'Belgique', 'Suisse'],
-    states: ['Île-de-France', 'Auvergne-Rhône-Alpes', 'Provence-Alpes-Côte d\'Azur'],
+    states: ['Île-de-France', 'Auvergne-Rhône-Alpes', "Provence-Alpes-Côte d'Azur"],
     streets: ['rue de la Paix', 'avenue des Champs-Élysées', 'boulevard Saint-Germain'],
     zipPattern: '#####',
   },
@@ -112,9 +111,9 @@ const fr: IllusionistLocale = {
 
 const illusion = createIllusion({ seed: 42, locale: fr });
 
-illusion.person.fullName();    // 'Camille Dubois'
-illusion.location.city();      // 'Marseille'
-illusion.person.jobTitle();    // 'marketing ingénieur'
+illusion.person.fullName(); // 'Camille Dubois'
+illusion.location.city(); // 'Marseille'
+illusion.person.jobTitle(); // 'marketing ingénieur'
 ```
 
 `date.weekday()` and `date.month()` currently ship English and German name arrays only; a custom locale code falls through to the English set. For other languages, format a generated `Temporal` date with `@vielzeug/tempo`'s `format()` and your own `Intl.DateTimeFormat` options.
@@ -123,16 +122,16 @@ Use `satisfies IllusionistLocale` instead of a bare type annotation to get error
 
 ## Category Overview
 
-| Category | Example call                        | Returns |
-| --- |-------------------------------------| --- |
-| `person` | `illusion.person.fullName()`        | `string` |
-| `internet` | `illusion.internet.email()`         | `string` |
-| `commerce` | `illusion.commerce.price()`         | `Money` (coins) |
-| `date` | `illusion.date.past({ years: 1 })`  | `Temporal.ZonedDateTime` (tempo) |
-| `finance` | `illusion.finance.iban()`           | `string` |
-| `location` | `illusion.location.streetAddress()` | `string` |
-| `lorem` | `illusion.lorem.paragraph()`        | `string` |
-| `system` | `illusion.system.uuid()`            | `string` |
+| Category   | Example call                        | Returns                          |
+| ---------- | ----------------------------------- | -------------------------------- |
+| `person`   | `illusion.person.fullName()`        | `string`                         |
+| `internet` | `illusion.internet.email()`         | `string`                         |
+| `commerce` | `illusion.commerce.price()`         | `Money` (coins)                  |
+| `date`     | `illusion.date.past({ years: 1 })`  | `Temporal.ZonedDateTime` (tempo) |
+| `finance`  | `illusion.finance.iban()`           | `string`                         |
+| `location` | `illusion.location.streetAddress()` | `string`                         |
+| `lorem`    | `illusion.lorem.paragraph()`        | `string`                         |
+| `system`   | `illusion.system.uuid()`            | `string`                         |
 
 ## Working with Other Vielzeug Libraries
 

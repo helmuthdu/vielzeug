@@ -41,7 +41,9 @@ import { createForm, toPlainValues } from '@vielzeug/forge';
 class ProviderUserModel {
   id: number;
   email = '';
-  constructor(id: number) { this.id = id; }
+  constructor(id: number) {
+    this.id = id;
+  }
 }
 
 const form = createForm<{ users: ProviderUserModel[] }>({
@@ -50,7 +52,7 @@ const form = createForm<{ users: ProviderUserModel[] }>({
 });
 
 form.field('users').field(0).set(new ProviderUserModel(2)); // flattened like init
-form.reset({ users: [new ProviderUserModel(3)] });          // flattened like init
+form.reset({ users: [new ProviderUserModel(3)] }); // flattened like init
 // Rebuild models at submit:
 await form.submit((values) => send(values.users.map((u) => new ProviderUserModel(u.id))));
 ```
@@ -102,7 +104,9 @@ import { bindField } from '@vielzeug/forge/dom';
 
 const stop = bindField(input, form.field('email'), {
   read: (element) => element.value,
-  write: (element, value) => { element.value = value; },
+  write: (element, value) => {
+    element.value = value;
+  },
 });
 ```
 
@@ -166,7 +170,11 @@ import { useSyncExternalStore } from 'react';
 import type { Form } from '@vielzeug/forge';
 
 export function useFormState<T extends Record<string, unknown>>(form: Form<T>) {
-  return useSyncExternalStore(form.subscribe, () => form.state, () => form.state);
+  return useSyncExternalStore(
+    form.subscribe,
+    () => form.state,
+    () => form.state,
+  );
 }
 ```
 
@@ -178,7 +186,12 @@ import type { Form } from '@vielzeug/forge';
 
 export function useFormState<T extends Record<string, unknown>>(form: Form<T>) {
   const state = shallowRef(form.state);
-  const stop = form.subscribe((next) => { state.value = next; }, { immediate: true });
+  const stop = form.subscribe(
+    (next) => {
+      state.value = next;
+    },
+    { immediate: true },
+  );
   onUnmounted(stop);
   return state;
 }

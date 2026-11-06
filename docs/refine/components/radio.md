@@ -188,8 +188,8 @@ The selected `value` attribute is submitted with the form under the `name` field
 | `disabled` | `boolean`                                                                 | `false`     | Disable the radio button                |
 | `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color                          |
 | `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`      | Radio button size                       |
-| `name`     | `string`                                                                  | N/A | Form field name (required for grouping) |
-| `value`    | `string`                                                                  | N/A | Form field value when checked           |
+| `name`     | `string`                                                                  | N/A         | Form field name (required for grouping) |
+| `value`    | `string`                                                                  | N/A         | Form field value when checked           |
 
 **`ore-radio` Slots**
 
@@ -216,23 +216,23 @@ The selected `value` attribute is submitted with the form under the `name` field
 
 **`ore-radio-group` Attributes**
 
-| Attribute     | Type                                                                      | Default      | Description                                      |
-| ------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------ |
+| Attribute     | Type                                                                      | Default      | Description                                     |
+| ------------- | ------------------------------------------------------------------------- | ------------ | ----------------------------------------------- |
 | `label`       | `string`                                                                  | `''`         | Legend text: required for accessibility         |
-| `value`       | `string`                                                                  | `''`         | Currently selected value                         |
+| `value`       | `string`                                                                  | `''`         | Currently selected value                        |
 | `name`        | `string`                                                                  | `''`         | Form field name: propagated to all child radios |
-| `orientation` | `'vertical' \| 'horizontal'`                                              | `'vertical'` | Layout direction                                 |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Color theme: propagated to all child radios     |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | N/A | Size: propagated to all child radios            |
-| `disabled`    | `boolean`                                                                 | `false`      | Disable all radios in the group                  |
-| `error`       | `string`                                                                  | `''`         | Error message shown below the group              |
-| `helper`      | `string`                                                                  | `''`         | Helper text (hidden when `error` is set)         |
-| `required`    | `boolean`                                                                 | `false`      | Mark the group as required                       |
+| `orientation` | `'vertical' \| 'horizontal'`                                              | `'vertical'` | Layout direction                                |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A          | Color theme: propagated to all child radios     |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | N/A          | Size: propagated to all child radios            |
+| `disabled`    | `boolean`                                                                 | `false`      | Disable all radios in the group                 |
+| `error`       | `string`                                                                  | `''`         | Error message shown below the group             |
+| `helper`      | `string`                                                                  | `''`         | Helper text (hidden when `error` is set)        |
+| `required`    | `boolean`                                                                 | `false`      | Mark the group as required                      |
 
 **`ore-radio-group` Slots**
 
-| Slot      | Description                    |
-| --------- | ------------------------------ |
+| Slot      | Description                     |
+| --------- | ------------------------------- |
 | (default) | Place `ore-radio` elements here |
 
 **`ore-radio-group` Events**

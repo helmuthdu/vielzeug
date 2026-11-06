@@ -76,15 +76,15 @@ Avoid assigning `grid-row` to individual groups when their columns contain diffe
 
 ## API Reference
 
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `open` | `string` | N/A | Controlled active trigger value. User interaction emits an `open-change` request; update this value to apply it. |
-| `default-open` | `string` | N/A | Initial active trigger value. |
-| `close-on-select` | `boolean` | `true` | Closes the menu after activating a panel link. |
-| `columns` | `number` | `2` | Number of columns in the panel grid. |
-| `label` | `string` | `'Navigation menu'` | Accessible label for the trigger region. |
-| `placement` | `'bottom-start' \| 'bottom-end'` | `'bottom-start'` | Panel placement relative to active trigger. |
-| `disabled` | `boolean` | `false` | Disables all triggers. |
+| Attribute         | Type                             | Default             | Description                                                                                                      |
+| ----------------- | -------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `open`            | `string`                         | N/A                 | Controlled active trigger value. User interaction emits an `open-change` request; update this value to apply it. |
+| `default-open`    | `string`                         | N/A                 | Initial active trigger value.                                                                                    |
+| `close-on-select` | `boolean`                        | `true`              | Closes the menu after activating a panel link.                                                                   |
+| `columns`         | `number`                         | `2`                 | Number of columns in the panel grid.                                                                             |
+| `label`           | `string`                         | `'Navigation menu'` | Accessible label for the trigger region.                                                                         |
+| `placement`       | `'bottom-start' \| 'bottom-end'` | `'bottom-start'`    | Panel placement relative to active trigger.                                                                      |
+| `disabled`        | `boolean`                        | `false`             | Disables all triggers.                                                                                           |
 
 Set `--navigation-menu-panel-width` to change the panel width, `columns` to change how many grid columns the panel uses, and `--navigation-menu-backdrop-blur` to tune the frosted backdrop.
 

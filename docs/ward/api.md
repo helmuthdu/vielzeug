@@ -7,17 +7,17 @@ description: Ordered authorization rules, typed decisions, immutable policies, a
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createWard()` | Compile immutable ordered rules | Sync | First match wins |
-| `allow()` / `deny()` | Create role-conditioned rules | Sync | One rule is produced per action |
-| `predicate` | Compose typed synchronous conditions | Sync | Async results throw |
-| `matchesPattern()` | Match exact and wildcard values | Sync | `posts:*` does not match `posts` |
+| Symbol               | Purpose                              | Execution mode | Common gotcha                    |
+| -------------------- | ------------------------------------ | -------------- | -------------------------------- |
+| `createWard()`       | Compile immutable ordered rules      | Sync           | First match wins                 |
+| `allow()` / `deny()` | Create role-conditioned rules        | Sync           | One rule is produced per action  |
+| `predicate`          | Compose typed synchronous conditions | Sync           | Async results throw              |
+| `matchesPattern()`   | Match exact and wildcard values      | Sync           | `posts:*` does not match `posts` |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import           | Purpose                                               |
+| ---------------- | ----------------------------------------------------- |
 | `@vielzeug/ward` | All runtime APIs, errors, constants, and public types |
 
 ## Core API
@@ -27,14 +27,14 @@ description: Ordered authorization rules, typed decisions, immutable policies, a
 ```ts
 function createWard<Action extends string, Resource extends string, Attributes extends WardAttributes>(
   rules?: readonly (WardRule<Action, Resource, Attributes> | readonly WardRule<Action, Resource, Attributes>[])[],
-): Ward<Action, Resource, Attributes>
+): Ward<Action, Resource, Attributes>;
 ```
 
 Returns an immutable ordered policy. Nested rule arrays are flattened once. Rules, declarative attributes, and bound principals are snapshotted.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `rules` | `readonly (WardRule \| readonly WardRule[])[]` | Rules in first-match order |
+| Parameter | Type                                           | Description                |
+| --------- | ---------------------------------------------- | -------------------------- |
+| `rules`   | `readonly (WardRule \| readonly WardRule[])[]` | Rules in first-match order |
 
 **Returns:** `Ward<Action, Resource, Attributes>`.
 
@@ -44,15 +44,15 @@ import { allow, createWard } from '@vielzeug/ward';
 const ward = createWard<'read', 'posts'>([allow('viewer', 'posts', ['read'])]);
 ```
 
-| Method | Returns | Behavior |
-| --- | --- | --- |
-| `decide(input)` | `WardDecision` | Evaluates and emits one decision event |
-| `checkAll(inputs)` | `WardDecision[]` | Evaluates each input in order |
-| `allowedActions(input)` | `Action[]` | Deduplicates and filters the derived known actions without emitting events |
-| `forPrincipal(principal?)` | `BoundWard` | Binds an immutable principal snapshot |
-| `tap(handler, options?)` | `() => void` | Observes decisions; supports `AbortSignal` |
-| `knownActions` | `readonly Action[]` | Exact allow-side actions derived from the compiled rules, in declaration order |
-| `rules` | `readonly WardRule[]` | Immutable compiled rules |
+| Method                     | Returns               | Behavior                                                                       |
+| -------------------------- | --------------------- | ------------------------------------------------------------------------------ |
+| `decide(input)`            | `WardDecision`        | Evaluates and emits one decision event                                         |
+| `checkAll(inputs)`         | `WardDecision[]`      | Evaluates each input in order                                                  |
+| `allowedActions(input)`    | `Action[]`            | Deduplicates and filters the derived known actions without emitting events     |
+| `forPrincipal(principal?)` | `BoundWard`           | Binds an immutable principal snapshot                                          |
+| `tap(handler, options?)`   | `() => void`          | Observes decisions; supports `AbortSignal`                                     |
+| `knownActions`             | `readonly Action[]`   | Exact allow-side actions derived from the compiled rules, in declaration order |
+| `rules`                    | `readonly WardRule[]` | Immutable compiled rules                                                       |
 
 ---
 
@@ -65,12 +65,12 @@ deny<Action, Resource, Attributes>(role, resource, actions, options?): WardRule[
 
 Return one role-conditioned rule per action. The role list is stored as declarative `roles` data on each rule, not a condition callback.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `role` | `string \| readonly string[]` | Role, role alternatives, `ANONYMOUS`, or `WILDCARD` |
-| `resource` | `WardPattern<Resource>` | Exact or wildcard resource |
-| `actions` | `readonly WardPattern<Action>[]` | Exact or wildcard actions |
-| `options.when` | `WardCondition<Attributes>` | Additional synchronous condition |
+| Parameter      | Type                             | Description                                         |
+| -------------- | -------------------------------- | --------------------------------------------------- |
+| `role`         | `string \| readonly string[]`    | Role, role alternatives, `ANONYMOUS`, or `WILDCARD` |
+| `resource`     | `WardPattern<Resource>`          | Exact or wildcard resource                          |
+| `actions`      | `readonly WardPattern<Action>[]` | Exact or wildcard actions                           |
+| `options.when` | `WardCondition<Attributes>`      | Additional synchronous condition                    |
 
 **Returns:** `WardRule<Action, Resource, Attributes>[]`.
 
@@ -85,10 +85,10 @@ const rules = [deny('blocked', WILDCARD, [WILDCARD]), allow(['editor', 'admin'],
 ### `predicate`
 
 ```ts
-predicate.owns<Attributes>(attribute)
-predicate.and<Attributes>(...conditions)
-predicate.or<Attributes>(...conditions)
-predicate.not<Attributes>(condition)
+predicate.owns<Attributes>(attribute);
+predicate.and<Attributes>(...conditions);
+predicate.or<Attributes>(...conditions);
+predicate.not<Attributes>(condition);
 ```
 
 Returns typed `WardCondition` functions. `owns()` accepts only a string key from the selected attribute type. Role checks do not need a predicate: declare `roles` on the rule instead.
@@ -134,9 +134,7 @@ type WardConditionInput<Attributes extends WardAttributes> = Readonly<{
   principal: Principal;
 }>;
 
-type WardCondition<Attributes extends WardAttributes> = (
-  input: WardConditionInput<Attributes>,
-) => boolean;
+type WardCondition<Attributes extends WardAttributes> = (input: WardConditionInput<Attributes>) => boolean;
 ```
 
 ```ts
@@ -177,8 +175,8 @@ type WardEvent<Action extends string, Resource extends string, Attributes extend
 
 ## Errors
 
-| Error | Trigger | Notable properties |
-| --- | --- | --- |
-| `WardError` | Base for Ward-originated errors | Standard `cause` support |
-| `WardConfigError` | Invalid rules, principals, inputs, or attribute values | Configuration message with field path |
-| `WardConditionError` | Thrown, async, or non-boolean condition result | `ruleIndex`, `cause` |
+| Error                | Trigger                                                | Notable properties                    |
+| -------------------- | ------------------------------------------------------ | ------------------------------------- |
+| `WardError`          | Base for Ward-originated errors                        | Standard `cause` support              |
+| `WardConfigError`    | Invalid rules, principals, inputs, or attribute values | Configuration message with field path |
+| `WardConditionError` | Thrown, async, or non-boolean condition result         | `ruleIndex`, `cause`                  |

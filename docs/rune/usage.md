@@ -38,10 +38,7 @@ import { consoleTransport, createLogger, jsonTransport } from '@vielzeug/rune';
 
 const log = createLogger({
   logLevel: 'debug',
-  transports: [
-    consoleTransport({ timestamp: true }),
-    jsonTransport({ level: 'error' }),
-  ],
+  transports: [consoleTransport({ timestamp: true }), jsonTransport({ level: 'error' })],
 });
 ```
 

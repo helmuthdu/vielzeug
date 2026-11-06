@@ -1,6 +1,6 @@
 ---
 title: 'Archive Examples: Content Identity and Versions'
-description: "Use stable JSON identity, explicit array normalization and content-version identity."
+description: 'Use stable JSON identity, explicit array normalization and content-version identity.'
 ---
 
 ## Content Identity and Versions
@@ -21,7 +21,8 @@ import { defineArchiveCollection } from '@vielzeug/archive';
 import { s } from '@vielzeug/spell';
 
 const recipes = defineArchiveCollection({
-  name: 'recipes', contentVersion: 1,
+  name: 'recipes',
+  contentVersion: 1,
   payloadSchema: s.object({
     name: s.string().min(1).max(32),
     ingredients: s.array(s.string().min(1).max(64)).min(1).max(20),

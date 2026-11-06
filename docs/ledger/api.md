@@ -7,25 +7,25 @@ description: Reference for serialized reversible commands, history state, compos
 
 ## API Overview
 
-| Symbol | Purpose | Execution | Common gotcha |
-| --- | --- | --- | --- |
-| `createLedger()` | Create serialized reversible history | Sync construction | Every operation method is queued |
-| `compose()` | Combine commands into one history entry | Sync construction | Child metadata is not aggregated |
-| `ledger.do()` | Apply and record a command | Async | Failed or cancelled apply is not recorded |
-| `ledger.undo()` / `redo()` | Move the latest history entry | Async | Failures leave history on its original side |
-| `ledger.clear()` | Remove history without reverting | Async | Serialized behind earlier work |
-| `ledger.whenIdle()` | Await an empty operation queue | Async | Cannot force non-cooperative work to settle |
+| Symbol                     | Purpose                                 | Execution         | Common gotcha                               |
+| -------------------------- | --------------------------------------- | ----------------- | ------------------------------------------- |
+| `createLedger()`           | Create serialized reversible history    | Sync construction | Every operation method is queued            |
+| `compose()`                | Combine commands into one history entry | Sync construction | Child metadata is not aggregated            |
+| `ledger.do()`              | Apply and record a command              | Async             | Failed or cancelled apply is not recorded   |
+| `ledger.undo()` / `redo()` | Move the latest history entry           | Async             | Failures leave history on its original side |
+| `ledger.clear()`           | Remove history without reverting        | Async             | Serialized behind earlier work              |
+| `ledger.whenIdle()`        | Await an empty operation queue          | Async             | Cannot force non-cooperative work to settle |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import             | Purpose                                                                                                        |
+| ------------------ | -------------------------------------------------------------------------------------------------------------- |
 | `@vielzeug/ledger` | Complete Ledger runtime, error hierarchy, state-readable contract, unsubscribe type, and command/history types |
 
 ## `createLedger()`
 
 ```ts
-function createLedger<TMeta = undefined>(options?: LedgerOptions): Ledger<TMeta>
+function createLedger<TMeta = undefined>(options?: LedgerOptions): Ledger<TMeta>;
 ```
 
 Creates a ledger with one submission-order operation queue and one atomic state readable.
@@ -52,7 +52,7 @@ interface LedgerOptions {
 function compose<TMeta = undefined>(
   commands: readonly ReversibleCommand<TMeta>[],
   label?: string,
-): ReversibleCommand<TMeta>
+): ReversibleCommand<TMeta>;
 ```
 
 Snapshots child command callbacks, applies children in order, and reverts them in reverse order. The result creates one history entry with the supplied label and `meta: undefined`.
@@ -154,12 +154,12 @@ interface LedgerState<TMeta = undefined> {
 }
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `queued` | Submitted operations that have not started |
-| `running` | Currently executing operation; serialization keeps this at 0 or 1 |
-| `undo` | Chronological successfully applied history; final entry is next to undo |
-| `redo` | Chronological reverted history; final entry is next to redo |
+| Field     | Meaning                                                                 |
+| --------- | ----------------------------------------------------------------------- |
+| `queued`  | Submitted operations that have not started                              |
+| `running` | Currently executing operation; serialization keeps this at 0 or 1       |
+| `undo`    | Chronological successfully applied history; final entry is next to undo |
+| `redo`    | Chronological reverted history; final entry is next to redo             |
 
 State objects and history arrays are frozen replacements.
 
@@ -191,13 +191,13 @@ Subscriptions are not immediate and receive no value argument. Listeners run syn
 
 ## Errors
 
-| Error | Trigger | History result |
-| --- | --- | --- |
-| `LedgerCancelledError` | Queued signal cancellation or active cooperative cancellation | No transition committed |
-| `LedgerDisposedError` | Submission after disposal or queued work rejected by disposal | History already cleared by disposal |
-| `LedgerExecutionError` | `apply()` fails during `do()` or `redo()` | New command absent, or redo entry retained |
-| `LedgerRollbackError` | `revert()` fails during `undo()` | Undo entry retained |
-| `LedgerConfigError` | Invalid `maxHistory` | Construction fails |
-| `LedgerError` | Base class and internal history corruption | Depends on operation |
+| Error                  | Trigger                                                       | History result                             |
+| ---------------------- | ------------------------------------------------------------- | ------------------------------------------ |
+| `LedgerCancelledError` | Queued signal cancellation or active cooperative cancellation | No transition committed                    |
+| `LedgerDisposedError`  | Submission after disposal or queued work rejected by disposal | History already cleared by disposal        |
+| `LedgerExecutionError` | `apply()` fails during `do()` or `redo()`                     | New command absent, or redo entry retained |
+| `LedgerRollbackError`  | `revert()` fails during `undo()`                              | Undo entry retained                        |
+| `LedgerConfigError`    | Invalid `maxHistory`                                          | Construction fails                         |
+| `LedgerError`          | Base class and internal history corruption                    | Depends on operation                       |
 
 Wrapped operation failures preserve the original value in `.cause`. Use `instanceof LedgerError` to catch the hierarchy, then narrow to a specific subtype.

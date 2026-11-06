@@ -79,10 +79,16 @@ document.body.append(scope);
 setTheme({ axisColor: '#64748b', textColor: '#172033' }, { scope });
 const chart = createLineChart(scope, {
   a11y: { ariaLabel: 'Active users by month' },
-  series: [{
-    data: [{ key: 1, value: 320 }, { key: 2, value: 410 }, { key: 3, value: 380 }],
-    name: 'Active users',
-  }],
+  series: [
+    {
+      data: [
+        { key: 1, value: 320 },
+        { key: 2, value: 410 },
+        { key: 3, value: 380 },
+      ],
+      name: 'Active users',
+    },
+  ],
 });
 
 chart.dispose();

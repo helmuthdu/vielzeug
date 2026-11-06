@@ -36,25 +36,23 @@ window.addEventListener('keydown', (event) => {
 // After
 import { createKeymap } from '@vielzeug/keymap';
 
-const map = createKeymap([
-  { id: 'save', shortcut: 'mod+s', handler: () => console.log('save') },
-]);
+const map = createKeymap([{ id: 'save', shortcut: 'mod+s', handler: () => console.log('save') }]);
 const unmount = map.mount(document);
 
 unmount();
 map.dispose();
 ```
 
-| Feature             | Raw `addEventListener`                       | Keymap                                       |
-| ------------------- | -------------------------------------------- | -------------------------------------------- |
-| Bundle size         | 0 B (built-in)                               | <PackageInfo package="keymap" type="size" /> |
-| Zero dependencies   | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Chord sequences     | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> |
-| Modifier aliases    | <ore-icon name="x" size="16"></ore-icon>     | `cmd`, `win`, `option` → canonical           |
-| Context guards      | Manual `if` in handler                       | Event-aware `when(event)` predicate          |
-| Chord ownership     | Application-managed state                    | Per mounted target                           |
+| Feature             | Raw `addEventListener`                       | Keymap                                                            |
+| ------------------- | -------------------------------------------- | ----------------------------------------------------------------- |
+| Bundle size         | 0 B (built-in)                               | <PackageInfo package="keymap" type="size" />                      |
+| Zero dependencies   | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                      |
+| Chord sequences     | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon>                      |
+| Modifier aliases    | <ore-icon name="x" size="16"></ore-icon>     | `cmd`, `win`, `option` → canonical                                |
+| Context guards      | Manual `if` in handler                       | Event-aware `when(event)` predicate                               |
+| Chord ownership     | Application-managed state                    | Per mounted target                                                |
 | Per-binding control | Manual `preventDefault`/`stopPropagation`    | Per-binding `preventDefault`/`stopPropagation` with safe defaults |
-| Disposable          | Manual `removeEventListener`                 | Terminal `dispose()` + `[Symbol.dispose]()`  |
+| Disposable          | Manual `removeEventListener`                 | Terminal `dispose()` + `[Symbol.dispose]()`                       |
 
 <div class="decision-callout">
 

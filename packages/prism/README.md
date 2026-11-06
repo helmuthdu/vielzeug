@@ -22,19 +22,34 @@ document.body.append(host);
 
 const chart = createLineChart(host, {
   a11y: { ariaLabel: 'Revenue by month' },
-  series: [{
-    color: '#3b82f6',
-    data: [{ key: 1, value: 10 }, { key: 2, value: 25 }, { key: 3, value: 18 }, { key: 4, value: 32 }],
-    name: 'Revenue',
-  }],
+  series: [
+    {
+      color: '#3b82f6',
+      data: [
+        { key: 1, value: 10 },
+        { key: 2, value: 25 },
+        { key: 3, value: 18 },
+        { key: 4, value: 32 },
+      ],
+      name: 'Revenue',
+    },
+  ],
   tooltip: true,
 });
 
-chart.update([{
-  color: '#3b82f6',
-  data: [{ key: 1, value: 10 }, { key: 2, value: 25 }, { key: 3, value: 18 }, { key: 4, value: 32 }, { key: 5, value: 28 }],
-  name: 'Revenue',
-}]);
+chart.update([
+  {
+    color: '#3b82f6',
+    data: [
+      { key: 1, value: 10 },
+      { key: 2, value: 25 },
+      { key: 3, value: 18 },
+      { key: 4, value: 32 },
+      { key: 5, value: 28 },
+    ],
+    name: 'Revenue',
+  },
+]);
 
 chart.dispose();
 ```

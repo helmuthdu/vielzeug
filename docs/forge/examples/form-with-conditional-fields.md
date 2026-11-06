@@ -29,9 +29,8 @@ const form = createForm({
 form.field('accountType').set('business');
 form.field('companyName').set('Acme');
 
-const payload = form.value.accountType === 'business'
-  ? form.value
-  : { accountType: form.value.accountType, email: form.value.email };
+const payload =
+  form.value.accountType === 'business' ? form.value : { accountType: form.value.accountType, email: form.value.email };
 
 console.log(payload);
 ```

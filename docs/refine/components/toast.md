@@ -78,7 +78,6 @@ while the surface stays neutral so toasts never fight the page beneath them.
 | `warning` | triangle alert | `polite`        |
 | `danger`  | circle alert   | `assertive`     |
 
-
 ### Avatar
 
 For person-centric notifications, pass an `avatar` object (any `ore-avatar` prop) to fill the
@@ -107,7 +106,6 @@ sets the screen-reader urgency; only its icon is replaced.
 ```
 
 </ComponentPreview>
-
 
 ## Heading & Metadata
 
@@ -262,10 +260,10 @@ Use attributes to set a host's placement and notification limit:
 <ore-toast position="top-right" max="3"></ore-toast>
 ```
 
-| Attribute  | Default          | Description                          |
-| ---------- | ---------------- | ------------------------------------ |
-| `position` | `bottom-right`   | `top-*` or `bottom-*` list anchor    |
-| `max`      | `5`              | Maximum live notifications per scope: attribute changes apply live |
+| Attribute  | Default        | Description                                                        |
+| ---------- | -------------- | ------------------------------------------------------------------ |
+| `position` | `bottom-right` | `top-*` or `bottom-*` list anchor                                  |
+| `max`      | `5`            | Maximum live notifications per scope: attribute changes apply live |
 
 ## Toast service
 
@@ -313,20 +311,20 @@ toast.add({
 });
 ```
 
-| Option        | Default     | Description                                                       |
-| ------------- | ----------- | ----------------------------------------------------------------- |
-| `message`     | N/A | Required notification text                                        |
-| `id`          | generated   | Stable notification identifier                                    |
-| `status`      | `neutral`   | `neutral`, `info`, `success`, `warning`, or `danger`: renders a status icon, tints the accent, and (for `danger`) raises urgency |
-| `avatar`      | N/A | `ore-avatar` props (`initials`, `src`, `alt`, `color`, `status`): fills the leading slot instead of the status icon |
-| `heading`     | N/A | Alert heading                                                     |
+| Option        | Default                       | Description                                                                                                                                                                                                                                |
+| ------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `message`     | N/A                           | Required notification text                                                                                                                                                                                                                 |
+| `id`          | generated                     | Stable notification identifier                                                                                                                                                                                                             |
+| `status`      | `neutral`                     | `neutral`, `info`, `success`, `warning`, or `danger`: renders a status icon, tints the accent, and (for `danger`) raises urgency                                                                                                           |
+| `avatar`      | N/A                           | `ore-avatar` props (`initials`, `src`, `alt`, `color`, `status`): fills the leading slot instead of the status icon                                                                                                                        |
+| `heading`     | N/A                           | Alert heading                                                                                                                                                                                                                              |
 | `duration`    | `5000`; `0` for action toasts | Auto-dismiss delay in milliseconds; `0` keeps it visible. Entries carrying `actions` persist until dismissed by default: keyboard and screen-reader users reach toasts last in tab order, so a timed expiry would expire the choice unseen |
-| `dismissible` | `true`      | Shows the close button                                            |
-| `snackbar`    | `false`     | Material-style compact bar: inverted neutral surface, single-row padding, text-style actions |
-| `actions`     | N/A | Buttons (ghost text buttons by default) that run `onClick` then dismiss. Each action takes `emphasis` (`primary` / `cancel` / `destructive` / `normal`) plus optional `color`/`variant` overrides |
-| `replace`     | `false`     | Replace a live entry with the same message instead of stacking a duplicate |
-| `urgency`     | derived     | `polite` or `assertive`; `danger` is assertive by default         |
-| `onDismiss`   | N/A | Called after the exit animation completes                         |
+| `dismissible` | `true`                        | Shows the close button                                                                                                                                                                                                                     |
+| `snackbar`    | `false`                       | Material-style compact bar: inverted neutral surface, single-row padding, text-style actions                                                                                                                                               |
+| `actions`     | N/A                           | Buttons (ghost text buttons by default) that run `onClick` then dismiss. Each action takes `emphasis` (`primary` / `cancel` / `destructive` / `normal`) plus optional `color`/`variant` overrides                                          |
+| `replace`     | `false`                       | Replace a live entry with the same message instead of stacking a duplicate                                                                                                                                                                 |
+| `urgency`     | derived                       | `polite` or `assertive`; `danger` is assertive by default                                                                                                                                                                                  |
+| `onDismiss`   | N/A                           | Called after the exit animation completes                                                                                                                                                                                                  |
 
 `toast.update(id, changes)` patches only the provided fields: omitted ones leave the entry (and its timer) unchanged.
 
@@ -394,32 +392,32 @@ service is disposed.
 
 ## CSS custom properties
 
-| Property                                                                          | Description                                          | Default                                 |
-| --------------------------------------------------------------------------------- | ---------------------------------------------------- | --------------------------------------- |
-| `--toast-max-width`                                                               | Notification width cap (full width on phones)        | `400px`                                 |
-| `--toast-gap`                                                                     | Gap between notifications                            | `var(--size-2)`                         |
-| `--toast-bg`                                                                      | Notification surface (neutral, light-dark adaptive)  | `var(--color-contrast-100)`             |
-| `--toast-color`                                                                   | Notification text colour                             | `var(--color-contrast-800)`             |
-| `--toast-border-color`                                                            | Notification border                                  | 8% `var(--color-contrast-900)`          |
-| `--toast-icon-size`                                                               | Status icon size                                     | `var(--size-5)`                         |
-| `--toast-avatar-size`                                                             | Leading avatar diameter                              | `var(--size-8)`                         |
-| `--toast-snackbar-bg`                                                             | Snackbar surface                                     | `var(--color-contrast-900)`             |
-| `--toast-snackbar-color`                                                          | Snackbar text colour                                 | `var(--color-contrast-100)`             |
-| `--toast-snackbar-padding`                                                        | Snackbar padding                                     | `var(--size-2) var(--size-4)`           |
-| `--toast-snackbar-height`                                                         | Snackbar message row height, action or not           | `var(--size-8)`                         |
-| `--toast-snackbar-shadow`                                                          | Snackbar elevation shadow                            | `var(--shadow-lg)`                      |
-| `--toast-shadow`                                                                  | Elevation shadow                                     | `var(--shadow-xl)`                      |
-| `--toast-enter-duration` / `--toast-exit-duration`                                | Motion durations                                     | `var(--duration-200)`                   |
-| `--toast-progress-height`                                                         | Height of the auto-dismiss progress bar              | `3px`                                   |
-| `--toast-progress-color`                                                          | Colour of the auto-dismiss progress bar              | Status accent colour                    |
-| `--toast-inset-top` / `--toast-inset-bottom` / `--toast-inset-left` / `--toast-inset-right` | Viewport insets                          | `var(--size-4)`                         |
-| `--toast-z-index`                                                                 | Stacking order                                       | `var(--z-toast)`                        |
+| Property                                                                                    | Description                                         | Default                        |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------ |
+| `--toast-max-width`                                                                         | Notification width cap (full width on phones)       | `400px`                        |
+| `--toast-gap`                                                                               | Gap between notifications                           | `var(--size-2)`                |
+| `--toast-bg`                                                                                | Notification surface (neutral, light-dark adaptive) | `var(--color-contrast-100)`    |
+| `--toast-color`                                                                             | Notification text colour                            | `var(--color-contrast-800)`    |
+| `--toast-border-color`                                                                      | Notification border                                 | 8% `var(--color-contrast-900)` |
+| `--toast-icon-size`                                                                         | Status icon size                                    | `var(--size-5)`                |
+| `--toast-avatar-size`                                                                       | Leading avatar diameter                             | `var(--size-8)`                |
+| `--toast-snackbar-bg`                                                                       | Snackbar surface                                    | `var(--color-contrast-900)`    |
+| `--toast-snackbar-color`                                                                    | Snackbar text colour                                | `var(--color-contrast-100)`    |
+| `--toast-snackbar-padding`                                                                  | Snackbar padding                                    | `var(--size-2) var(--size-4)`  |
+| `--toast-snackbar-height`                                                                   | Snackbar message row height, action or not          | `var(--size-8)`                |
+| `--toast-snackbar-shadow`                                                                   | Snackbar elevation shadow                           | `var(--shadow-lg)`             |
+| `--toast-shadow`                                                                            | Elevation shadow                                    | `var(--shadow-xl)`             |
+| `--toast-enter-duration` / `--toast-exit-duration`                                          | Motion durations                                    | `var(--duration-200)`          |
+| `--toast-progress-height`                                                                   | Height of the auto-dismiss progress bar             | `3px`                          |
+| `--toast-progress-color`                                                                    | Colour of the auto-dismiss progress bar             | Status accent colour           |
+| `--toast-inset-top` / `--toast-inset-bottom` / `--toast-inset-left` / `--toast-inset-right` | Viewport insets                                     | `var(--size-4)`                |
+| `--toast-z-index`                                                                           | Stacking order                                      | `var(--z-toast)`               |
 
 ## CSS parts
 
-| Part            | Description                                   |
-| --------------- | --------------------------------------------- |
-| `container`     | Notification list                             |
+| Part            | Description                                    |
+| --------------- | ---------------------------------------------- |
+| `container`     | Notification list                              |
 | `toast-wrapper` | Per-notification layout wrapper (swipe target) |
-| `toast-inner`   | Per-notification motion target                |
-| `progress`      | Auto-dismiss progress bar                     |
+| `toast-inner`   | Per-notification motion target                 |
+| `progress`      | Auto-dismiss progress bar                      |

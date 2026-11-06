@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       dry-run:
-        description: 'List what would be tagged without tagging or creating releases'
+        description: "List what would be tagged without tagging or creating releases"
         required: false
         default: false
         type: boolean
@@ -44,8 +44,8 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          root-install: 'false'
-          rush-install: 'false'
+          root-install: "false"
+          rush-install: "false"
 
       - id: plan
         run: |
@@ -68,8 +68,8 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          root-install: 'false'
-          rush-install: 'false'
+          root-install: "false"
+          rush-install: "false"
 
       - name: Tag the published version
         env:
@@ -81,7 +81,7 @@ jobs:
   # tag), so a train whose aggregate release was never created can always be backfilled by
   # re-dispatching this workflow.
   train-release:
-    needs: [plan, release]
+    needs: [ plan, release ]
     if: ${{ always() && needs.plan.result == 'success' && needs.release.result != 'failure' && needs.release.result != 'cancelled' }}
     runs-on: ubuntu-latest
     permissions:
@@ -97,8 +97,8 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          root-install: 'false'
-          rush-install: 'false'
+          root-install: "false"
+          rush-install: "false"
 
       - name: Create the aggregate train release
         run: node scripts/release/cli.mjs train-release

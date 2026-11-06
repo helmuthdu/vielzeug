@@ -94,8 +94,10 @@ describe('ore-pull-to-refresh', () => {
       target.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientY: 0, pointerId: 1 }));
       target.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientY: 148, pointerId: 1 }));
 
-      // 64 + sqrt((148 - 64) * 64) ≈ 137.3: pulled 148, moved ~137.
-      expect(content().style.transform).toBe(`translateY(${64 + Math.sqrt(84 * 64)}px)`);
+      // 64 + sqrt((148 - 64) * 64) ≈ 137.3: pulled 148, moved ~137 (not 148:1).
+      // Compare numerically: the CSSOM serializes the float to 6 significant figures.
+      const offset = Number(/translateY\((.+)px\)/.exec(content().style.transform)?.[1]);
+      expect(offset).toBeCloseTo(64 + Math.sqrt(84 * 64), 2);
       expect(phase()).toBe('ready');
     });
 

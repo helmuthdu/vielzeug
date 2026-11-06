@@ -201,16 +201,16 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 
 ### Attributes
 
-| Attribute     | Type                                                                      | Default  | Description                                      |
-| ------------- | ------------------------------------------------------------------------- | -------- | ------------------------------------------------ |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color                                      |
-| `variant`     | `'flat' \| 'solid' \| 'bordered'`                                         | `'flat'` | Visual style variant                             |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`   | Component size                                   |
-| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                | N/A | Border radius override                           |
-| `heading`     | `string`                                                                  | `''`     | Bold heading above the message body              |
-| `dismissible` | `boolean`                                                                 | `false`  | Show a close (×) button                          |
-| `accented`    | `boolean`                                                                 | `false`  | Left accent border (flat/bordered variants only) |
-| `horizontal`  | `boolean`                                                                 | `false`  | Place action buttons beside the content          |
+| Attribute     | Type                                                                      | Default  | Description                                                                                                                   |
+| ------------- | ------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A      | Theme color                                                                                                                   |
+| `variant`     | `'flat' \| 'solid' \| 'bordered'`                                         | `'flat'` | Visual style variant                                                                                                          |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`   | Component size                                                                                                                |
+| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                | N/A      | Border radius override                                                                                                        |
+| `heading`     | `string`                                                                  | `''`     | Bold heading above the message body                                                                                           |
+| `dismissible` | `boolean`                                                                 | `false`  | Show a close (×) button                                                                                                       |
+| `accented`    | `boolean`                                                                 | `false`  | Left accent border (flat/bordered variants only)                                                                              |
+| `horizontal`  | `boolean`                                                                 | `false`  | Place action buttons beside the content                                                                                       |
 | `embedded`    | `boolean`                                                                 | `false`  | Host-managed mode: no live region or `role`, and `dismiss` fires immediately without the exit animation (used by `ore-toast`) |
 
 ### Slots
@@ -218,14 +218,14 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 | Slot      | Description                                                             |
 | --------- | ----------------------------------------------------------------------- |
 | (default) | Alert message content                                                   |
-| `icon`    | Icon on the leading edge. Hidden when empty: no reserved space.        |
+| `icon`    | Icon on the leading edge. Hidden when empty: no reserved space.         |
 | `meta`    | Secondary info alongside the heading (lighter, right-aligned, smaller)  |
 | `actions` | Action buttons below the message, or beside it when `horizontal` is set |
 
 ### Events
 
-| Event     | Detail                          | Description                            |
-| --------- | ------------------------------- | -------------------------------------- |
+| Event     | Detail                          | Description                                                            |
+| --------- | ------------------------------- | ---------------------------------------------------------------------- |
 | `dismiss` | `{ originalEvent: MouseEvent }` | Fired after the exit animation completes (immediately when `embedded`) |
 
 ### CSS Parts

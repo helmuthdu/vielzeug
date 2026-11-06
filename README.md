@@ -911,8 +911,11 @@ form.submit(async (values) => {
 git clone https://github.com/helmuthdu/vielzeug.git
 cd vielzeug
 
-# Install all dependencies (via Rush)
+# Install package dependencies (via Rush)
 pnpm setup
+
+# Install root workspace tooling (vitest, Biome, VitePress): Rush covers packages/* only
+pnpm install
 
 # Build all packages
 pnpm build
@@ -986,43 +989,43 @@ pnpm docs:build     # Build documentation
 
 All sizes are **minified + gzipped** production builds:
 
-| Package                  | Minified                     | Gzipped        | Dependencies |
-| ------------------------ | ---------------------------- | -------------- | ------------ |
-| `@vielzeug/arsenal`      | **25.0 KB** (full bundle)    | **9.0 KB**     | 0            |
-| `@vielzeug/assay`        | **4.2 KB**                   | **1.5 KB**     | 0            |
-| `@vielzeug/clockwork`    | **8.5 KB**                   | **3.1 KB**     | 1\*          |
-| `@vielzeug/codex`        | **0.7 KB**                   | **0.4 KB**     | 0            |
-| `@vielzeug/coins`        | **9.5 KB**                   | **3.5 KB**     | 0            |
-| `@vielzeug/conduit`      | **7.8 KB**                   | **2.6 KB**     | 0            |
-| `@vielzeug/courier`      | **21.9 KB**                  | **7.4 KB**     | 1\*          |
-| `@vielzeug/ore`        | **28.9 KB**                  | **10.5 KB**    | 2\*          |
-| `@vielzeug/dnd`          | **9.7 KB**                   | **3.7 KB**     | 0            |
-| `@vielzeug/familiar`     | **11.3 KB**                  | **4.2 KB**     | 0            |
-| `@vielzeug/flux`         | **12.9 KB**                  | **3.6 KB**     | 1\*          |
-| `@vielzeug/focus`        | N/A | N/A | 0            |
-| `@vielzeug/forge`        | **17.9 KB**                  | **5.6 KB**     | 0            |
-| `@vielzeug/gesture`      | N/A | N/A | 0            |
-| `@vielzeug/herald`       | **6.0 KB**                   | **2.4 KB**     | 0            |
-| `@vielzeug/keymap`       | N/A | N/A | 0            |
-| `@vielzeug/ledger`       | N/A | N/A | 0            |
-| `@vielzeug/lingua`       | **9.1 KB**                   | **3.7 KB**     | 0            |
-| `@vielzeug/necromancer`        | **3.2 KB**                   | **1.5 KB**     | 0            |
-| `@vielzeug/orbit`        | **12.7 KB**                  | **4.8 KB**     | 0            |
-| `@vielzeug/prism`        | **33.7 KB**                  | **11.0 KB**    | 2\*          |
-| `@vielzeug/pulse`        | **13.4 KB**                  | **4.6 KB**     | 1\*          |
-| `@vielzeug/ripple`       | **16.3 KB**                  | **5.4 KB**     | 0            |
-| `@vielzeug/rune`         | **7.8 KB**                   | **3.4 KB**     | 0            |
-| `@vielzeug/sandbox`      | N/A | N/A | 0            |
-| `@vielzeug/scout`        | N/A | N/A | 0            |
-| `@vielzeug/scroll`       | **18.3 KB**                  | **6.2 KB**     | 0            |
-| `@vielzeug/refine`        | **~3–6 KB** per component    | **~1–2 KB**    | 3\*          |
-| `@vielzeug/sourcerer`    | **8.5 KB**                   | **2.6 KB**     | 1\*          |
-| `@vielzeug/spell`        | **49.1 KB**                  | **11.9 KB**    | 0            |
-| `@vielzeug/tandem`       | **3.3 KB**                   | **1.4 KB**     | 0            |
-| `@vielzeug/tempo`        | **12.5 KB**                  | **4.0 KB**     | 0            |
-| `@vielzeug/vault`        | **26.9 KB**                  | **8.7 KB**     | 0            |
-| `@vielzeug/ward`         | **7.1 KB**                   | **2.6 KB**     | 0            |
-| `@vielzeug/wayfinder`    | **16.3 KB**                  | **5.9 KB**     | 0            |
+| Package                 | Minified                  | Gzipped     | Dependencies |
+| ----------------------- | ------------------------- | ----------- | ------------ |
+| `@vielzeug/arsenal`     | **25.0 KB** (full bundle) | **9.0 KB**  | 0            |
+| `@vielzeug/assay`       | **4.2 KB**                | **1.5 KB**  | 0            |
+| `@vielzeug/clockwork`   | **8.5 KB**                | **3.1 KB**  | 1\*          |
+| `@vielzeug/codex`       | **0.7 KB**                | **0.4 KB**  | 0            |
+| `@vielzeug/coins`       | **9.5 KB**                | **3.5 KB**  | 0            |
+| `@vielzeug/conduit`     | **7.8 KB**                | **2.6 KB**  | 0            |
+| `@vielzeug/courier`     | **21.9 KB**               | **7.4 KB**  | 1\*          |
+| `@vielzeug/ore`         | **28.9 KB**               | **10.5 KB** | 2\*          |
+| `@vielzeug/dnd`         | **9.7 KB**                | **3.7 KB**  | 0            |
+| `@vielzeug/familiar`    | **11.3 KB**               | **4.2 KB**  | 0            |
+| `@vielzeug/flux`        | **12.9 KB**               | **3.6 KB**  | 1\*          |
+| `@vielzeug/focus`       | N/A                       | N/A         | 0            |
+| `@vielzeug/forge`       | **17.9 KB**               | **5.6 KB**  | 0            |
+| `@vielzeug/gesture`     | N/A                       | N/A         | 0            |
+| `@vielzeug/herald`      | **6.0 KB**                | **2.4 KB**  | 0            |
+| `@vielzeug/keymap`      | N/A                       | N/A         | 0            |
+| `@vielzeug/ledger`      | N/A                       | N/A         | 0            |
+| `@vielzeug/lingua`      | **9.1 KB**                | **3.7 KB**  | 0            |
+| `@vielzeug/necromancer` | **3.2 KB**                | **1.5 KB**  | 0            |
+| `@vielzeug/orbit`       | **12.7 KB**               | **4.8 KB**  | 0            |
+| `@vielzeug/prism`       | **33.7 KB**               | **11.0 KB** | 2\*          |
+| `@vielzeug/pulse`       | **13.4 KB**               | **4.6 KB**  | 1\*          |
+| `@vielzeug/ripple`      | **16.3 KB**               | **5.4 KB**  | 0            |
+| `@vielzeug/rune`        | **7.8 KB**                | **3.4 KB**  | 0            |
+| `@vielzeug/sandbox`     | N/A                       | N/A         | 0            |
+| `@vielzeug/scout`       | N/A                       | N/A         | 0            |
+| `@vielzeug/scroll`      | **18.3 KB**               | **6.2 KB**  | 0            |
+| `@vielzeug/refine`      | **~3–6 KB** per component | **~1–2 KB** | 3\*          |
+| `@vielzeug/sourcerer`   | **8.5 KB**                | **2.6 KB**  | 1\*          |
+| `@vielzeug/spell`       | **49.1 KB**               | **11.9 KB** | 0            |
+| `@vielzeug/tandem`      | **3.3 KB**                | **1.4 KB**  | 0            |
+| `@vielzeug/tempo`       | **12.5 KB**               | **4.0 KB**  | 0            |
+| `@vielzeug/vault`       | **26.9 KB**               | **8.7 KB**  | 0            |
+| `@vielzeug/ward`        | **7.1 KB**                | **2.6 KB**  | 0            |
+| `@vielzeug/wayfinder`   | **16.3 KB**               | **5.9 KB**  | 0            |
 
 \* Only depends on other `@vielzeug` packages. `arsenal` is tree-shakeable: individual utilities average 0.1–0.8 KB each. `refine` is designed for per-component imports; the full bundle is ~453 KB / 95 KB.
 
@@ -1099,7 +1102,7 @@ Inter-package dependencies use `workspace:*` during development and are pinned t
 
 ### What's the versioning strategy?
 
-CalVer lockstep trains: every package carries the same `YY.MM.N` version: the release train it last shipped on. The number answers *when*, never *how big*; a breaking change rides the next train like any other and says so in that package's changelog and `migration.md`. Every package rides every train: a train publishes the whole family at its number, so all `@vielzeug/*` versions always line up and installing `@latest` of any combination resolves to exactly one copy of each package. Pin exact versions (a caret range spans months under CalVer and can silently pull a breaking train) and read each changed package's `migration.md` when moving between trains.
+CalVer lockstep trains: every package carries the same `YY.MM.N` version: the release train it last shipped on. The number answers _when_, never _how big_; a breaking change rides the next train like any other and says so in that package's changelog and `migration.md`. Every package rides every train: a train publishes the whole family at its number, so all `@vielzeug/*` versions always line up and installing `@latest` of any combination resolves to exactly one copy of each package. Pin exact versions (a caret range spans months under CalVer and can silently pull a breaking train) and read each changed package's `migration.md` when moving between trains.
 
 ### Where can I get help?
 

@@ -7,33 +7,31 @@ description: Immutable typed form state, flat validation issues, and optional in
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createForm()` | Create immutable form and field state | Sync | Dispose with its owner |
-| `toPlainValues()` | Flatten class instances to the plain value shape | Sync | Drops circular branches |
-| `validate()` | Run the configured full-form validator | Async | Superseded work returns `aborted` |
-| `submit()` | Validate and submit one captured snapshot | Async | Concurrent submission rejects |
-| `bindField()` | Bind a field to an HTML element | Sync | Caller owns returned cleanup |
-| `schemaValidator()` | Adapt Standard Schema validation | Async | Transform output is not applied |
-| `loadForm()` / `saveForm()` | Explicit structural draft persistence | Async | Loading will not overwrite newer edits |
-| `toFormData()` | Serialize supported values | Sync | Dotted keys and object arrays reject |
+| Symbol                      | Purpose                                          | Execution mode | Common gotcha                          |
+| --------------------------- | ------------------------------------------------ | -------------- | -------------------------------------- |
+| `createForm()`              | Create immutable form and field state            | Sync           | Dispose with its owner                 |
+| `toPlainValues()`           | Flatten class instances to the plain value shape | Sync           | Drops circular branches                |
+| `validate()`                | Run the configured full-form validator           | Async          | Superseded work returns `aborted`      |
+| `submit()`                  | Validate and submit one captured snapshot        | Async          | Concurrent submission rejects          |
+| `bindField()`               | Bind a field to an HTML element                  | Sync           | Caller owns returned cleanup           |
+| `schemaValidator()`         | Adapt Standard Schema validation                 | Async          | Transform output is not applied        |
+| `loadForm()` / `saveForm()` | Explicit structural draft persistence            | Async          | Loading will not overwrite newer edits |
+| `toFormData()`              | Serialize supported values                       | Sync           | Dotted keys and object arrays reject   |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/forge` | Form and field state |
-| `@vielzeug/forge/dom` | `bindField()` DOM binding |
-| `@vielzeug/forge/form-data` | `toFormData()` serialization |
-| `@vielzeug/forge/schema` | Standard Schema validation adapter |
-| `@vielzeug/forge/persist` | Explicit draft save/load helpers |
+| Import                      | Purpose                            |
+| --------------------------- | ---------------------------------- |
+| `@vielzeug/forge`           | Form and field state               |
+| `@vielzeug/forge/dom`       | `bindField()` DOM binding          |
+| `@vielzeug/forge/form-data` | `toFormData()` serialization       |
+| `@vielzeug/forge/schema`    | Standard Schema validation adapter |
+| `@vielzeug/forge/persist`   | Explicit draft save/load helpers   |
 
 ## createForm
 
 ```ts
-function createForm<TValues extends Record<string, unknown>>(
-  options: FormOptions<TValues>,
-): Form<TValues>
+function createForm<TValues extends Record<string, unknown>>(options: FormOptions<TValues>): Form<TValues>;
 ```
 
 `initialValues` is required. Validation is explicit and returns flat issues.
@@ -41,8 +39,7 @@ function createForm<TValues extends Record<string, unknown>>(
 ```ts
 const form = createForm({
   initialValues: { email: '' },
-  validate: (values) =>
-    values.email.includes('@') ? undefined : [{ path: ['email'], message: 'Invalid email' }],
+  validate: (values) => (values.email.includes('@') ? undefined : [{ path: ['email'], message: 'Invalid email' }]),
 });
 ```
 
@@ -171,7 +168,9 @@ import { bindField } from '@vielzeug/forge/dom';
 
 const stop = bindField(input, form.field('email'), {
   read: (element) => element.value,
-  write: (element, value) => { element.value = value; },
+  write: (element, value) => {
+    element.value = value;
+  },
 });
 ```
 

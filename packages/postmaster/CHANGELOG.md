@@ -3,156 +3,182 @@
 This log was last generated on Thu, 05 Nov 2026 21:44:45 GMT and should not be manually modified.
 
 ## 26.11.5
+
 Thu, 05 Nov 2026 21:44:45 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.4
+
 Wed, 04 Nov 2026 16:49:50 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.3
+
 Wed, 04 Nov 2026 05:52:43 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.2
+
 Tue, 03 Nov 2026 18:42:43 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.1
+
 Tue, 03 Nov 2026 17:00:37 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.0
+
 Tue, 03 Nov 2026 16:30:26 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.22
+
 Fri, 30 Oct 2026 19:07:28 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.21
+
 Tue, 27 Oct 2026 08:39:39 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.20
+
 Sun, 25 Oct 2026 05:13:02 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.19
+
 Sat, 24 Oct 2026 19:56:28 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.18
+
 Fri, 23 Oct 2026 14:23:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.17
+
 Fri, 23 Oct 2026 07:29:16 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.16
+
 Wed, 21 Oct 2026 07:30:45 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.15
+
 Mon, 19 Oct 2026 10:13:34 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.14
+
 Sun, 18 Oct 2026 09:46:30 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.13
+
 Sat, 17 Oct 2026 06:46:08 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.12
+
 Sat, 17 Oct 2026 05:06:33 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.11
+
 Thu, 15 Oct 2026 13:45:48 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.10
+
 Thu, 15 Oct 2026 05:00:39 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.9
+
 Wed, 14 Oct 2026 21:26:14 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.8
+
 Tue, 13 Oct 2026 07:49:18 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.7
+
 Mon, 12 Oct 2026 20:24:11 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.6
+
 Mon, 12 Oct 2026 18:44:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.5
+
 Thu, 08 Oct 2026 07:48:38 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.1
+
 Wed, 07 Oct 2026 07:25:55 GMT
 
 ### Patches
 
 - Standardize package text punctuation
 ## 26.10.0
+
 Fri, 02 Oct 2026 18:01:51 GMT
 
 ### Minor changes
@@ -160,21 +186,25 @@ Fri, 02 Oct 2026 18:01:51 GMT
 - feat: RetryResult renamed to RequeueResult
 - Make RetryPolicy.shouldRetry optional; default retries any error until maxAttempts
 ## 3.0.3
+
 Wed, 23 Sep 2026 06:05:22 GMT
 
 _Version update only_
 
 ## 3.0.2
+
 Wed, 23 Sep 2026 03:47:55 GMT
 
 _Version update only_
 
 ## 3.0.1
+
 Mon, 21 Sep 2026 15:19:01 GMT
 
 _Version update only_
 
 ## 3.0.0
+
 Wed, 09 Sep 2026 22:15:14 GMT
 
 ### Breaking changes
@@ -182,6 +212,7 @@ Wed, 09 Sep 2026 22:15:14 GMT
 - Refine migrations, isolate store contracts, and make corrupt IndexedDB records non-blocking.
 
 ## 2.2.0
+
 Sun, 30 Aug 2026 13:16:08 GMT
 
 ### Minor changes
@@ -189,6 +220,7 @@ Sun, 30 Aug 2026 13:16:08 GMT
 - refactor: extract normalize to _store-utils. Add PostmasterJobError. Remove mergeSignals helper.
 
 ## 2.1.0
+
 Fri, 28 Aug 2026 07:44:01 GMT
 
 ### Minor changes
@@ -196,6 +228,7 @@ Fri, 28 Aug 2026 07:44:01 GMT
 - Add EnqueueOptions.availableAt for delayed job eligibility
 
 ## 2.0.0
+
 Wed, 26 Aug 2026 17:29:55 GMT
 
 ### Breaking changes
@@ -209,4 +242,3 @@ Wed, 26 Aug 2026 17:29:55 GMT
 ### Patches
 
 - chore: add sideEffects: false for tree-shaking.
-

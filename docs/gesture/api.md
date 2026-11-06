@@ -7,20 +7,20 @@ description: API reference for two-dimensional drag and one-axis pan recognition
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createDragGesture()` | Track unrestricted two-dimensional pointer movement | Sync | Does not provide DOM movement or drop semantics |
-| `createPanGesture()` | Track pointer movement projected onto one axis | Sync | Cross-axis intent ends a pending interaction |
-| `createLongPress()` | Recognize a primary pointer held in place | Sync | The click that follows a fired hold is swallowed |
-| `DragGesture` / `PanGesture` / `LongPress` | Control recognition lifecycle | Sync | `dispose()` does not invoke `onEnd` |
-| `DragGestureOptions` | Configure free-drag recognition | Sync | `activationDistance` uses Euclidean distance |
-| `PanGestureOptions` | Configure axis-locked recognition | Sync | Completion thresholds belong in `onEnd` |
-| `LongPressOptions` | Configure hold recognition | Sync | `durationMs` and `slopPx` are validated at construction |
+| Symbol                                     | Purpose                                             | Execution mode | Common gotcha                                           |
+| ------------------------------------------ | --------------------------------------------------- | -------------- | ------------------------------------------------------- |
+| `createDragGesture()`                      | Track unrestricted two-dimensional pointer movement | Sync           | Does not provide DOM movement or drop semantics         |
+| `createPanGesture()`                       | Track pointer movement projected onto one axis      | Sync           | Cross-axis intent ends a pending interaction            |
+| `createLongPress()`                        | Recognize a primary pointer held in place           | Sync           | The click that follows a fired hold is swallowed        |
+| `DragGesture` / `PanGesture` / `LongPress` | Control recognition lifecycle                       | Sync           | `dispose()` does not invoke `onEnd`                     |
+| `DragGestureOptions`                       | Configure free-drag recognition                     | Sync           | `activationDistance` uses Euclidean distance            |
+| `PanGestureOptions`                        | Configure axis-locked recognition                   | Sync           | Completion thresholds belong in `onEnd`                 |
+| `LongPressOptions`                         | Configure hold recognition                          | Sync           | `durationMs` and `slopPx` are validated at construction |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import              | Purpose                                                                                   |
+| ------------------- | ----------------------------------------------------------------------------------------- |
 | `@vielzeug/gesture` | Drag and pan factories, handles, callback details, options, axes, points, and end reasons |
 
 ## Core Functions
@@ -33,9 +33,9 @@ function createDragGesture(target: Element, options?: DragGestureOptions): DragG
 
 Tracks one primary pointer without restricting movement to an axis.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `target` | `Element` | Element that owns pointer admission and optional capture |
+| Parameter | Type                 | Description                                                           |
+| --------- | -------------------- | --------------------------------------------------------------------- |
+| `target`  | `Element`            | Element that owns pointer admission and optional capture              |
 | `options` | `DragGestureOptions` | Activation, admission, capture, callback, and lifecycle configuration |
 
 **Returns:** A lifecycle-owned `DragGesture` handle.
@@ -65,9 +65,9 @@ function createPanGesture(target: Element, options?: PanGestureOptions): PanGest
 
 Tracks one primary pointer after movement establishes intent on the configured axis.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `target` | `Element` | Element that owns pointer admission and optional capture |
+| Parameter | Type                | Description                                                                 |
+| --------- | ------------------- | --------------------------------------------------------------------------- |
+| `target`  | `Element`           | Element that owns pointer admission and optional capture                    |
 | `options` | `PanGestureOptions` | Axis, activation, admission, capture, callback, and lifecycle configuration |
 
 **Returns:** A lifecycle-owned `PanGesture` handle.
@@ -87,14 +87,14 @@ const pan = createPanGesture(element, {
 
 Both handles expose the same members:
 
-| Member | Type | Contract |
-| --- | --- | --- |
-| `active` | `boolean` | `true` after activation and before release or cancellation |
-| `cancel()` | `() => boolean` | Clears pending recognition or ends active recognition with `reason: 'cancel'`; returns whether a session existed |
-| `disposalSignal` | `AbortSignal` | Aborts when the handle is disposed |
-| `dispose()` | `() => void` | Aborts `disposalSignal`, clears recognition, releases capture, and detaches listeners; idempotent |
-| `disposed` | `boolean` | `true` after disposal |
-| `[Symbol.dispose]()` | `() => void` | Calls `dispose()` |
+| Member               | Type            | Contract                                                                                                         |
+| -------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `active`             | `boolean`       | `true` after activation and before release or cancellation                                                       |
+| `cancel()`           | `() => boolean` | Clears pending recognition or ends active recognition with `reason: 'cancel'`; returns whether a session existed |
+| `disposalSignal`     | `AbortSignal`   | Aborts when the handle is disposed                                                                               |
+| `dispose()`          | `() => void`    | Aborts `disposalSignal`, clears recognition, releases capture, and detaches listeners; idempotent                |
+| `disposed`           | `boolean`       | `true` after disposal                                                                                            |
+| `[Symbol.dispose]()` | `() => void`    | Calls `dispose()`                                                                                                |
 
 ---
 
@@ -106,10 +106,10 @@ function createLongPress(target: Element, options?: LongPressOptions): LongPress
 
 Recognizes a primary pointer held in place: `onLongPress` fires with the originating pointerdown once the hold outlasts `durationMs`.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `target` | `Element` | Element that owns pointer admission, document tracking, and click swallowing |
-| `options` | `LongPressOptions` | Hold time, slop distance, admission, callback, and lifecycle configuration |
+| Parameter | Type               | Description                                                                  |
+| --------- | ------------------ | ---------------------------------------------------------------------------- |
+| `target`  | `Element`          | Element that owns pointer admission, document tracking, and click swallowing |
+| `options` | `LongPressOptions` | Hold time, slop distance, admission, callback, and lifecycle configuration   |
 
 **Returns:** A lifecycle-owned `LongPress` handle with the same members as the other gestures; `active` is `true` while a hold is pending.
 
@@ -246,17 +246,17 @@ type PanGesture = DragGesture;
 
 ### Shared option behavior
 
-| Option | Default | Contract |
-| --- | --- | --- |
-| `activationDistance` | `6` | Non-negative finite CSS pixels; drag uses Euclidean distance, pan waits for dominant-axis intent |
-| `axis` | `'x'` | Pan only; fixed value or getter sampled when each interaction starts |
-| `disabled` | `false` | Fixed value or getter; blocks starts and cancels active recognition on the next matching pointer event |
-| `pointerCapture` | `true` | Best-effort capture after activation; document tracking continues when capture is disabled or fails |
-| `shouldStart` | N/A | Admission predicate evaluated for the primary pointer before tracking starts |
-| `signal` | N/A | Disposes the handle when the external owner aborts |
-| `onStart` | N/A | Runs once on the activating movement |
-| `onMove` | N/A | Runs on the activating movement and each later matching movement |
-| `onEnd` | N/A | Runs once for active release or cancellation; pending interactions end without callbacks |
+| Option               | Default | Contract                                                                                               |
+| -------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `activationDistance` | `6`     | Non-negative finite CSS pixels; drag uses Euclidean distance, pan waits for dominant-axis intent       |
+| `axis`               | `'x'`   | Pan only; fixed value or getter sampled when each interaction starts                                   |
+| `disabled`           | `false` | Fixed value or getter; blocks starts and cancels active recognition on the next matching pointer event |
+| `pointerCapture`     | `true`  | Best-effort capture after activation; document tracking continues when capture is disabled or fails    |
+| `shouldStart`        | N/A     | Admission predicate evaluated for the primary pointer before tracking starts                           |
+| `signal`             | N/A     | Disposes the handle when the external owner aborts                                                     |
+| `onStart`            | N/A     | Runs once on the activating movement                                                                   |
+| `onMove`             | N/A     | Runs on the activating movement and each later matching movement                                       |
+| `onEnd`              | N/A     | Runs once for active release or cancellation; pending interactions end without callbacks               |
 
 Options and callback details are readonly. Fixed callbacks and capture policy are snapshotted at construction. Function-valued `axis` and `disabled` options remain dynamic.
 
@@ -264,10 +264,10 @@ Gesture tracks accepted movement with capture-phase listeners on the target's cu
 
 ## Errors
 
-| Error | Trigger | Notable properties |
-| --- | --- | --- |
-| `GestureError` | Base class for every gesture-originated error | `instanceof GestureError` catches any gesture error |
-| `GestureConfigError` | Invalid option value | Extends `GestureError` |
+| Error                | Trigger                                       | Notable properties                                  |
+| -------------------- | --------------------------------------------- | --------------------------------------------------- |
+| `GestureError`       | Base class for every gesture-originated error | `instanceof GestureError` catches any gesture error |
+| `GestureConfigError` | Invalid option value                          | Extends `GestureError`                              |
 
 - Invalid `activationDistance` values throw `GestureConfigError` during construction.
 - Invalid fixed `axis` values throw `GestureConfigError` during construction.

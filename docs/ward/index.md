@@ -36,13 +36,13 @@ const decision = ward.decide({
 });
 ```
 
-| Feature | Ward | Inline conditionals |
-| --- | --- | --- |
-| Ordered first-match policy | <ore-icon name="check" size="16"></ore-icon> | Manual |
-| Default deny | <ore-icon name="check" size="16"></ore-icon> | Manual |
-| Typed actions | <ore-icon name="check" size="16"></ore-icon> | Partial |
-| Ownership predicates | <ore-icon name="check" size="16"></ore-icon> | Manual |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Feature                    | Ward                                         | Inline conditionals                          |
+| -------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Ordered first-match policy | <ore-icon name="check" size="16"></ore-icon> | Manual                                       |
+| Default deny               | <ore-icon name="check" size="16"></ore-icon> | Manual                                       |
+| Typed actions              | <ore-icon name="check" size="16"></ore-icon> | Partial                                      |
+| Ownership predicates       | <ore-icon name="check" size="16"></ore-icon> | Manual                                       |
+| Zero dependencies          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 ## Features
 

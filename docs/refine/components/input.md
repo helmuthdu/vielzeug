@@ -266,23 +266,23 @@ For first-run forms, combine a visible label, helper text, and progressive valid
 
 ### Attributes
 
-| Attribute         | Type                                                                        | Default     | Description              |
-| ----------------- | --------------------------------------------------------------------------- | ----------- | ------------------------ |
-| `type`            | `'text' \| 'email' \| 'password' \| 'search' \| 'url' \| 'tel' \| 'number'` | `'text'`    | Input type               |
-| `value`           | `string`                                                                    | `''`        | Current input value      |
-| `name`            | `string`                                                                    | `''`        | Form field name          |
-| `placeholder`     | `string`                                                                    | `''`        | Placeholder text         |
-| `label`           | `string`                                                                    | `''`        | Label text               |
-| `label-placement` | `'inset' \| 'outside'`                                                      | `'inset'`   | Label placement          |
-| `helper`          | `string`                                                                    | `''`        | Helper text below input  |
-| `disabled`        | `boolean`                                                                   | `false`     | Disable the input        |
-| `readonly`        | `boolean`                                                                   | `false`     | Make the input read-only |
-| `clearable`       | `boolean`                                                                   | `false`     | Show a clear button when the field has a value |
+| Attribute         | Type                                                                        | Default     | Description                                                                     |
+| ----------------- | --------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------- |
+| `type`            | `'text' \| 'email' \| 'password' \| 'search' \| 'url' \| 'tel' \| 'number'` | `'text'`    | Input type                                                                      |
+| `value`           | `string`                                                                    | `''`        | Current input value                                                             |
+| `name`            | `string`                                                                    | `''`        | Form field name                                                                 |
+| `placeholder`     | `string`                                                                    | `''`        | Placeholder text                                                                |
+| `label`           | `string`                                                                    | `''`        | Label text                                                                      |
+| `label-placement` | `'inset' \| 'outside'`                                                      | `'inset'`   | Label placement                                                                 |
+| `helper`          | `string`                                                                    | `''`        | Helper text below input                                                         |
+| `disabled`        | `boolean`                                                                   | `false`     | Disable the input                                                               |
+| `readonly`        | `boolean`                                                                   | `false`     | Make the input read-only                                                        |
+| `clearable`       | `boolean`                                                                   | `false`     | Show a clear button when the field has a value                                  |
 | `required`        | `boolean`                                                                   | `false`     | Participate in native form validation while blank (read-only inputs are exempt) |
-| `fullwidth`       | `boolean`                                                                   | `false`     | Expand to full width     |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`      | Input size               |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'`         | `'solid'`   | Visual variant           |
-| `color`           | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`             | `'primary'` | Color theme              |
+| `fullwidth`       | `boolean`                                                                   | `false`     | Expand to full width                                                            |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`      | Input size                                                                      |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'`         | `'solid'`   | Visual variant                                                                  |
+| `color`           | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`             | `'primary'` | Color theme                                                                     |
 
 ### Slots
 

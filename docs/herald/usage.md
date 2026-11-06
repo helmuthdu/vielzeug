@@ -92,9 +92,12 @@ Herald captures synchronous listener throws only, and `tap()` does not suppress 
 `tap()` observes subscriptions, unsubscriptions, wildcard subscriptions, emissions, listener failures, and disposal without changing bus behavior. Tap-handler failures are swallowed.
 
 ```ts
-const stopTrace = bus.tap((event) => {
-  recordHeraldEvent(event);
-}, { signal: owner.signal });
+const stopTrace = bus.tap(
+  (event) => {
+    recordHeraldEvent(event);
+  },
+  { signal: owner.signal },
+);
 ```
 
 An `emit` trace includes the event key, payload, and number of specific plus wildcard listeners invoked. Trace events do not include timestamps; add them in the observer if needed.

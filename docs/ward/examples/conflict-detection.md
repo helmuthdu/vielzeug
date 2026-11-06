@@ -16,10 +16,7 @@ Ward intentionally has no conflict engine: conditions can make static shadow ana
 ```ts
 import { allow, createWard, deny, WILDCARD } from '@vielzeug/ward';
 
-const ward = createWard([
-  deny('blocked', WILDCARD, [WILDCARD]),
-  allow(WILDCARD, 'posts', ['read']),
-]);
+const ward = createWard([deny('blocked', WILDCARD, [WILDCARD]), allow(WILDCARD, 'posts', ['read'])]);
 
 const blocked = { id: 'u1', roles: ['blocked'] };
 expect(ward.decide({ action: 'read', principal: blocked, resource: 'posts' }).effect).toBe('deny');

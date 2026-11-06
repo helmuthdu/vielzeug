@@ -86,8 +86,8 @@ Override the default `"Breadcrumb"` landmark label when a page has multiple navi
 
 **`ore-breadcrumb`** Slots
 
-| Slot      | Description                                           |
-| --------- | ----------------------------------------------------- |
+| Slot      | Description                                            |
+| --------- | ------------------------------------------------------ |
 | (default) | `ore-breadcrumb-item` elements representing each crumb |
 
 **`ore-breadcrumb`** CSS Custom Properties
@@ -98,9 +98,9 @@ Override the default `"Breadcrumb"` landmark label when a page has multiple navi
 
 **`ore-breadcrumb-item`** Attributes
 
-| Attribute | Type      | Default | Description                                                                     |
-| --------- | --------- | ------- | ------------------------------------------------------------------------------- |
-| `href`    | `string`  | N/A | URL the item links to. Omit for non-linked crumbs.                              |
+| Attribute | Type      | Default | Description                                                                                                                                                                                                                                          |
+| --------- | --------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `href`    | `string`  | N/A     | URL the item links to. Omit for non-linked crumbs.                                                                                                                                                                                                   |
 | `active`  | `boolean` | `false` | Marks this item as the current page (`aria-current="page"`). Disables the link. Always mark the final (current) crumb as `active`: omitting it breaks `aria-current` and confuses screen readers. Only one crumb should carry `aria-current="page"`. |
 
 **`ore-breadcrumb-item`** Slots

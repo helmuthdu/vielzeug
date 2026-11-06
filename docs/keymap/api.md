@@ -9,41 +9,41 @@ description: Complete API reference for @vielzeug/keymap bindings, chords, parsi
 
 ### Core API (Most Users)
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createKeymap()` | Create shortcut manager from an ordered binding array | Sync | `dispose()` is terminal |
-| `findShortcutConflicts()` | Find duplicate and prefix paths | Sync | Invalid non-empty input throws |
-| `formatShortcut()` | Format shortcut labels | Sync | Invalid input returns `''` |
-| `matchKey()` | Match an event against one shortcut pattern | Sync | Unparseable pattern returns `false`; chord patterns never match |
-| `detectModKey()` | Resolve platform primary modifier | Sync | Returns `ctrl` without `navigator` |
-| `tap()` | Observe chord lifecycle, matches, and disposal | Sync | Observer failures are swallowed |
-| `Binding` | Per-binding config type (id, shortcut, handler, trigger, when, preventDefault, stopPropagation) | N/A | Reusing an `id` replaces its binding |
+| Symbol                    | Purpose                                                                                         | Execution mode | Common gotcha                                                   |
+| ------------------------- | ----------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------- |
+| `createKeymap()`          | Create shortcut manager from an ordered binding array                                           | Sync           | `dispose()` is terminal                                         |
+| `findShortcutConflicts()` | Find duplicate and prefix paths                                                                 | Sync           | Invalid non-empty input throws                                  |
+| `formatShortcut()`        | Format shortcut labels                                                                          | Sync           | Invalid input returns `''`                                      |
+| `matchKey()`              | Match an event against one shortcut pattern                                                     | Sync           | Unparseable pattern returns `false`; chord patterns never match |
+| `detectModKey()`          | Resolve platform primary modifier                                                               | Sync           | Returns `ctrl` without `navigator`                              |
+| `tap()`                   | Observe chord lifecycle, matches, and disposal                                                  | Sync           | Observer failures are swallowed                                 |
+| `Binding`                 | Per-binding config type (id, shortcut, handler, trigger, when, preventDefault, stopPropagation) | N/A            | Reusing an `id` replaces its binding                            |
 
 ### Parser Subpath (`@vielzeug/keymap/parse`)
 
 Use the parser subpath if you're building keyboard-aware config validators, custom UI, or framework integrations.
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `parseShortcut()` | Strictly parse full shortcut | Sync | Empty input throws |
-| `parseStep()` | Parse one step without throwing | Sync | Invalid input returns `null` |
-| `canonicalizeShortcut()` | Create stable shortcut key | Sync | Input must already be parsed |
-| `matchStep()` | Test event against parsed step | Sync | Extra modifiers prevent a match |
-| `detectModKey()` | Resolve platform primary modifier | Sync | Returns `ctrl` without `navigator` |
+| Symbol                   | Purpose                           | Execution mode | Common gotcha                      |
+| ------------------------ | --------------------------------- | -------------- | ---------------------------------- |
+| `parseShortcut()`        | Strictly parse full shortcut      | Sync           | Empty input throws                 |
+| `parseStep()`            | Parse one step without throwing   | Sync           | Invalid input returns `null`       |
+| `canonicalizeShortcut()` | Create stable shortcut key        | Sync           | Input must already be parsed       |
+| `matchStep()`            | Test event against parsed step    | Sync           | Extra modifiers prevent a match    |
+| `detectModKey()`         | Resolve platform primary modifier | Sync           | Returns `ctrl` without `navigator` |
 
 ### Errors
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `KeymapError` | Base Keymap error | Sync | Includes parse, config, and lifecycle errors |
-| `KeymapConfigError` | Invalid `createKeymap` option | Sync | Thrown for a non-positive `chordTimeout` |
-| `KeymapParseError` | Strict parser error | Sync | `parseStep()` never throws it |
+| Symbol              | Purpose                       | Execution mode | Common gotcha                                |
+| ------------------- | ----------------------------- | -------------- | -------------------------------------------- |
+| `KeymapError`       | Base Keymap error             | Sync           | Includes parse, config, and lifecycle errors |
+| `KeymapConfigError` | Invalid `createKeymap` option | Sync           | Thrown for a non-positive `chordTimeout`     |
+| `KeymapParseError`  | Strict parser error           | Sync           | `parseStep()` never throws it                |
 
 ## Package Entry Points
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/keymap` | Root entry point for `createKeymap`, `formatShortcut`, `findShortcutConflicts`, `matchKey`, `detectModKey`, errors, and public types. |
+| Import                   | Purpose                                                                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@vielzeug/keymap`       | Root entry point for `createKeymap`, `formatShortcut`, `findShortcutConflicts`, `matchKey`, `detectModKey`, errors, and public types.       |
 | `@vielzeug/keymap/parse` | Parser internals subpath for custom tooling: `parseShortcut`, `parseStep`, `matchStep`, `matchKey`, `canonicalizeShortcut`, `detectModKey`. |
 
 ## Core Manager
@@ -51,44 +51,39 @@ Use the parser subpath if you're building keyboard-aware config validators, cust
 ### `createKeymap()`
 
 ```ts
-function createKeymap(
-  bindings?: readonly Binding[],
-  options?: KeymapOptions,
-): Keymap;
+function createKeymap(bindings?: readonly Binding[], options?: KeymapOptions): Keymap;
 ```
 
 Creates shortcut manager with independent chord state for each mounted target.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
+| Parameter  | Type                 | Description                                                                              |
+| ---------- | -------------------- | ---------------------------------------------------------------------------------------- |
 | `bindings` | `readonly Binding[]` | Ordered array of bindings. Each binding has an explicit `id`, `shortcut`, and `handler`. |
-| `options` | `KeymapOptions` | Chord, modifier, and global-guard configuration. |
+| `options`  | `KeymapOptions`      | Chord, modifier, and global-guard configuration.                                         |
 
 **Returns:** `Keymap`.
 
 ```ts
 import { createKeymap } from '@vielzeug/keymap';
 
-const map = createKeymap([
-  { id: 'save', shortcut: 'ctrl+s', handler: () => console.log('save') },
-]);
+const map = createKeymap([{ id: 'save', shortcut: 'ctrl+s', handler: () => console.log('save') }]);
 const unmount = map.mount(document);
 
 unmount();
 map.dispose();
 ```
 
-| `Keymap` member | Return | Contract |
-| --- | --- | --- |
-| `bind(binding)` | `() => void` | Adds or replaces a binding with the same `id`. Returned callback removes that binding while active. |
-| `mount(target)` | `() => void` | Adds target listener. Repeat mounts of same target are reference-counted. |
-| `unbind(id)` | `void` | Removes binding by id. Warns in development when unknown. |
-| `listBindings()` | `readonly BindingEntry[]` | Returns a detached binding snapshot. |
-| `tap(handler, options?)` | `() => void` | Observes chord lifecycle, matches, and disposal. Supports signal-owned teardown. |
-| `dispose()` | `void` | Removes all listeners, aborts signal, and permanently disposes map. Idempotent. |
-| `disposed` | `boolean` | `true` after first `dispose()`. |
-| `disposalSignal` | `AbortSignal` | Aborts when map is disposed. |
-| `[Symbol.dispose]()` | `void` | Calls `dispose()`. |
+| `Keymap` member          | Return                    | Contract                                                                                            |
+| ------------------------ | ------------------------- | --------------------------------------------------------------------------------------------------- |
+| `bind(binding)`          | `() => void`              | Adds or replaces a binding with the same `id`. Returned callback removes that binding while active. |
+| `mount(target)`          | `() => void`              | Adds target listener. Repeat mounts of same target are reference-counted.                           |
+| `unbind(id)`             | `void`                    | Removes binding by id. Warns in development when unknown.                                           |
+| `listBindings()`         | `readonly BindingEntry[]` | Returns a detached binding snapshot.                                                                |
+| `tap(handler, options?)` | `() => void`              | Observes chord lifecycle, matches, and disposal. Supports signal-owned teardown.                    |
+| `dispose()`              | `void`                    | Removes all listeners, aborts signal, and permanently disposes map. Idempotent.                     |
+| `disposed`               | `boolean`                 | `true` after first `dispose()`.                                                                     |
+| `disposalSignal`         | `AbortSignal`             | Aborts when map is disposed.                                                                        |
+| `[Symbol.dispose]()`     | `void`                    | Calls `dispose()`.                                                                                  |
 
 After disposal, `bind()`, `unbind()`, and `mount()` throw `KeymapError`.
 
@@ -97,18 +92,15 @@ After disposal, `bind()`, `unbind()`, and `mount()` throw `KeymapError`.
 ### `tap()`
 
 ```ts
-function tap(
-  handler: (event: KeymapEvent) => void,
-  options?: { signal?: AbortSignal },
-): () => void;
+function tap(handler: (event: KeymapEvent) => void, options?: { signal?: AbortSignal }): () => void;
 ```
 
 Observes chord progress, cancellation, completed matches, timeouts, and disposal without affecting shortcut behavior.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `handler` | `(event: KeymapEvent) => void` | Receives each runtime event synchronously. Errors are swallowed. |
-| `options.signal` | `AbortSignal` | Detaches the handler when aborted. |
+| Parameter        | Type                           | Description                                                      |
+| ---------------- | ------------------------------ | ---------------------------------------------------------------- |
+| `handler`        | `(event: KeymapEvent) => void` | Receives each runtime event synchronously. Errors are swallowed. |
+| `options.signal` | `AbortSignal`                  | Detaches the handler when aborted.                               |
 
 **Returns:** An idempotent detach function.
 
@@ -133,11 +125,11 @@ function findShortcutConflicts(
 
 Returns entries with same-trigger exact or prefix-conflicting shortcut paths.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `shortcut` | `string` | Proposed shortcut. Empty or whitespace-only input returns no conflicts. |
-| `entries` | `readonly BindingEntry[]` | Bindings to compare, commonly `map.listBindings()`. |
-| `options` | `ConflictOptions` | Optional modifier resolution and trigger filter. |
+| Parameter  | Type                      | Description                                                             |
+| ---------- | ------------------------- | ----------------------------------------------------------------------- |
+| `shortcut` | `string`                  | Proposed shortcut. Empty or whitespace-only input returns no conflicts. |
+| `entries`  | `readonly BindingEntry[]` | Bindings to compare, commonly `map.listBindings()`.                     |
+| `options`  | `ConflictOptions`         | Optional modifier resolution and trigger filter.                        |
 
 **Returns:** Matching entries. Returns `[]` when no conflict exists.
 
@@ -160,10 +152,10 @@ function formatShortcut(shortcut: string, modKey?: 'ctrl' | 'meta'): string;
 
 Formats parsed shortcut into Mac symbols for `meta` or word labels for `ctrl`.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `shortcut` | `string` | Shortcut string to format. |
-| `modKey` | `'ctrl' \| 'meta'` | Platform primary modifier. Defaults to `detectModKey()`. |
+| Parameter  | Type               | Description                                              |
+| ---------- | ------------------ | -------------------------------------------------------- |
+| `shortcut` | `string`           | Shortcut string to format.                               |
+| `modKey`   | `'ctrl' \| 'meta'` | Platform primary modifier. Defaults to `detectModKey()`. |
 
 **Returns:** Display label, or `''` for invalid input.
 
@@ -184,10 +176,10 @@ function parseShortcut(raw: string, modKey?: 'ctrl' | 'meta'): Shortcut;
 
 Strictly parses one or more space-separated shortcut steps.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `raw` | `string` | Full shortcut string. |
-| `modKey` | `'ctrl' \| 'meta'` | Platform primary modifier. Defaults to `detectModKey()`. |
+| Parameter | Type               | Description                                              |
+| --------- | ------------------ | -------------------------------------------------------- |
+| `raw`     | `string`           | Full shortcut string.                                    |
+| `modKey`  | `'ctrl' \| 'meta'` | Platform primary modifier. Defaults to `detectModKey()`. |
 
 **Returns:** Parsed `Shortcut`.
 
@@ -210,10 +202,10 @@ function parseStep(raw: string, modKey?: 'ctrl' | 'meta'): ShortcutStep | null;
 
 Parses one shortcut step without throwing.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `raw` | `string` | One shortcut step. |
-| `modKey` | `'ctrl' \| 'meta'` | Platform primary modifier. Defaults to `detectModKey()`. |
+| Parameter | Type               | Description                                              |
+| --------- | ------------------ | -------------------------------------------------------- |
+| `raw`     | `string`           | One shortcut step.                                       |
+| `modKey`  | `'ctrl' \| 'meta'` | Platform primary modifier. Defaults to `detectModKey()`. |
 
 **Returns:** Parsed `ShortcutStep`, or `null` for empty, modifier-only, or ambiguous input.
 
@@ -234,9 +226,9 @@ function canonicalizeShortcut(steps: readonly ShortcutStep[]): string;
 
 Converts parsed steps into stable canonical string with sorted modifier order.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `steps` | `readonly ShortcutStep[]` | Parsed shortcut steps. |
+| Parameter | Type                      | Description            |
+| --------- | ------------------------- | ---------------------- |
+| `steps`   | `readonly ShortcutStep[]` | Parsed shortcut steps. |
 
 **Returns:** Canonical shortcut string.
 
@@ -256,10 +248,10 @@ function matchStep(event: KeyboardEvent, step: ShortcutStep): boolean;
 
 Tests exact key and modifier equality for one parsed step.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `event` | `KeyboardEvent` | Event to match. Missing runtime `key` returns `false`. |
-| `step` | `ShortcutStep` | Parsed step. |
+| Parameter | Type            | Description                                            |
+| --------- | --------------- | ------------------------------------------------------ |
+| `event`   | `KeyboardEvent` | Event to match. Missing runtime `key` returns `false`. |
+| `step`    | `ShortcutStep`  | Parsed step.                                           |
 
 **Returns:** `true` only when key and all modifier states match.
 
@@ -280,11 +272,11 @@ function matchKey(event: KeyboardEvent, pattern: string, modKey?: 'ctrl' | 'meta
 
 Matches a keyboard event against a single shortcut pattern such as `'ArrowDown'`, `'esc'`, `'mod+k'`, or `'shift+Home'`. Aliases and `mod` resolve through the same parser `createKeymap` uses, and modifier state must match exactly: `'ArrowDown'` does not match Ctrl+ArrowDown. Exported from both the root entry point and `@vielzeug/keymap/parse`.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `event` | `KeyboardEvent` | Event to match. Missing runtime `key` returns `false`. |
-| `pattern` | `string` | One shortcut step. Unparseable patterns and multi-step chords return `false` (never throws). |
-| `modKey` | `'ctrl' \| 'meta'` | Optional. Resolution for `mod`; defaults to `detectModKey()`. |
+| Parameter | Type               | Description                                                                                  |
+| --------- | ------------------ | -------------------------------------------------------------------------------------------- |
+| `event`   | `KeyboardEvent`    | Event to match. Missing runtime `key` returns `false`.                                       |
+| `pattern` | `string`           | One shortcut step. Unparseable patterns and multi-step chords return `false` (never throws). |
+| `modKey`  | `'ctrl' \| 'meta'` | Optional. Resolution for `mod`; defaults to `detectModKey()`.                                |
 
 **Returns:** `true` only when key and all modifier states match.
 
@@ -433,8 +425,8 @@ interface ConflictOptions {
 
 ## Errors
 
-| Error | Trigger | Notable properties |
-| --- | --- | --- |
-| `KeymapError` | Lifecycle operation after disposal | Use `instanceof KeymapError` to narrow Keymap errors. |
-| `KeymapConfigError` | `createKeymap()` receives an invalid option | Extends `KeymapError`. Thrown for a non-positive or non-finite `chordTimeout`. |
-| `KeymapParseError` | Strict shortcut parser receives invalid input | Extends `KeymapError`. |
+| Error               | Trigger                                       | Notable properties                                                             |
+| ------------------- | --------------------------------------------- | ------------------------------------------------------------------------------ |
+| `KeymapError`       | Lifecycle operation after disposal            | Use `instanceof KeymapError` to narrow Keymap errors.                          |
+| `KeymapConfigError` | `createKeymap()` receives an invalid option   | Extends `KeymapError`. Thrown for a non-positive or non-finite `chordTimeout`. |
+| `KeymapParseError`  | Strict shortcut parser receives invalid input | Extends `KeymapError`.                                                         |

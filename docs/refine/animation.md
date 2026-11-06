@@ -13,50 +13,51 @@ Every animation and transition in Refine routes through the tokens on this page.
 
 **Duration scale:**
 
-| Token             | Value  | Zeroed under reduced-motion |
-| ----------------- | ------ | --------------------------- |
-| `--duration-75`   | 75ms   | Yes                         |
-| `--duration-100`  | 100ms  | Yes                         |
-| `--duration-150`  | 150ms  | Yes                         |
-| `--duration-200`  | 200ms  | Yes                         |
-| `--duration-250`  | 250ms  | Yes                         |
-| `--duration-300`  | 300ms  | Yes                         |
-| `--duration-350`  | 350ms  | Yes                         |
-| `--duration-500`  | 500ms  | Yes                         |
+| Token             | Value  | Zeroed under reduced-motion                                  |
+| ----------------- | ------ | ------------------------------------------------------------ |
+| `--duration-75`   | 75ms   | Yes                                                          |
+| `--duration-100`  | 100ms  | Yes                                                          |
+| `--duration-150`  | 150ms  | Yes                                                          |
+| `--duration-200`  | 200ms  | Yes                                                          |
+| `--duration-250`  | 250ms  | Yes                                                          |
+| `--duration-300`  | 300ms  | Yes                                                          |
+| `--duration-350`  | 350ms  | Yes                                                          |
+| `--duration-500`  | 500ms  | Yes                                                          |
 | `--duration-600`  | 600ms  | Yes (spinner also stops via the `--_motion-animation` hatch) |
-| `--duration-700`  | 700ms  | Yes                         |
-| `--duration-1000` | 1000ms | Yes                         |
-| `--duration-1200` | 1200ms | Yes (looping indicator stops via the hatch) |
-| `--duration-1400` | 1400ms | Yes (looping indicator stops via the hatch) |
-| `--duration-1500` | 1500ms | Yes (looping indicator stops via the hatch) |
+| `--duration-700`  | 700ms  | Yes                                                          |
+| `--duration-1000` | 1000ms | Yes                                                          |
+| `--duration-1200` | 1200ms | Yes (looping indicator stops via the hatch)                  |
+| `--duration-1400` | 1400ms | Yes (looping indicator stops via the hatch)                  |
+| `--duration-1500` | 1500ms | Yes (looping indicator stops via the hatch)                  |
 
 **Easing:**
 
-| Token              | Value                             | Use                            |
-| ------------------ | --------------------------------- | ------------------------------ |
-| `--ease-linear`    | `linear`                          |                                |
-| `--ease-in`        | `cubic-bezier(0.4, 0, 1, 1)`     |                                |
-| `--ease-out`       | `cubic-bezier(0, 0, 0.2, 1)`     |                                |
-| `--ease-in-out`    | `cubic-bezier(0.4, 0, 0.2, 1)`   | Default for most transitions   |
-| `--ease-spring`    | `cubic-bezier(0.22, 1, 0.36, 1)` | Fast start, soft landing       |
-| `--ease-move`      | `cubic-bezier(0.25, 1, 0.5, 1)`  | Drawers, panels, carousels     |
+| Token              | Value                              | Use                          |
+| ------------------ | ---------------------------------- | ---------------------------- |
+| `--ease-linear`    | `linear`                           |                              |
+| `--ease-in`        | `cubic-bezier(0.4, 0, 1, 1)`       |                              |
+| `--ease-out`       | `cubic-bezier(0, 0, 0.2, 1)`       |                              |
+| `--ease-in-out`    | `cubic-bezier(0.4, 0, 0.2, 1)`     | Default for most transitions |
+| `--ease-spring`    | `cubic-bezier(0.22, 1, 0.36, 1)`   | Fast start, soft landing     |
+| `--ease-move`      | `cubic-bezier(0.25, 1, 0.5, 1)`    | Drawers, panels, carousels   |
 | `--ease-overshoot` | `cubic-bezier(0.34, 1.1, 0.64, 1)` | Toasts, popups               |
 
 **Pre-built transitions:**
 
-| Token                 | Value                          | Use                              |
-| --------------------- | ------------------------------ | -------------------------------- |
-| `--transition-none`   | `none`                         |                                  |
-| `--transition-fast`   | `150ms var(--ease-in-out)`     | Hover states, toggles            |
-| `--transition-normal` | `200ms var(--ease-in-out)`     | Default                          |
-| `--transition-slow`   | `300ms var(--ease-in-out)`     | Panels, accordions               |
-| `--transition-slower` | `500ms var(--ease-in-out)`     |                                  |
-| `--transition-spring` | `300ms var(--ease-spring)`     | Bouncy interactions              |
-| `--transition-exit`   | `300ms var(--ease-out)`        | Overlay dismiss, alert collapse  |
-| `--transition-loader` | `600ms linear`                 | Spinner constant rotation        |
+| Token                 | Value                      | Use                             |
+| --------------------- | -------------------------- | ------------------------------- |
+| `--transition-none`   | `none`                     |                                 |
+| `--transition-fast`   | `150ms var(--ease-in-out)` | Hover states, toggles           |
+| `--transition-normal` | `200ms var(--ease-in-out)` | Default                         |
+| `--transition-slow`   | `300ms var(--ease-in-out)` | Panels, accordions              |
+| `--transition-slower` | `500ms var(--ease-in-out)` |                                 |
+| `--transition-spring` | `300ms var(--ease-spring)` | Bouncy interactions             |
+| `--transition-exit`   | `300ms var(--ease-out)`    | Overlay dismiss, alert collapse |
+| `--transition-loader` | `600ms linear`             | Spinner constant rotation       |
 
 ::: warning
 `--transition-all` does not exist in Refine. Use explicit property transitions to avoid forcing layout recalculation on every style change:
+
 ```css
 transition: color var(--transition-fast), background var(--transition-fast);
 ```
@@ -70,21 +71,21 @@ Overlay enter/exit transitions that carry a `display`/`overlay` `allow-discrete`
 
 Keyframe + house timing as one token, composed from the duration/easing scale above so reduced motion governs every one of them. The keyframes ship in `@vielzeug/refine/styles/animation.css` (included in `tokens.css`).
 
-| Token                        | Utility class                  | Keyframe            | Timing                          |
-| ---------------------------- | ------------------------------ | ------------------- | ------------------------------- |
-| `--animate-fade-in`          | `.animate-fade-in`             | `fade-in`           | `150ms ease-out both`           |
-| `--animate-fade-out`         | `.animate-fade-out`            | `fade-out`          | `150ms ease-in both`            |
-| `--animate-fade-in-up`       | `.animate-fade-in-up`          | `fade-in-up`        | `300ms ease-move both`          |
-| `--animate-scale-in`         | `.animate-scale-in`            | `scale-in`          | `200ms ease-overshoot both`     |
-| `--animate-slide-in-from-top`| `.animate-slide-in-from-top`   | `slide-in-from-top` | `300ms ease-move both`          |
-| `--animate-slide-in-from-bottom` | `.animate-slide-in-from-bottom` | `slide-in-from-bottom` | `300ms ease-move both`   |
-| `--animate-slide-in-from-left` | `.animate-slide-in-from-left`  | `slide-in-from-left` | `300ms ease-move both`       |
-| `--animate-slide-in-from-right` | `.animate-slide-in-from-right` | `slide-in-from-right` | `300ms ease-move both`      |
-| `--animate-spin`             | `.animate-spin`                | `spin`              | loader duration, linear, infinite |
-| `--animate-ping`             | `.animate-ping`                | `ping`              | `1000ms ease-out infinite`      |
-| `--animate-pulse`            | `.animate-pulse`               | `pulse`             | `1000ms ease-in-out infinite`   |
-| `--animate-bounce`           | `.animate-bounce`              | `bounce`            | `1000ms ease-in-out infinite`   |
-| `--animate-progress-bar`     | `.animate-progress-bar`        | `progress-bar`      | `1400ms ease-in-out infinite`   |
+| Token                            | Utility class                   | Keyframe               | Timing                            |
+| -------------------------------- | ------------------------------- | ---------------------- | --------------------------------- |
+| `--animate-fade-in`              | `.animate-fade-in`              | `fade-in`              | `150ms ease-out both`             |
+| `--animate-fade-out`             | `.animate-fade-out`             | `fade-out`             | `150ms ease-in both`              |
+| `--animate-fade-in-up`           | `.animate-fade-in-up`           | `fade-in-up`           | `300ms ease-move both`            |
+| `--animate-scale-in`             | `.animate-scale-in`             | `scale-in`             | `200ms ease-overshoot both`       |
+| `--animate-slide-in-from-top`    | `.animate-slide-in-from-top`    | `slide-in-from-top`    | `300ms ease-move both`            |
+| `--animate-slide-in-from-bottom` | `.animate-slide-in-from-bottom` | `slide-in-from-bottom` | `300ms ease-move both`            |
+| `--animate-slide-in-from-left`   | `.animate-slide-in-from-left`   | `slide-in-from-left`   | `300ms ease-move both`            |
+| `--animate-slide-in-from-right`  | `.animate-slide-in-from-right`  | `slide-in-from-right`  | `300ms ease-move both`            |
+| `--animate-spin`                 | `.animate-spin`                 | `spin`                 | loader duration, linear, infinite |
+| `--animate-ping`                 | `.animate-ping`                 | `ping`                 | `1000ms ease-out infinite`        |
+| `--animate-pulse`                | `.animate-pulse`                | `pulse`                | `1000ms ease-in-out infinite`     |
+| `--animate-bounce`               | `.animate-bounce`               | `bounce`               | `1000ms ease-in-out infinite`     |
+| `--animate-progress-bar`         | `.animate-progress-bar`         | `progress-bar`         | `1400ms ease-in-out infinite`     |
 
 Every token has a matching `.animate-*` utility class (a build-time contract test keeps the two in sync):
 
@@ -102,11 +103,11 @@ The `slide-in-from-top`/`slide-in-from-bottom` keyframes read `--overlay-enter-t
 
 Reduced motion has three states, mirroring `@vielzeug/necromancer`'s `MotionMode`:
 
-| State | How | Effect |
-| --- | --- | --- |
-| System (default) | no `data-motion` attribute | Follows `prefers-reduced-motion` |
-| Reduced | `data-motion="reduced"` on `<html>` | Forces reduction regardless of the OS |
-| Full | `data-motion="full"` on `<html>` | Opts back in despite an OS-level reduction |
+| State            | How                                 | Effect                                     |
+| ---------------- | ----------------------------------- | ------------------------------------------ |
+| System (default) | no `data-motion` attribute          | Follows `prefers-reduced-motion`           |
+| Reduced          | `data-motion="reduced"` on `<html>` | Forces reduction regardless of the OS      |
+| Full             | `data-motion="full"` on `<html>`    | Opts back in despite an OS-level reduction |
 
 Set it from JavaScript with `setMotionMode()` (or read the current state with `getMotionMode()`):
 
@@ -146,13 +147,13 @@ const reflow = animateReflow(listElement, abortController.signal, {
 reflow.run(() => renderItems(nextItems));
 ```
 
-| Option | Type | Default | Purpose |
-| --- | --- | --- | --- |
-| `elements` | `() => HTMLElement[]` | required | The elements to track, read live from the DOM on both sides of the mutation |
-| `getKey` | `(el: HTMLElement) => string \| undefined` | required | Stable identity per element; every element must return one |
-| `durationToken` | `string` | `'--duration-200'` | Duration token to honor |
-| `easingToken` | `string` | `'--ease-move'` | Easing token to honor |
-| `stagger` | `number` | `0` | Per-element delay in ms, so a reflow reads as a cascade |
+| Option          | Type                                       | Default            | Purpose                                                                     |
+| --------------- | ------------------------------------------ | ------------------ | --------------------------------------------------------------------------- |
+| `elements`      | `() => HTMLElement[]`                      | required           | The elements to track, read live from the DOM on both sides of the mutation |
+| `getKey`        | `(el: HTMLElement) => string \| undefined` | required           | Stable identity per element; every element must return one                  |
+| `durationToken` | `string`                                   | `'--duration-200'` | Duration token to honor                                                     |
+| `easingToken`   | `string`                                   | `'--ease-move'`    | Easing token to honor                                                       |
+| `stagger`       | `number`                                   | `0`                | Per-element delay in ms, so a reflow reads as a cascade                     |
 
 How it behaves:
 
@@ -169,14 +170,14 @@ Token-timed transitions have a fixed duration and easing curve. A gesture-driven
 
 `spring(from, to, onUpdate, options)` integrates a damped harmonic oscillator (`mass * x'' = -stiffness * (x - to) - damping * x'`) frame by frame and calls `onUpdate(value, velocity)` until both the distance to `to` and the velocity fall below `precision`. It returns a lifecycle-owned `SpringHandle` (`dispose()`, a `result` promise, `Symbol.dispose`).
 
-| Option | Default | Effect |
-| --- | --- | --- |
-| `stiffness` | `170` | Higher settles faster |
-| `damping` | `26` | Lower overshoots more; `2 * sqrt(k * mass)` is critically damped |
-| `mass` | `1` | Higher lags and overshoots |
-| `velocity` | `0` | Initial velocity in units/s — the finger velocity at release |
-| `precision` | `0.1` | Rest threshold on both distance and velocity |
-| `motion` | `'system'` | Reduced motion jumps straight to `to` |
+| Option      | Default    | Effect                                                           |
+| ----------- | ---------- | ---------------------------------------------------------------- |
+| `stiffness` | `170`      | Higher settles faster                                            |
+| `damping`   | `26`       | Lower overshoots more; `2 * sqrt(k * mass)` is critically damped |
+| `mass`      | `1`        | Higher lags and overshoots                                       |
+| `velocity`  | `0`        | Initial velocity in units/s — the finger velocity at release     |
+| `precision` | `0.1`      | Rest threshold on both distance and velocity                     |
+| `motion`    | `'system'` | Reduced motion jumps straight to `to`                            |
 
 ```ts
 import { spring } from '@vielzeug/necromancer';
@@ -193,7 +194,7 @@ const handle = spring(currentOffset, targetOffset, (value) => paint(value), {
 The gesture layer measures velocity, the spring consumes it, and a small projection bridges the two:
 
 1. **Measure** — a `@vielzeug/gesture` drag/pan reports `velocity: { x, y }` in px/s, sampled over a short trailing window so a stale pointer position does not inflate it.
-2. **Project** — Refine's internal fling helper (`projectFling`) extrapolates where the panel would land if that velocity continued for ~250 ms. The projection decides *where* to settle; the spring reproduces the *feel*.
+2. **Project** — Refine's internal fling helper (`projectFling`) extrapolates where the panel would land if that velocity continued for ~250 ms. The projection decides _where_ to settle; the spring reproduces the _feel_.
 3. **Settle** — the projected point is snapped to the nearest legal stop (a drawer detent, or fully open/closed), and `spring()` runs to it seeded with the release velocity. A quick flick carries through to the next stop; a slow release settles without overshoot.
 
 Because the spring takes `motion: 'system'` by default, a fling under reduced motion jumps straight to the target instead of animating — the same preference the token layer honors, reached through necromancer's own `motion` option rather than a CSS token.

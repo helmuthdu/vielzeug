@@ -331,9 +331,9 @@ against the same file. Point wrangler at the directory:
     {
       "binding": "DB",
       "database_name": "my-app",
-      "migrations_dir": "./node_modules/@vielzeug/archive/migrations",
-    },
-  ],
+      "migrations_dir": "./node_modules/@vielzeug/archive/migrations"
+    }
+  ]
 }
 ```
 

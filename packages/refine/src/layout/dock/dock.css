@@ -338,7 +338,8 @@
         [mobile-layout='auto'][data-center-claimed]:not([data-start-claimed]):not([data-tools-claimed]):not(
           [data-commit-claimed]
         )
-      ) .dock-center {
+      )
+      .dock-center {
       position: static;
       pointer-events: auto;
     }

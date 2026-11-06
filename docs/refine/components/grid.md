@@ -435,52 +435,52 @@ Use `responsive` for fluid layouts where column count depends on available space
 
 **`ore-grid`**
 
-| Attribute       | Type                                                      | Default | Description                                       |
-| --------------- | --------------------------------------------------------- | ------- | ------------------------------------------------- |
-| `cols`          | `'1'–'12' \| 'auto'`                                      | -       | Number of columns                                 |
-| `cols-sm`       | `'1'–'12' \| 'auto'`                                      | -       | Columns when element width ≥ 640px                |
-| `cols-md`       | `'1'–'12' \| 'auto'`                                      | -       | Columns when element width ≥ 768px                |
-| `cols-lg`       | `'1'–'12' \| 'auto'`                                      | -       | Columns when element width ≥ 1024px               |
-| `cols-xl`       | `'1'–'12' \| 'auto'`                                      | -       | Columns when element width ≥ 1280px               |
-| `cols-2xl`      | `'1'–'12' \| 'auto'`                                      | -       | Columns when element width ≥ 1536px               |
-| `rows`          | `'1'–'12' \| 'auto'`                                      | -       | Number of explicit rows                           |
-| `gap`           | `'none' \| 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`  | Gap between items                                 |
-| `align`         | `'start' \| 'center' \| 'end' \| 'stretch' \| 'baseline'` | -       | `align-items` for all cells                       |
-| `justify`       | `'start' \| 'center' \| 'end' \| 'stretch'`               | -       | `justify-items` for all cells                     |
-| `flow`          | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`      | `'row'` | `grid-auto-flow` direction                        |
-| `responsive`    | `boolean`                                                 | `false` | Enable `auto-fit` mode                            |
-| `min-col-width` | `string`                                                  | `--grid-min-item-width` | Minimum column width in `responsive` mode |
-| `fullwidth`     | `boolean`                                                 | `false` | Stretch the grid to fill its container's width    |
-| `areas`         | `string`                                                  | -       | CSS `grid-template-areas` value                   |
-| `areas-sm`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 640px  |
-| `areas-md`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 768px  |
-| `areas-lg`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 1024px |
-| `areas-xl`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 1280px |
-| `areas-2xl`     | `string`                                                  | -       | `grid-template-areas` when element width ≥ 1536px |
+| Attribute       | Type                                                      | Default                 | Description                                       |
+| --------------- | --------------------------------------------------------- | ----------------------- | ------------------------------------------------- |
+| `cols`          | `'1'–'12' \| 'auto'`                                      | -                       | Number of columns                                 |
+| `cols-sm`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 640px                |
+| `cols-md`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 768px                |
+| `cols-lg`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1024px               |
+| `cols-xl`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1280px               |
+| `cols-2xl`      | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1536px               |
+| `rows`          | `'1'–'12' \| 'auto'`                                      | -                       | Number of explicit rows                           |
+| `gap`           | `'none' \| 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`                  | Gap between items                                 |
+| `align`         | `'start' \| 'center' \| 'end' \| 'stretch' \| 'baseline'` | -                       | `align-items` for all cells                       |
+| `justify`       | `'start' \| 'center' \| 'end' \| 'stretch'`               | -                       | `justify-items` for all cells                     |
+| `flow`          | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`      | `'row'`                 | `grid-auto-flow` direction                        |
+| `responsive`    | `boolean`                                                 | `false`                 | Enable `auto-fit` mode                            |
+| `min-col-width` | `string`                                                  | `--grid-min-item-width` | Minimum column width in `responsive` mode         |
+| `fullwidth`     | `boolean`                                                 | `false`                 | Stretch the grid to fill its container's width    |
+| `areas`         | `string`                                                  | -                       | CSS `grid-template-areas` value                   |
+| `areas-sm`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 640px  |
+| `areas-md`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 768px  |
+| `areas-lg`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1024px |
+| `areas-xl`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1280px |
+| `areas-2xl`     | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1536px |
 
 **`ore-grid-item`**
 
-| Attribute  | Type                                        | Default | Description                                    |
-| ---------- | ------------------------------------------- | ------- | ---------------------------------------------- |
-| `col-span` | `'1'–'12' \| 'full'`                        | -       | Columns to span; `'full'` = `1 / -1`           |
-| `row-span` | `'1'–'6' \| 'full'`                         | -       | Rows to span; `'full'` = `1 / -1`              |
+| Attribute  | Type                                        | Default | Description                                   |
+| ---------- | ------------------------------------------- | ------- | --------------------------------------------- |
+| `col-span` | `'1'–'12' \| 'full'`                        | -       | Columns to span; `'full'` = `1 / -1`          |
+| `row-span` | `'1'–'6' \| 'full'`                         | -       | Rows to span; `'full'` = `1 / -1`             |
 | `col`      | `string`                                    | -       | Raw `grid-column` value: overrides `col-span` |
 | `row`      | `string`                                    | -       | Raw `grid-row` value: overrides `row-span`    |
-| `align`    | `'start' \| 'center' \| 'end' \| 'stretch'` | -       | `align-self` for this cell                     |
-| `justify`  | `'start' \| 'center' \| 'end' \| 'stretch'` | -       | `justify-self` for this cell                   |
+| `align`    | `'start' \| 'center' \| 'end' \| 'stretch'` | -       | `align-self` for this cell                    |
+| `justify`  | `'start' \| 'center' \| 'end' \| 'stretch'` | -       | `justify-self` for this cell                  |
 
 ### CSS Custom Properties
 
 These are fallback values: attributes take precedence when set. Fixed column counts resolve through the `--grid-1`–`--grid-12` theme tokens, so a theme can redefine the track sizing globally.
 
-| Property                | Default                              | Description                          |
-| ----------------------- | ------------------------------------ | ------------------------------------ |
-| `--grid-cols`           | -                                    | Fallback column template             |
-| `--grid-rows`           | -                                    | Fallback row template                |
-| `--grid-gap`            | `var(--size-4)`                      | Fallback gap                         |
-| `--grid-row-gap`        | `var(--grid-gap)`                    | Fallback row gap                     |
-| `--grid-col-gap`        | `var(--grid-gap)`                    | Fallback column gap                  |
-| `--grid-min-item-width` | `15.625rem` (250px)                  | Floor for `auto-fit` column width    |
+| Property                | Default             | Description                       |
+| ----------------------- | ------------------- | --------------------------------- |
+| `--grid-cols`           | -                   | Fallback column template          |
+| `--grid-rows`           | -                   | Fallback row template             |
+| `--grid-gap`            | `var(--size-4)`     | Fallback gap                      |
+| `--grid-row-gap`        | `var(--grid-gap)`   | Fallback row gap                  |
+| `--grid-col-gap`        | `var(--grid-gap)`   | Fallback column gap               |
+| `--grid-min-item-width` | `15.625rem` (250px) | Floor for `auto-fit` column width |
 
 ## Examples
 

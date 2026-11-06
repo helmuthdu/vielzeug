@@ -47,13 +47,13 @@ The ticker moves left by default. Set `direction="right"` for the reverse motion
 
 ### Attributes / Properties
 
-| Name             | Type                | Default    | Description                            |
-| ---------------- | ------------------- | ---------- | -------------------------------------- |
-| `color`          | `ThemeColor`        | N/A | Theme color for navigation controls    |
-| `duration`       | `number`            | `20`       | Seconds for one complete ticker cycle  |
-| `direction`      | `'left' \| 'right'` | `'left'`   | Horizontal scroll direction            |
-| `pause-on-hover` | `boolean`           | `true`     | Pauses the animation while hovered or keyboard-focused |
-| `show-controls`  | `boolean`           | `true`     | Shows previous and next controls       |
+| Name             | Type                | Default  | Description                                            |
+| ---------------- | ------------------- | -------- | ------------------------------------------------------ |
+| `color`          | `ThemeColor`        | N/A      | Theme color for navigation controls                    |
+| `duration`       | `number`            | `20`     | Seconds for one complete ticker cycle                  |
+| `direction`      | `'left' \| 'right'` | `'left'` | Horizontal scroll direction                            |
+| `pause-on-hover` | `boolean`           | `true`   | Pauses the animation while hovered or keyboard-focused |
+| `show-controls`  | `boolean`           | `true`   | Shows previous and next controls                       |
 
 ### CSS Custom Properties
 

@@ -18,5 +18,6 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 ## Verification
 
 - Structure and relative links: `pnpm validate:docs -- --package=<name>`.
+- Sidebar coverage: `pnpm validate:sidebar -- --package=<name>`. The hand-authored `themeConfig.sidebar` in `docs/.vitepress/config.ts` drifts both ways (links outlive their pages, new pages never get linked) and `ignoreDeadLinks` means the build never complains, so this is the only gate. It imports the real config (generated Refine links included), so text-parsing the sidebar is never the check.
 - Build: `pnpm docs:build` (renders VitePress; dead links are not a build gate while `ignoreDeadLinks` is enabled).
 - Local preview: `pnpm docs:dev`.

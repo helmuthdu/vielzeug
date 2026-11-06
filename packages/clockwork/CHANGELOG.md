@@ -3,156 +3,182 @@
 This log was last generated on Thu, 05 Nov 2026 21:44:45 GMT and should not be manually modified.
 
 ## 26.11.5
+
 Thu, 05 Nov 2026 21:44:45 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.4
+
 Wed, 04 Nov 2026 16:49:50 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.3
+
 Wed, 04 Nov 2026 05:52:43 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.2
+
 Tue, 03 Nov 2026 18:42:43 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.1
+
 Tue, 03 Nov 2026 17:00:37 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.0
+
 Tue, 03 Nov 2026 16:30:26 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.22
+
 Fri, 30 Oct 2026 19:07:28 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.21
+
 Tue, 27 Oct 2026 08:39:39 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.20
+
 Sun, 25 Oct 2026 05:13:02 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.19
+
 Sat, 24 Oct 2026 19:56:28 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.18
+
 Fri, 23 Oct 2026 14:23:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.17
+
 Fri, 23 Oct 2026 07:29:16 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.16
+
 Wed, 21 Oct 2026 07:30:45 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.15
+
 Mon, 19 Oct 2026 10:13:34 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.14
+
 Sun, 18 Oct 2026 09:46:30 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.13
+
 Sat, 17 Oct 2026 06:46:08 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.12
+
 Sat, 17 Oct 2026 05:06:33 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.11
+
 Thu, 15 Oct 2026 13:45:48 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.10
+
 Thu, 15 Oct 2026 05:00:39 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.9
+
 Wed, 14 Oct 2026 21:26:14 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.8
+
 Tue, 13 Oct 2026 07:49:18 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.7
+
 Mon, 12 Oct 2026 20:24:11 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.6
+
 Mon, 12 Oct 2026 18:44:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.5
+
 Thu, 08 Oct 2026 07:48:38 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.1
+
 Wed, 07 Oct 2026 07:25:55 GMT
 
 ### Patches
 
 - Standardize package text punctuation
 ## 26.10.0
+
 Fri, 02 Oct 2026 18:01:51 GMT
 
 ### Minor changes
@@ -160,6 +186,7 @@ Fri, 02 Oct 2026 18:01:51 GMT
 - feat: split config errors into Definition/Snapshot/TransitionLimit; tap events
 - refactor: trust typed definitions: remove the runtime definition compiler and its compiled indirection, keep the untypeable footgun checks
 ## 3.0.0
+
 Wed, 09 Sep 2026 22:15:14 GMT
 
 ### Breaking changes
@@ -167,6 +194,7 @@ Wed, 09 Sep 2026 22:15:14 GMT
 - refactor!: simplify actor error recovery while isolating observers and hardening deterministic machine snapshots
 
 ## 2.2.1
+
 Sun, 30 Aug 2026 13:16:08 GMT
 
 ### Patches
@@ -174,6 +202,7 @@ Sun, 30 Aug 2026 13:16:08 GMT
 - refactor: remove dead CompiledAfter.id field
 
 ## 2.2.0
+
 Wed, 26 Aug 2026 17:29:55 GMT
 
 ### Minor changes
@@ -185,6 +214,7 @@ Wed, 26 Aug 2026 17:29:55 GMT
 - chore: add sideEffects: false for tree-shaking.
 
 ## 2.1.0
+
 Sun, 16 Aug 2026 09:15:39 GMT
 
 ### Minor changes
@@ -192,6 +222,7 @@ Sun, 16 Aug 2026 09:15:39 GMT
 - refactor: remove ClockworkError.is() type guard; use instanceof ClockworkError instead. Warn in development when actor.send() receives a malformed event.
 
 ## 2.0.1
+
 Thu, 06 Aug 2026 07:20:49 GMT
 
 ### Patches
@@ -199,6 +230,7 @@ Thu, 06 Aug 2026 07:20:49 GMT
 - publish clean export metadata and classic TypeScript subpath mappings
 
 ## 2.0.0
+
 Wed, 05 Aug 2026 16:48:52 GMT
 
 ### Breaking changes
@@ -206,6 +238,7 @@ Wed, 05 Aug 2026 16:48:52 GMT
 - refactor!: redesign Clockwork around pure transitions and actors
 
 ## 1.1.2
+
 Sun, 26 Jul 2026 06:43:54 GMT
 
 ### Patches
@@ -213,6 +246,7 @@ Sun, 26 Jul 2026 06:43:54 GMT
 - refactor(clockwork): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies
 
 ## 1.1.1
+
 Fri, 24 Jul 2026 05:28:41 GMT
 
 ### Patches
@@ -220,6 +254,7 @@ Fri, 24 Jul 2026 05:28:41 GMT
 - chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement
 
 ## 1.1.0
+
 Fri, 17 Jul 2026 14:17:07 GMT
 
 ### Minor changes
@@ -227,6 +262,7 @@ Fri, 17 Jul 2026 14:17:07 GMT
 - feat: add hydrated-context validation option and snapshot-safe subscriptions
 
 ## 1.0.5
+
 Tue, 14 Jul 2026 06:12:09 GMT
 
 ### Patches
@@ -234,6 +270,7 @@ Tue, 14 Jul 2026 06:12:09 GMT
 - fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)
 
 ## 1.0.4
+
 Tue, 07 Jul 2026 09:20:39 GMT
 
 ### Patches
@@ -241,11 +278,13 @@ Tue, 07 Jul 2026 09:20:39 GMT
 - chore: declare minimum supported Node.js version (>=18) in package.json engines
 
 ## 1.0.3
+
 Sun, 05 Jul 2026 06:22:27 GMT
 
 _Version update only_
 
 ## 1.0.2
+
 Sun, 05 Jul 2026 05:52:18 GMT
 
 ### Patches
@@ -253,6 +292,7 @@ Sun, 05 Jul 2026 05:52:18 GMT
 - fix(clockwork): scope invoke/after-timer restarts to exited paths, harden against prototype-key state/event names, fix stale MachineError docs
 
 ## 1.0.1
+
 Fri, 03 Jul 2026 06:00:47 GMT
 
 ### Patches
@@ -260,9 +300,9 @@ Fri, 03 Jul 2026 06:00:47 GMT
 - chore(clockwork): rename internal _warn.ts to _dev.ts
 
 ## 1.0.0
+
 Wed, 01 Jul 2026 16:10:37 GMT
 
 ### Breaking changes
 
 - Initial public release
-

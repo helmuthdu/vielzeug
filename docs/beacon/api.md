@@ -7,19 +7,19 @@ description: Public API of @vielzeug/beacon.
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createTour(config)` | Runs a sequential, resumable walkthrough over the app's DOM | Sync (storage reads may be async) | `start()` is a no-op when the stored record says the tour is completed |
-| `createCoachmark(config)` | Shows a single contextual hint anchored to one target | Sync (storage reads may be async) | `show()` is a no-op after `dismiss()` until `reset()` or a `version` bump |
-| `resolveTarget(target)` | Resolves any target to a viewport-space rect or `null` | Sync | Call it per position update; a scrolled target's rect changes |
-| `BeaconError` | Base class for all beacon-originated errors | — | Catch this to catch any beacon error |
-| `BeaconConfigError` | Invalid tour/coachmark configuration | Thrown at creation | Empty `steps` or duplicate step ids fail at `createTour()` |
-| `BeaconDisposedError` | Handle used after `dispose()` | Thrown on call | `dispose()` is idempotent; later method calls throw |
+| Symbol                    | Purpose                                                     | Execution mode                    | Common gotcha                                                             |
+| ------------------------- | ----------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------- |
+| `createTour(config)`      | Runs a sequential, resumable walkthrough over the app's DOM | Sync (storage reads may be async) | `start()` is a no-op when the stored record says the tour is completed    |
+| `createCoachmark(config)` | Shows a single contextual hint anchored to one target       | Sync (storage reads may be async) | `show()` is a no-op after `dismiss()` until `reset()` or a `version` bump |
+| `resolveTarget(target)`   | Resolves any target to a viewport-space rect or `null`      | Sync                              | Call it per position update; a scrolled target's rect changes             |
+| `BeaconError`             | Base class for all beacon-originated errors                 | —                                 | Catch this to catch any beacon error                                      |
+| `BeaconConfigError`       | Invalid tour/coachmark configuration                        | Thrown at creation                | Empty `steps` or duplicate step ids fail at `createTour()`                |
+| `BeaconDisposedError`     | Handle used after `dispose()`                               | Thrown on call                    | `dispose()` is idempotent; later method calls throw                       |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import             | Purpose                    |
+| ------------------ | -------------------------- |
 | `@vielzeug/beacon` | Complete public Beacon API |
 
 ---
@@ -29,7 +29,7 @@ description: Public API of @vielzeug/beacon.
 ### createTour
 
 ```ts
-function createTour(config: BeaconTourConfig): BeaconTourHandle
+function createTour(config: BeaconTourConfig): BeaconTourHandle;
 ```
 
 Returns a live handle for one guided tour. Throws `BeaconConfigError` when `id` is empty, `steps` is empty, or step ids are duplicated.
@@ -54,37 +54,37 @@ tour.status.subscribe(() => console.log(tour.status.value));
 
 Handle methods:
 
-| Member | Behavior |
-| --- | --- |
-| `start()` | Begin or resume the tour. No-op when completed; throws after dispose. |
-| `next()` | Advance; past the last step, finishes the tour. |
-| `back()` | Return to the previous step. No-op on the first step. |
-| `goto(step)` | Jump to a step by index or id. Unknown values warn and no-op. |
-| `pause()` | Stop showing, keep progress so `start()` resumes it. |
-| `skip()` | End from a "Skip" control. Persisted as dismissed, reported with reason `'skip'`. |
-| `finish()` | Mark finished and stop showing. |
-| `dismiss()` | End by closing (Escape, backdrop). Persisted as dismissed. |
-| `reset()` | Discard persisted progress; the tour is eligible again. |
-| `tap(handler, options?)` | Observe [`BeaconTourEvent`](#beacontourentype)s; returns an unsubscribe, honors `options.signal`. |
-| `dispose()` / `[Symbol.dispose]()` | Release all listeners and observers. Idempotent. |
-Handle properties:
+| Member                             | Behavior                                                                                          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `start()`                          | Begin or resume the tour. No-op when completed; throws after dispose.                             |
+| `next()`                           | Advance; past the last step, finishes the tour.                                                   |
+| `back()`                           | Return to the previous step. No-op on the first step.                                             |
+| `goto(step)`                       | Jump to a step by index or id. Unknown values warn and no-op.                                     |
+| `pause()`                          | Stop showing, keep progress so `start()` resumes it.                                              |
+| `skip()`                           | End from a "Skip" control. Persisted as dismissed, reported with reason `'skip'`.                 |
+| `finish()`                         | Mark finished and stop showing.                                                                   |
+| `dismiss()`                        | End by closing (Escape, backdrop). Persisted as dismissed.                                        |
+| `reset()`                          | Discard persisted progress; the tour is eligible again.                                           |
+| `tap(handler, options?)`           | Observe [`BeaconTourEvent`](#beacontourentype)s; returns an unsubscribe, honors `options.signal`. |
+| `dispose()` / `[Symbol.dispose]()` | Release all listeners and observers. Idempotent.                                                  |
+| Handle properties:                 |
 
-| Member | Type | Notes |
-| --- | --- | --- |
-| `current` | `Readable<BeaconCurrentStep>` | The snapshot to render; `step` is `null` while closed. Beacon re-publishes the rect on scroll, resize, and target layout changes while a step is active. |
-| `status` | `Readable<BeaconStatus>` | Lifecycle, persisted on every change. |
-| `eligible` | `Readable<boolean>` | Whether the tour should be offered to this user. |
-| `steps` | `readonly BeaconStep[]` | The configured steps, in order. |
-| `id` | `string` | The configured id (also the storage key suffix). |
-| `disposed` | `boolean` | Whether `dispose()` has run. |
-| `disposalSignal` | `AbortSignal` | Aborted on dispose; pass it to your own listeners. |
+| Member           | Type                          | Notes                                                                                                                                                    |
+| ---------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `current`        | `Readable<BeaconCurrentStep>` | The snapshot to render; `step` is `null` while closed. Beacon re-publishes the rect on scroll, resize, and target layout changes while a step is active. |
+| `status`         | `Readable<BeaconStatus>`      | Lifecycle, persisted on every change.                                                                                                                    |
+| `eligible`       | `Readable<boolean>`           | Whether the tour should be offered to this user.                                                                                                         |
+| `steps`          | `readonly BeaconStep[]`       | The configured steps, in order.                                                                                                                          |
+| `id`             | `string`                      | The configured id (also the storage key suffix).                                                                                                         |
+| `disposed`       | `boolean`                     | Whether `dispose()` has run.                                                                                                                             |
+| `disposalSignal` | `AbortSignal`                 | Aborted on dispose; pass it to your own listeners.                                                                                                       |
 
 ---
 
 ### createCoachmark
 
 ```ts
-function createCoachmark(config: BeaconCoachmarkConfig): BeaconCoachmarkHandle
+function createCoachmark(config: BeaconCoachmarkConfig): BeaconCoachmarkHandle;
 ```
 
 Returns a handle for one contextual hint. Throws `BeaconConfigError` when `id` is empty.
@@ -109,29 +109,29 @@ hint.show(); // waits for the target to mount if it is not on screen yet
 
 Handle members:
 
-| Member | Behavior |
-| --- | --- |
-| `show()` | Show the hint. No-op once dismissed without a newer version. |
-| `hide()` | Hide without recording it as seen; it can show again. |
-| `dismiss()` | Hide and record as seen permanently (until `reset()`/`version`). |
-| `reset()` | Discard the persisted record; the hint is eligible again. |
-| `tap(handler, options?)` | Observe `coachmark:show`, `coachmark:dismiss`, and common events. |
-| `current` | `Readable<BeaconCurrentStep>` — the hint as a single-step snapshot: `step` is the hint while visible, `null` while hidden. The rect stays live on scroll, resize, and target layout changes. |
-| `eligible` | `Readable<boolean>` — never seen, or superseded by a newer version. |
+| Member                   | Behavior                                                                                                                                                                                     |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `show()`                 | Show the hint. No-op once dismissed without a newer version.                                                                                                                                 |
+| `hide()`                 | Hide without recording it as seen; it can show again.                                                                                                                                        |
+| `dismiss()`              | Hide and record as seen permanently (until `reset()`/`version`).                                                                                                                             |
+| `reset()`                | Discard the persisted record; the hint is eligible again.                                                                                                                                    |
+| `tap(handler, options?)` | Observe `coachmark:show`, `coachmark:dismiss`, and common events.                                                                                                                            |
+| `current`                | `Readable<BeaconCurrentStep>` — the hint as a single-step snapshot: `step` is the hint while visible, `null` while hidden. The rect stays live on scroll, resize, and target layout changes. |
+| `eligible`               | `Readable<boolean>` — never seen, or superseded by a newer version.                                                                                                                          |
 
 ---
 
 ### resolveTarget
 
 ```ts
-function resolveTarget(target: BeaconTarget): BeaconRect | null
+function resolveTarget(target: BeaconTarget): BeaconRect | null;
 ```
 
 Resolves a target to a viewport-space rect, or `null` when it is not available yet. Strings resolve through `document.querySelector`; functions are called and their result normalized.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `target` | `BeaconTarget` | Selector, `Element`, rect, or lazy resolver. |
+| Parameter | Type           | Description                                  |
+| --------- | -------------- | -------------------------------------------- |
+| `target`  | `BeaconTarget` | Selector, `Element`, rect, or lazy resolver. |
 
 **Returns:** `BeaconRect | null` — shape-compatible with `getBoundingClientRect()` and `@vielzeug/orbit`'s `Rect`.
 
@@ -151,33 +151,33 @@ const reference = { getBoundingClientRect: () => resolveTarget('[data-tour="shar
 
 ### BeaconTourConfig
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `id` | `string` | required | Unique identity; used as the storage key. |
-| `steps` | `readonly BeaconStep[]` | required | Every step, in order. At least one. |
-| `autoScroll` | `boolean` | `true` | Scroll each anchored step's target into view when it activates. |
-| `autoStart` | `boolean` | `false` | Start on the next microtask when eligible. |
-| `placement` | `BeaconPlacement` | `'auto'` | Default placement handed to the presentation layer. |
-| `presentation` | `BeaconPresentation` | `'auto'` | Default presentation handed to the presentation layer. |
-| `scrollOffset` | `number \| (() => number)` | `0` | Pixels kept clear at the viewport top for a sticky header, read at scroll time. |
-| `storage` | `BeaconStorage` | memory-only | Progress persistence. |
-| `targetTimeoutMs` | `number` | `Infinity` | How long to wait for a step's target before skipping that step. `0` publishes immediately with a `null` rect. |
-| `version` | `number` | `1` | Bump to re-show a finished tour. |
+| Option            | Type                       | Default     | Description                                                                                                   |
+| ----------------- | -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------- |
+| `id`              | `string`                   | required    | Unique identity; used as the storage key.                                                                     |
+| `steps`           | `readonly BeaconStep[]`    | required    | Every step, in order. At least one.                                                                           |
+| `autoScroll`      | `boolean`                  | `true`      | Scroll each anchored step's target into view when it activates.                                               |
+| `autoStart`       | `boolean`                  | `false`     | Start on the next microtask when eligible.                                                                    |
+| `placement`       | `BeaconPlacement`          | `'auto'`    | Default placement handed to the presentation layer.                                                           |
+| `presentation`    | `BeaconPresentation`       | `'auto'`    | Default presentation handed to the presentation layer.                                                        |
+| `scrollOffset`    | `number \| (() => number)` | `0`         | Pixels kept clear at the viewport top for a sticky header, read at scroll time.                               |
+| `storage`         | `BeaconStorage`            | memory-only | Progress persistence.                                                                                         |
+| `targetTimeoutMs` | `number`                   | `Infinity`  | How long to wait for a step's target before skipping that step. `0` publishes immediately with a `null` rect. |
+| `version`         | `number`                   | `1`         | Bump to re-show a finished tour.                                                                              |
 
 ### BeaconCoachmarkConfig
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `id` | `string` | required | Unique identity; used as the storage key. |
-| `target` | `BeaconTarget` | required | Where the hint points. |
-| `autoShow` | `boolean` | `true` | Show automatically when not yet seen. |
-| `data` | `unknown` | — | Free-form data for the presentation layer. |
-| `description` | `string` | — | Supporting copy. |
-| `placement` | `BeaconPlacement` | `'auto'` | Preferred side. |
-| `presentation` | `BeaconPresentation` | `'auto'` | Preferred presentation. |
-| `storage` | `BeaconStorage` | memory-only | Seen-record persistence. |
-| `title` | `string` | — | Headline copy. |
-| `version` | `number` | `1` | Bump to re-show a seen coachmark. |
+| Option         | Type                 | Default     | Description                                |
+| -------------- | -------------------- | ----------- | ------------------------------------------ |
+| `id`           | `string`             | required    | Unique identity; used as the storage key.  |
+| `target`       | `BeaconTarget`       | required    | Where the hint points.                     |
+| `autoShow`     | `boolean`            | `true`      | Show automatically when not yet seen.      |
+| `data`         | `unknown`            | —           | Free-form data for the presentation layer. |
+| `description`  | `string`             | —           | Supporting copy.                           |
+| `placement`    | `BeaconPlacement`    | `'auto'`    | Preferred side.                            |
+| `presentation` | `BeaconPresentation` | `'auto'`    | Preferred presentation.                    |
+| `storage`      | `BeaconStorage`      | memory-only | Seen-record persistence.                   |
+| `title`        | `string`             | —           | Headline copy.                             |
+| `version`      | `number`             | `1`         | Bump to re-show a seen coachmark.          |
 
 ### BeaconStep
 
@@ -229,10 +229,18 @@ A viewport-space rectangle in CSS pixels. Matches `@vielzeug/orbit`'s `Rect` sha
 ```ts
 type BeaconPlacement =
   | 'auto'
-  | 'bottom' | 'bottom-end' | 'bottom-start'
-  | 'left' | 'left-end' | 'left-start'
-  | 'right' | 'right-end' | 'right-start'
-  | 'top' | 'top-end' | 'top-start';
+  | 'bottom'
+  | 'bottom-end'
+  | 'bottom-start'
+  | 'left'
+  | 'left-end'
+  | 'left-start'
+  | 'right'
+  | 'right-end'
+  | 'right-start'
+  | 'top'
+  | 'top-end'
+  | 'top-start';
 ```
 
 Preferred side for an anchored presentation; `'auto'` asks the positioning layer to choose.
@@ -336,8 +344,8 @@ The objects returned by `createTour()` and `createCoachmark()`, documented in [C
 
 ## Errors
 
-| Error | Triggered by | Notes |
-| --- | --- | --- |
-| `BeaconError` | Base for all beacon errors | `name` is the subclass name; `cause` supported via `ErrorOptions`. |
-| `BeaconConfigError` | Empty `id`, empty `steps`, missing/duplicate step ids | Thrown synchronously from `createTour()`/`createCoachmark()`. |
-| `BeaconDisposedError` | Calling handle methods after `dispose()` | `dispose()` itself never throws. |
+| Error                 | Triggered by                                          | Notes                                                              |
+| --------------------- | ----------------------------------------------------- | ------------------------------------------------------------------ |
+| `BeaconError`         | Base for all beacon errors                            | `name` is the subclass name; `cause` supported via `ErrorOptions`. |
+| `BeaconConfigError`   | Empty `id`, empty `steps`, missing/duplicate step ids | Thrown synchronously from `createTour()`/`createCoachmark()`.      |
+| `BeaconDisposedError` | Calling handle methods after `dispose()`              | `dispose()` itself never throws.                                   |

@@ -36,16 +36,15 @@ const user = {
   email: illusion.internet.email(),
   address: illusion.location.streetAddress(),
 };
-
 ```
 
-| Feature | Illusionist | Faker.js | @faker-js/faker |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="illusionist" type="size" /> | External dependency | External dependency |
-| Zero external dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Seeded determinism | <ore-icon name="check" size="16"></ore-icon> | Partial | <ore-icon name="check" size="16"></ore-icon> |
-| Locale-aware datasets | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| TypeScript-native types | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Feature                    | Illusionist                                       | Faker.js                                     | @faker-js/faker                              |
+| -------------------------- | ------------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size                | <PackageInfo package="illusionist" type="size" /> | External dependency                          | External dependency                          |
+| Zero external dependencies | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Seeded determinism         | <ore-icon name="check" size="16"></ore-icon>      | Partial                                      | <ore-icon name="check" size="16"></ore-icon> |
+| Locale-aware datasets      | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| TypeScript-native types    | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
@@ -83,11 +82,10 @@ import { en } from '@vielzeug/illusionist/locales';
 
 const illusion = createIllusion({ seed: 12345, locale: en });
 
-illusion.person.fullName();        // 'Ashley Harris'
-illusion.internet.email();         // 'samantha.sanchez@mail.com'
-illusion.commerce.price();         // Money { amount: 76640n, currency: USD }
-illusion.date.past({ years: 2 });  // Temporal.ZonedDateTime
-
+illusion.person.fullName(); // 'Ashley Harris'
+illusion.internet.email(); // 'samantha.sanchez@mail.com'
+illusion.commerce.price(); // Money { amount: 76640n, currency: USD }
+illusion.date.past({ years: 2 }); // Temporal.ZonedDateTime
 ```
 
 ## Features

@@ -45,7 +45,7 @@ await waitUntil(() => (view.query('.results')?.children.length ?? 0) > 0, { time
 
 - `waitUntil()` requires a boolean result. Use `eventually()` for a retrying `expect()` assertion.
 - `waitUntil()` applies one hard deadline to polling and pending async predicates. Raise the default 1000ms only for intentionally longer workflows.
-- `waitForEvent()` only resolves on the *next* matching event: if the event may have already fired before listening starts, wait for resulting DOM state instead.
+- `waitForEvent()` only resolves on the _next_ matching event: if the event may have already fired before listening starts, wait for resulting DOM state instead.
 
 ### Related
 

@@ -7,36 +7,26 @@ description: API reference for the @vielzeug/sandbox managed iframe runtime, bri
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createSandbox()` | Create a managed sandbox iframe | Sync | The iframe is created lazily by `render()` |
-| `SandboxHandle.render()` | Replace the document and await readiness | Async | Injected scripts can trigger a timeout |
-| `SandboxHandle` | Update, observe, and dispose the iframe | Sync methods | State/body updates require a ready document |
-| `SandboxOptions` | Configure metadata, CSP sources, scripts, styles, and timeout | Sync validation | Invalid values throw during creation |
-| `SandboxMessage` | Host-side message union | Sync callback | Custom details are always `unknown` |
-| `SandboxBridge` | Typed sandbox-side `window.__sandbox__` API | Sync | Its generics do not validate host-side input |
-| `SandboxError` | Base class for package errors | Thrown/rejected | Narrow caught values with `instanceof` |
+| Symbol                   | Purpose                                                       | Execution mode  | Common gotcha                                |
+| ------------------------ | ------------------------------------------------------------- | --------------- | -------------------------------------------- |
+| `createSandbox()`        | Create a managed sandbox iframe                               | Sync            | The iframe is created lazily by `render()`   |
+| `SandboxHandle.render()` | Replace the document and await readiness                      | Async           | Injected scripts can trigger a timeout       |
+| `SandboxHandle`          | Update, observe, and dispose the iframe                       | Sync methods    | State/body updates require a ready document  |
+| `SandboxOptions`         | Configure metadata, CSP sources, scripts, styles, and timeout | Sync validation | Invalid values throw during creation         |
+| `SandboxMessage`         | Host-side message union                                       | Sync callback   | Custom details are always `unknown`          |
+| `SandboxBridge`          | Typed sandbox-side `window.__sandbox__` API                   | Sync            | Its generics do not validate host-side input |
+| `SandboxError`           | Base class for package errors                                 | Thrown/rejected | Narrow caught values with `instanceof`       |
 
 ## Package Entry Point
 
-| Import | Exports |
-| --- | --- |
-| `@vielzeug/sandbox` | Runtime, errors, and public types |
-| `@vielzeug/sandbox/testing` | `createSandboxTestHelpers()` |
+| Import                      | Exports                           |
+| --------------------------- | --------------------------------- |
+| `@vielzeug/sandbox`         | Runtime, errors, and public types |
+| `@vielzeug/sandbox/testing` | `createSandboxTestHelpers()`      |
 
 ```ts
-import {
-  createSandbox,
-  SandboxConfigurationError,
-  SandboxError,
-  SandboxTimeoutError,
-} from '@vielzeug/sandbox';
-import type {
-  SandboxBridge,
-  SandboxHandle,
-  SandboxMessage,
-  SandboxOptions,
-} from '@vielzeug/sandbox';
+import { createSandbox, SandboxConfigurationError, SandboxError, SandboxTimeoutError } from '@vielzeug/sandbox';
+import type { SandboxBridge, SandboxHandle, SandboxMessage, SandboxOptions } from '@vielzeug/sandbox';
 ```
 
 ## Runtime
@@ -52,10 +42,10 @@ function createSandbox<State extends object = Record<string, unknown>>(
 
 Creates a managed `<iframe sandbox="allow-scripts">` in `container`. Construction validates options but does not create DOM. The first `render()` creates the iframe with `referrerpolicy="no-referrer"` and a generated CSP.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `container` | `HTMLElement` | Host element that owns the iframe |
-| `options` | `SandboxOptions` | Optional document and runtime configuration |
+| Parameter   | Type             | Description                                 |
+| ----------- | ---------------- | ------------------------------------------- |
+| `container` | `HTMLElement`    | Host element that owns the iframe           |
+| `options`   | `SandboxOptions` | Optional document and runtime configuration |
 
 **Returns:** `SandboxHandle<State>`.
 
@@ -92,15 +82,15 @@ interface SandboxHandle<State extends object = Record<string, unknown>> {
 }
 ```
 
-| Method/property | Description |
-| --- | --- |
-| `render(html)` | Replace the complete document and await readiness |
-| `replaceBody(html)` | Replace body descendants without navigation |
-| `setState(update)` | Push typed host state |
-| `updateStyle(id, css)` | Patch a named style |
-| `onMessage(handler)` | Subscribe to untrusted iframe messages |
-| `disposed` / `disposalSignal` | Observe lifecycle state |
-| `dispose()` / `[Symbol.dispose]()` | Release the iframe and listeners |
+| Method/property                    | Description                                       |
+| ---------------------------------- | ------------------------------------------------- |
+| `render(html)`                     | Replace the complete document and await readiness |
+| `replaceBody(html)`                | Replace body descendants without navigation       |
+| `setState(update)`                 | Push typed host state                             |
+| `updateStyle(id, css)`             | Patch a named style                               |
+| `onMessage(handler)`               | Subscribe to untrusted iframe messages            |
+| `disposed` / `disposalSignal`      | Observe lifecycle state                           |
+| `dispose()` / `[Symbol.dispose]()` | Release the iframe and listeners                  |
 
 #### `render(html)`
 
@@ -163,18 +153,18 @@ interface SandboxOptions {
 }
 ```
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `allowedFontOrigins` | `[]` | HTTP(S) origins added to `font-src`; otherwise `'none'` |
-| `allowedImageOrigins` | `[]` | HTTP(S) origins added to `img-src`; `data:` is always included |
-| `allowedScriptOrigins` | `[]` | HTTP(S) origins added to `script-src` |
-| `allowedStyleOrigins` | `[]` | HTTP(S) origins added to `style-src` |
-| `lang` | `'en'` | Basic BCP 47 language tag for `<html lang>` |
-| `nonce` | `undefined` | Base64/base64url-style nonce for the bridge script and CSP |
-| `readyTimeout` | `5000` | Positive finite timeout in milliseconds, at most `2^31 - 1` |
-| `scripts` | `[]` | Absolute HTTP(S) scripts injected before user HTML |
-| `styles` | `{}` | Named style blocks; IDs start with a letter and contain letters, digits, `_`, or `-` |
-| `title` | `''` | Escaped document title |
+| Option                 | Default     | Description                                                                          |
+| ---------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `allowedFontOrigins`   | `[]`        | HTTP(S) origins added to `font-src`; otherwise `'none'`                              |
+| `allowedImageOrigins`  | `[]`        | HTTP(S) origins added to `img-src`; `data:` is always included                       |
+| `allowedScriptOrigins` | `[]`        | HTTP(S) origins added to `script-src`                                                |
+| `allowedStyleOrigins`  | `[]`        | HTTP(S) origins added to `style-src`                                                 |
+| `lang`                 | `'en'`      | Basic BCP 47 language tag for `<html lang>`                                          |
+| `nonce`                | `undefined` | Base64/base64url-style nonce for the bridge script and CSP                           |
+| `readyTimeout`         | `5000`      | Positive finite timeout in milliseconds, at most `2^31 - 1`                          |
+| `scripts`              | `[]`        | Absolute HTTP(S) scripts injected before user HTML                                   |
+| `styles`               | `{}`        | Named style blocks; IDs start with a letter and contain letters, digits, `_`, or `-` |
+| `title`                | `''`        | Escaped document title                                                               |
 
 Allowed origins reject paths, credentials, query strings, fragments, unsupported schemes, and CSP syntax. Script URLs must be absolute HTTP(S) URLs.
 
@@ -202,10 +192,7 @@ interface SandboxBridge<
     event: K,
     ...detail: undefined extends Events[K] ? [detail?: Events[K]] : [detail: Events[K]]
   ): void;
-  onState<K extends keyof State & string>(
-    key: K,
-    handler: (value: State[K]) => void,
-  ): () => void;
+  onState<K extends keyof State & string>(key: K, handler: (value: State[K]) => void): () => void;
 }
 ```
 

@@ -7,42 +7,42 @@ description: Reference for Arsenal root utilities and category entry points.
 
 ## API Overview
 
-| Symbol | Purpose | Execution | Common gotcha |
-| --- | --- | --- | --- |
-| `groupBy` | Group values by key (prototype-pollution guarded) | Sync | Root export |
-| `chunk` / `zip` / `compact` | Typed collection transforms | Sync | Available from `/array` |
-| `paginate` | Cut one page and its totals out of a list | Sync | Pages past the last return empty `items`, unclamped |
-| `sort` | Sort by a selector, keyed fields, or ordered path criteria | Sync | Criteria paths are resolved safely; mixed value types throw |
-| `range` / `average` / `median` | Numeric generation and aggregation | Sync | Available from `/math` |
-| `assert` | Assert and narrow a condition | Sync | Available from `/function` |
-| `retry` | Retry async work | Async | Rethrows final error |
-| `taskPool` | Bound concurrent tasks | Async | Available from `/async` |
-| `cache` | In-memory identity-keyed cache | Async | Available from `/cache` |
-| `fuzzyFilter` | Filter string or selected object fields | Sync | Object collections require `select` |
-| `fuzzyScore` | Rank string or selected object fields | Sync | Object collections require `select` |
-| `tryParseJson` | Preserve JSON syntax result | Sync | Returns `unknown` on success |
-| `getPath` | Optional object lookup (safe-path guarded) | Sync | Available from `/object` |
-| `allocate` | Lossless proportional distribution | Sync | Available from `/math` |
-| `isEqual` | Structural equality | Sync | Root export |
-| `hash` | Deterministic serialization for cache keys | Sync | Available from `/object` |
-| `compressBytes` / `decompressBytes` | Native byte compression with bounded decompression | Async | Requires native compression streams; decoding requires an output limit |
-| `pack` / `unpack` | Versioned, compressed, URL-safe payload envelope | Async | Both sides bound the payload with `maxBytes`; compression falls back to raw |
+| Symbol                              | Purpose                                                    | Execution | Common gotcha                                                               |
+| ----------------------------------- | ---------------------------------------------------------- | --------- | --------------------------------------------------------------------------- |
+| `groupBy`                           | Group values by key (prototype-pollution guarded)          | Sync      | Root export                                                                 |
+| `chunk` / `zip` / `compact`         | Typed collection transforms                                | Sync      | Available from `/array`                                                     |
+| `paginate`                          | Cut one page and its totals out of a list                  | Sync      | Pages past the last return empty `items`, unclamped                         |
+| `sort`                              | Sort by a selector, keyed fields, or ordered path criteria | Sync      | Criteria paths are resolved safely; mixed value types throw                 |
+| `range` / `average` / `median`      | Numeric generation and aggregation                         | Sync      | Available from `/math`                                                      |
+| `assert`                            | Assert and narrow a condition                              | Sync      | Available from `/function`                                                  |
+| `retry`                             | Retry async work                                           | Async     | Rethrows final error                                                        |
+| `taskPool`                          | Bound concurrent tasks                                     | Async     | Available from `/async`                                                     |
+| `cache`                             | In-memory identity-keyed cache                             | Async     | Available from `/cache`                                                     |
+| `fuzzyFilter`                       | Filter string or selected object fields                    | Sync      | Object collections require `select`                                         |
+| `fuzzyScore`                        | Rank string or selected object fields                      | Sync      | Object collections require `select`                                         |
+| `tryParseJson`                      | Preserve JSON syntax result                                | Sync      | Returns `unknown` on success                                                |
+| `getPath`                           | Optional object lookup (safe-path guarded)                 | Sync      | Available from `/object`                                                    |
+| `allocate`                          | Lossless proportional distribution                         | Sync      | Available from `/math`                                                      |
+| `isEqual`                           | Structural equality                                        | Sync      | Root export                                                                 |
+| `hash`                              | Deterministic serialization for cache keys                 | Sync      | Available from `/object`                                                    |
+| `compressBytes` / `decompressBytes` | Native byte compression with bounded decompression         | Async     | Requires native compression streams; decoding requires an output limit      |
+| `pack` / `unpack`                   | Versioned, compressed, URL-safe payload envelope           | Async     | Both sides bound the payload with `maxBytes`; compression falls back to raw |
 
 ## Package Entry Points
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/arsenal` | Curated common utilities |
-| `@vielzeug/arsenal/array` | Immutable transforms, pagination, set operations, sorting, fuzzy search |
-| `@vielzeug/arsenal/async` | Retry, cancellation, task pool, timing |
-| `@vielzeug/arsenal/cache` | In-memory cache and memoization |
-| `@vielzeug/arsenal/encoding` | Base64url and native byte compression |
-| `@vielzeug/arsenal/function` | Assertions, composition, timing, teardown |
-| `@vielzeug/arsenal/guards` | Type guards, predicate combinators, equality guards |
-| `@vielzeug/arsenal/math` | Ranges, aggregation, statistics, interpolation, exact allocation |
-| `@vielzeug/arsenal/object` | Paths, transforms, hash, JSON parse result |
-| `@vielzeug/arsenal/random` | Cryptographic-entropy selection and shuffle |
-| `@vielzeug/arsenal/string` | Unicode-aware case transforms and similarity |
+| Import                       | Purpose                                                                 |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| `@vielzeug/arsenal`          | Curated common utilities                                                |
+| `@vielzeug/arsenal/array`    | Immutable transforms, pagination, set operations, sorting, fuzzy search |
+| `@vielzeug/arsenal/async`    | Retry, cancellation, task pool, timing                                  |
+| `@vielzeug/arsenal/cache`    | In-memory cache and memoization                                         |
+| `@vielzeug/arsenal/encoding` | Base64url and native byte compression                                   |
+| `@vielzeug/arsenal/function` | Assertions, composition, timing, teardown                               |
+| `@vielzeug/arsenal/guards`   | Type guards, predicate combinators, equality guards                     |
+| `@vielzeug/arsenal/math`     | Ranges, aggregation, statistics, interpolation, exact allocation        |
+| `@vielzeug/arsenal/object`   | Paths, transforms, hash, JSON parse result                              |
+| `@vielzeug/arsenal/random`   | Cryptographic-entropy selection and shuffle                             |
+| `@vielzeug/arsenal/string`   | Unicode-aware case transforms and similarity                            |
 
 ## Array
 
@@ -69,11 +69,11 @@ paginate<T>(items: readonly T[], options?: PaginateOptions): PageEnvelope<T>
 
 Cuts one page out of an in-memory list and returns the items with the arithmetic that produced them. `pageOffset` selects the caller's page base: `1` (default) for one-based paging, `0` for zero-based servers such as Spring. The default `page` is the first page in that base, and the default `pageSize` is `20`. `totalPages` is at least 1, even for an empty list, so `page < totalPages` never underflows. Pages past the last yield empty `items` and echo the requested page rather than clamping it. Throws `TypeError` for a non-array and `RangeError` when `page` is not an integer in the selected base or `pageSize` is not a positive integer.
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `page` | `number` | First page in `pageOffset`'s base | Requested page; must be an integer greater than or equal to `pageOffset` |
-| `pageSize` | `number` | `20` | Number of items per page; must be a positive integer |
-| `pageOffset` | `0 \| 1` | `1` | Page-number base: `0` for zero-based callers, `1` for one-based callers |
+| Option       | Type     | Default                           | Description                                                              |
+| ------------ | -------- | --------------------------------- | ------------------------------------------------------------------------ |
+| `page`       | `number` | First page in `pageOffset`'s base | Requested page; must be an integer greater than or equal to `pageOffset` |
+| `pageSize`   | `number` | `20`                              | Number of items per page; must be a positive integer                     |
+| `pageOffset` | `0 \| 1` | `1`                               | Page-number base: `0` for zero-based callers, `1` for one-based callers  |
 
 ```ts
 import { paginate } from '@vielzeug/arsenal/array';
@@ -101,7 +101,10 @@ Three forms, one entry point. The selector form sorts by one extracted value; th
 ```ts
 import { sort } from '@vielzeug/arsenal/array';
 
-const users = [{ name: 'Ada', age: 41 }, { name: 'Grace', age: 30 }];
+const users = [
+  { name: 'Ada', age: 41 },
+  { name: 'Grace', age: 30 },
+];
 sort(users, (user) => user.name);
 sort(users, { name: 'asc', age: 'desc' });
 
@@ -215,8 +218,8 @@ compressBytes(bytes: Uint8Array, options?: CompressionOptions): Promise<Uint8Arr
 
 Compresses bytes using the native `CompressionStream` API without modifying the input.
 
-| Option | Type | Default | Meaning |
-| --- | --- | --- | --- |
+| Option   | Type                | Default         | Meaning                                                   |
+| -------- | ------------------- | --------------- | --------------------------------------------------------- |
 | `format` | `CompressionFormat` | `'deflate-raw'` | Compression format; the receiver must use the same format |
 
 **Returns:** Compressed bytes. Rejects with `ArsenalSerializationError` when the format or capability is unavailable, or stream processing fails. Does not fall back to another format.
@@ -240,10 +243,10 @@ decompressBytes(bytes: Uint8Array, options: DecompressionOptions): Promise<Uint8
 
 Decompresses bytes using the native `DecompressionStream` API, enforcing the output limit while reading chunks.
 
-| Option | Type | Default | Meaning |
-| --- | --- | --- | --- |
-| `format` | `CompressionFormat` | `'deflate-raw'` | Format used by the sender |
-| `maxOutputBytes` | `number` | Required | Non-negative safe integer; maximum decoded byte length |
+| Option           | Type                | Default         | Meaning                                                |
+| ---------------- | ------------------- | --------------- | ------------------------------------------------------ |
+| `format`         | `CompressionFormat` | `'deflate-raw'` | Format used by the sender                              |
+| `maxOutputBytes` | `number`            | Required        | Non-negative safe integer; maximum decoded byte length |
 
 **Returns:** Decompressed bytes. Rejects with `ArsenalSerializationError` for invalid limits, corrupt or truncated data, unavailable formats/capabilities, or output exceeding the limit. A failed stream is canceled and its reader lock released. Bound encoded input separately before calling this function.
 
@@ -267,10 +270,10 @@ pack(payload: unknown, options: ShareCodeOptions): Promise<string>
 
 Serializes `payload` as JSON and encodes it into a compact share code: `prefix` + mode marker + base64url bytes, compressed with raw DEFLATE when the compressed form is shorter and the runtime supports the streams.
 
-| Option | Type | Meaning |
-| --- | --- | --- |
-| `maxBytes` | `number` | Positive safe integer; maximum serialized payload size |
-| `prefix` | `string` | 1–8 alphanumeric characters identifying the code family and version |
+| Option     | Type     | Meaning                                                             |
+| ---------- | -------- | ------------------------------------------------------------------- |
+| `maxBytes` | `number` | Positive safe integer; maximum serialized payload size              |
+| `prefix`   | `string` | 1–8 alphanumeric characters identifying the code family and version |
 
 **Returns:** The shorter of the raw (`prefix` + `r`) and compressed (`prefix` + `d`) representations. Throws `ShareCodeError` (`too-large`, `invalid`) for oversized payloads and misconfigured options.
 

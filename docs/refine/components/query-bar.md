@@ -82,15 +82,17 @@ The example evaluates results in application code: values within a group match w
 Each vocabulary entry defaults to `selection: 'single'`. Use `selection: 'multiple'` when several values can be selected together; keep mutually exclusive choices such as sort order single-select.
 
 ```js
-bar.vocabulary = [{
-  key: 'fruit',
-  label: 'Fruit',
-  selection: 'multiple',
-  options: [
-    { label: 'Apple', value: 'apple' },
-    { label: 'Banana', value: 'banana' },
-  ],
-}];
+bar.vocabulary = [
+  {
+    key: 'fruit',
+    label: 'Fruit',
+    selection: 'multiple',
+    options: [
+      { label: 'Apple', value: 'apple' },
+      { label: 'Banana', value: 'banana' },
+    ],
+  },
+];
 
 bar.state = {
   text: '',
@@ -119,14 +121,14 @@ Groups with more than eight options have a search field; searching only narrows 
 
 **Changes not applied** appears above the footer when selections differ from the applied query. **Reset filters** is disabled when the draft has no filters.
 
-| Action | Effect |
-| --- | --- |
-| Select an option | Update the drawer draft only |
-| Clear a multiple-selection group | Clear that draft group's values only |
-| Reset filters | Clear draft filters, preserving free text |
-| Apply filters | Commit the draft once and close; discard any unfinished typed token |
-| Cancel, close, or Escape | Discard draft changes |
-| Backdrop or swipe | Close an unchanged drawer; keep pending edits open |
+| Action                           | Effect                                                              |
+| -------------------------------- | ------------------------------------------------------------------- |
+| Select an option                 | Update the drawer draft only                                        |
+| Clear a multiple-selection group | Clear that draft group's values only                                |
+| Reset filters                    | Clear draft filters, preserving free text                           |
+| Apply filters                    | Commit the draft once and close; discard any unfinished typed token |
+| Cancel, close, or Escape         | Discard draft changes                                               |
+| Backdrop or swipe                | Close an unchanged drawer; keep pending edits open                  |
 
 Opening the drawer focuses its heading, not a search field. Closing returns focus to Filters. The drawer has a muted body, distinct filter sections, and a separate action footer. An actual external state change or vocabulary replacement closes the drawer to prevent stale edits from overwriting application changes. Tokens outside the vocabulary remain visible in the field and are preserved unless you remove or reset them.
 
@@ -135,14 +137,16 @@ Opening the drawer focuses its heading, not a search field. Closing returns focu
 Set an option's `icon` to a registered `ore-icon` name to show it beside the text in the drawer. Both radio and checkbox choices support icons; omit `icon` for text-only options.
 
 ```js
-bar.vocabulary = [{
-  key: 'status',
-  label: 'Status',
-  options: [
-    { label: 'Open', value: 'open', icon: 'circle' },
-    { label: 'Closed', value: 'closed', icon: 'check' },
-  ],
-}];
+bar.vocabulary = [
+  {
+    key: 'status',
+    label: 'Status',
+    options: [
+      { label: 'Open', value: 'open', icon: 'circle' },
+      { label: 'Closed', value: 'closed', icon: 'check' },
+    ],
+  },
+];
 ```
 
 Icons use the shared Refine registry. Register application icons through `registerIcons` as described in the [icon guide](./icon.md); no icon-library dependency is added by the query bar. Names do not refer to image URLs or raw SVG markup.
@@ -222,15 +226,15 @@ const unrestricted = clearTokens(withoutApple, 'fruit');
 const fruits = tokenValues(withBoth, 'fruit'); // ['apple', 'banana']
 ```
 
-| Helper | Contract |
-| --- | --- |
-| `parseQuery(input, vocabulary)` | Extract text, tokens, and an unfinished draft; respect each key's selection mode |
-| `suggestQuery(input, vocabulary)` | Offer matching keys or values |
+| Helper                                            | Contract                                                                               |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `parseQuery(input, vocabulary)`                   | Extract text, tokens, and an unfinished draft; respect each key's selection mode       |
+| `suggestQuery(input, vocabulary)`                 | Offer matching keys or values                                                          |
 | `commitToken(state, token, selection = 'single')` | Replace a single-selection key in place, or append a distinct multiple-selection value |
-| `removeToken(state, token)` | Remove only the exact key/value pair |
-| `clearTokens(state, key)` | Remove every value of one key |
-| `tokenValues(state, key)` | Return all values for a key in selection order, or `[]` |
-| `hasQueryFilters(state)` | Return whether free text or any tokens are present |
+| `removeToken(state, token)`                       | Remove only the exact key/value pair                                                   |
+| `clearTokens(state, key)`                         | Remove every value of one key                                                          |
+| `tokenValues(state, key)`                         | Return all values for a key in selection order, or `[]`                                |
+| `hasQueryFilters(state)`                          | Return whether free text or any tokens are present                                     |
 
 These helpers return state without mutating the supplied object. `commitToken` receives the mode explicitly because state alone does not contain the vocabulary.
 
@@ -262,12 +266,12 @@ Quick filters use checkbox semantics and accessible checked states. Applied pill
 
 ## Properties and Events
 
-| Property | Type | Purpose |
-| --- | --- | --- |
-| `vocabulary` | `QueryTokenDef[]` | Labeled keys, exact option values, and per-key selection mode |
-| `state` | `QueryState` | Free text and distinct key/value tokens |
-| `quick-filters` | `QueryQuickFilter[]` | Curated single-filter toggles |
-| `labels` | `Partial<QueryBarLabels>` | Localized built-in copy |
+| Property        | Type                      | Purpose                                                       |
+| --------------- | ------------------------- | ------------------------------------------------------------- |
+| `vocabulary`    | `QueryTokenDef[]`         | Labeled keys, exact option values, and per-key selection mode |
+| `state`         | `QueryState`              | Free text and distinct key/value tokens                       |
+| `quick-filters` | `QueryQuickFilter[]`      | Curated single-filter toggles                                 |
+| `labels`        | `Partial<QueryBarLabels>` | Localized built-in copy                                       |
 
 The types and grammar helpers are exported from `@vielzeug/refine/query-bar`.
 
@@ -317,13 +321,13 @@ demo.labels = {
 
 The `{filter}` placeholder is replaced by the vocabulary label; `{count}` is the selected-value count (`selected`) or the search-hidden selected-value count (`hiddenSelected`). `{values}` lists search-hidden selected labels. Localize vocabulary labels, `anyLabel`, option labels, and quick-filter labels in your application. The shared drawer supplies its own close-button accessible name.
 
-| Part | Surface |
-| --- | --- |
-| `wrapper` | Search field host |
-| `clear-btn` | Clear-text button |
-| `toolbar` | Filters button, quick filters, and toolbar-end slot |
+| Part          | Surface                                              |
+| ------------- | ---------------------------------------------------- |
+| `wrapper`     | Search field host                                    |
+| `clear-btn`   | Clear-text button                                    |
+| `toolbar`     | Filters button, quick filters, and toolbar-end slot  |
 | `toolbar-end` | End-aligned container for `toolbar-end` slot content |
-| `applied` | Applied-filter group inside the search field |
-| `dropdown` | Suggestion panel |
+| `applied`     | Applied-filter group inside the search field         |
+| `dropdown`    | Suggestion panel                                     |
 
 Use Refine design tokens for spacing, type, color, and radii. `--query-bar-min-width` defaults to `0` so narrow containers can shrink the bar. See the [migration guide](../migration.md#query-bar-filter-layout-and-state-echoes) for changed layout and state semantics.

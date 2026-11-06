@@ -41,10 +41,7 @@ const router = createRouter({
   },
 });
 
-const views = router.createViewRegistry(
-  { error: ErrorPage, home: HomePage },
-  { notFound: NotFoundPage },
-);
+const views = router.createViewRegistry({ error: ErrorPage, home: HomePage }, { notFound: NotFoundPage });
 ```
 
 The fallback view is explicit and does not depend on Wayfinder's internal synthetic match name.

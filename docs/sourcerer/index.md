@@ -30,13 +30,13 @@ const source = createPageSource({
 source.subscribe((state) => render(state));
 ```
 
-| Feature | Sourcerer | Manual store | General query cache |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="sourcerer" type="size" /> | Application-defined | Package-defined |
-| Zero runtime dependencies | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
-| Page, cursor, and infinite navigation | <ore-icon name="check" size="16"></ore-icon> | Application-defined | Application-defined |
-| Framework-neutral subscriptions | <ore-icon name="check" size="16"></ore-icon> | Application-defined | <ore-icon name="triangle-alert" size="16"></ore-icon> |
-| HTTP transport policy | Loader-defined | Application-defined | Loader-defined |
+| Feature                               | Sourcerer                                       | Manual store                                 | General query cache                                   |
+| ------------------------------------- | ----------------------------------------------- | -------------------------------------------- | ----------------------------------------------------- |
+| Bundle size                           | <PackageInfo package="sourcerer" type="size" /> | Application-defined                          | Package-defined                                       |
+| Zero runtime dependencies             | <ore-icon name="x" size="16"></ore-icon>        | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| Page, cursor, and infinite navigation | <ore-icon name="check" size="16"></ore-icon>    | Application-defined                          | Application-defined                                   |
+| Framework-neutral subscriptions       | <ore-icon name="check" size="16"></ore-icon>    | Application-defined                          | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| HTTP transport policy                 | Loader-defined                                  | Application-defined                          | Loader-defined                                        |
 
 <div class="decision-callout">
 

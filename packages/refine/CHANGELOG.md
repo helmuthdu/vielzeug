@@ -3,6 +3,7 @@
 This log was last generated on Thu, 05 Nov 2026 21:44:45 GMT and should not be manually modified.
 
 ## 26.11.5
+
 Thu, 05 Nov 2026 21:44:45 GMT
 
 ### Minor changes
@@ -14,6 +15,7 @@ Thu, 05 Nov 2026 21:44:45 GMT
 
 - fix(refine): neutral UA focus rings, non-dimming sidebar drawer backdrop default, ghost/outline press feedback, navbar external-drawer toggle
 ## 26.11.4
+
 Wed, 04 Nov 2026 16:49:50 GMT
 
 ### Minor changes
@@ -24,6 +26,7 @@ Wed, 04 Nov 2026 16:49:50 GMT
 
 - Fix combined focus/click tooltip and popover activation, react to trigger changes, and keep mobile dock controls within their content-sized flanks.
 ## 26.11.3
+
 Wed, 04 Nov 2026 05:52:43 GMT
 
 ### Minor changes
@@ -35,6 +38,7 @@ Wed, 04 Nov 2026 05:52:43 GMT
 
 - Keep sticky docks and detached pills clear of the viewport safe area.
 ## 26.11.2
+
 Tue, 03 Nov 2026 18:42:43 GMT
 
 ### Minor changes
@@ -42,6 +46,7 @@ Tue, 03 Nov 2026 18:42:43 GMT
 - Replace the dock compact boolean with mobile-layout auto/full/compact; default mobile sizing now hugs and aligns single occupied zones while preserving full-width multi-zone and attached rows.
 - ore-menu grid layout now renders cards for statically parsed markup: ore-menu-item defines after ore-menu, so a child's inject(MENU_CTX) can no longer cache a miss before the parent provides it.
 ## 26.11.1
+
 Tue, 03 Nov 2026 17:00:37 GMT
 
 ### Minor changes
@@ -49,12 +54,14 @@ Tue, 03 Nov 2026 17:00:37 GMT
 - ore-dock: new action bar that pins to a viewport edge, with start/center/commit places, an attached capsule, a phone tool row and a compact HUD mode
 - ore-menu: layout="grid" turns the panel into a card grid (icon over a clamped label, `columns` per row owning both the tracks and the arrow-key rows, row/column arrow keys, full-width separators); opening from the keyboard now focuses the first usable item; closing after a plain-item selection reports reason "select"
 ## 26.11.0
+
 Tue, 03 Nov 2026 16:30:26 GMT
 
 ### Minor changes
 
 - ore-tooltip: a tooltip whose trigger includes click now closes when a pointer press starts outside its trigger and bubble, so touch users are not stranded on an open tooltip when iOS Safari keeps focus on the trigger
 ## 26.10.22
+
 Fri, 30 Oct 2026 19:07:28 GMT
 
 ### Minor changes
@@ -77,6 +84,7 @@ Fri, 30 Oct 2026 19:07:28 GMT
 - command-palette: drill-down categories (nested items open on ArrowRight/Enter with global search still flattening leaves), category-open event, back row, and an optional onEscape hook in useDialogControl
 - command-palette: search-debounce attribute and search re-emit on drill navigation
 ## 26.10.21
+
 Tue, 27 Oct 2026 08:39:39 GMT
 
 ### Minor changes
@@ -87,6 +95,7 @@ Tue, 27 Oct 2026 08:39:39 GMT
 
 - Fix tour popover anchoring when the step target changes
 ## 26.10.20
+
 Sun, 25 Oct 2026 05:13:02 GMT
 
 ### Minor changes
@@ -96,6 +105,7 @@ Sun, 25 Oct 2026 05:13:02 GMT
 - refine: motion system hardening - every transition/animation timing now token-driven, component-local prefers-reduced-motion blocks replaced by the root motion-mode hatches (data-motion='full' now opts back in everywhere), hover-move affordances guarded behind @media (hover: hover), new --duration-250/350/1200 tokens
 - WCAG 2.2 AA: marquee pauses on hover/focus by default, slider slot label mirrors to aria-label, file drop zone and query-bar filter named from visible content, AA-compliant helper-text token, calendar/date-picker outside-day color token, sticky-header scroll-padding, WCAG 2.2 axe tag set with real-browser scans for all 44 components
 ## 26.10.19
+
 Sat, 24 Oct 2026 19:56:28 GMT
 
 ### Minor changes
@@ -113,18 +123,21 @@ Sat, 24 Oct 2026 19:56:28 GMT
 
 - calendar: inactive month/year views no longer stack under the day grid (hidden rule class-qualified to outrank the grids' own display declarations)
 ## 26.10.18
+
 Fri, 23 Oct 2026 14:23:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.17
+
 Fri, 23 Oct 2026 07:29:16 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.16
+
 Wed, 21 Oct 2026 07:30:45 GMT
 
 ### Minor changes
@@ -144,6 +157,7 @@ Wed, 21 Oct 2026 07:30:45 GMT
 - chat-message: skip no-op textContent writes in slot trim, preventing an infinite slotchange loop on WebKit/iOS Safari
 - fix(refine): keep the slider track usable when a long label wraps below it
 ## 26.10.15
+
 Mon, 19 Oct 2026 10:13:34 GMT
 
 ### Major changes
@@ -160,54 +174,63 @@ Mon, 19 Oct 2026 10:13:34 GMT
 - Query-bar card gallery: unchecked cards drop the corner tick for a clean art-and-name resting state; the checkmark re-appears as the checked card's selection badge (forced-colors mode keeps every tick)
 - Badge size=xs uses the size-px vertical padding token instead of a hardcoded 0px
 ## 26.10.14
+
 Sun, 18 Oct 2026 09:46:30 GMT
 
 ### Minor changes
 
 - Add an adaptive coverflow carousel variant with container-fitted previews, accessible selection, and separate navigation areas; use fully rounded carousel navigation buttons. Add ore-speed-reading with stable focal positioning, punctuation-aware pacing, context highlighting, sentence navigation, explicit overflow recovery, responsive icon-only transport, and touch-accessible pace and keyboard help. Keep popovers and tooltips within the viewport when neither side of the trigger fits. Add 1.5× speech playback and consistent numeric speed labels. Preserve select keyboard navigation beneath a stationary pointer.
 ## 26.10.13
+
 Sat, 17 Oct 2026 06:46:08 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.12
+
 Sat, 17 Oct 2026 05:06:33 GMT
 
 ### Patches
 
 - fix: support touch swiping in carousel slides
 ## 26.10.11
+
 Thu, 15 Oct 2026 13:45:48 GMT
 
 ### Major changes
 
 - Replace icon registration arrays with library-neutral definitions; group shared registration and Lucide/Iconify data adapters under icons subpaths, preserving the icon component entry. Make Lucide an optional peer owned by full-set consumers, normalize Iconify provider classes, and reject invalid geometry before transforms. Add pure Heroicons, Tabler, and MDI named-map adapters for caller-supplied individual Iconify data.
 ## 26.10.10
+
 Thu, 15 Oct 2026 05:00:39 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.9
+
 Wed, 14 Oct 2026 21:26:14 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.8
+
 Tue, 13 Oct 2026 07:49:18 GMT
 
 ### Minor changes
 
 - adopt prop.oneOf() for union-valued props, model() for text-field bindings, and the single useField validity signal
 ## 26.10.7
+
 Mon, 12 Oct 2026 20:24:11 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.6
+
 Mon, 12 Oct 2026 18:44:06 GMT
 
 ### Minor changes
@@ -220,12 +243,14 @@ Mon, 12 Oct 2026 18:44:06 GMT
 - Fix ore-tabs boot race: ensureSelection no longer locks an empty first value when slotted tab items have not received their bound values yet; it defers until a valued tab exists, so a bound host value is never overridden by the fallback.
 - Preserve internal icon registration in production bundles and connect query-bar suggestions across shadow-root boundaries.
 ## 26.10.5
+
 Thu, 08 Oct 2026 07:48:38 GMT
 
 ### Minor changes
 
 - Add a preview slot and active-change event to ore-command-palette
 ## 26.10.1
+
 Wed, 07 Oct 2026 07:25:55 GMT
 
 ### Minor changes
@@ -243,6 +268,7 @@ Wed, 07 Oct 2026 07:25:55 GMT
 - define the select panel radius from --select-radius so a slotted select stops inheriting the surrounding radius
 - Snackbar toasts keep one bar height whether or not they carry an action: the message row reserves the action button's height (new --toast-snackbar-height, default --size-8) and centres its text.
 ## 26.10.0
+
 Fri, 02 Oct 2026 18:01:51 GMT
 
 ### Minor changes
@@ -262,6 +288,7 @@ Fri, 02 Oct 2026 18:01:51 GMT
 - Load testing fixtures in IIFE dependency order (Sentinel after Arsenal, Focus after Keymap) so bundles no longer capture undefined globals; hoist parseOptionalBool to core and the container-measure helpers to a private layout module; narrow useFloatingTrigger offset/slot to single callables
 - Composite component sub-paths now register their child components: the per-entry library build silently dropped side-effect-only imports between entry modules, so importing e.g. @vielzeug/refine/cookie-banner shipped without registering ore-button/ore-checkbox. Children are TAG re-exports now (bindings survive cross-entry chunking), guarded by check:cross-entry in build
 ## 3.3.1
+
 Wed, 23 Sep 2026 03:47:55 GMT
 
 ### Patches
@@ -269,6 +296,7 @@ Wed, 23 Sep 2026 03:47:55 GMT
 - fix: size dropdown panels from natural width and add embedded alert surface for toasts
 
 ## 3.3.0
+
 Mon, 21 Sep 2026 15:19:01 GMT
 
 ### Minor changes
@@ -281,6 +309,7 @@ Mon, 21 Sep 2026 15:19:01 GMT
 - fix(refine): honor documented --button-padding, --button-gap and --button-font-size overrides
 
 ## 3.2.1
+
 Wed, 16 Sep 2026 09:18:24 GMT
 
 ### Patches
@@ -288,6 +317,7 @@ Wed, 16 Sep 2026 09:18:24 GMT
 - Fix checkbox, radio and switch labels wrapping below the control instead of beside it, and stepper labels overlapping on narrow widths.
 
 ## 3.2.0
+
 Sun, 13 Sep 2026 20:22:23 GMT
 
 ### Minor changes
@@ -295,6 +325,7 @@ Sun, 13 Sep 2026 20:22:23 GMT
 - Add explicit sidebar item labels and menu panel foreground theming, and fix controlled popover dismissal through triggers, outside clicks, and Escape.
 
 ## 3.1.0
+
 Fri, 11 Sep 2026 11:19:30 GMT
 
 ### Minor changes
@@ -302,6 +333,7 @@ Fri, 11 Sep 2026 11:19:30 GMT
 - Use native anchor semantics for link buttons, improve dark field-label contrast, make skeleton media fill externally sized hosts, normalize native sidebar item controls, remove empty navbar regions from layout, apply perceptually distinct elevation to frost navbars, and support contextual mobile menu icons.
 
 ## 3.0.0
+
 Wed, 09 Sep 2026 22:15:14 GMT
 
 ### Breaking changes
@@ -309,6 +341,7 @@ Wed, 09 Sep 2026 22:15:14 GMT
 - Remove the glass surface variant, align DataGrid sources with Sourcerer's page-source contract, publish complete framework typings, and harden interaction lifecycles
 
 ## 2.4.0
+
 Sun, 06 Sep 2026 04:50:16 GMT
 
 ### Minor changes
@@ -316,11 +349,13 @@ Sun, 06 Sep 2026 04:50:16 GMT
 - feat: add stats and improve accessible, responsive component interactions
 
 ## 2.3.1
+
 Sun, 30 Aug 2026 13:16:08 GMT
 
 _Version update only_
 
 ## 2.3.0
+
 Fri, 28 Aug 2026 07:44:01 GMT
 
 ### Minor changes
@@ -328,11 +363,13 @@ Fri, 28 Aug 2026 07:44:01 GMT
 - Harden internal announcer: accept ownerDocument via AnnounceOptions.document for correct iframe accessibility tree routing. Fix documentation to describe latest-value replacement (debounce) instead of queueing. Remove unsubstantiated 50ms delay claim. All call sites (carousel, typing-indicator, chat-message, command-palette, file-input, file-input-upload, alert) now pass getHost().ownerDocument.
 
 ## 2.2.5
+
 Wed, 26 Aug 2026 17:29:55 GMT
 
 _Version update only_
 
 ## 2.2.4
+
 Fri, 21 Aug 2026 16:02:58 GMT
 
 ### Patches
@@ -343,6 +380,7 @@ Fri, 21 Aug 2026 16:02:58 GMT
 - fix: navbar stuck in mobile mode after resizing back to desktop: untrack breakpoint watch callback to prevent mediaMatches from becoming a dependency that triggers effect re-run and disposes the MediaQueryList listener
 
 ## 2.2.3
+
 Thu, 20 Aug 2026 10:12:48 GMT
 
 ### Patches
@@ -350,16 +388,19 @@ Thu, 20 Aug 2026 10:12:48 GMT
 - fix: registerProp reads existing PropMeta signal on reconnect instead of host property overwritten by defineFieldValue; restores ore-number-input value on cart/checkout
 
 ## 2.2.2
+
 Wed, 19 Aug 2026 09:25:42 GMT
 
 _Version update only_
 
 ## 2.2.1
+
 Wed, 19 Aug 2026 06:57:36 GMT
 
 _Version update only_
 
 ## 2.2.0
+
 Tue, 18 Aug 2026 11:28:52 GMT
 
 ### Minor changes
@@ -367,26 +408,31 @@ Tue, 18 Aug 2026 11:28:52 GMT
 - feat(refine): add fouc.css export for FOUC suppression of unupgraded custom elements
 
 ## 2.1.6
+
 Mon, 17 Aug 2026 10:42:29 GMT
 
 _Version update only_
 
 ## 2.1.5
+
 Sun, 16 Aug 2026 10:35:40 GMT
 
 _Version update only_
 
 ## 2.1.4
+
 Sun, 16 Aug 2026 09:15:40 GMT
 
 _Version update only_
 
 ## 2.1.3
+
 Sat, 15 Aug 2026 10:39:54 GMT
 
 _Version update only_
 
 ## 2.1.2
+
 Sat, 15 Aug 2026 06:26:02 GMT
 
 ### Patches
@@ -394,11 +440,13 @@ Sat, 15 Aug 2026 06:26:02 GMT
 - fix: update 29 ripple imports from /watch subpath to root after ripple 3.0 subpath collapse
 
 ## 2.1.1
+
 Fri, 14 Aug 2026 09:10:58 GMT
 
 _Version update only_
 
 ## 2.1.0
+
 Thu, 13 Aug 2026 06:06:28 GMT
 
 ### Minor changes
@@ -406,6 +454,7 @@ Thu, 13 Aug 2026 06:06:28 GMT
 - feat: add navigation menu
 
 ## 2.0.3
+
 Mon, 10 Aug 2026 21:21:35 GMT
 
 ### Patches
@@ -413,6 +462,7 @@ Mon, 10 Aug 2026 21:21:35 GMT
 - refactor: collapse core/ barrels, unify composable disposal, derive manifest from filesystem, add --_* CSS contract check
 
 ## 2.0.2
+
 Mon, 10 Aug 2026 15:11:23 GMT
 
 ### Patches
@@ -420,6 +470,7 @@ Mon, 10 Aug 2026 15:11:23 GMT
 - Fix floating overlays in deferred slot and preview lifecycles
 
 ## 2.0.1
+
 Thu, 06 Aug 2026 07:20:49 GMT
 
 ### Patches
@@ -427,6 +478,7 @@ Thu, 06 Aug 2026 07:20:49 GMT
 - add classic TypeScript subpath mappings
 
 ## 2.0.0
+
 Wed, 05 Aug 2026 16:48:52 GMT
 
 ### Breaking changes
@@ -445,6 +497,7 @@ Wed, 05 Aug 2026 16:48:52 GMT
 - fix: refine slider touch geometry
 
 ## 1.8.0
+
 Sun, 26 Jul 2026 06:43:54 GMT
 
 ### Minor changes
@@ -456,6 +509,7 @@ Sun, 26 Jul 2026 06:43:54 GMT
 - fix(refine): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies: fixes @vielzeug/keymap missing from the tree-shakeable build's externals (was being silently inlined into refine's own dist instead of staying external) and removes a dead @vielzeug/scroll entry from the bundle config (never imported, not a dependency)
 
 ## 1.7.0
+
 Fri, 24 Jul 2026 21:50:49 GMT
 
 ### Minor changes
@@ -468,6 +522,7 @@ Fri, 24 Jul 2026 21:50:49 GMT
 - feat(refine): add List component with swipe-to-reveal row actions and swipe-through confirm gesture
 
 ## 1.6.0
+
 Fri, 24 Jul 2026 05:28:41 GMT
 
 ### Minor changes
@@ -479,11 +534,13 @@ Fri, 24 Jul 2026 05:28:41 GMT
 - chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement
 
 ## 1.5.4
+
 Tue, 21 Jul 2026 07:04:16 GMT
 
 _Version update only_
 
 ## 1.5.3
+
 Fri, 17 Jul 2026 14:17:07 GMT
 
 ### Patches
@@ -491,6 +548,7 @@ Fri, 17 Jul 2026 14:17:07 GMT
 - fix: resolve @vielzeug/ore/directives in vitest
 
 ## 1.5.2
+
 Thu, 16 Jul 2026 16:49:59 GMT
 
 ### Patches
@@ -498,6 +556,7 @@ Thu, 16 Jul 2026 16:49:59 GMT
 - fix: match externalized subpath imports (e.g. @vielzeug/ore/forms) so refine doesn't vendor a second, disconnected copy of ore's runtime
 
 ## 1.5.1
+
 Thu, 16 Jul 2026 13:17:33 GMT
 
 ### Patches
@@ -505,6 +564,7 @@ Thu, 16 Jul 2026 13:17:33 GMT
 - fix: ore-navbar's mobile toggle button and menu panel now respect their own hidden state: :host([data-mobile]) .mobile-toggle set display:inline-flex unconditionally (an author-stylesheet rule, which always wins over the UA stylesheet's [hidden]{display:none} regardless of specificity), so the button stayed visibly clickable even when the component's own logic correctly decided to hide it (no mobile-menu slot content, no mobile-sidebar target): clicking toggled a panel that stayed hidden too, doing nothing visible. Also: ore-navbar-item now closes the mobile menu on click (via a new closeMobileMenu on NavbarContext): previously stayed open after navigating
 
 ## 1.5.0
+
 Wed, 15 Jul 2026 17:08:06 GMT
 
 ### Minor changes
@@ -517,6 +577,7 @@ Wed, 15 Jul 2026 17:08:06 GMT
 - fix: ore-toast now registers ore-alert internally: toast.ts renders <ore-alert> in its own template but never imported alert.ts, so any consumer that imported only @vielzeug/refine/toast (without separately importing @vielzeug/refine/alert) got an undefined custom element rendering as unstyled plain text instead of a styled alert
 
 ## 1.4.2
+
 Wed, 15 Jul 2026 07:45:31 GMT
 
 ### Patches
@@ -527,6 +588,7 @@ Wed, 15 Jul 2026 07:45:31 GMT
 - fix: ore-dialog/ore-drawer no longer mistake a same-named bubbling event from a nested field for their own native close/cancel: selecting an option in an ore-select/ore-combobox dropdown nested in a dialog was closing the whole dialog instead of just that field's dropdown, because slot-assignment-based event-path computation crosses into a projecting shadow tree regardless of the originating event's own composed flag
 
 ## 1.4.1
+
 Tue, 14 Jul 2026 06:12:09 GMT
 
 ### Patches
@@ -535,6 +597,7 @@ Tue, 14 Jul 2026 06:12:09 GMT
 - fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)
 
 ## 1.4.0
+
 Sat, 11 Jul 2026 19:22:05 GMT
 
 ### Minor changes
@@ -547,6 +610,7 @@ Sat, 11 Jul 2026 19:22:05 GMT
 - fix: ore-message-composer -- flat/ghost variants no longer render identically at rest (flat now matches ore-textarea's filled/inset-shadow recipe), field no longer collapses to near-zero height before the first keystroke (auto-resize scrollHeight read deferred a frame, with a min-height floor as a backstop), and a cancelled send (preventDefault()) no longer refocuses the field
 
 ## 1.3.1
+
 Thu, 09 Jul 2026 15:05:53 GMT
 
 ### Patches
@@ -554,6 +618,7 @@ Thu, 09 Jul 2026 15:05:53 GMT
 - fix: light-dark() shadow tokens computed to none in spec-compliant browsers, breaking hover/focus/halo effects across every component; fix button effect/frost mixin selectors matching a nonexistent <button> tag; move refine's internal build scripts into scripts/
 
 ## 1.3.0
+
 Wed, 08 Jul 2026 17:19:00 GMT
 
 ### Minor changes
@@ -565,6 +630,7 @@ Wed, 08 Jul 2026 17:19:00 GMT
 - fix: chat-message alignment/announce fixes, typing-indicator reliable announcement via shared live region, command-palette simplified slot handling + disabled-row Enter guard, file-input naming cleanup
 
 ## 1.2.0
+
 Wed, 08 Jul 2026 09:22:31 GMT
 
 ### Minor changes
@@ -577,21 +643,25 @@ Wed, 08 Jul 2026 09:22:31 GMT
 - fix: externalize @vielzeug/ore/directives, /forms, /observers (mapped to the same Ore global) in the IIFE bundle: previously only the bare @vielzeug/ore specifier was externalized, so Rollup silently inlined a second copy of ore's module graph into refine.iife.js, and any lifecycle hook (getHost, onMounted, etc.) resolved through it always threw 'outside setup'. Fixes broken docs component previews for every component using useField/when/live/raw/styleMap/resizeObserver/intersectionObserver.
 
 ## 1.1.3
+
 Tue, 07 Jul 2026 09:20:39 GMT
 
 _Version update only_
 
 ## 1.1.2
+
 Sun, 05 Jul 2026 21:33:33 GMT
 
 _Version update only_
 
 ## 1.1.1
+
 Sun, 05 Jul 2026 06:22:27 GMT
 
 _Version update only_
 
 ## 1.1.0
+
 Sun, 05 Jul 2026 05:52:18 GMT
 
 ### Minor changes
@@ -604,6 +674,7 @@ Sun, 05 Jul 2026 05:52:18 GMT
 - fix(refine): surface visible failure state in ore-copy-command instead of silently failing
 
 ## 1.0.1
+
 Fri, 03 Jul 2026 06:00:47 GMT
 
 ### Patches
@@ -611,9 +682,9 @@ Fri, 03 Jul 2026 06:00:47 GMT
 - chore(refine): rename internal _warn.ts to _dev.ts
 
 ## 1.0.0
+
 Wed, 01 Jul 2026 16:10:37 GMT
 
 ### Breaking changes
 
 - Initial public release
-

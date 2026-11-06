@@ -36,12 +36,12 @@ The step card of a product tour: a compact dialog with title, body, progress, an
 
 ## Presentations
 
-| Presentation   | Behavior                                                                        |
-| -------------- | ------------------------------------------------------------------------------- |
-| `popover`      | Anchored to `anchor` with an Orbit positioner in the Popover API top layer       |
-| `modal`        | Native `<dialog>`: centered panel, focus trap, background lock                   |
-| `bottom-sheet` | Native `<dialog>` docked to the bottom edge, full width                          |
-| `auto`         | `bottom-sheet` on narrow viewports (≤ 640px), `popover` otherwise (default)      |
+| Presentation   | Behavior                                                                    |
+| -------------- | --------------------------------------------------------------------------- |
+| `popover`      | Anchored to `anchor` with an Orbit positioner in the Popover API top layer  |
+| `modal`        | Native `<dialog>`: centered panel, focus trap, background lock              |
+| `bottom-sheet` | Native `<dialog>` docked to the bottom edge, full width                     |
+| `auto`         | `bottom-sheet` on narrow viewports (≤ 640px), `popover` otherwise (default) |
 
 ## Anchoring
 
@@ -128,64 +128,64 @@ if (media) {
 
 ### Attributes
 
-| Attribute       | Type                                                                       | Default    | Description                                          |
-| --------------- | -------------------------------------------------------------------------- | ---------- | ---------------------------------------------------- |
-| `backdrop`      | `'opaque' \| 'blur' \| 'transparent'`                                       | `'opaque'` | Backdrop style in dialog presentations: veil only (default), veil + blur, or no overlay |
-| `description`   | `string`                                                                    | N/A        | Body text (replaced by the default slot)             |
-| `dismissible`   | `boolean`                                                                   | `true`     | Show a close (×) button                              |
-| `initial-focus` | `string`                                                                    | N/A        | Selector to focus on open (dialog presentations)     |
-| `offset`        | `number`                                                                    | `8`        | Anchor gap in px (popover mode)                      |
-| `open`          | `boolean`                                                                   | N/A        | Controlled open state                                |
-| `persistent`    | `boolean`                                                                   | `false`    | Escape/backdrop do not request dismissal             |
-| `placement`     | Orbit `Placement`                                                            | `'bottom'` | Popover placement                                    |
-| `presentation`  | `'auto' \| 'bottom-sheet' \| 'modal' \| 'popover'`                          | `'auto'`   | How the card presents                                |
-| `return-focus`  | `boolean`                                                                   | `true`     | Restore focus after the card closes                  |
-| `spotlight`     | `boolean`                                                                   | `false`    | Dim the page around the anchor rect                  |
-| `step-index`    | `number`                                                                    | `0`        | Zero-based current step                              |
-| `title`         | `string`                                                                    | N/A        | Card title                                           |
-| `total-steps`   | `number`                                                                    | `0`        | Total steps; >0 shows the progress bar and "Step N of M" |
+| Attribute       | Type                                               | Default    | Description                                                                             |
+| --------------- | -------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------- |
+| `backdrop`      | `'opaque' \| 'blur' \| 'transparent'`              | `'opaque'` | Backdrop style in dialog presentations: veil only (default), veil + blur, or no overlay |
+| `description`   | `string`                                           | N/A        | Body text (replaced by the default slot)                                                |
+| `dismissible`   | `boolean`                                          | `true`     | Show a close (×) button                                                                 |
+| `initial-focus` | `string`                                           | N/A        | Selector to focus on open (dialog presentations)                                        |
+| `offset`        | `number`                                           | `8`        | Anchor gap in px (popover mode)                                                         |
+| `open`          | `boolean`                                          | N/A        | Controlled open state                                                                   |
+| `persistent`    | `boolean`                                          | `false`    | Escape/backdrop do not request dismissal                                                |
+| `placement`     | Orbit `Placement`                                  | `'bottom'` | Popover placement                                                                       |
+| `presentation`  | `'auto' \| 'bottom-sheet' \| 'modal' \| 'popover'` | `'auto'`   | How the card presents                                                                   |
+| `return-focus`  | `boolean`                                          | `true`     | Restore focus after the card closes                                                     |
+| `spotlight`     | `boolean`                                          | `false`    | Dim the page around the anchor rect                                                     |
+| `step-index`    | `number`                                           | `0`        | Zero-based current step                                                                 |
+| `title`         | `string`                                           | N/A        | Card title                                                                              |
+| `total-steps`   | `number`                                           | `0`        | Total steps; >0 shows the progress bar and "Step N of M"                                |
 
 The `anchor` and `labels` props are JS-only. `labels` overrides the English defaults (`back`, `close`, `finish`, `next`, `skip`, `stepOf` with `{current}`/`{total}` placeholders).
 
 ### Methods
 
-| Method | Returns | Description |
-| -------------- | --------------- | --------------------------------------------------- |
+| Method         | Returns      | Description                                                                                                                                      |
+| -------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `bind(handle)` | `() => void` | Render a controller's `current` snapshot into the props and route the card's actions into it; see [Wiring a Beacon Tour](#wiring-a-beacon-tour). |
 
 A controller is anything with `current: Readable<TourStepSnapshot>` plus `dismiss()` and the optional `next` / `back` / `skip` / `finish` actions — a beacon handle, or your own state.
 
 ### Slots
 
-| Slot      | Description                                  |
-| --------- | -------------------------------------------- |
+| Slot      | Description                                                        |
+| --------- | ------------------------------------------------------------------ |
 | `media`   | Full-bleed media above the copy (`img`, `picture`, `video`, `svg`) |
-| (default) | Body content (replaces `description`)        |
-| `footer`  | Custom footer actions (replaces Skip/Back/Next) |
+| (default) | Body content (replaces `description`)                              |
+| `footer`  | Custom footer actions (replaces Skip/Back/Next)                    |
 
 ### Events
 
-| Event         | Detail                  | Description                                       |
-| ------------- | ----------------------- | ------------------------------------------------- |
-| `back`        | —                       | Back was requested                                |
-| `dismiss`     | `{ reason: string }`    | Close was requested (popover) / happened (dialog) |
-| `finish`      | —                       | Advance pressed on the final step                 |
-| `next`        | —                       | Next was requested                                |
-| `open-change` | `{ open, reason }`      | Open state changed                                |
-| `skip`        | —                       | Skip was requested                                |
+| Event         | Detail               | Description                                       |
+| ------------- | -------------------- | ------------------------------------------------- |
+| `back`        | —                    | Back was requested                                |
+| `dismiss`     | `{ reason: string }` | Close was requested (popover) / happened (dialog) |
+| `finish`      | —                    | Advance pressed on the final step                 |
+| `next`        | —                    | Next was requested                                |
+| `open-change` | `{ open, reason }`   | Open state changed                                |
+| `skip`        | —                    | Skip was requested                                |
 
 ### CSS Custom Properties
 
-| Property                | Description                          |
-| ----------------------- | ------------------------------------ |
-| `--tour-bg`             | Card background color                |
-| `--tour-backdrop-bg`    | Backdrop veil color (default `--overlay-veil`) |
-| `--tour-border-color`   | Card border color                    |
-| `--tour-max-width`      | Card max width (default 22rem)       |
+| Property                  | Description                                                                   |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| `--tour-bg`               | Card background color                                                         |
+| `--tour-backdrop-bg`      | Backdrop veil color (default `--overlay-veil`)                                |
+| `--tour-border-color`     | Card border color                                                             |
+| `--tour-max-width`        | Card max width (default 22rem)                                                |
 | `--tour-media-max-height` | Media ceiling (default `min(38dvh, 16rem)`; bottom sheet `min(26dvh, 12rem)`) |
-| `--tour-panel-blur`     | Backdrop blur (default `--blur-md`)  |
-| `--tour-radius`         | Card border radius                   |
-| `--tour-shadow`         | Card drop shadow                     |
+| `--tour-panel-blur`       | Backdrop blur (default `--blur-md`)                                           |
+| `--tour-radius`           | Card border radius                                                            |
+| `--tour-shadow`           | Card drop shadow                                                              |
 
 ## Accessibility
 

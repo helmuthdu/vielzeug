@@ -7,23 +7,23 @@ description: Factory signatures, options, state types, lifecycle handles, and er
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createViewport()` | Observe layout viewport dimensions and device pixel ratio | Sync | Requires a browser Window |
-| `createNetwork()` | Observe online status and optional connection information | Sync | `connection` is often `null` |
-| `createMediaQuery()` | Observe one media query | Sync | Throws when `matchMedia` is unavailable |
-| `createElementSize()` | Observe element content-box dimensions | Sync | Value is `null` before the first delivery |
-| `createIntersection()` | Observe element intersection state | Sync | Value is `null` before the first delivery |
-| `createWakeLock()` | Prevent the screen from sleeping | Async | Degrades silently when the Wake Lock API is unavailable |
-| `createFullscreen()` | Track and drive document fullscreen state | Sync | Degrades silently when the Fullscreen API is unavailable |
-| `Sentinel<T>` | Expose an external-store snapshot with explicit browser-resource ownership | Sync | Call `getSnapshot()` inside subscription listeners |
-| `SentinelError` | Base class for package-defined errors | Sync | Catch a subtype when recovery is specific |
-| `SentinelUnavailableError` | Report an unavailable browser API | Sync | Invalid observer inputs retain their native errors |
+| Symbol                     | Purpose                                                                    | Execution mode | Common gotcha                                            |
+| -------------------------- | -------------------------------------------------------------------------- | -------------- | -------------------------------------------------------- |
+| `createViewport()`         | Observe layout viewport dimensions and device pixel ratio                  | Sync           | Requires a browser Window                                |
+| `createNetwork()`          | Observe online status and optional connection information                  | Sync           | `connection` is often `null`                             |
+| `createMediaQuery()`       | Observe one media query                                                    | Sync           | Throws when `matchMedia` is unavailable                  |
+| `createElementSize()`      | Observe element content-box dimensions                                     | Sync           | Value is `null` before the first delivery                |
+| `createIntersection()`     | Observe element intersection state                                         | Sync           | Value is `null` before the first delivery                |
+| `createWakeLock()`         | Prevent the screen from sleeping                                           | Async          | Degrades silently when the Wake Lock API is unavailable  |
+| `createFullscreen()`       | Track and drive document fullscreen state                                  | Sync           | Degrades silently when the Fullscreen API is unavailable |
+| `Sentinel<T>`              | Expose an external-store snapshot with explicit browser-resource ownership | Sync           | Call `getSnapshot()` inside subscription listeners       |
+| `SentinelError`            | Base class for package-defined errors                                      | Sync           | Catch a subtype when recovery is specific                |
+| `SentinelUnavailableError` | Report an unavailable browser API                                          | Sync           | Invalid observer inputs retain their native errors       |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import               | Purpose                                                     |
+| -------------------- | ----------------------------------------------------------- |
 | `@vielzeug/sentinel` | All factories, state types, option types, and error classes |
 
 ## Factories
@@ -36,10 +36,10 @@ function createViewport(options?: WindowSentinelOptions): Sentinel<ViewportState
 
 Returns a Sentinel initialized from the layout viewport's `innerWidth`, `innerHeight`, and `devicePixelRatio`.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `options.target` | `Window` | Window to observe instead of the global browser window |
-| `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
+| Parameter        | Type          | Description                                            |
+| ---------------- | ------------- | ------------------------------------------------------ |
+| `options.target` | `Window`      | Window to observe instead of the global browser window |
+| `options.signal` | `AbortSignal` | External signal that disposes the Sentinel             |
 
 **Returns:** `Sentinel<ViewportState>`.
 
@@ -63,10 +63,10 @@ function createNetwork(options?: WindowSentinelOptions): Sentinel<NetworkState>;
 
 Returns a Sentinel initialized from `navigator.onLine` and the optional Network Information API.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `options.target` | `Window` | Window whose navigator and events are observed |
-| `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
+| Parameter        | Type          | Description                                    |
+| ---------------- | ------------- | ---------------------------------------------- |
+| `options.target` | `Window`      | Window whose navigator and events are observed |
+| `options.signal` | `AbortSignal` | External signal that disposes the Sentinel     |
 
 **Returns:** `Sentinel<NetworkState>`.
 
@@ -90,10 +90,10 @@ function createMediaQuery(query: string, options?: WindowSentinelOptions): Senti
 
 Returns a Sentinel initialized from `matchMedia(query).matches`.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `query` | `string` | CSS media query to observe |
-| `options.target` | `Window` | Window whose `matchMedia` method is used |
+| Parameter        | Type          | Description                                |
+| ---------------- | ------------- | ------------------------------------------ |
+| `query`          | `string`      | CSS media query to observe                 |
+| `options.target` | `Window`      | Window whose `matchMedia` method is used   |
 | `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
 
 **Returns:** `Sentinel<MediaQueryState>`.
@@ -118,9 +118,9 @@ function createElementSize(element: Element, options?: SentinelOptions): Sentine
 
 Returns a Sentinel containing the latest `ResizeObserverEntry.contentRect` dimensions.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `element` | `Element` | Element to observe |
+| Parameter        | Type          | Description                                |
+| ---------------- | ------------- | ------------------------------------------ |
+| `element`        | `Element`     | Element to observe                         |
 | `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
 
 **Returns:** `Sentinel<ElementSizeState | null>`. The initial value is `null`.
@@ -144,22 +144,19 @@ size.dispose();
 ### `createIntersection()`
 
 ```ts
-function createIntersection(
-  element: Element,
-  options?: CreateIntersectionOptions,
-): Sentinel<IntersectionState | null>;
+function createIntersection(element: Element, options?: CreateIntersectionOptions): Sentinel<IntersectionState | null>;
 ```
 
 Returns a Sentinel containing normalized fields from the latest IntersectionObserver entry.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `element` | `Element` | Element to observe |
-| `options.root` | `Element \| Document \| null` | Intersection root |
-| `options.rootMargin` | `string` | Margin applied to the root |
-| `options.scrollMargin` | `string` | Margin applied to nested scroll containers |
-| `options.threshold` | `number \| number[]` | Intersection ratio threshold or thresholds |
-| `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
+| Parameter              | Type                          | Description                                |
+| ---------------------- | ----------------------------- | ------------------------------------------ |
+| `element`              | `Element`                     | Element to observe                         |
+| `options.root`         | `Element \| Document \| null` | Intersection root                          |
+| `options.rootMargin`   | `string`                      | Margin applied to the root                 |
+| `options.scrollMargin` | `string`                      | Margin applied to nested scroll containers |
+| `options.threshold`    | `number \| number[]`          | Intersection ratio threshold or thresholds |
+| `options.signal`       | `AbortSignal`                 | External signal that disposes the Sentinel |
 
 **Returns:** `Sentinel<IntersectionState | null>`. The initial value is `null`.
 
@@ -187,10 +184,10 @@ function createWakeLock(options?: SentinelOptions & { readonly target?: Window }
 
 Returns a Sentinel-backed screen wake lock. `request()` acquires the lock; `release()` frees it. When the tab is hidden the browser auto-releases the lock; the Sentinel re-acquires it automatically on `visibilitychange` if the lock was active. Degrades silently when the Screen Wake Lock API is unavailable.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `options.target` | `Window` | Window whose document and navigator are used |
-| `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
+| Parameter        | Type          | Description                                  |
+| ---------------- | ------------- | -------------------------------------------- |
+| `options.target` | `Window`      | Window whose document and navigator are used |
+| `options.signal` | `AbortSignal` | External signal that disposes the Sentinel   |
 
 **Returns:** `WakeLockSentinel`.
 
@@ -222,9 +219,9 @@ function createFullscreen(options?: SentinelOptions & { readonly target?: Window
 
 Returns a Sentinel-backed fullscreen view. `request()` enters fullscreen for an element (default: the document element), `exit()` leaves it, and `toggle()` flips it. All degrade silently when the Fullscreen API is missing or the browser refuses (user-activation requirements). Disposing the sentinel exits fullscreen and stops tracking `fullscreenchange`.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `options.target` | `Window` | Window whose document is tracked |
+| Parameter        | Type          | Description                                |
+| ---------------- | ------------- | ------------------------------------------ |
+| `options.target` | `Window`      | Window whose document is tracked           |
 | `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
 
 **Returns:** `FullscreenSentinel`.
@@ -264,15 +261,15 @@ interface Subscribable<T> {
 
 `Sentinel<T>` follows the standard external-store snapshot/subscription contract and owns the underlying browser resource. `getSnapshot()`, `subscribe()`, and `dispose()` are stable callback-safe functions. `dispose()` stops observation, clears listeners, and aborts `disposalSignal`.
 
-| Member | Type | Description |
-| --- | --- | --- |
-| `getSnapshot()` | `() => T` | Return the current immutable snapshot |
-| `subscribe(listener)` | `(listener: () => void) => () => void` | Subscribe to snapshot changes and return an unsubscribe function |
-| `disposed` | `boolean` | Whether observation has ended |
-| `disposalSignal` | `AbortSignal` | Aborts when observation ends |
-| `dispose()` | `() => void` | Stop observation and release owned browser resources |
+| Member                   | Type                                                                                          | Description                                                                                                            |
+| ------------------------ | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `getSnapshot()`          | `() => T`                                                                                     | Return the current immutable snapshot                                                                                  |
+| `subscribe(listener)`    | `(listener: () => void) => () => void`                                                        | Subscribe to snapshot changes and return an unsubscribe function                                                       |
+| `disposed`               | `boolean`                                                                                     | Whether observation has ended                                                                                          |
+| `disposalSignal`         | `AbortSignal`                                                                                 | Aborts when observation ends                                                                                           |
+| `dispose()`              | `() => void`                                                                                  | Stop observation and release owned browser resources                                                                   |
 | `tap(handler, options?)` | `(handler: (event: SentinelEvent) => void, options?: { signal?: AbortSignal }) => () => void` | Observe `{ type: 'error' }` when a listener throws and `{ type: 'dispose' }` on disposal; handler errors are swallowed |
-| `[Symbol.dispose]()` | `() => void` | Dispose through the explicit resource-management protocol |
+| `[Symbol.dispose]()`     | `() => void`                                                                                  | Dispose through the explicit resource-management protocol                                                              |
 
 ---
 
@@ -294,7 +291,7 @@ interface SentinelOptions {
 function createSentinel<T>(
   options: CreateSentinelOptions<T>,
   setup: (update: (value: T) => void) => () => void,
-): Sentinel<T>
+): Sentinel<T>;
 ```
 
 The generic primitive every built-in sensor is built on. `setup` starts observing and returns its cleanup; it calls `update(value)` whenever the underlying source changes. Use it for platform sensors the built-ins do not cover (for example `prefers-reduced-motion`).
@@ -401,9 +398,9 @@ interface WakeLockState {
 }
 ```
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `active` | `boolean` | Whether a wake lock is currently held |
+| Field       | Type      | Description                                                       |
+| ----------- | --------- | ----------------------------------------------------------------- |
+| `active`    | `boolean` | Whether a wake lock is currently held                             |
 | `supported` | `boolean` | Whether the Screen Wake Lock API is available in this environment |
 
 ---
@@ -419,10 +416,10 @@ interface WakeLockSentinel extends Sentinel<WakeLockState> {
 
 A `Sentinel<WakeLockState>` with two additional methods:
 
-| Member | Type | Description |
-| --- | --- | --- |
+| Member      | Type         | Description                                                          |
+| ----------- | ------------ | -------------------------------------------------------------------- |
 | `request()` | `() => void` | Acquire the screen wake lock. No-op if already active or unsupported |
-| `release()` | `() => void` | Release the wake lock. No-op if not active |
+| `release()` | `() => void` | Release the wake lock. No-op if not active                           |
 
 ---
 
@@ -435,9 +432,9 @@ interface FullscreenState {
 }
 ```
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `active` | `boolean` | Whether an element is currently shown fullscreen |
+| Property    | Type      | Description                                                 |
+| ----------- | --------- | ----------------------------------------------------------- |
+| `active`    | `boolean` | Whether an element is currently shown fullscreen            |
 | `supported` | `boolean` | Whether the Fullscreen API is available in this environment |
 
 ---
@@ -454,11 +451,11 @@ interface FullscreenSentinel extends Sentinel<FullscreenState> {
 
 A `Sentinel<FullscreenState>` with three additional methods:
 
-| Member | Type | Description |
-| --- | --- | --- |
+| Member              | Type         | Description                                                                                              |
+| ------------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
 | `request(element?)` | `() => void` | Enter fullscreen for `element` (default: the document element). No-op when already active or unsupported |
-| `exit()` | `() => void` | Leave fullscreen. No-op when not active |
-| `toggle(element?)` | `() => void` | Flip fullscreen for `element` (default: the document element) |
+| `exit()`            | `() => void` | Leave fullscreen. No-op when not active                                                                  |
+| `toggle(element?)`  | `() => void` | Flip fullscreen for `element` (default: the document element)                                            |
 
 ## Errors
 

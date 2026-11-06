@@ -25,7 +25,12 @@ const ward = createWard([
   allow('admin', 'posts', ['delete']),
 ]);
 
-ward.decide({ action: 'update', attributes: { authorId: 'u1' }, principal: { id: 'u1', roles: ['editor'] }, resource: 'posts' }).effect; // allow
+ward.decide({
+  action: 'update',
+  attributes: { authorId: 'u1' },
+  principal: { id: 'u1', roles: ['editor'] },
+  resource: 'posts',
+}).effect; // allow
 ```
 
 ### Pitfalls

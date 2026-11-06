@@ -25,7 +25,7 @@ Read the [Usage Guide](./usage.md) first. This page covers customization only.
 
 That single variable shifts every primary token (base, focus, backdrop, border, lighter, light, dark, darker…) and simultaneously derives the `secondary` family as a near-black / near-white tone with a matching hue tint. No other overrides are needed for a full rebrand.
 
-Need finer control? Override `--color-primary` itself after setting the hue: every other primary sub-token is computed *from* `--color-primary` with OKLCH relative color syntax (`oklch(from var(--color-primary) ...)`), so one override cascades everywhere it's used:
+Need finer control? Override `--color-primary` itself after setting the hue: every other primary sub-token is computed _from_ `--color-primary` with OKLCH relative color syntax (`oklch(from var(--color-primary) ...)`), so one override cascades everywhere it's used:
 
 ```css
 :root {
@@ -38,7 +38,7 @@ Need finer control? Override `--color-primary` itself after setting the hue: eve
 **Toggle dark mode:**
 
 ```javascript
-document.documentElement.classList.add('dark');    // force dark
+document.documentElement.classList.add('dark'); // force dark
 document.documentElement.classList.remove('dark'); // force light (falls back to OS)
 document.documentElement.classList.toggle('dark'); // toggle
 ```
@@ -67,21 +67,21 @@ If you need to scope overrides to a subtree, put them on a class instead of `:ro
 
 ## Semantic Colors
 
-Each semantic color ships with **one authored base plus 10 derived sub-tokens**: 11 total. Only `--color-{name}` (and, for `content`/`contrast`, two small ink pairs) is ever hand-authored; every other sub-token is computed *from the base* with [OKLCH relative color syntax](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Colors/Using_relative_colors) (`oklch(from var(--color-{name}) ...)`). Override the base and the rest follows automatically: see [Overriding the Neutral Palette](#overriding-the-neutral-palette) below for a concrete example.
+Each semantic color ships with **one authored base plus 10 derived sub-tokens**: 11 total. Only `--color-{name}` (and, for `content`/`contrast`, two small ink pairs) is ever hand-authored; every other sub-token is computed _from the base_ with [OKLCH relative color syntax](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Colors/Using_relative_colors) (`oklch(from var(--color-{name}) ...)`). Override the base and the rest follows automatically: see [Overriding the Neutral Palette](#overriding-the-neutral-palette) below for a concrete example.
 
-| Sub-token                     | Purpose                                                                        |
-| ------------------------------ | ------------------------------------------------------------------------------ |
-| `--color-{name}`               | Base interactive color (buttons, links, highlights): the only hand-authored value |
-| `--color-{name}-lighter`       | Tint step, brighter than base: decorative fills, subtle badges                |
-| `--color-{name}-light`         | Tint step, moderately brighter than base                                      |
-| `--color-{name}-dark`          | Shade step, moderately darker than base                                       |
-| `--color-{name}-darker`        | Shade step, darker than base, hue nudged slightly cooler                       |
-| `--color-{name}-focus`         | Hover and active state                                                        |
-| `--color-{name}-backdrop`      | Tinted surface behind a colored element                                        |
-| `--color-{name}-content`       | Foreground text/icon on a translucent or tinted fill of `--color-{name}` (e.g. the frost variant) |
-| `--color-{name}-contrast`      | Foreground text/icon on a fully opaque fill of `--color-{name}` (solid buttons, badges, chips, hover/active states) |
-| `--color-{name}-border`        | Border at reduced opacity                                                      |
-| `--color-{name}-focus-shadow`  | Focus ring `box-shadow`                                                       |
+| Sub-token                     | Purpose                                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `--color-{name}`              | Base interactive color (buttons, links, highlights): the only hand-authored value                                   |
+| `--color-{name}-lighter`      | Tint step, brighter than base: decorative fills, subtle badges                                                      |
+| `--color-{name}-light`        | Tint step, moderately brighter than base                                                                            |
+| `--color-{name}-dark`         | Shade step, moderately darker than base                                                                             |
+| `--color-{name}-darker`       | Shade step, darker than base, hue nudged slightly cooler                                                            |
+| `--color-{name}-focus`        | Hover and active state                                                                                              |
+| `--color-{name}-backdrop`     | Tinted surface behind a colored element                                                                             |
+| `--color-{name}-content`      | Foreground text/icon on a translucent or tinted fill of `--color-{name}` (e.g. the frost variant)                   |
+| `--color-{name}-contrast`     | Foreground text/icon on a fully opaque fill of `--color-{name}` (solid buttons, badges, chips, hover/active states) |
+| `--color-{name}-border`       | Border at reduced opacity                                                                                           |
+| `--color-{name}-focus-shadow` | Focus ring `box-shadow`                                                                                             |
 
 Available families: **neutral**, **primary**, **secondary**, **info**, **success**, **warning**, **error**.
 
@@ -122,8 +122,12 @@ Every color token uses the CSS [`light-dark()`](https://developer.mozilla.org/en
 Two rules on `<html>` let you override the OS:
 
 ```css
-html.dark       { color-scheme: dark; }
-html:not(.dark) { color-scheme: light; }
+html.dark {
+  color-scheme: dark;
+}
+html:not(.dark) {
+  color-scheme: light;
+}
 ```
 
 This is Refine's own dark-mode contract: not specific to any particular framework or app shell. Toggle `.dark` on `<html>` from any app (VitePress does this automatically for these docs) and every `light-dark()` token in the package resolves accordingly. Refine deliberately doesn't couple this behavior to a specific delivery mechanism (a router, a state library, a meta-framework convention): a plain class toggle keeps it usable anywhere.
@@ -149,8 +153,12 @@ OKLCH is recommended for custom colors: lightness steps are perceptually uniform
 A third appearance context sits alongside light and dark. The OS "increase contrast" setting is honored automatically, and an explicit `html.contrast-more` class gives an app the same path without an OS setting:
 
 ```css
-@media (prefers-contrast: more) { /* applied automatically */ }
-html.contrast-more { /* manual opt-in, same effect */ }
+@media (prefers-contrast: more) {
+  /* applied automatically */
+}
+html.contrast-more {
+  /* manual opt-in, same effect */
+}
 ```
 
 Both push the neutral ramp toward the extremes, thicken separators, and widen every focus ring (via `--focus-ring-width`), so a reader who cannot parse the default ramp has a verified higher-contrast path.
@@ -159,13 +167,13 @@ Both push the neutral ramp toward the extremes, thicken separators, and widen ev
 
 Components pick a background by role, never by a raw contrast-ramp step, so depth stays correct in both appearances:
 
-| Token               | Role                                                        |
-| ------------------- | ----------------------------------------------------------- |
-| `--surface-base`    | default page-level surface                                  |
-| `--surface-sunken`  | recessed wells, inset fields                                |
-| `--surface-raised`  | cards and panels resting on the base                        |
+| Token               | Role                                                             |
+| ------------------- | ---------------------------------------------------------------- |
+| `--surface-base`    | default page-level surface                                       |
+| `--surface-sunken`  | recessed wells, inset fields                                     |
+| `--surface-raised`  | cards and panels resting on the base                             |
 | `--surface-overlay` | floating layers (dialog, popover, menu, drawer, command palette) |
-| `--surface-inset`   | deepest inset fill                                          |
+| `--surface-inset`   | deepest inset fill                                               |
 
 `--surface-overlay` reads as a foreground surface in both schemes; in dark mode it steps one ramp level brighter (`html.dark` re-declares it) so a dialog separates from the page behind it.
 
@@ -176,10 +184,18 @@ Components pick a background by role, never by a raw contrast-ramp step, so dept
 Create a theme with a single hue variable: primary and secondary both adapt:
 
 ```css
-.theme-ocean  { --color-primary-hue: 220deg; }
-.theme-sunset { --color-primary-hue: 35deg;  }
-.theme-forest { --color-primary-hue: 160deg; }
-.theme-rose   { --color-primary-hue: 0deg;   }
+.theme-ocean {
+  --color-primary-hue: 220deg;
+}
+.theme-sunset {
+  --color-primary-hue: 35deg;
+}
+.theme-forest {
+  --color-primary-hue: 160deg;
+}
+.theme-rose {
+  --color-primary-hue: 0deg;
+}
 ```
 
 Apply it anywhere in the DOM:
@@ -206,10 +222,10 @@ Because the entire palette derives from a single hue, switching themes at runtim
 
 ```typescript
 const THEMES = {
-  ocean:  { '--color-primary-hue': '220deg' },
-  sunset: { '--color-primary-hue': '35deg'  },
+  ocean: { '--color-primary-hue': '220deg' },
+  sunset: { '--color-primary-hue': '35deg' },
   forest: { '--color-primary-hue': '160deg' },
-  rose:   { '--color-primary-hue': '0deg'   },
+  rose: { '--color-primary-hue': '0deg' },
 } as const;
 
 function applyTheme(name: keyof typeof THEMES) {
@@ -275,14 +291,14 @@ Refine uses an 11-step contrast scale driven by `light-dark()`. Values flip auto
 
 **Background range (50–400)**: surfaces, borders, UI structure:
 
-| Token                  | Light                     | Dark                      | Usage                              |
-| ---------------------- | ------------------------- | ------------------------- | ---------------------------------- |
-| `--color-contrast-50`  | oklch(99% 0.001 264deg)   | oklch(17% 0.001 250deg)   | Canvas, page background            |
-| `--color-contrast-100` | oklch(97% 0.001 264deg)   | oklch(21% 0.001 250deg)   | Cards, elevated surfaces           |
+| Token                  | Light                     | Dark                      | Usage                             |
+| ---------------------- | ------------------------- | ------------------------- | --------------------------------- |
+| `--color-contrast-50`  | oklch(99% 0.001 264deg)   | oklch(17% 0.001 250deg)   | Canvas, page background           |
+| `--color-contrast-100` | oklch(97% 0.001 264deg)   | oklch(21% 0.001 250deg)   | Cards, elevated surfaces          |
 | `--color-contrast-150` | oklch(95.5% 0.001 264deg) | oklch(23.5% 0.001 250deg) | Midpoint: chip base, subtle fills |
-| `--color-contrast-200` | oklch(94% 0.001 264deg)   | oklch(26% 0.001 250deg)   | Nested cards, hover states         |
-| `--color-contrast-300` | oklch(89% 0.002 264deg)   | oklch(32% 0.001 250deg)   | Borders, dividers                  |
-| `--color-contrast-400` | oklch(81% 0.002 264deg)   | oklch(40% 0.001 250deg)   | Disabled backgrounds, subtle UI    |
+| `--color-contrast-200` | oklch(94% 0.001 264deg)   | oklch(26% 0.001 250deg)   | Nested cards, hover states        |
+| `--color-contrast-300` | oklch(89% 0.002 264deg)   | oklch(32% 0.001 250deg)   | Borders, dividers                 |
+| `--color-contrast-400` | oklch(81% 0.002 264deg)   | oklch(40% 0.001 250deg)   | Disabled backgrounds, subtle UI   |
 
 **Text range (500–900)**: readability and WCAG compliance:
 
@@ -296,24 +312,24 @@ Refine uses an 11-step contrast scale driven by `light-dark()`. Values flip auto
 
 **Aliases:**
 
-| Token              | Value                                                              | Usage                             |
-| ------------------ | ------------------------------------------------------------------ | --------------------------------- |
-| `--color-canvas`   | `color-mix(in oklch, var(--color-contrast-50) 85%, transparent)`   | Default page/component background |
-| `--color-divider`  | `color-mix(in oklch, var(--color-contrast-300) 85%, transparent)`  | Separator lines and borders       |
-| `--color-contrast` | `color-mix(in oklch, var(--color-contrast-900) 85%, transparent)`  | Maximum-contrast text/icon color  |
-| `--color-scrim`    | `light-dark(rgb(0 0 0 / 55%), rgb(0 0 0 / 72%))`                      | Overlay dim veil (never inverts)  |
-| `--overlay-veil`   | `color-mix(in oklch, var(--color-scrim) 70%, transparent)`             | The dimming backdrop behind every overlay (dialog, drawer, command palette, tour, and the sidebar drawer in its `backdrop="opaque"`/`"blur"` modes) |
+| Token              | Value                                                             | Usage                                                                                                                                               |
+| ------------------ | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--color-canvas`   | `color-mix(in oklch, var(--color-contrast-50) 85%, transparent)`  | Default page/component background                                                                                                                   |
+| `--color-divider`  | `color-mix(in oklch, var(--color-contrast-300) 85%, transparent)` | Separator lines and borders                                                                                                                         |
+| `--color-contrast` | `color-mix(in oklch, var(--color-contrast-900) 85%, transparent)` | Maximum-contrast text/icon color                                                                                                                    |
+| `--color-scrim`    | `light-dark(rgb(0 0 0 / 55%), rgb(0 0 0 / 72%))`                  | Overlay dim veil (never inverts)                                                                                                                    |
+| `--overlay-veil`   | `color-mix(in oklch, var(--color-scrim) 70%, transparent)`        | The dimming backdrop behind every overlay (dialog, drawer, command palette, tour, and the sidebar drawer in its `backdrop="opaque"`/`"blur"` modes) |
 
 ### Semantic Text Colors
 
-| Token                    | Contrast step          | Use                               |
-| ------------------------ | ---------------------- | --------------------------------- |
+| Token                    | Contrast step          | Use                              |
+| ------------------------ | ---------------------- | -------------------------------- |
 | `--text-color-heading`   | `--color-contrast-900` | Headings: AAA                    |
 | `--text-color-body`      | `--color-contrast-800` | Default body text: AAA           |
 | `--text-color-secondary` | `--color-contrast-600` | Secondary / muted text: AA       |
 | `--text-color-tertiary`  | `--color-contrast-500` | Placeholder, hint text: AA large |
 | `--text-color-disabled`  | `--color-contrast-400` | Disabled state: decorative only  |
-| `--text-color-contrast`  | `--color-contrast-100` | Text on dark/colored backgrounds  |
+| `--text-color-contrast`  | `--color-contrast-100` | Text on dark/colored backgrounds |
 
 Prefer semantic tokens over raw contrast values: they stay meaningful in both modes:
 
@@ -329,17 +345,17 @@ color: var(--color-contrast-800);
 
 One shared, monotonic stacking scale for an entire page: sticky headers, dropdowns, overlays, modals, popovers, tooltips, toasts. Reach for these instead of ad-hoc `z-index` literals in app code, the same way you'd reach for `--size-*` instead of a random `margin` value:
 
-| Token           | Value | Use                                    |
-| --------------- | ----- | --------------------------------------- |
-| `--z-base`      | 0     | Default stacking, no explicit layer     |
-| `--z-sticky`    | 40    | Sticky headers/sidebars within the flow |
-| `--z-dropdown`  | 100   | Inline dropdowns (select, combobox)     |
-| `--z-fixed`     | 300   | Fixed-position chrome                   |
-| `--z-overlay`   | 500   | Backdrop behind a dialog/drawer         |
-| `--z-modal`     | 600   | Dialogs, drawers                        |
-| `--z-popover`   | 1000  | Floating menus, popovers                |
-| `--z-tooltip`   | 1100  | Tooltips: always above popovers        |
-| `--z-toast`     | 9999  | Toasts: always on top                  |
+| Token          | Value | Use                                     |
+| -------------- | ----- | --------------------------------------- |
+| `--z-base`     | 0     | Default stacking, no explicit layer     |
+| `--z-sticky`   | 40    | Sticky headers/sidebars within the flow |
+| `--z-dropdown` | 100   | Inline dropdowns (select, combobox)     |
+| `--z-fixed`    | 300   | Fixed-position chrome                   |
+| `--z-overlay`  | 500   | Backdrop behind a dialog/drawer         |
+| `--z-modal`    | 600   | Dialogs, drawers                        |
+| `--z-popover`  | 1000  | Floating menus, popovers                |
+| `--z-tooltip`  | 1100  | Tooltips: always above popovers         |
+| `--z-toast`    | 9999  | Toasts: always on top                   |
 
 ```css
 .app-header {
@@ -353,16 +369,16 @@ One shared, monotonic stacking scale for an entire page: sticky headers, dropdow
 
 **Body scale (`--text-*`):**
 
-| Token         | Value           |
-| ------------- | --------------- |
+| Token         | Value            |
+| ------------- | ---------------- |
 | `--text-2xs`  | 0.6875rem (11px) |
-| `--text-xs`   | 0.75rem (12px)  |
-| `--text-sm`   | 0.875rem (14px) |
-| `--text-base` | 1rem (16px)     |
-| `--text-lg`   | 1.125rem (18px) |
-| `--text-xl`   | 1.25rem (20px)  |
-| `--text-2xl`  | 1.5rem (24px)   |
-| `--text-3xl`  | 1.875rem (30px) |
+| `--text-xs`   | 0.75rem (12px)   |
+| `--text-sm`   | 0.875rem (14px)  |
+| `--text-base` | 1rem (16px)      |
+| `--text-lg`   | 1.125rem (18px)  |
+| `--text-xl`   | 1.25rem (20px)   |
+| `--text-2xl`  | 1.5rem (24px)    |
+| `--text-3xl`  | 1.875rem (30px)  |
 
 `--text-2xs` (11px) is the legibility floor: component text never ships smaller. `--text-3xl` is reserved for display values (e.g. a circular-progress label), not running text.
 
@@ -379,46 +395,46 @@ One shared, monotonic stacking scale for an entire page: sticky headers, dropdow
 
 **Font weights:**
 
-| Token              | Value | Note                        |
-| ------------------ | ----- | --------------------------- |
-| `--font-thin`      | 100   |                             |
-| `--font-extralight`| 200   |                             |
-| `--font-light`     | 300   |                             |
-| `--font-normal`    | 400   | Minimum for body text       |
-| `--font-medium`    | 500   |                             |
-| `--font-semibold`  | 600   |                             |
-| `--font-bold`      | 700   |                             |
-| `--font-extrabold` | 800   |                             |
-| `--font-black`     | 900   |                             |
+| Token               | Value | Note                  |
+| ------------------- | ----- | --------------------- |
+| `--font-thin`       | 100   |                       |
+| `--font-extralight` | 200   |                       |
+| `--font-light`      | 300   |                       |
+| `--font-normal`     | 400   | Minimum for body text |
+| `--font-medium`     | 500   |                       |
+| `--font-semibold`   | 600   |                       |
+| `--font-bold`       | 700   |                       |
+| `--font-extrabold`  | 800   |                       |
+| `--font-black`      | 900   |                       |
 
 **Letter spacing:**
 
-| Token               | Value      | Use                              |
-| ------------------- | ---------- | -------------------------------- |
-| `--tracking-tighter`| -0.05em    | Tightest display headings        |
-| `--tracking-tight`  | -0.025em   | Standard headers, display text   |
-| `--tracking-header` | -0.05em    | Default for heading variant      |
-| `--tracking-normal` | 0em        | Default body tracking            |
-| `--tracking-wide`   | 0.05em     | Labels, badges, uppercase caps   |
+| Token                | Value    | Use                            |
+| -------------------- | -------- | ------------------------------ |
+| `--tracking-tighter` | -0.05em  | Tightest display headings      |
+| `--tracking-tight`   | -0.025em | Standard headers, display text |
+| `--tracking-header`  | -0.05em  | Default for heading variant    |
+| `--tracking-normal`  | 0em      | Default body tracking          |
+| `--tracking-wide`    | 0.05em   | Labels, badges, uppercase caps |
 
 **Line heights:**
 
-| Token              | Value  | Use                              |
-| ------------------ | ------ | -------------------------------- |
-| `--leading-none`   | 1      |                                  |
-| `--leading-tight`  | 1.15   | Headings                         |
-| `--leading-snug`   | 1.375  |                                  |
-| `--leading-normal` | 1.5    | Body text (WCAG recommended)     |
-| `--leading-relaxed`| 1.625  |                                  |
-| `--leading-loose`  | 2      |                                  |
-| `--leading-3`      | 0.75rem (12px) |                          |
-| `--leading-4`      | 1rem (16px)    |                          |
-| `--leading-5`      | 1.25rem (20px) |                          |
-| `--leading-6`      | 1.5rem (24px)  |                          |
-| `--leading-7`      | 1.75rem (28px) |                          |
-| `--leading-8`      | 2rem (32px)    |                          |
-| `--leading-9`      | 2.25rem (36px) |                          |
-| `--leading-10`     | 2.5rem (40px)  |                          |
+| Token               | Value          | Use                          |
+| ------------------- | -------------- | ---------------------------- |
+| `--leading-none`    | 1              |                              |
+| `--leading-tight`   | 1.15           | Headings                     |
+| `--leading-snug`    | 1.375          |                              |
+| `--leading-normal`  | 1.5            | Body text (WCAG recommended) |
+| `--leading-relaxed` | 1.625          |                              |
+| `--leading-loose`   | 2              |                              |
+| `--leading-3`       | 0.75rem (12px) |                              |
+| `--leading-4`       | 1rem (16px)    |                              |
+| `--leading-5`       | 1.25rem (20px) |                              |
+| `--leading-6`       | 1.5rem (24px)  |                              |
+| `--leading-7`       | 1.75rem (28px) |                              |
+| `--leading-8`       | 2rem (32px)    |                              |
+| `--leading-9`       | 2.25rem (36px) |                              |
+| `--leading-10`      | 2.5rem (40px)  |                              |
 
 ### Transitions & Animation
 
@@ -426,37 +442,37 @@ Duration, easing, pre-built transitions, named animations, and Motion Mode moved
 
 ### All Token Categories
 
-| Category                   | Prefix                                      | Description                                        |
-| -------------------------- | ------------------------------------------- | -------------------------------------------------- |
-| **Spacing Scale**          | `--size-{n}`                                | 4px-increment spacing (0 → 96)                     |
-| **Container Sizes**        | `--size-{2xs–7xl}`                          | Named width breakpoints (256px → 1280px)            |
-| **Special Sizes**          | `--size-{full,fit,min,max,auto,none,prose}` | Keyword size utilities                             |
-| **Viewport & Breakpoints** | `--size-screen-*`                           | Viewport units + breakpoint values                 |
-| **Z-Index Scale**          | `--z-*`                                     | Shared page-wide stacking scale (sticky → toast)   |
-| **Aspect Ratios**          | `--aspect-*`                                | Common aspect ratios (square, video, wide…)        |
-| **3D Perspective**         | `--perspective-*`                           | Transform perspective distances                    |
-| **Grid Templates**         | `--grid-{1–12}`                             | CSS Grid column repeat helpers                     |
-| **Grid Auto-fit Floor**    | `--grid-min-item-width`                     | Minimum `auto-fit` column width (250px)            |
-| **Surfaces**               | `--surface-{base,sunken,raised,overlay,inset}` | Role-named backgrounds, appearance-aware        |
-| **Target Spacing**         | `--target-gap-{bezel,open}`                 | Minimum gap between controls (bezeled / borderless) |
-| **Safe-area Insets**       | `--safe-area-inset-block/inline-*`          | Notch/home-indicator clearance (0 off-device)      |
-| **Focus Ring**             | `--focus-ring{,-width,-color,-offset}`      | Keyboard focus indicator primitives                |
-| **Border Widths**          | `--border-*`                                | Stroke widths (0, 1px, 2px, 4px, 8px)              |
-| **Ring Utilities**         | `--ring-*`                                  | Focus ring box-shadow helpers                      |
-| **Border Radius**          | `--rounded-*`                               | Corner rounding scale                              |
-| **Blur Effects**           | `--blur-*`                                  | Blur filter scale                                  |
-| **Box Shadows**            | `--shadow-*`                                | Elevation shadows (light-dark aware)               |
-| **Inset Shadows**          | `--inset-shadow-*`                          | Inner shadow scale                                 |
-| **Drop Shadows**           | `--drop-shadow-*`                           | CSS filter drop-shadows                            |
-| **Text Shadows**           | `--text-shadow-*`                           | Typographic text shadows                           |
-| **Halo Shadows**           | `--halo-shadow-*`                           | Branded glow per semantic color                    |
-| **Font Families**          | `--font-{sans,serif,mono}`                  | System font stacks                                 |
-| **Semantic Colors**        | `--color-{name}-*`                          | 1 authored base + 10 derived sub-tokens per family |
-| **Shade Ramp**              | `--shade-*`                                 | Shared lighter/light/dark/darker derivation recipe |
-| **Contrast Scale**         | `--color-contrast-{50–900}`                 | 11-step light/dark adaptive palette                |
-| **Section Spacing**        | `--section-spacing`                         | Default block section gap (2rem)                   |
-| **Named Animations**       | `--animate-*`                               | Keyframe + house timing as one token (see [Animation & Motion](./animation)) |
-| **Overlay Enter**          | `--overlay-enter-*`                         | Shared enter displacement/scale for overlays       |
+| Category                   | Prefix                                         | Description                                                                  |
+| -------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| **Spacing Scale**          | `--size-{n}`                                   | 4px-increment spacing (0 → 96)                                               |
+| **Container Sizes**        | `--size-{2xs–7xl}`                             | Named width breakpoints (256px → 1280px)                                     |
+| **Special Sizes**          | `--size-{full,fit,min,max,auto,none,prose}`    | Keyword size utilities                                                       |
+| **Viewport & Breakpoints** | `--size-screen-*`                              | Viewport units + breakpoint values                                           |
+| **Z-Index Scale**          | `--z-*`                                        | Shared page-wide stacking scale (sticky → toast)                             |
+| **Aspect Ratios**          | `--aspect-*`                                   | Common aspect ratios (square, video, wide…)                                  |
+| **3D Perspective**         | `--perspective-*`                              | Transform perspective distances                                              |
+| **Grid Templates**         | `--grid-{1–12}`                                | CSS Grid column repeat helpers                                               |
+| **Grid Auto-fit Floor**    | `--grid-min-item-width`                        | Minimum `auto-fit` column width (250px)                                      |
+| **Surfaces**               | `--surface-{base,sunken,raised,overlay,inset}` | Role-named backgrounds, appearance-aware                                     |
+| **Target Spacing**         | `--target-gap-{bezel,open}`                    | Minimum gap between controls (bezeled / borderless)                          |
+| **Safe-area Insets**       | `--safe-area-inset-block/inline-*`             | Notch/home-indicator clearance (0 off-device)                                |
+| **Focus Ring**             | `--focus-ring{,-width,-color,-offset}`         | Keyboard focus indicator primitives                                          |
+| **Border Widths**          | `--border-*`                                   | Stroke widths (0, 1px, 2px, 4px, 8px)                                        |
+| **Ring Utilities**         | `--ring-*`                                     | Focus ring box-shadow helpers                                                |
+| **Border Radius**          | `--rounded-*`                                  | Corner rounding scale                                                        |
+| **Blur Effects**           | `--blur-*`                                     | Blur filter scale                                                            |
+| **Box Shadows**            | `--shadow-*`                                   | Elevation shadows (light-dark aware)                                         |
+| **Inset Shadows**          | `--inset-shadow-*`                             | Inner shadow scale                                                           |
+| **Drop Shadows**           | `--drop-shadow-*`                              | CSS filter drop-shadows                                                      |
+| **Text Shadows**           | `--text-shadow-*`                              | Typographic text shadows                                                     |
+| **Halo Shadows**           | `--halo-shadow-*`                              | Branded glow per semantic color                                              |
+| **Font Families**          | `--font-{sans,serif,mono}`                     | System font stacks                                                           |
+| **Semantic Colors**        | `--color-{name}-*`                             | 1 authored base + 10 derived sub-tokens per family                           |
+| **Shade Ramp**             | `--shade-*`                                    | Shared lighter/light/dark/darker derivation recipe                           |
+| **Contrast Scale**         | `--color-contrast-{50–900}`                    | 11-step light/dark adaptive palette                                          |
+| **Section Spacing**        | `--section-spacing`                            | Default block section gap (2rem)                                             |
+| **Named Animations**       | `--animate-*`                                  | Keyframe + house timing as one token (see [Animation & Motion](./animation)) |
+| **Overlay Enter**          | `--overlay-enter-*`                            | Shared enter displacement/scale for overlays                                 |
 
 ::: details View theme.css
 <<< @/../packages/refine/src/styles/theme.css

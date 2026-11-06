@@ -255,49 +255,49 @@ Use the `loading` slot to render a table-shaped skeleton that matches the real t
 
 ## Status values
 
-| `status`  | What renders                         | `aria-busy` | Announced by                    |
-| --------- | ------------------------------------ | ----------- | ------------------------------- |
-| `idle`    | nothing (empty region)               | `false`     | —                               |
-| `loading` | `loading` slot or skeleton stack     | `true`      | `role="status"` (polite)        |
-| `empty`   | `empty` slot or built-in placeholder | `false`     | `role="status"` (polite)        |
-| `error`   | `error` slot or built-in placeholder | `false`     | `role="alert"` (assertive)      |
-| `success` | default slot (your content)          | `false`     | —                               |
+| `status`  | What renders                         | `aria-busy` | Announced by               |
+| --------- | ------------------------------------ | ----------- | -------------------------- |
+| `idle`    | nothing (empty region)               | `false`     | —                          |
+| `loading` | `loading` slot or skeleton stack     | `true`      | `role="status"` (polite)   |
+| `empty`   | `empty` slot or built-in placeholder | `false`     | `role="status"` (polite)   |
+| `error`   | `error` slot or built-in placeholder | `false`     | `role="alert"` (assertive) |
+| `success` | default slot (your content)          | `false`     | —                          |
 
 ## Props
 
-| Attribute           | Type          | Default                  | Description                                         |
-| ------------------- | ------------- | ------------------------ | --------------------------------------------------- |
-| `status`            | `StateStatus` | `'success'`              | Current data-fetch status                           |
-| `empty-label`       | `string`      | `'No content yet'`       | Heading for the built-in empty state                |
-| `empty-description` | `string`      | N/A | Description below the empty-state heading           |
-| `error-label`       | `string`      | `'Something went wrong'` | Heading for the built-in error state                |
-| `error-description` | `string`      | N/A | Description below the error-state heading           |
+| Attribute           | Type          | Default                  | Description                                           |
+| ------------------- | ------------- | ------------------------ | ----------------------------------------------------- |
+| `status`            | `StateStatus` | `'success'`              | Current data-fetch status                             |
+| `empty-label`       | `string`      | `'No content yet'`       | Heading for the built-in empty state                  |
+| `empty-description` | `string`      | N/A                      | Description below the empty-state heading             |
+| `error-label`       | `string`      | `'Something went wrong'` | Heading for the built-in error state                  |
+| `error-description` | `string`      | N/A                      | Description below the error-state heading             |
 | `retryable`         | `boolean`     | `false`                  | Show a retry button when error has no slotted actions |
 
 ## Events
 
 | Event   | Detail | Description                                     |
 | ------- | ------ | ----------------------------------------------- |
-| `retry` | N/A | Fired when the built-in retry button is clicked |
+| `retry` | N/A    | Fired when the built-in retry button is clicked |
 
 ## Slots
 
-| Slot            | Description                                                          |
-| --------------- | -------------------------------------------------------------------- |
-| _(default)_     | Rendered when `status="success"`                                     |
-| `loading`       | Replaces the built-in skeleton stack during loading                  |
-| `empty`         | Replaces the built-in empty placeholder whole                        |
-| `error`         | Replaces the built-in error placeholder whole                        |
-| `illustration`  | Swaps the artwork in the built-in empty/error placeholder            |
-| `actions`       | Recovery controls for the built-in placeholder, below its text       |
+| Slot           | Description                                                    |
+| -------------- | -------------------------------------------------------------- |
+| _(default)_    | Rendered when `status="success"`                               |
+| `loading`      | Replaces the built-in skeleton stack during loading            |
+| `empty`        | Replaces the built-in empty placeholder whole                  |
+| `error`        | Replaces the built-in error placeholder whole                  |
+| `illustration` | Swaps the artwork in the built-in empty/error placeholder      |
+| `actions`      | Recovery controls for the built-in placeholder, below its text |
 
 ## CSS Custom Properties
 
-| Property            | Default                | Description                                       |
-| ------------------- | ---------------------- | ------------------------------------------------- |
-| `--state-color`     | `--color-contrast-500` | Icon/text color for built-in states               |
-| `--state-icon-size` | `var(--size-12)`       | Icon size in built-in empty/error views           |
-| `--state-gap`       | `var(--size-3)`        | Gap between elements in built-in views            |
+| Property            | Default                | Description                             |
+| ------------------- | ---------------------- | --------------------------------------- |
+| `--state-color`     | `--color-contrast-500` | Icon/text color for built-in states     |
+| `--state-icon-size` | `var(--size-12)`       | Icon size in built-in empty/error views |
+| `--state-gap`       | `var(--size-3)`        | Gap between elements in built-in views  |
 
 ## Accessibility
 

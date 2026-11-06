@@ -7,26 +7,26 @@ description: Reference for Vault schemas, adapter entry points, storage capabili
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createMemory()` | In-memory document store | Async API | Import from `/memory`; codecs optional |
-| `createLocalStorage()` / `createSessionStorage()` | Web Storage-backed key-value stores | Async API | Codecs required; available only where the corresponding Web API exists |
-| `createIndexedDB()` | Browser document store with transactions and cursor iteration | Async API | Import from `/indexeddb`; codecs required |
-| `createSQLite()` | Driver-neutral SQLite document store | Async API over a synchronous driver | Import from `/sqlite`; codecs required |
-| `table()` | Typed record schema | Sync | The key field must be a string or finite number |
-| `validatorCodec()` | Create an identity-encoding codec from a parser | Sync | Spell schemas can also be passed directly |
-| `ttl` | Valid expiration durations | Sync | Durations must be positive |
+| Symbol                                            | Purpose                                                       | Execution mode                      | Common gotcha                                                          |
+| ------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------- |
+| `createMemory()`                                  | In-memory document store                                      | Async API                           | Import from `/memory`; codecs optional                                 |
+| `createLocalStorage()` / `createSessionStorage()` | Web Storage-backed key-value stores                           | Async API                           | Codecs required; available only where the corresponding Web API exists |
+| `createIndexedDB()`                               | Browser document store with transactions and cursor iteration | Async API                           | Import from `/indexeddb`; codecs required                              |
+| `createSQLite()`                                  | Driver-neutral SQLite document store                          | Async API over a synchronous driver | Import from `/sqlite`; codecs required                                 |
+| `table()`                                         | Typed record schema                                           | Sync                                | The key field must be a string or finite number                        |
+| `validatorCodec()`                                | Create an identity-encoding codec from a parser               | Sync                                | Spell schemas can also be passed directly                              |
+| `ttl`                                             | Valid expiration durations                                    | Sync                                | Durations must be positive                                             |
 
 ## Package Entry Points
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/vault` | Adapter-free schemas, TTL, errors, codecs, derived helpers, and shared types |
-| `@vielzeug/vault/memory` | `createMemory` |
-| `@vielzeug/vault/local-storage` | `createLocalStorage` |
-| `@vielzeug/vault/session-storage` | `createSessionStorage` |
-| `@vielzeug/vault/indexeddb` | `createIndexedDB`, the `migrate` upgrade-hook types, and IndexedDB-only types |
-| `@vielzeug/vault/sqlite` | `createSQLite`, the SQLite driver protocol types, and `TransactionContext` |
+| Import                            | Purpose                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| `@vielzeug/vault`                 | Adapter-free schemas, TTL, errors, codecs, derived helpers, and shared types  |
+| `@vielzeug/vault/memory`          | `createMemory`                                                                |
+| `@vielzeug/vault/local-storage`   | `createLocalStorage`                                                          |
+| `@vielzeug/vault/session-storage` | `createSessionStorage`                                                        |
+| `@vielzeug/vault/indexeddb`       | `createIndexedDB`, the `migrate` upgrade-hook types, and IndexedDB-only types |
+| `@vielzeug/vault/sqlite`          | `createSQLite`, the SQLite driver protocol types, and `TransactionContext`    |
 
 ## Schemas, Codecs, and TTL
 
@@ -41,11 +41,11 @@ function table<T extends object, Key extends keyof T & string = keyof T & string
 
 Defines a typed table and its primary-key field.
 
-| Parameter | Description |
-| --- | --- |
-| `key` | A record field whose values are `string` or finite `number` keys |
-| `options.defaultTtl` | Per-table default TTL in milliseconds |
-| `options.indexes` | IndexedDB secondary index fields |
+| Parameter            | Description                                                      |
+| -------------------- | ---------------------------------------------------------------- |
+| `key`                | A record field whose values are `string` or finite `number` keys |
+| `options.defaultTtl` | Per-table default TTL in milliseconds                            |
+| `options.indexes`    | IndexedDB secondary index fields                                 |
 
 **Returns:** A `SchemaEntry` describing the table.
 
@@ -119,10 +119,10 @@ function createMemory<S extends AnySchema>(options: MemoryStoreOptions<S>): Docu
 
 Creates an in-memory document store with `batch()` and `iterate()`. `batch()` snapshots the declared tables and restores them when the callback throws. Codecs are optional because memory values never cross a trust boundary.
 
-| Parameter | Description |
-| --- | --- |
-| `schema` | Tables created by `table()` |
-| `codecs` | Optional per-table codecs |
+| Parameter | Description                 |
+| --------- | --------------------------- |
+| `schema`  | Tables created by `table()` |
+| `codecs`  | Optional per-table codecs   |
 
 **Returns:** `DocumentVaultStore<S>`.
 
@@ -138,18 +138,20 @@ const store = createMemory({ schema: { users: table<{ id: number; name: string }
 ### `createLocalStorage()`
 
 ```ts
-function createLocalStorage<S extends AnySchema>(options: DurableStoreOptions<S> & {
-  name: string;
-}): KeyValueVaultStore<S>;
+function createLocalStorage<S extends AnySchema>(
+  options: DurableStoreOptions<S> & {
+    name: string;
+  },
+): KeyValueVaultStore<S>;
 ```
 
 Creates a namespaced `localStorage` store. Codecs are required.
 
-| Parameter | Description |
-| --- | --- |
-| `schema` | Tables created by `table()` |
-| `codecs` | Required per-table codecs |
-| `name` | Required storage namespace |
+| Parameter | Description                 |
+| --------- | --------------------------- |
+| `schema`  | Tables created by `table()` |
+| `codecs`  | Required per-table codecs   |
+| `name`    | Required storage namespace  |
 
 A write that exceeds the browser quota rejects with `VaultQuotaError`.
 
@@ -171,9 +173,11 @@ const store = createLocalStorage({
 ### `createSessionStorage()`
 
 ```ts
-function createSessionStorage<S extends AnySchema>(options: DurableStoreOptions<S> & {
-  name: string;
-}): KeyValueVaultStore<S>;
+function createSessionStorage<S extends AnySchema>(
+  options: DurableStoreOptions<S> & {
+    name: string;
+  },
+): KeyValueVaultStore<S>;
 ```
 
 Creates a namespaced `sessionStorage` store. Its options and return type match `createLocalStorage()`.
@@ -196,21 +200,23 @@ const store = createSessionStorage({
 ### `createIndexedDB()`
 
 ```ts
-function createIndexedDB<S extends AnySchema>(options: DurableStoreOptions<S> & {
-  migrate?: MigrationFn;
-  name: string;
-  version?: number;
-}): IndexedDbVaultStore<S>;
+function createIndexedDB<S extends AnySchema>(
+  options: DurableStoreOptions<S> & {
+    migrate?: MigrationFn;
+    name: string;
+    version?: number;
+  },
+): IndexedDbVaultStore<S>;
 ```
 
 Creates an IndexedDB document store with atomic batches, lazy cursor iteration, and optional schema migrations. Codecs are required.
 
-| Parameter | Description |
-| --- | --- |
-| `schema` | Tables and IndexedDB secondary indexes |
-| `codecs` | Required per-table codecs |
-| `name` | Required database name |
-| `version` | Positive schema version; defaults to `1` |
+| Parameter | Description                                                                                                                                                     |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema`  | Tables and IndexedDB secondary indexes                                                                                                                          |
+| `codecs`  | Required per-table codecs                                                                                                                                       |
+| `name`    | Required database name                                                                                                                                          |
+| `version` | Positive schema version; defaults to `1`                                                                                                                        |
 | `migrate` | Synchronous `onupgradeneeded` callback. Object stores and schema-declared indexes are created automatically; use the hook only for deletes or record transforms |
 
 **Returns:** `IndexedDbVaultStore<S>`. Its `getAllByIndex(table, field, value)` method queries a declared IndexedDB index without scanning the full table.
@@ -238,12 +244,12 @@ function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>): Docu
 
 Creates a namespaced SQLite document store with atomic batches and keyset-paginated iteration. Codecs are required. It accepts an application-provided positional-parameter driver and never opens or imports a runtime driver.
 
-| Parameter | Description |
-| --- | --- |
-| `schema` | Tables created by `table()` |
-| `codecs` | Required per-table codecs |
-| `database` | Caller-provided `SQLiteDatabase` connection |
-| `name` | Namespace within the connection |
+| Parameter        | Description                                                |
+| ---------------- | ---------------------------------------------------------- |
+| `schema`         | Tables created by `table()`                                |
+| `codecs`         | Required per-table codecs                                  |
+| `database`       | Caller-provided `SQLiteDatabase` connection                |
+| `name`           | Namespace within the connection                            |
 | `closeOnDispose` | Closes the connection during disposal; defaults to `false` |
 
 **Returns:** `DocumentVaultStore<S>`.
@@ -311,10 +317,10 @@ interface DocumentVaultStore<S extends AnySchema> extends KeyValueVaultStore<S> 
 
 `batch()` runs a scoped atomic callback. `iterate()` lazily yields table records: IndexedDB uses a cursor, SQLite uses keyset pagination. Both are provided by `createIndexedDB()` and `createSQLite()`.
 
-| Parameter | Description |
-| --- | --- |
-| `tables` | Tables the transaction may access |
-| `fn` | Async callback that uses only the supplied `tx` context |
+| Parameter | Description                                             |
+| --------- | ------------------------------------------------------- |
+| `tables`  | Tables the transaction may access                       |
+| `fn`      | Async callback that uses only the supplied `tx` context |
 
 **Returns:** The callback result after commit.
 
@@ -330,16 +336,16 @@ for await (const user of store.iterate('users')) console.log(user);
 
 Convenience operations are bound to every store and transaction context. For filtering, ordering, and pagination, compose over `getAll()`: it returns a plain array, or use `iterate()` on document stores and `getAllByIndex()` on IndexedDB for declared equality indexes.
 
-| Helper | Signature | Description |
-| --- | --- | --- |
-| `has()` | `(table, key) => Promise<boolean>` | Check whether a record exists |
-| `count()` | `(table) => Promise<number>` | Count live records |
-| `isEmpty()` | `(table) => Promise<boolean>` | Check whether a table has no live records |
-| `getMany()` | `(table, keys) => Promise<(T \| undefined)[]>` | Fetch multiple records by key |
-| `keys()` | `(table, filter?) => Promise<VaultKey[]>` | Fetch live primary keys, optionally filtered by record |
-| `deleteMany()` | `(table, keys) => Promise<number>` | Delete multiple records, return count |
-| `update()` | `(table, key, changes, ttl?) => Promise<T \| undefined>` | Partially update an existing record |
-| `upsert()` | `(table, key, fn, ttl?) => Promise<T>` | Read-modify-write with callback |
+| Helper         | Signature                                                | Description                                            |
+| -------------- | -------------------------------------------------------- | ------------------------------------------------------ |
+| `has()`        | `(table, key) => Promise<boolean>`                       | Check whether a record exists                          |
+| `count()`      | `(table) => Promise<number>`                             | Count live records                                     |
+| `isEmpty()`    | `(table) => Promise<boolean>`                            | Check whether a table has no live records              |
+| `getMany()`    | `(table, keys) => Promise<(T \| undefined)[]>`           | Fetch multiple records by key                          |
+| `keys()`       | `(table, filter?) => Promise<VaultKey[]>`                | Fetch live primary keys, optionally filtered by record |
+| `deleteMany()` | `(table, keys) => Promise<number>`                       | Delete multiple records, return count                  |
+| `update()`     | `(table, key, changes, ttl?) => Promise<T \| undefined>` | Partially update an existing record                    |
+| `upsert()`     | `(table, key, fn, ttl?) => Promise<T>`                   | Read-modify-write with callback                        |
 
 ```ts
 const exists = await store.has('users', 1);
@@ -349,7 +355,10 @@ const updated = await store.update('users', 1, { name: 'Alice' });
 const result = await store.upsert('users', 99, (existing) => ({ id: 99, name: existing?.name ?? 'Guest' }));
 
 const all = await store.getAll('users');
-const active = all.filter((user) => user.status === 'active').sort((a, b) => a.name.localeCompare(b.name)).slice(0, 20);
+const active = all
+  .filter((user) => user.status === 'active')
+  .sort((a, b) => a.name.localeCompare(b.name))
+  .slice(0, 20);
 ```
 
 Bound `update()` and `upsert()` are atomic on document stores. Their key-value-store forms are non-atomic convenience operations.
@@ -360,26 +369,27 @@ Bound `update()` and `upsert()` are atomic on document stores. Their key-value-s
 type VaultKey = number | string;
 type Unsubscribe = () => void;
 type Observer<T> = (records: T[]) => void;
-type AnySchema = Record<string, {
-  defaultTtl?: number;
-  indexes?: readonly string[];
-  key: string;
-}>;
+type AnySchema = Record<
+  string,
+  {
+    defaultTtl?: number;
+    indexes?: readonly string[];
+    key: string;
+  }
+>;
 type SchemaEntry<T extends object, Key extends keyof T & string = keyof T & string> = {
   defaultTtl?: number;
   indexes?: readonly (keyof T & string)[];
   key: Key;
 };
-type RecordOf<S extends AnySchema, K extends keyof S> =
-  K extends unknown
-    ? S[K] extends SchemaEntry<infer R, infer _Key>
-      ? R
-      : never
-    : never;
-type KeyOf<S extends AnySchema, K extends keyof S> =
-  K extends unknown
-    ? Extract<S[K] extends SchemaEntry<infer R, infer Key> ? R[Key] : never, VaultKey>
-    : never;
+type RecordOf<S extends AnySchema, K extends keyof S> = K extends unknown
+  ? S[K] extends SchemaEntry<infer R, infer _Key>
+    ? R
+    : never
+  : never;
+type KeyOf<S extends AnySchema, K extends keyof S> = K extends unknown
+  ? Extract<S[K] extends SchemaEntry<infer R, infer Key> ? R[Key] : never, VaultKey>
+  : never;
 ```
 
 ```ts
@@ -458,12 +468,12 @@ interface TransactionContext<S extends AnySchema, K extends keyof S & string = k
 
 ## Errors
 
-| Error | Trigger |
-| --- | --- |
-| `VaultError` | Any Vault-originated validation, serialization, storage, or codec error |
-| `VaultDisposedError` | An operation after the store or observer hub is disposed |
-| `VaultScopeError` | A `batch()` callback accesses a table outside its declared scope |
-| `VaultQuotaError` | A LocalStorage or SessionStorage write exceeds the browser quota |
-| `VaultMigrationError` | An IndexedDB migration callback throws |
+| Error                 | Trigger                                                                 |
+| --------------------- | ----------------------------------------------------------------------- |
+| `VaultError`          | Any Vault-originated validation, serialization, storage, or codec error |
+| `VaultDisposedError`  | An operation after the store or observer hub is disposed                |
+| `VaultScopeError`     | A `batch()` callback accesses a table outside its declared scope        |
+| `VaultQuotaError`     | A LocalStorage or SessionStorage write exceeds the browser quota        |
+| `VaultMigrationError` | An IndexedDB migration callback throws                                  |
 
 Every listed error extends `VaultError`.

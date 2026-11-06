@@ -20,10 +20,7 @@ import { createCourier } from '@vielzeug/courier';
 
 type Item = { id: string; name: string };
 
-export function createItemsClient(options: {
-  resolveBaseUrl: () => Promise<string>;
-  fetch: typeof globalThis.fetch;
-}) {
+export function createItemsClient(options: { resolveBaseUrl: () => Promise<string>; fetch: typeof globalThis.fetch }) {
   return {
     async getItems(signal: AbortSignal): Promise<Item[]> {
       signal.throwIfAborted();

@@ -16,10 +16,7 @@ A suspended-user deny must appear before the normal staff allow.
 ```ts
 import { allow, createWard, deny } from '@vielzeug/ward';
 
-const ward = createWard([
-  deny('suspended', 'posts', ['read']),
-  allow('staff', 'posts', ['read']),
-]);
+const ward = createWard([deny('suspended', 'posts', ['read']), allow('staff', 'posts', ['read'])]);
 
 ward.decide({ action: 'read', principal: { id: 'u1', roles: ['staff', 'suspended'] }, resource: 'posts' }).effect; // deny
 ward.decide({ action: 'read', principal: { id: 'u2', roles: ['staff'] }, resource: 'posts' }).effect; // allow

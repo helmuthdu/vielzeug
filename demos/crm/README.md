@@ -41,39 +41,39 @@ Courier uses a browser-local `mockFetch` implementation with 100–400ms latency
 
 ## Package map
 
-| Package | Where used | Why |
-| --- | --- | --- |
-| `assay` | `crm-kpi` test | Framework-neutral DOM assertions |
-| `clockwork` | Opportunity state machine | Validate legal pipeline transitions |
-| `coins` | Money formatting | Correct localized EUR amounts |
-| `conduit` | Report service | Compose reporting from Courier and Rune |
-| `courier` | Mock CRM API | HTTP-shaped reads and stage mutations with latency |
-| `dnd` | Pipeline | Connected sortable pipeline columns |
-| `familiar` | Showcase analytics worker | Process 10,000 contacts off the main thread |
-| `flux` | Router and Pulse bridges | Convert subscribed external state into Ripple signals |
-| `forge` | Company, contact, lead, and opportunity forms | Typed immutable create/edit form state |
-| `gesture` | Activity feed | Mobile swipe-to-archive interaction |
-| `herald` | App event bus | Connect pipeline, activity, realtime, sync, and toasts |
-| `illusionist` | Seed generator | Deterministic realistic people and contact data |
-| `keymap` | App shell | Global undo and redo shortcuts |
-| `ledger` | Opportunity history | Reversible stage and edit commands |
-| `lingua` | Locale switcher | EN/DE navigation and action labels |
-| `necromancer` | Realtime activity | Reduced-motion-aware feed insertion animation |
-| `ore` | App shell and CRM elements | Custom KPI, activity, record form, detail drawer, and view elements |
-| `postmaster` | Offline stage outbox | Persist and retry Courier mutations |
-| `prism` | Overview | Accessible line and bar charts |
-| `pulse` | Simulated presence | Exercise room/presence protocol without a server |
-| `refine` | Controls, feedback, overlays | Accessible generic UI primitives |
-| `ripple` | Application state | Signals, computed values, effects, and external bindings |
-| `rune` | Core services | Scoped structured diagnostics |
-| `sandbox` | Showcase email preview | Isolate generated preview HTML in a sandboxed iframe |
-| `scout` | Global search | Fuzzy indexing for CRM-wide discovery |
-| `sentinel` | Offline sync | Observe real browser connectivity and trigger an outbox flush |
-| `spell` | Entity create/edit dialog | Validate names, contact email, revenue, amount, probability, and dates |
-| `tempo` | Relative activity time | Parse Temporal instants before localization |
-| `vault` | CRM state and outbox | Persist local data, preferences, and queued work |
-| `ward` | Demo user switcher | Manager, sales representative, and viewer permissions |
-| `wayfinder` | Eight application routes | Browser history and deep links |
+| Package       | Where used                                    | Why                                                                    |
+| ------------- | --------------------------------------------- | ---------------------------------------------------------------------- |
+| `assay`       | `crm-kpi` test                                | Framework-neutral DOM assertions                                       |
+| `clockwork`   | Opportunity state machine                     | Validate legal pipeline transitions                                    |
+| `coins`       | Money formatting                              | Correct localized EUR amounts                                          |
+| `conduit`     | Report service                                | Compose reporting from Courier and Rune                                |
+| `courier`     | Mock CRM API                                  | HTTP-shaped reads and stage mutations with latency                     |
+| `dnd`         | Pipeline                                      | Connected sortable pipeline columns                                    |
+| `familiar`    | Showcase analytics worker                     | Process 10,000 contacts off the main thread                            |
+| `flux`        | Router and Pulse bridges                      | Convert subscribed external state into Ripple signals                  |
+| `forge`       | Company, contact, lead, and opportunity forms | Typed immutable create/edit form state                                 |
+| `gesture`     | Activity feed                                 | Mobile swipe-to-archive interaction                                    |
+| `herald`      | App event bus                                 | Connect pipeline, activity, realtime, sync, and toasts                 |
+| `illusionist` | Seed generator                                | Deterministic realistic people and contact data                        |
+| `keymap`      | App shell                                     | Global undo and redo shortcuts                                         |
+| `ledger`      | Opportunity history                           | Reversible stage and edit commands                                     |
+| `lingua`      | Locale switcher                               | EN/DE navigation and action labels                                     |
+| `necromancer` | Realtime activity                             | Reduced-motion-aware feed insertion animation                          |
+| `ore`         | App shell and CRM elements                    | Custom KPI, activity, record form, detail drawer, and view elements    |
+| `postmaster`  | Offline stage outbox                          | Persist and retry Courier mutations                                    |
+| `prism`       | Overview                                      | Accessible line and bar charts                                         |
+| `pulse`       | Simulated presence                            | Exercise room/presence protocol without a server                       |
+| `refine`      | Controls, feedback, overlays                  | Accessible generic UI primitives                                       |
+| `ripple`      | Application state                             | Signals, computed values, effects, and external bindings               |
+| `rune`        | Core services                                 | Scoped structured diagnostics                                          |
+| `sandbox`     | Showcase email preview                        | Isolate generated preview HTML in a sandboxed iframe                   |
+| `scout`       | Global search                                 | Fuzzy indexing for CRM-wide discovery                                  |
+| `sentinel`    | Offline sync                                  | Observe real browser connectivity and trigger an outbox flush          |
+| `spell`       | Entity create/edit dialog                     | Validate names, contact email, revenue, amount, probability, and dates |
+| `tempo`       | Relative activity time                        | Parse Temporal instants before localization                            |
+| `vault`       | CRM state and outbox                          | Persist local data, preferences, and queued work                       |
+| `ward`        | Demo user switcher                            | Manager, sales representative, and viewer permissions                  |
+| `wayfinder`   | Eight application routes                      | Browser history and deep links                                         |
 
 `Arsenal`, `Focus`, and `Orbit` arrive transitively where their owners need them: Courier/Postmaster use Arsenal helpers, and Refine's composite controls use Focus and Orbit. They are not direct dependencies because the CRM has no direct API call for them. Codex remains a development-time MCP server and is intentionally absent from the browser bundle.
 

@@ -121,17 +121,17 @@ const source = createInfiniteSource({
 });
 ```
 
-| Before | After |
-| --- | --- |
-| `initialQuery.page` | Call `goTo(page)` after construction |
-| `initialQuery.pageSize` | `pageSize` |
-| `initialQuery.search/filter/sort` | `params` |
-| loader `query.page` | loader `page` |
-| loader `query.pageSize` | loader `pageSize` |
-| loader result `data` | loader result `items` |
-| loader result `total` | loader result `totalItems` |
-| `snapshot.pendingQuery` | `state.pendingParams` |
-| `setData()` | `setItems()` |
+| Before                            | After                                |
+| --------------------------------- | ------------------------------------ |
+| `initialQuery.page`               | Call `goTo(page)` after construction |
+| `initialQuery.pageSize`           | `pageSize`                           |
+| `initialQuery.search/filter/sort` | `params`                             |
+| loader `query.page`               | loader `page`                        |
+| loader `query.pageSize`           | loader `pageSize`                    |
+| loader result `data`              | loader result `items`                |
+| loader result `total`             | loader result `totalItems`           |
+| `snapshot.pendingQuery`           | `state.pendingParams`                |
+| `setData()`                       | `setItems()`                         |
 
 Pagination no longer includes a `kind` discriminant. Each factory returns one concrete pagination type.
 

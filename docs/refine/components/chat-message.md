@@ -46,7 +46,7 @@ Pass an ISO 8601 `timestamp`: it renders as a localized short time inside a sema
 
 ## Delivery Status
 
-Set `status` on outgoing messages to show an inline indicator: a spinner while `sending`, a checkmark once `sent`, or an error icon with an automatic **Retry** action and error text for `error`. A failed send is also announced to screen readers: including a retry that fails again with a *different* `error` message, even without leaving `status="error"` in between.
+Set `status` on outgoing messages to show an inline indicator: a spinner while `sending`, a checkmark once `sent`, or an error icon with an automatic **Retry** action and error text for `error`. A failed send is also announced to screen readers: including a retry that fails again with a _different_ `error` message, even without leaving `status="error"` in between.
 
 <ComponentPreview vertical>
 
@@ -93,7 +93,7 @@ Set `streaming` while an assistant reply is still generating: it appends a blink
 
 </ComponentPreview>
 
-Pair this with [`ore-typing-indicator`](./typing-indicator.md) for the moment *before* the first token arrives: the indicator represents "composing a reply," while `streaming` represents "reply is arriving."
+Pair this with [`ore-typing-indicator`](./typing-indicator.md) for the moment _before_ the first token arrives: the indicator represents "composing a reply," while `streaming` represents "reply is arriving."
 
 ## Actions
 
@@ -152,39 +152,39 @@ Pair the list with [`ore-message-composer`](./message-composer.md) for the input
 
 ### Attributes
 
-| Attribute   | Type                                    | Default    | Description                                                                 |
-| ----------- | ---------------------------------------- | ---------- | ---------------------------------------------------------------------------- |
-| `sender`    | `'user' \| 'assistant' \| 'system'`      | `'assistant'` | Who sent the message: controls alignment and bubble styling               |
-| `name`      | `string`                                 | N/A | Display name shown above the bubble (falls back to "You"/"Assistant"/"System" in the accessible label) |
-| `timestamp` | `string`                                 | N/A | ISO 8601 timestamp, rendered as a localized short time                     |
-| `status`    | `'sending' \| 'sent' \| 'error'`         | N/A | Delivery status indicator; `'error'` also shows a retry action and error text |
-| `error`     | `string`                                 | N/A | Error detail shown beneath the bubble when `status="error"`                |
-| `streaming` | `boolean`                                | `false`    | Append a blinking cursor after the content                                 |
+| Attribute   | Type                                | Default       | Description                                                                                            |
+| ----------- | ----------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------ |
+| `sender`    | `'user' \| 'assistant' \| 'system'` | `'assistant'` | Who sent the message: controls alignment and bubble styling                                            |
+| `name`      | `string`                            | N/A           | Display name shown above the bubble (falls back to "You"/"Assistant"/"System" in the accessible label) |
+| `timestamp` | `string`                            | N/A           | ISO 8601 timestamp, rendered as a localized short time                                                 |
+| `status`    | `'sending' \| 'sent' \| 'error'`    | N/A           | Delivery status indicator; `'error'` also shows a retry action and error text                          |
+| `error`     | `string`                            | N/A           | Error detail shown beneath the bubble when `status="error"`                                            |
+| `streaming` | `boolean`                           | `false`       | Append a blinking cursor after the content                                                             |
 
 ### Events
 
-| Event   | Detail                        | Description                                             |
-| ------- | ------------------------------ | -------------------------------------------------------- |
-| `retry` | `{ originalEvent?: Event }`   | Fired when the retry action is activated (`status="error"` only) |
+| Event   | Detail                      | Description                                                      |
+| ------- | --------------------------- | ---------------------------------------------------------------- |
+| `retry` | `{ originalEvent?: Event }` | Fired when the retry action is activated (`status="error"` only) |
 
 ### Slots
 
-| Slot      | Description                                             |
-| --------- | -------------------------------------------------------- |
-| (default) | Message content                                          |
-| `avatar`  | Avatar element (e.g. `<ore-avatar>`)                     |
-| `actions` | Action buttons shown beneath the message                 |
+| Slot      | Description                              |
+| --------- | ---------------------------------------- |
+| (default) | Message content                          |
+| `avatar`  | Avatar element (e.g. `<ore-avatar>`)     |
+| `actions` | Action buttons shown beneath the message |
 
 ### CSS Custom Properties
 
-| Property                       | Description                          | Default                 |
-| ------------------------------- | -------------------------------------- | -------------------------- |
-| `--chat-message-bg`            | Bubble background color (assistant/system) | `var(--color-contrast-100)` |
-| `--chat-message-color`         | Bubble text color (assistant/system)   | `var(--color-contrast-900)` |
-| `--chat-message-user-bg`       | Bubble background color (user)         | `var(--color-primary)`     |
-| `--chat-message-user-color`    | Bubble text color (user)               | `var(--color-primary-content)` |
-| `--chat-message-radius`        | Bubble border radius                   | `var(--rounded-lg)`        |
-| `--chat-message-max-width`     | Maximum bubble width                   | `36rem`                    |
+| Property                    | Description                                | Default                        |
+| --------------------------- | ------------------------------------------ | ------------------------------ |
+| `--chat-message-bg`         | Bubble background color (assistant/system) | `var(--color-contrast-100)`    |
+| `--chat-message-color`      | Bubble text color (assistant/system)       | `var(--color-contrast-900)`    |
+| `--chat-message-user-bg`    | Bubble background color (user)             | `var(--color-primary)`         |
+| `--chat-message-user-color` | Bubble text color (user)                   | `var(--color-primary-content)` |
+| `--chat-message-radius`     | Bubble border radius                       | `var(--rounded-lg)`            |
+| `--chat-message-max-width`  | Maximum bubble width                       | `36rem`                        |
 
 ## Accessibility
 

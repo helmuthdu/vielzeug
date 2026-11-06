@@ -467,12 +467,12 @@ Perfect for compact layouts and list views:
 
 | Attribute     | Type                                                                      | Default | Description                                |
 | ------------- | ------------------------------------------------------------------------- | ------- | ------------------------------------------ |
-| `variant`     | `'solid' \| 'flat' \| 'frost'`                                 | N/A | Visual style variant                       |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Color theme for the card                   |
-| `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | N/A | Internal padding size                      |
-| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | N/A | Border radius size                         |
-| `elevation`   | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | N/A | Shadow elevation level (0=none, 5=maximum) |
-| `orientation` | `'horizontal'`                                                            | N/A | Side-by-side media + content layout        |
+| `variant`     | `'solid' \| 'flat' \| 'frost'`                                            | N/A     | Visual style variant                       |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A     | Color theme for the card                   |
+| `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | N/A     | Internal padding size                      |
+| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | N/A     | Border radius size                         |
+| `elevation`   | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | N/A     | Shadow elevation level (0=none, 5=maximum) |
+| `orientation` | `'horizontal'`                                                            | N/A     | Side-by-side media + content layout        |
 | `interactive` | `boolean`                                                                 | `false` | Enable hover/active states and activation  |
 | `disabled`    | `boolean`                                                                 | `false` | Disable card interaction                   |
 | `loading`     | `boolean`                                                                 | `false` | Show animated loading bar at the top       |
@@ -491,7 +491,7 @@ Perfect for compact layouts and list views:
 
 | Event      | Detail                                                                             | Description                                     |
 | ---------- | ---------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `click`    | N/A | Native browser click (always available)         |
+| `click`    | N/A                                                                                | Native browser click (always available)         |
 | `activate` | `{ trigger: 'pointer' \| 'keyboard', originalEvent: MouseEvent \| KeyboardEvent }` | Emitted when an `interactive` card is activated |
 
 ### CSS Custom Properties
@@ -501,7 +501,7 @@ Perfect for compact layouts and list views:
 | `--card-bg`           | `var(--color-canvas)`       | Background color   |
 | `--card-color`        | `var(--color-contrast-900)` | Text color         |
 | `--card-border`       | `var(--border)`             | Border width       |
-| `--card-border-color` | `var(--color-divider)`        | Border color         |
+| `--card-border-color` | `var(--color-divider)`      | Border color       |
 | `--card-radius`       | `var(--rounded-lg)`         | Border radius      |
 | `--card-padding`      | `var(--size-4)`             | Internal padding   |
 | `--card-shadow`       | `var(--shadow-sm)`          | Box shadow         |

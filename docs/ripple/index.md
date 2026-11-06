@@ -40,13 +40,13 @@ stop.dispose();
 ripple.dispose();
 ```
 
-| Feature | Ripple | Zustand | Jotai |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="ripple" type="size" /> | ~3.5 kB | ~7 kB |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Framework-agnostic | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | React-first |
-| Explicit graph lifetime | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Fine-grained derived values | <ore-icon name="check" size="16"></ore-icon> | Selectors | Atoms |
+| Feature                     | Ripple                                       | Zustand                                      | Jotai                                    |
+| --------------------------- | -------------------------------------------- | -------------------------------------------- | ---------------------------------------- |
+| Bundle size                 | <PackageInfo package="ripple" type="size" /> | ~3.5 kB                                      | ~7 kB                                    |
+| Zero dependencies           | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon> |
+| Framework-agnostic          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | React-first                              |
+| Explicit graph lifetime     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon> |
+| Fine-grained derived values | <ore-icon name="check" size="16"></ore-icon> | Selectors                                    | Atoms                                    |
 
 <div class="decision-callout">
 

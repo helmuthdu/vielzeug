@@ -34,11 +34,13 @@ const results = defineMachine<{ page: number; query: string }, Event>()({
       },
     },
     loading: {
-      invoke: [{
-        src: async ({ context, signal }) => fetch(`/api/search?q=${context.query}&page=${context.page}`, { signal }),
-        onDone: () => ({ type: 'DONE' }),
-        onError: () => ({ type: 'FAILED' }),
-      }],
+      invoke: [
+        {
+          src: async ({ context, signal }) => fetch(`/api/search?q=${context.query}&page=${context.page}`, { signal }),
+          onDone: () => ({ type: 'DONE' }),
+          onError: () => ({ type: 'FAILED' }),
+        },
+      ],
       on: { DONE: { target: 'ready' }, FAILED: { target: 'error' } },
     },
     ready: { on: { SEARCH: { reduce: ({ event }) => ({ page: 1, query: event.query }), target: 'loading' } } },

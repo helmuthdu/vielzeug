@@ -11,34 +11,34 @@ All browser-runtime symbols below are imported from `@vielzeug/ore`. Lifecycle/c
 
 > `watchEffect` is not named `watch`: `@vielzeug/ripple` already exports a `watch(source, callback)` with different semantics (explicit source + old/new value pair), and the two are frequently imported in the same file.
 
-| Symbol                | Purpose                                              | Execution mode | Common gotcha                                                             |
-| ---------------------- | ----------------------------------------------------- | -------------- | -------------------------------------------------------------------------- |
-| `define()`             | Create and register a custom element                   | Sync           | Tag must contain a hyphen; call before first use                          |
-| `html`                 | Tagged template literal returning HTMLResult          | Sync           | Expressions must be signals, functions, or primitives                     |
-| `prop.*`               | Typed prop helpers (string, bool, number, …)          | Sync           | Prop values are signals: read `.value`                                   |
-| `provide()`/`inject()` | Context API for parent-to-descendant sharing          | Setup only     | Must be called synchronously during `setup()`                             |
-| `ref()`                | Reactive reference to a DOM element                   | Sync           | Value is null until after first mount                                     |
-| `createContext()`      | Create a unique typed injection key                   | Sync           | Context is scoped to the component tree                                   |
-| `each()`               | Keyed list rendering with DOM diffing                 | Sync           | Duplicate keys report `ore:error`; plain `T[]` is a one-time static render  |
-| `when()`               | Conditional branch rendering                          | Sync           | Getter-fn computed disposed on cleanup; static bool skips subscription    |
-| `live(signal)`         | One-way binding that skips stale writes during input  | Sync           | Use for controlled inputs alongside a manual `@input` handler             |
-| `model(signal)`        | Two-way form-control binding (value/checked + write-back) | Sync       | Plain `value`/`checked` attribute only; pass `get` to keep numeric signals numeric   |
-| `onMounted(fn)`        | DOM-ready callback                                    | Setup only     | Must be called synchronously during `setup()`                             |
-| `onCleanup(fn)`        | Register teardown                                     | Setup only     | Called on component disconnect                                            |
-| `onEvent(target, …)`   | Scoped event listener with auto-cleanup               | Setup only     | No-ops on null target; removed on disconnect                              |
-| `useField(options)`    | Wire signal to form `ElementInternals`                | Setup only     | Requires `formAssociated: true` on the component definition               |
-| `onFormReset(fn)`      | Run work when the ancestor `<form>` resets            | Setup only     | Fires every reset (not one-shot); only for `formAssociated: true` components |
-| `useEmit<Emits>()`     | Typed `emit()` bound to the current host              | Setup only     | Call once per component; returns `dispatchEvent`'s boolean (`false` if a listener called `preventDefault()`) |
-| `useSlots<SlotNames>()`| Reactive slot presence/element signals                | Setup only     | Safe to call more than once: the underlying registry is created once    |
-| `getHost()`            | The current component's host element                 | Setup only     | Prefer a higher-level helper (`bind`, …) when one exists                  |
+| Symbol                  | Purpose                                                   | Execution mode | Common gotcha                                                                                                |
+| ----------------------- | --------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------ |
+| `define()`              | Create and register a custom element                      | Sync           | Tag must contain a hyphen; call before first use                                                             |
+| `html`                  | Tagged template literal returning HTMLResult              | Sync           | Expressions must be signals, functions, or primitives                                                        |
+| `prop.*`                | Typed prop helpers (string, bool, number, …)              | Sync           | Prop values are signals: read `.value`                                                                       |
+| `provide()`/`inject()`  | Context API for parent-to-descendant sharing              | Setup only     | Must be called synchronously during `setup()`                                                                |
+| `ref()`                 | Reactive reference to a DOM element                       | Sync           | Value is null until after first mount                                                                        |
+| `createContext()`       | Create a unique typed injection key                       | Sync           | Context is scoped to the component tree                                                                      |
+| `each()`                | Keyed list rendering with DOM diffing                     | Sync           | Duplicate keys report `ore:error`; plain `T[]` is a one-time static render                                   |
+| `when()`                | Conditional branch rendering                              | Sync           | Getter-fn computed disposed on cleanup; static bool skips subscription                                       |
+| `live(signal)`          | One-way binding that skips stale writes during input      | Sync           | Use for controlled inputs alongside a manual `@input` handler                                                |
+| `model(signal)`         | Two-way form-control binding (value/checked + write-back) | Sync           | Plain `value`/`checked` attribute only; pass `get` to keep numeric signals numeric                           |
+| `onMounted(fn)`         | DOM-ready callback                                        | Setup only     | Must be called synchronously during `setup()`                                                                |
+| `onCleanup(fn)`         | Register teardown                                         | Setup only     | Called on component disconnect                                                                               |
+| `onEvent(target, …)`    | Scoped event listener with auto-cleanup                   | Setup only     | No-ops on null target; removed on disconnect                                                                 |
+| `useField(options)`     | Wire signal to form `ElementInternals`                    | Setup only     | Requires `formAssociated: true` on the component definition                                                  |
+| `onFormReset(fn)`       | Run work when the ancestor `<form>` resets                | Setup only     | Fires every reset (not one-shot); only for `formAssociated: true` components                                 |
+| `useEmit<Emits>()`      | Typed `emit()` bound to the current host                  | Setup only     | Call once per component; returns `dispatchEvent`'s boolean (`false` if a listener called `preventDefault()`) |
+| `useSlots<SlotNames>()` | Reactive slot presence/element signals                    | Setup only     | Safe to call more than once: the underlying registry is created once                                         |
+| `getHost()`             | The current component's host element                      | Setup only     | Prefer a higher-level helper (`bind`, …) when one exists                                                     |
 
 ## Package Entry Points
 
-| Import                    | Purpose                                                            |
-| ------------------------- | ------------------------------------------------------------------ |
-| `@vielzeug/ore`           | All browser runtime APIs, including directives, fields, and lifecycle helpers |
-| `@vielzeug/ore/testing`   | Ore-specific mounting, lifecycle, hook, cleanup, and form test support |
-| `@vielzeug/assay`         | Generic DOM events, scoped queries, and async waiting              |
+| Import                  | Purpose                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `@vielzeug/ore`         | All browser runtime APIs, including directives, fields, and lifecycle helpers |
+| `@vielzeug/ore/testing` | Ore-specific mounting, lifecycle, hook, cleanup, and form test support        |
+| `@vielzeug/assay`       | Generic DOM events, scoped queries, and async waiting                         |
 
 ## Core Component API
 
@@ -132,14 +132,14 @@ setup(_props) {
 
 ## Props API
 
-| Helper                              | Signature          | Notes                                                                                                        |
-| ----------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `prop.string(defaultValue?)`        | `PropDef<string>`  | Reflects by default                                                                                          |
-| `prop.bool(defaultValue?)`          | `PropDef<boolean>` | Any non-null attribute value other than `"false"` parses as `true`; `"false"` or absent attribute is `false` |
-| `prop.number(defaultValue?)`        | `PropDef<number>`  | Returns default (not NaN) and warns in dev when attribute is not a valid number                              |
-| `prop.oneOf(allowed, defaultValue?)` | `PropDef<T>`      | Restricts to a fixed set of string or number members; `parse` falls back to `defaultValue` (or `undefined` when omitted) for anything outside the set. Numeric members match the attribute parsed as a number |
-| `prop.json(defaultValue)`           | `PropDef<T>`       | JSON.parse from attribute; `reflect: false`                                                                  |
-| `prop.data<T>(defaultValue?)`       | `PropDef<T>`       | JS-only: never reads/writes an attribute; use for objects, arrays, callbacks, or any non-serialisable value |
+| Helper                               | Signature          | Notes                                                                                                                                                                                                         |
+| ------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prop.string(defaultValue?)`         | `PropDef<string>`  | Reflects by default                                                                                                                                                                                           |
+| `prop.bool(defaultValue?)`           | `PropDef<boolean>` | Any non-null attribute value other than `"false"` parses as `true`; `"false"` or absent attribute is `false`                                                                                                  |
+| `prop.number(defaultValue?)`         | `PropDef<number>`  | Returns default (not NaN) and warns in dev when attribute is not a valid number                                                                                                                               |
+| `prop.oneOf(allowed, defaultValue?)` | `PropDef<T>`       | Restricts to a fixed set of string or number members; `parse` falls back to `defaultValue` (or `undefined` when omitted) for anything outside the set. Numeric members match the attribute parsed as a number |
+| `prop.json(defaultValue)`            | `PropDef<T>`       | JSON.parse from attribute; `reflect: false`                                                                                                                                                                   |
+| `prop.data<T>(defaultValue?)`        | `PropDef<T>`       | JS-only: never reads/writes an attribute; use for objects, arrays, callbacks, or any non-serialisable value                                                                                                   |
 
 > **Choosing the right prop helper:**
 >
@@ -194,15 +194,15 @@ Tagged template literal that returns a `CSSResult` for use in `styles`.
 
 ### Directives
 
-| Directive                              | Purpose                                                                                               |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `each(source, key, render, fallback?)` | Keyed reactive list; render receives `Readable<T>` and `Readable<number>`; plain `T[]` is a one-time static snapshot |
-| `when(condition, truthy, falsy?)`      | Conditional rendering                                                                                 |
-| `classMap(record)`                     | Reactive class string from object map                                                                 |
-| `styleMap(record)`                     | Reactive inline style string from object map                                                          |
-| `live(signal)`                         | One-way binding that skips stale writes during active user input; use with `@input` handler           |
+| Directive                              | Purpose                                                                                                                       |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `each(source, key, render, fallback?)` | Keyed reactive list; render receives `Readable<T>` and `Readable<number>`; plain `T[]` is a one-time static snapshot          |
+| `when(condition, truthy, falsy?)`      | Conditional rendering                                                                                                         |
+| `classMap(record)`                     | Reactive class string from object map                                                                                         |
+| `styleMap(record)`                     | Reactive inline style string from object map                                                                                  |
+| `live(signal)`                         | One-way binding that skips stale writes during active user input; use with `@input` handler                                   |
 | `model(signal, options?)`              | Two-way form-control binding: writes the signal to `value`/`checked` and writes user input back on the control's change event |
-| `unsafeHtml(value)`                    | HTML rendering sink; sanitize untrusted values before calling                                           |
+| `unsafeHtml(value)`                    | HTML rendering sink; sanitize untrusted values before calling                                                                 |
 
 `each()` treats number and string keys as distinct. A reconciliation failure (a duplicate key, or a render function that throws) reports `ore:error` and preserves the last valid list: entries created during the failed pass are rolled back, so the previous list stays exactly on screen.
 
@@ -257,10 +257,7 @@ bind({
 Pass `{ target: el }` as a second argument to bind to any element other than the host:
 
 ```ts
-bind(
-  { attr: { 'aria-expanded': () => String(isOpen.value) } },
-  { target: triggerEl },
-);
+bind({ attr: { 'aria-expanded': () => String(isOpen.value) } }, { target: triggerEl });
 ```
 
 Event listener options (`once`, `capture`, `passive`) are also accepted in the second argument. Cleanup is auto-registered with the component scope when called during setup.
@@ -460,9 +457,9 @@ See the [Ripple documentation](/ripple/) for the full API.
 
 ## Lifecycle Events
 
-| Event         | When                                                                      |
-| ------------- | ------------------------------------------------------------------------- |
-| `ore:error`   | When a lifecycle callback fails: bubbles, composed; detail is `OreLifecycleError` |
+| Event       | When                                                                              |
+| ----------- | --------------------------------------------------------------------------------- |
+| `ore:error` | When a lifecycle callback fails: bubbles, composed; detail is `OreLifecycleError` |
 
 ## Types
 
@@ -556,11 +553,7 @@ type RefCallback<T extends Element> = (el: T | null) => void;
 type InjectionKey<T> = symbol & { readonly __ore_injection_key?: T };
 
 interface HTMLResult {
-  mount(
-    parent: ParentNode,
-    anchor: Node | null,
-    registerCleanup: (fn: () => void) => void,
-  ): Node[];
+  mount(parent: ParentNode, anchor: Node | null, registerCleanup: (fn: () => void) => void): Node[];
 }
 
 type CSSResult = {

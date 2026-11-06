@@ -85,7 +85,9 @@ define<{ required?: boolean }>('rating-input-v3', {
     const field = useField({
       onReset: () => (value.value = initialValue),
       validity: computed(() =>
-        props.required.value && isBlank() ? { flags: { valueMissing: true }, message: 'Please select a rating.' } : null,
+        props.required.value && isBlank()
+          ? { flags: { valueMissing: true }, message: 'Please select a rating.' }
+          : null,
       ),
       value,
     });

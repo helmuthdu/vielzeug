@@ -57,19 +57,22 @@ const statusDefinitions = [
   { labelKey: 'status.done', value: 'done' },
 ] as const;
 const translator = createTranslator(messages, { locale: 'en' });
-const statusOptions = statusDefinitions.map(({ labelKey, value }) => ({ label: translator.translate(labelKey), value }));
+const statusOptions = statusDefinitions.map(({ labelKey, value }) => ({
+  label: translator.translate(labelKey),
+  value,
+}));
 ```
 
 ## Missing Keys and Values
 
 Missing keys and values do not silently echo placeholders by default: Lingua warns in development and returns the key or `{name}`. Control failure behaviour with the `missing` option:
 
-| `missing` | Behaviour |
-| --- | --- |
-| `undefined` (default) | Warn in development; return key / `{name}` |
-| `'key'` | Return key / `{name}` silently |
-| `'throw'` | Throw `LinguaMissingKeyError` / `LinguaMissingValueError` |
-| `handler` | Call `({ key, locale, name? }) => string` |
+| `missing`             | Behaviour                                                 |
+| --------------------- | --------------------------------------------------------- |
+| `undefined` (default) | Warn in development; return key / `{name}`                |
+| `'key'`               | Return key / `{name}` silently                            |
+| `'throw'`             | Throw `LinguaMissingKeyError` / `LinguaMissingValueError` |
+| `handler`             | Call `({ key, locale, name? }) => string`                 |
 
 ```ts
 const translator = createTranslator(messages, { locale: 'en', missing: 'throw' });
@@ -147,10 +150,7 @@ Use `createTranslator()` when one catalog and locale stay fixed for the translat
 ```ts
 import { createTranslator } from '@vielzeug/lingua';
 
-const translator = createTranslator(
-  { save: 'Enregistrer' },
-  { locale: 'fr' },
-);
+const translator = createTranslator({ save: 'Enregistrer' }, { locale: 'fr' });
 
 console.log(translator.translate('save'));
 ```

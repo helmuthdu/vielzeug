@@ -7,21 +7,21 @@ description: Public API for @vielzeug/sourcerer.
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createLocalSource()` | Filter and paginate in-memory items | Sync | `params` replacement uses `Object.is` |
-| `createPageSource()` | Load numbered pages | Async | Construction is inert |
-| `createCursorSource()` | Load server-issued cursor pages | Async | `after` and `before` cannot coexist initially |
-| `createInfiniteSource()` | Append numbered pages | Async | `loadMore()` is a no-op while loading or exhausted |
-| `createResource()` | Load one reactive value | Async | Starts loading during construction; `start: false` opts out |
-| `SourcererError` | Base package error | Sync | Loader errors retain their original type |
-| `SourcererConfigurationError` | Invalid pagination configuration | Sync | Pages and page sizes must be positive integers |
-| `SourcererDisposedError` | Command after source disposal | Sync | In-flight work instead settles without committing |
+| Symbol                        | Purpose                             | Execution mode | Common gotcha                                               |
+| ----------------------------- | ----------------------------------- | -------------- | ----------------------------------------------------------- |
+| `createLocalSource()`         | Filter and paginate in-memory items | Sync           | `params` replacement uses `Object.is`                       |
+| `createPageSource()`          | Load numbered pages                 | Async          | Construction is inert                                       |
+| `createCursorSource()`        | Load server-issued cursor pages     | Async          | `after` and `before` cannot coexist initially               |
+| `createInfiniteSource()`      | Append numbered pages               | Async          | `loadMore()` is a no-op while loading or exhausted          |
+| `createResource()`            | Load one reactive value             | Async          | Starts loading during construction; `start: false` opts out |
+| `SourcererError`              | Base package error                  | Sync           | Loader errors retain their original type                    |
+| `SourcererConfigurationError` | Invalid pagination configuration    | Sync           | Pages and page sizes must be positive integers              |
+| `SourcererDisposedError`      | Command after source disposal       | Sync           | In-flight work instead settles without committing           |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import                | Purpose                                                              |
+| --------------------- | -------------------------------------------------------------------- |
 | `@vielzeug/sourcerer` | All factories, states, pagination types, loader contexts, and errors |
 
 ## Source Factories
@@ -29,21 +29,21 @@ description: Public API for @vielzeug/sourcerer.
 ### `createLocalSource()`
 
 ```ts
-function createLocalSource<T>(items: readonly T[]): LocalSource<T>
+function createLocalSource<T>(items: readonly T[]): LocalSource<T>;
 function createLocalSource<T, TParams = undefined>(
   items: readonly T[],
   config: LocalSourceConfig<T, TParams>,
-): LocalSource<T, TParams>
+): LocalSource<T, TParams>;
 ```
 
 Returns a synchronous in-memory source.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `items` | `readonly T[]` | Initial collection |
-| `config.filter` | `(item: T, params: TParams) => boolean` | Optional inclusion predicate |
-| `config.pageSize` | `number` | Positive page size; defaults to `20` |
-| `config.params` | `TParams` | Initial params; required when `TParams` excludes `undefined` |
+| Parameter         | Type                                    | Description                                                  |
+| ----------------- | --------------------------------------- | ------------------------------------------------------------ |
+| `items`           | `readonly T[]`                          | Initial collection                                           |
+| `config.filter`   | `(item: T, params: TParams) => boolean` | Optional inclusion predicate                                 |
+| `config.pageSize` | `number`                                | Positive page size; defaults to `20`                         |
+| `config.params`   | `TParams`                               | Initial params; required when `TParams` excludes `undefined` |
 
 **Returns:** `LocalSource<T, TParams>`.
 
@@ -57,36 +57,34 @@ const source = createLocalSource(['Ada', 'Grace'], {
 source.setParams('Ada');
 ```
 
-| Method | Returns | Description |
-| --- | --- | --- |
-| `first()` | `void` | Move to page one |
-| `goTo(page)` | `void` | Move to a positive page, clamped to the known range |
-| `last()` | `void` | Move to the final page |
-| `next()` | `void` | Move forward when available |
-| `previous()` | `void` | Move backward when available |
-| `setItems(items)` | `void` | Replace the collection and recompute state |
-| `setPageSize(pageSize)` | `void` | Replace page size and reset to page one |
-| `setParams(params)` | `void` | Replace params and reset to page one |
-| `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
-| `dispose()` | `void` | Stop notifications and reject later mutations |
+| Method                  | Returns      | Description                                                   |
+| ----------------------- | ------------ | ------------------------------------------------------------- |
+| `first()`               | `void`       | Move to page one                                              |
+| `goTo(page)`            | `void`       | Move to a positive page, clamped to the known range           |
+| `last()`                | `void`       | Move to the final page                                        |
+| `next()`                | `void`       | Move forward when available                                   |
+| `previous()`            | `void`       | Move backward when available                                  |
+| `setItems(items)`       | `void`       | Replace the collection and recompute state                    |
+| `setPageSize(pageSize)` | `void`       | Replace page size and reset to page one                       |
+| `setParams(params)`     | `void`       | Replace params and reset to page one                          |
+| `subscribe(listener)`   | `() => void` | Register a state listener and return its unsubscribe function |
+| `dispose()`             | `void`       | Stop notifications and reject later mutations                 |
 
 ---
 
 ### `createPageSource()`
 
 ```ts
-function createPageSource<T, TParams = undefined>(
-  config: PageSourceConfig<T, TParams>,
-): PageSource<T, TParams>
+function createPageSource<T, TParams = undefined>(config: PageSourceConfig<T, TParams>): PageSource<T, TParams>;
 ```
 
 Returns an inert numbered-page source.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `config.load` | `(context: PageLoadContext<TParams>) => Promise<PageResult<T>>` | Page loader |
-| `config.pageSize` | `number` | Positive page size; defaults to `20` |
-| `config.params` | `TParams` | Initial params; required when `TParams` excludes `undefined` |
+| Parameter         | Type                                                            | Description                                                  |
+| ----------------- | --------------------------------------------------------------- | ------------------------------------------------------------ |
+| `config.load`     | `(context: PageLoadContext<TParams>) => Promise<PageResult<T>>` | Page loader                                                  |
+| `config.pageSize` | `number`                                                        | Positive page size; defaults to `20`                         |
+| `config.params`   | `TParams`                                                       | Initial params; required when `TParams` excludes `undefined` |
 
 **Returns:** `PageSource<T, TParams>`.
 
@@ -99,19 +97,19 @@ const source = createPageSource({
 await source.reload();
 ```
 
-| Method | Returns | Description |
-| --- | --- | --- |
-| `apply(update)` | `Promise<void>` | Reconcile `{ params, page }` in at most one load; params compare structurally |
-| `first()` | `Promise<void>` | Load page one |
-| `goTo(page)` | `Promise<void>` | Load a positive page |
-| `last()` | `Promise<void>` | Load the last known page |
-| `next()` | `Promise<void>` | Load the next known page |
-| `previous()` | `Promise<void>` | Load the previous page |
-| `reload()` | `Promise<void>` | Reload the requested page and params |
-| `setPageSize(pageSize)` | `Promise<void>` | Reset to page one and load with a new size |
-| `setParams(params)` | `Promise<void>` | Reset to page one and load replacement params |
-| `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
-| `dispose()` | `void` | Abort work and stop notifications |
+| Method                  | Returns         | Description                                                                   |
+| ----------------------- | --------------- | ----------------------------------------------------------------------------- |
+| `apply(update)`         | `Promise<void>` | Reconcile `{ params, page }` in at most one load; params compare structurally |
+| `first()`               | `Promise<void>` | Load page one                                                                 |
+| `goTo(page)`            | `Promise<void>` | Load a positive page                                                          |
+| `last()`                | `Promise<void>` | Load the last known page                                                      |
+| `next()`                | `Promise<void>` | Load the next known page                                                      |
+| `previous()`            | `Promise<void>` | Load the previous page                                                        |
+| `reload()`              | `Promise<void>` | Reload the requested page and params                                          |
+| `setPageSize(pageSize)` | `Promise<void>` | Reset to page one and load with a new size                                    |
+| `setParams(params)`     | `Promise<void>` | Reset to page one and load replacement params                                 |
+| `subscribe(listener)`   | `() => void`    | Register a state listener and return its unsubscribe function                 |
+| `dispose()`             | `void`          | Abort work and stop notifications                                             |
 
 `apply(update: PageSourceUpdate<TParams>): Promise<void>` compares params structurally with
 `isEqual`. Changed params use the supplied positive page without clamping, or page one when omitted.
@@ -128,18 +126,18 @@ The update does not include page size; use `setPageSize()` separately.
 ```ts
 function createCursorSource<T, TParams = undefined, TCursor = string>(
   config: CursorSourceConfig<T, TParams, TCursor>,
-): CursorSource<T, TParams, TCursor>
+): CursorSource<T, TParams, TCursor>;
 ```
 
 Returns an inert cursor source.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `config.after` | `TCursor` | Optional initial forward cursor |
-| `config.before` | `TCursor` | Optional initial backward cursor |
-| `config.load` | `(context: CursorLoadContext<TParams, TCursor>) => Promise<CursorResult<T, TCursor>>` | Cursor loader |
-| `config.pageSize` | `number` | Positive page size; defaults to `20` |
-| `config.params` | `TParams` | Initial params; required when `TParams` excludes `undefined` |
+| Parameter         | Type                                                                                  | Description                                                  |
+| ----------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `config.after`    | `TCursor`                                                                             | Optional initial forward cursor                              |
+| `config.before`   | `TCursor`                                                                             | Optional initial backward cursor                             |
+| `config.load`     | `(context: CursorLoadContext<TParams, TCursor>) => Promise<CursorResult<T, TCursor>>` | Cursor loader                                                |
+| `config.pageSize` | `number`                                                                              | Positive page size; defaults to `20`                         |
+| `config.params`   | `TParams`                                                                             | Initial params; required when `TParams` excludes `undefined` |
 
 **Returns:** `CursorSource<T, TParams, TCursor>`.
 
@@ -151,15 +149,15 @@ await source.reload();
 await source.next();
 ```
 
-| Method | Returns | Description |
-| --- | --- | --- |
-| `next()` | `Promise<void>` | Load `state.pagination.nextCursor` when available |
-| `previous()` | `Promise<void>` | Load `state.pagination.previousCursor` when available |
-| `reload()` | `Promise<void>` | Reload the requested cursor and params |
-| `setPageSize(pageSize)` | `Promise<void>` | Clear cursors and reload with a new size |
-| `setParams(params)` | `Promise<void>` | Clear cursors and load replacement params |
-| `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
-| `dispose()` | `void` | Abort work and stop notifications |
+| Method                  | Returns         | Description                                                   |
+| ----------------------- | --------------- | ------------------------------------------------------------- |
+| `next()`                | `Promise<void>` | Load `state.pagination.nextCursor` when available             |
+| `previous()`            | `Promise<void>` | Load `state.pagination.previousCursor` when available         |
+| `reload()`              | `Promise<void>` | Reload the requested cursor and params                        |
+| `setPageSize(pageSize)` | `Promise<void>` | Clear cursors and reload with a new size                      |
+| `setParams(params)`     | `Promise<void>` | Clear cursors and load replacement params                     |
+| `subscribe(listener)`   | `() => void`    | Register a state listener and return its unsubscribe function |
+| `dispose()`             | `void`          | Abort work and stop notifications                             |
 
 ---
 
@@ -168,16 +166,16 @@ await source.next();
 ```ts
 function createInfiniteSource<T, TParams = undefined>(
   config: InfiniteSourceConfig<T, TParams>,
-): InfiniteSource<T, TParams>
+): InfiniteSource<T, TParams>;
 ```
 
 Returns an inert source that appends numbered pages.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `config.load` | `(context: InfiniteLoadContext<TParams>) => Promise<PageResult<T>>` | Page loader |
-| `config.pageSize` | `number` | Positive page size; defaults to `20` |
-| `config.params` | `TParams` | Initial params; required when `TParams` excludes `undefined` |
+| Parameter         | Type                                                                | Description                                                  |
+| ----------------- | ------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `config.load`     | `(context: InfiniteLoadContext<TParams>) => Promise<PageResult<T>>` | Page loader                                                  |
+| `config.pageSize` | `number`                                                            | Positive page size; defaults to `20`                         |
+| `config.params`   | `TParams`                                                           | Initial params; required when `TParams` excludes `undefined` |
 
 **Returns:** `InfiniteSource<T, TParams>`.
 
@@ -189,30 +187,30 @@ await source.reload();
 await source.loadMore();
 ```
 
-| Method | Returns | Description |
-| --- | --- | --- |
-| `loadMore()` | `Promise<void>` | Append the next page when available |
-| `reload()` | `Promise<void>` | Replace items from page one |
-| `setPageSize(pageSize)` | `Promise<void>` | Replace items from page one with a new size |
-| `setParams(params)` | `Promise<void>` | Replace items from page one with new params |
-| `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
-| `dispose()` | `void` | Abort work and stop notifications |
+| Method                  | Returns         | Description                                                   |
+| ----------------------- | --------------- | ------------------------------------------------------------- |
+| `loadMore()`            | `Promise<void>` | Append the next page when available                           |
+| `reload()`              | `Promise<void>` | Replace items from page one                                   |
+| `setPageSize(pageSize)` | `Promise<void>` | Replace items from page one with a new size                   |
+| `setParams(params)`     | `Promise<void>` | Replace items from page one with new params                   |
+| `subscribe(listener)`   | `() => void`    | Register a state listener and return its unsubscribe function |
+| `dispose()`             | `void`          | Abort work and stop notifications                             |
 
 ---
 
 ### `createResource()`
 
 ```ts
-function createResource<T>(config: ResourceConfig<T>): Resource<T>
+function createResource<T>(config: ResourceConfig<T>): Resource<T>;
 ```
 
 Returns observable state for one asynchronously loaded value. It does not suspend rendering,
 cache by key, or track external reactive inputs.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `config.load` | `(context: ResourceLoadContext) => Promise<T>` | Loader; receives a signal aborted on disposal and on the next `reload()` |
-| `config.start` | `boolean` | Start the initial load during construction; defaults to `true` |
+| Parameter      | Type                                           | Description                                                              |
+| -------------- | ---------------------------------------------- | ------------------------------------------------------------------------ |
+| `config.load`  | `(context: ResourceLoadContext) => Promise<T>` | Loader; receives a signal aborted on disposal and on the next `reload()` |
+| `config.start` | `boolean`                                      | Start the initial load during construction; defaults to `true`           |
 
 **Returns:** `Resource<T>`.
 
@@ -234,11 +232,11 @@ try {
 }
 ```
 
-| Method | Returns | Description |
-| --- | --- | --- |
-| `reload()` | `Promise<void>` | Refetch with a fresh signal; rejects so callers can await it |
-| `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
-| `dispose()` | `void` | Abort the in-flight load and stop notifications |
+| Method                | Returns         | Description                                                   |
+| --------------------- | --------------- | ------------------------------------------------------------- |
+| `reload()`            | `Promise<void>` | Refetch with a fresh signal; rejects so callers can await it  |
+| `subscribe(listener)` | `() => void`    | Register a state listener and return its unsubscribe function |
+| `dispose()`           | `void`          | Abort the in-flight load and stop notifications               |
 
 Construction starts the initial load unless `start: false`. Its failure surfaces through
 `state.error`; a later `reload()` rejects and retains the previous `data` on failure.
@@ -281,9 +279,10 @@ type PageResult<T> = Readonly<{
   totalItems: number;
 }>;
 
-type PageSourceConfig<T, TParams = undefined> = Readonly<{
-  load(context: PageLoadContext<TParams>): Promise<PageResult<T>>;
-  pageSize?: number;
+type PageSourceConfig<T, TParams = undefined> = Readonly<
+  {
+    load(context: PageLoadContext<TParams>): Promise<PageResult<T>>;
+    pageSize?: number;
   } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
 >;
 
@@ -353,9 +352,10 @@ type LocalSourceState<T, TParams = undefined> = Readonly<{
   params: TParams;
 }>;
 
-type LocalSourceConfig<T, TParams = undefined> = Readonly<{
-  filter?: (item: T, params: TParams) => boolean;
-  pageSize?: number;
+type LocalSourceConfig<T, TParams = undefined> = Readonly<
+  {
+    filter?: (item: T, params: TParams) => boolean;
+    pageSize?: number;
   } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
 >;
 
@@ -411,11 +411,12 @@ type CursorSourceState<T, TParams = undefined, TCursor = string> = Readonly<{
   pendingParams?: TParams;
 }>;
 
-type CursorSourceConfig<T, TParams = undefined, TCursor = string> = Readonly<{
-  after?: TCursor;
-  before?: TCursor;
-  load(context: CursorLoadContext<TParams, TCursor>): Promise<CursorResult<T, TCursor>>;
-  pageSize?: number;
+type CursorSourceConfig<T, TParams = undefined, TCursor = string> = Readonly<
+  {
+    after?: TCursor;
+    before?: TCursor;
+    load(context: CursorLoadContext<TParams, TCursor>): Promise<CursorResult<T, TCursor>>;
+    pageSize?: number;
   } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
 >;
 
@@ -460,9 +461,10 @@ type InfiniteSourceState<T, TParams = undefined> = Readonly<{
   pendingParams?: TParams;
 }>;
 
-type InfiniteSourceConfig<T, TParams = undefined> = Readonly<{
-  load(context: InfiniteLoadContext<TParams>): Promise<PageResult<T>>;
-  pageSize?: number;
+type InfiniteSourceConfig<T, TParams = undefined> = Readonly<
+  {
+    load(context: InfiniteLoadContext<TParams>): Promise<PageResult<T>>;
+    pageSize?: number;
   } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
 >;
 
@@ -482,10 +484,10 @@ type InfiniteSource<T, TParams = undefined> = {
 
 ## Errors
 
-| Error | Trigger | Notable properties |
-| --- | --- | --- |
-| `SourcererError` | Base class for package-originated configuration and lifecycle errors | `instanceof SourcererError` narrows the hierarchy |
-| `SourcererConfigurationError` | Invalid page, page size, total, or initial cursor direction | Extends `SourcererError` |
-| `SourcererDisposedError` | A source command runs after disposal | Extends `SourcererError` |
+| Error                         | Trigger                                                              | Notable properties                                |
+| ----------------------------- | -------------------------------------------------------------------- | ------------------------------------------------- |
+| `SourcererError`              | Base class for package-originated configuration and lifecycle errors | `instanceof SourcererError` narrows the hierarchy |
+| `SourcererConfigurationError` | Invalid page, page size, total, or initial cursor direction          | Extends `SourcererError`                          |
+| `SourcererDisposedError`      | A source command runs after disposal                                 | Extends `SourcererError`                          |
 
 Loader failures are preserved when they are `Error` instances. Non-Error rejections become `Error` objects whose `cause` contains the original value.

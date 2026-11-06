@@ -50,7 +50,15 @@ document.body.append(container);
 let series = [{ data: [{ key: 1, value: 10 }], name: 'Live' }];
 const chart = createLineChart(container, { series });
 
-series = [{ data: [{ key: 1, value: 10 }, { key: 2, value: 20 }], name: 'Live' }];
+series = [
+  {
+    data: [
+      { key: 1, value: 10 },
+      { key: 2, value: 20 },
+    ],
+    name: 'Live',
+  },
+];
 chart.update(series);
 chart.dispose();
 ```
@@ -73,13 +81,21 @@ const chart = createLineChart(container, {
   series: [
     {
       curve: 'monotone',
-      data: [{ key: 1, value: 100 }, { key: 2, value: 150 }, { key: 3, value: 130 }],
+      data: [
+        { key: 1, value: 100 },
+        { key: 2, value: 150 },
+        { key: 3, value: 130 },
+      ],
       name: 'Revenue',
       showPoints: true,
     },
     {
       color: '#c2410c',
-      data: [{ key: 1, value: 70 }, { key: 2, value: 95 }, { key: 3, value: 110 }],
+      data: [
+        { key: 1, value: 70 },
+        { key: 2, value: 95 },
+        { key: 3, value: 110 },
+      ],
       name: 'Expenses',
     },
   ],
@@ -106,8 +122,21 @@ const chart = createLineChart(container, {
   a11y: { ariaLabel: 'Health and damage by level' },
   rightYAxis: { label: 'Damage' },
   series: [
-    { data: [{ key: 1, value: 30 }, { key: 2, value: 20 }], name: 'Health' },
-    { data: [{ key: 1, value: 100 }, { key: 2, value: 300 }], name: 'Damage', yAxis: 'right' },
+    {
+      data: [
+        { key: 1, value: 30 },
+        { key: 2, value: 20 },
+      ],
+      name: 'Health',
+    },
+    {
+      data: [
+        { key: 1, value: 100 },
+        { key: 2, value: 300 },
+      ],
+      name: 'Damage',
+      yAxis: 'right',
+    },
   ],
   yAxis: { grid: true, label: 'Health' },
 });
@@ -131,15 +160,17 @@ document.body.append(container);
 const formatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 const chart = createLineChart(container, {
   a11y: { ariaLabel: 'Signups over time' },
-  series: [{
-    data: [
-      { key: new Date('2026-09-01'), value: 50 },
-      { key: new Date('2026-09-08'), value: 80 },
-      { key: new Date('2026-09-15'), value: 120 },
-    ],
-    name: 'Signups',
-  }],
-  xAxis: { tickFormat: (value) => value instanceof Date ? formatter.format(value) : String(value) },
+  series: [
+    {
+      data: [
+        { key: new Date('2026-09-01'), value: 50 },
+        { key: new Date('2026-09-08'), value: 80 },
+        { key: new Date('2026-09-15'), value: 120 },
+      ],
+      name: 'Signups',
+    },
+  ],
+  xAxis: { tickFormat: (value) => (value instanceof Date ? formatter.format(value) : String(value)) },
 });
 
 chart.dispose();
@@ -150,7 +181,15 @@ chart.dispose();
 ```ts
 // Force a tick on the last month, which nice-stepped ticks can skip.
 const chart = createLineChart(container, {
-  series: [{ data: [{ key: 0, value: 90 }, { key: 11, value: 128 }], name: 'Costs' }],
+  series: [
+    {
+      data: [
+        { key: 0, value: 90 },
+        { key: 11, value: 128 },
+      ],
+      name: 'Costs',
+    },
+  ],
   xAxis: { tickValues: [0, 6, 11] },
 });
 ```
@@ -170,10 +209,16 @@ document.body.append(container);
 
 const chart = createBarChart(container, {
   a11y: { ariaLabel: 'Sales by quarter' },
-  series: [{
-    data: [{ key: 'Q1', value: 200 }, { key: 'Q2', value: 350 }, { key: 'Q3', value: 280 }],
-    name: 'Sales',
-  }],
+  series: [
+    {
+      data: [
+        { key: 'Q1', value: 200 },
+        { key: 'Q2', value: 350 },
+        { key: 'Q3', value: 280 },
+      ],
+      name: 'Sales',
+    },
+  ],
   tooltip: true,
 });
 
@@ -200,14 +245,20 @@ document.body.append(container);
 const chart = createAreaChart(container, {
   a11y: { ariaLabel: 'Visitors over time' },
   crosshair: true,
-  series: [{
-    curve: 'monotone',
-    data: [{ key: 1, value: 12 }, { key: 2, value: 18 }, { key: 3, value: 15 }],
-    fill: 'solid',
-    fillOpacity: 0.2,
-    name: 'Visitors',
-    showLine: true,
-  }],
+  series: [
+    {
+      curve: 'monotone',
+      data: [
+        { key: 1, value: 12 },
+        { key: 2, value: 18 },
+        { key: 3, value: 15 },
+      ],
+      fill: 'solid',
+      fillOpacity: 0.2,
+      name: 'Visitors',
+      showLine: true,
+    },
+  ],
 });
 
 chart.dispose();
@@ -226,11 +277,17 @@ document.body.append(container);
 
 const chart = createScatterChart(container, {
   a11y: { ariaLabel: 'Height against weight' },
-  series: [{
-    data: [{ key: 160, value: 55 }, { key: 175, value: 70 }, { key: 190, value: 88 }],
-    name: 'Cohort A',
-    pointRadius: 5,
-  }],
+  series: [
+    {
+      data: [
+        { key: 160, value: 55 },
+        { key: 175, value: 70 },
+        { key: 190, value: 88 },
+      ],
+      name: 'Cohort A',
+      pointRadius: 5,
+    },
+  ],
   tooltip: true,
 });
 
@@ -252,15 +309,17 @@ document.body.append(container);
 
 const values = [10, 13, 15, 18];
 const chart = createLineChart(container, {
-  series: [{
-    data: values.map((value, index) => ({
-      key: index + 1,
-      value,
-      ...(index >= 2 ? { dash: '5 5', opacity: 0.4 } : {}),
-    })),
-    name: 'Forecast',
-    showPoints: true,
-  }],
+  series: [
+    {
+      data: values.map((value, index) => ({
+        key: index + 1,
+        value,
+        ...(index >= 2 ? { dash: '5 5', opacity: 0.4 } : {}),
+      })),
+      name: 'Forecast',
+      showPoints: true,
+    },
+  ],
 });
 
 chart.dispose();
@@ -317,10 +376,16 @@ const chart = createRadarChart(container, {
   a11y: { ariaLabel: 'Hero stats' },
   axes,
   domain: [0, 10],
-  series: [{
-    data: [{ key: 'strength', value: 8 }, { key: 'agility', value: 6 }, { key: 'endurance', value: 9 }],
-    name: 'Adam',
-  }],
+  series: [
+    {
+      data: [
+        { key: 'strength', value: 8 },
+        { key: 'agility', value: 6 },
+        { key: 'endurance', value: 9 },
+      ],
+      name: 'Adam',
+    },
+  ],
   tooltip: true,
 });
 
@@ -430,7 +495,15 @@ container.style.cssText = 'width:640px;height:320px';
 document.body.append(container);
 
 const chart = createBarChart(container, {
-  series: [{ data: [{ key: 'A', value: 4 }, { key: 'B', value: 7 }], name: 'Count' }],
+  series: [
+    {
+      data: [
+        { key: 'A', value: 4 },
+        { key: 'B', value: 7 },
+      ],
+      name: 'Count',
+    },
+  ],
   transition: { duration: 500, easing: 'ease-out', preference: 'system' },
 });
 
@@ -503,22 +576,22 @@ resetTheme({ scope: container });
 
 The stylesheet defines defaults for the following token groups. Pie-label color and size are read with fallback values by the renderer but are not declared in the base token block. Set a token on the chart container or an ancestor to scope an override.
 
-| Group | CSS custom properties |
-| --- | --- |
-| Palette and surfaces | `--prism-color-1` through `--prism-color-8`, `--prism-bg`, `--prism-border-radius` |
-| Axes and grid | `--prism-axis-color`, `--prism-axis-width`, `--prism-grid-color`, `--prism-grid-width`, `--prism-grid-dash`, `--prism-grid-opacity` |
-| Text | `--prism-font-family`, `--prism-font-size`, `--prism-font-size-label`, `--prism-font-size-title`, `--prism-font-weight`, `--prism-font-weight-title`, `--prism-text-color`, `--prism-text-color-secondary` |
-| Tooltip | `--prism-tooltip-bg`, `--prism-tooltip-color`, `--prism-tooltip-border`, `--prism-tooltip-radius`, `--prism-tooltip-padding`, `--prism-tooltip-shadow`, `--prism-tooltip-font-size` |
-| Crosshair | `--prism-crosshair-color`, `--prism-crosshair-width`, `--prism-crosshair-dash`, `--prism-crosshair-opacity` |
-| Points | `--prism-point-radius`, `--prism-point-radius-hover`, `--prism-point-stroke-width`, `--prism-point-stroke` |
-| Bars | `--prism-bar-radius`, `--prism-bar-hover-opacity`, `--prism-bar-gap`, `--prism-bar-band-fill`, `--prism-bar-band-opacity`, `--prism-bar-dim-opacity` |
-| Areas and lines | `--prism-area-opacity`, `--prism-area-stroke-width`, `--prism-area-gradient-start`, `--prism-area-gradient-end`, `--prism-line-width`, `--prism-line-width-hover` |
-| Interaction | `--prism-dim-opacity`, `--prism-active-point-radius`, `--prism-point-ring`, `--prism-focus-color` |
-| Sparklines | `--prism-spark-fill-opacity`, `--prism-spark-gradient-start`, `--prism-spark-gradient-end` |
-| Radar | `--prism-radar-grid-color`, `--prism-radar-grid-opacity`, `--prism-radar-band-fill`, `--prism-radar-band-opacity`, `--prism-radar-spoke-color`, `--prism-radar-fill-opacity`, `--prism-radar-stroke-width`, `--prism-radar-point-radius`, `--prism-radar-point-radius-active`, `--prism-radar-label-color`, `--prism-radar-label-size`, `--prism-radar-value-color`, `--prism-radar-value-size`, `--prism-radar-dim-opacity` |
-| Heatmap | `--prism-heatmap-label-color`, `--prism-heatmap-label-size`, `--prism-heatmap-value-size`, `--prism-heatmap-highlight-color` |
-| Motion | `--prism-duration-fast`, `--prism-duration`, `--prism-duration-slow`, `--prism-ease`, `--prism-ease-spring`, `--prism-transition`, `--prism-transition-fast` |
-| Legend and pie labels | `--prism-legend-gap`, `--prism-legend-dot-size`, `--prism-legend-font-size`, `--prism-pie-label-color`, `--prism-pie-label-size` |
+| Group                 | CSS custom properties                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Palette and surfaces  | `--prism-color-1` through `--prism-color-8`, `--prism-bg`, `--prism-border-radius`                                                                                                                                                                                                                                                                                                                                           |
+| Axes and grid         | `--prism-axis-color`, `--prism-axis-width`, `--prism-grid-color`, `--prism-grid-width`, `--prism-grid-dash`, `--prism-grid-opacity`                                                                                                                                                                                                                                                                                          |
+| Text                  | `--prism-font-family`, `--prism-font-size`, `--prism-font-size-label`, `--prism-font-size-title`, `--prism-font-weight`, `--prism-font-weight-title`, `--prism-text-color`, `--prism-text-color-secondary`                                                                                                                                                                                                                   |
+| Tooltip               | `--prism-tooltip-bg`, `--prism-tooltip-color`, `--prism-tooltip-border`, `--prism-tooltip-radius`, `--prism-tooltip-padding`, `--prism-tooltip-shadow`, `--prism-tooltip-font-size`                                                                                                                                                                                                                                          |
+| Crosshair             | `--prism-crosshair-color`, `--prism-crosshair-width`, `--prism-crosshair-dash`, `--prism-crosshair-opacity`                                                                                                                                                                                                                                                                                                                  |
+| Points                | `--prism-point-radius`, `--prism-point-radius-hover`, `--prism-point-stroke-width`, `--prism-point-stroke`                                                                                                                                                                                                                                                                                                                   |
+| Bars                  | `--prism-bar-radius`, `--prism-bar-hover-opacity`, `--prism-bar-gap`, `--prism-bar-band-fill`, `--prism-bar-band-opacity`, `--prism-bar-dim-opacity`                                                                                                                                                                                                                                                                         |
+| Areas and lines       | `--prism-area-opacity`, `--prism-area-stroke-width`, `--prism-area-gradient-start`, `--prism-area-gradient-end`, `--prism-line-width`, `--prism-line-width-hover`                                                                                                                                                                                                                                                            |
+| Interaction           | `--prism-dim-opacity`, `--prism-active-point-radius`, `--prism-point-ring`, `--prism-focus-color`                                                                                                                                                                                                                                                                                                                            |
+| Sparklines            | `--prism-spark-fill-opacity`, `--prism-spark-gradient-start`, `--prism-spark-gradient-end`                                                                                                                                                                                                                                                                                                                                   |
+| Radar                 | `--prism-radar-grid-color`, `--prism-radar-grid-opacity`, `--prism-radar-band-fill`, `--prism-radar-band-opacity`, `--prism-radar-spoke-color`, `--prism-radar-fill-opacity`, `--prism-radar-stroke-width`, `--prism-radar-point-radius`, `--prism-radar-point-radius-active`, `--prism-radar-label-color`, `--prism-radar-label-size`, `--prism-radar-value-color`, `--prism-radar-value-size`, `--prism-radar-dim-opacity` |
+| Heatmap               | `--prism-heatmap-label-color`, `--prism-heatmap-label-size`, `--prism-heatmap-value-size`, `--prism-heatmap-highlight-color`                                                                                                                                                                                                                                                                                                 |
+| Motion                | `--prism-duration-fast`, `--prism-duration`, `--prism-duration-slow`, `--prism-ease`, `--prism-ease-spring`, `--prism-transition`, `--prism-transition-fast`                                                                                                                                                                                                                                                                 |
+| Legend and pie labels | `--prism-legend-gap`, `--prism-legend-dot-size`, `--prism-legend-font-size`, `--prism-pie-label-color`, `--prism-pie-label-size`                                                                                                                                                                                                                                                                                             |
 
 The default palette and structural colors adapt to `prefers-color-scheme: dark`, `html.dark`, or `[data-prism-theme='dark']` on an ancestor. Scoped inline values set with `setTheme()` take precedence in either mode. The stylesheet also provides `prefers-reduced-motion` overrides for CSS transitions.
 
@@ -552,7 +625,15 @@ const host = document.createElement('div');
 host.style.cssText = 'width:640px;height:320px';
 document.body.append(host);
 const view = mountChart(host, [{ data: [{ key: 1, value: 10 }], name: 'Revenue' }]);
-view.update([{ data: [{ key: 1, value: 10 }, { key: 2, value: 15 }], name: 'Revenue' }]);
+view.update([
+  {
+    data: [
+      { key: 1, value: 10 },
+      { key: 2, value: 15 },
+    ],
+    name: 'Revenue',
+  },
+]);
 view.dispose();
 ```
 

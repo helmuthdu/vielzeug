@@ -27,13 +27,13 @@ panel.style.top = `${y}px`;
 const positioner = createPositioner(trigger, panel);
 ```
 
-| Feature | Manual DOM positioning | Orbit |
-| --- | --- | --- |
-| Bundle size | 0 B | <PackageInfo package="orbit" type="size" /> |
-| Root dependencies | Application-defined | `@vielzeug/arsenal` |
-| Clipping boundary | Manual geometry | `clippingAncestors` default |
-| Coordinate strategy | Consumer logic | `fixed` / `absolute` |
-| Cleanup | Manual listeners | `dispose()` |
+| Feature             | Manual DOM positioning | Orbit                                       |
+| ------------------- | ---------------------- | ------------------------------------------- |
+| Bundle size         | 0 B                    | <PackageInfo package="orbit" type="size" /> |
+| Root dependencies   | Application-defined    | `@vielzeug/arsenal`                         |
+| Clipping boundary   | Manual geometry        | `clippingAncestors` default                 |
+| Coordinate strategy | Consumer logic         | `fixed` / `absolute`                        |
+| Cleanup             | Manual listeners       | `dispose()`                                 |
 
 <div class="decision-callout">
 

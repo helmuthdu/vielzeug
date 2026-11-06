@@ -117,7 +117,7 @@ await store.upsert('sessions', 'temp', (existing) => ({
 }));
 
 const current = (await store.getAll('sessions')).find((session) => session.id === 'current');
-(void a, b, current);
+void a, b, current;
 ```
 
 ## React Hook

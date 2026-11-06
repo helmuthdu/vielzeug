@@ -116,7 +116,9 @@ const stopResults = search.results.subscribe(() => console.debug('results:', sea
 
 ```ts
 // Before
-search.tap((event) => { if (event.type === 'dispose') cleanup(); });
+search.tap((event) => {
+  if (event.type === 'dispose') cleanup();
+});
 
 // After
 search.disposalSignal.addEventListener('abort', () => cleanup());
@@ -178,13 +180,13 @@ import { ScoutConfigurationError } from '@vielzeug/scout';
 
 Scout 1 accepted several invalid numeric values. Scout 2 rejects them with `ScoutConfigurationError`.
 
-| Option | Scout 2 domain              |
-| --- |-----------------------------|
-| field `weight` | finite, greater than `0`    |
-| `threshold` | finite, `0..1`              |
-| `limit` | finite non-negative integer |
+| Option           | Scout 2 domain              |
+| ---------------- | --------------------------- |
+| field `weight`   | finite, greater than `0`    |
+| `threshold`      | finite, `0..1`              |
+| `limit`          | finite non-negative integer |
 | `minQueryLength` | finite positive integer     |
-| `debounce` | finite non-negative integer |
+| `debounce`       | finite non-negative integer |
 
 ```ts
 // Scout 1: negative limit returned no results

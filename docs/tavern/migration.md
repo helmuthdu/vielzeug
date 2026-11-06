@@ -32,10 +32,12 @@ host.tap((event) => {
 
 ```ts
 // Before
-const { guest } = await joinTavern({ onRejected: (message) => toast(message), /* ... */ });
+const { guest } = await joinTavern({ onRejected: (message) => toast(message) /* ... */ });
 
 // After
-const { guest } = await joinTavern({ /* ... */ });
+const { guest } = await joinTavern({
+  /* ... */
+});
 guest.tap((event) => {
   if (event.type === 'rejected') toast(event.message); // event.commandId names the command it answers
 });

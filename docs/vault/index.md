@@ -5,7 +5,8 @@ package: vault
 category: Storage
 keywords: [storage, indexeddb, localstorage, sessionstorage, sqlite, ttl, browser, node, deno]
 related: [courier, forge, ripple]
-exports: [table, ttl, validatorCodec, createMemory, createLocalStorage, createSessionStorage, createIndexedDB, createSQLite]
+exports:
+  [table, ttl, validatorCodec, createMemory, createLocalStorage, createSessionStorage, createIndexedDB, createSQLite]
 environments: [browser, node, deno]
 ---
 
@@ -27,15 +28,15 @@ await store.put('preferences', { id: 'theme', value: 'dark' });
 const theme = await store.get('preferences', 'theme');
 ```
 
-| Feature | Vault | Raw Web Storage | Dexie |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="vault" type="size" /> | Browser built-in | Extra dependency |
-| Runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Typed schema and keys | <ore-icon name="check" size="16"></ore-icon> | Application-defined | <ore-icon name="check" size="16"></ore-icon> |
-| Portable key-value store API | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | IndexedDB only |
-| Explicit atomic transactions | IndexedDB + SQLite capability | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Required durable codecs | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Driver-neutral SQLite | Opt-in subpath | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Feature                      | Vault                                        | Raw Web Storage                                       | Dexie                                        |
+| ---------------------------- | -------------------------------------------- | ----------------------------------------------------- | -------------------------------------------- |
+| Bundle size                  | <PackageInfo package="vault" type="size" />  | Browser built-in                                      | Extra dependency                             |
+| Runtime dependencies         | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="x" size="16"></ore-icon>     |
+| Typed schema and keys        | <ore-icon name="check" size="16"></ore-icon> | Application-defined                                   | <ore-icon name="check" size="16"></ore-icon> |
+| Portable key-value store API | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | IndexedDB only                               |
+| Explicit atomic transactions | IndexedDB + SQLite capability                | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="check" size="16"></ore-icon> |
+| Required durable codecs      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>     |
+| Driver-neutral SQLite        | Opt-in subpath                               | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 

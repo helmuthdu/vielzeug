@@ -7,7 +7,7 @@ description: Render model-authored UI safely with the blueprint contract, fixed 
 
 [[toc]]
 
-An agent harness (Copilot, Claude, Codex, or your own) can generate small UI on request: "show me a summary card with the three risky deals." The model's output is untrusted input, and rendering untrusted input is how prompt injection becomes stored XSS. The blueprint entries exist so the model can *describe* UI while the application decides what gets *rendered*.
+An agent harness (Copilot, Claude, Codex, or your own) can generate small UI on request: "show me a summary card with the three risky deals." The model's output is untrusted input, and rendering untrusted input is how prompt injection becomes stored XSS. The blueprint entries exist so the model can _describe_ UI while the application decides what gets _rendered_.
 
 ```mermaid
 sequenceDiagram
@@ -68,7 +68,7 @@ Rules the contract enforces:
 
 ## Interactive UIs and Node Identity
 
-The registry deliberately stops short of behaviour: a document describes what a UI looks like, never what it does. That is enough for a preview, but an interactive panel (a filter form, a what-if calculator) needs the host to *address* individual controls. That is what `id` is for:
+The registry deliberately stops short of behaviour: a document describes what a UI looks like, never what it does. That is enough for a preview, but an interactive panel (a filter form, a what-if calculator) needs the host to _address_ individual controls. That is what `id` is for:
 
 ```json
 {
@@ -94,7 +94,7 @@ const rate = nodes.get('rate');
 rate?.addEventListener('change', () => recalculate());
 ```
 
-The split keeps both sides honest. Model output stays pure data with no behaviour, so nothing new can execute; the host keeps every handler, every piece of state, and every network call. Controls are interactive in the browser-native sense (a slider drags, a checkbox toggles) exactly as they are when you write them by hand; what the *document* can never do is decide what happens next.
+The split keeps both sides honest. Model output stays pure data with no behaviour, so nothing new can execute; the host keeps every handler, every piece of state, and every network call. Controls are interactive in the browser-native sense (a slider drags, a checkbox toggles) exactly as they are when you write them by hand; what the _document_ can never do is decide what happens next.
 
 Components with a required accessible name (`button`, `slider`, `switch`, `checkbox`, `icon`) reject a document that omits it, so no generated control can be unlabeled.
 
@@ -118,7 +118,7 @@ try {
 }
 ```
 
-Issues are safe to display: they name fields and allowed values, report a wrong-typed value only as its *type*, and echo an accepted-type value (a bad enum string, a rejected key) only as a truncated snippet. Nothing is copied into an issue unbounded, whatever the model put in the document. There is no repair mode. A document that needs a default filled in is a document the model should have written correctly, and silently guessing what it meant is how a UI ends up lying.
+Issues are safe to display: they name fields and allowed values, report a wrong-typed value only as its _type_, and echo an accepted-type value (a bad enum string, a rejected key) only as a truncated snippet. Nothing is copied into an issue unbounded, whatever the model put in the document. There is no repair mode. A document that needs a default filled in is a document the model should have written correctly, and silently guessing what it meant is how a UI ends up lying.
 
 ## Rendering
 
@@ -163,12 +163,12 @@ for (const [name, rule] of Object.entries(UI_BLUEPRINT_REGISTRY)) {
 
 ## Failure Handling
 
-| Failure | What happens | What the harness shows |
-| --- | --- | --- |
-| Invalid JSON | Never reaches the contract (`JSON.parse` throws first) | "The model did not return valid JSON." |
-| Rejected document | `UiBlueprintError`; container untouched | The `issues` list, and the previous preview |
-| Unknown component | Rejected with the registered list | Same |
-| Over budget | Rejected with the budget rule | Same; prompt the model for something smaller |
+| Failure           | What happens                                           | What the harness shows                       |
+| ----------------- | ------------------------------------------------------ | -------------------------------------------- |
+| Invalid JSON      | Never reaches the contract (`JSON.parse` throws first) | "The model did not return valid JSON."       |
+| Rejected document | `UiBlueprintError`; container untouched                | The `issues` list, and the previous preview  |
+| Unknown component | Rejected with the registered list                      | Same                                         |
+| Over budget       | Rejected with the budget rule                          | Same; prompt the model for something smaller |
 
 The UI never shows a half-rendered document, and it never silently keeps a stale one: mark the preview stale in your own state when a request starts, and clear it only when a valid document renders.
 
@@ -184,12 +184,12 @@ The UI never shows a half-rendered document, and it never silently keeps a stale
 
 Every exclusion is a surface that cannot be verified as pure data, and each has a host-side answer:
 
-| Left out | Why | Host-side answer |
-| --- | --- | --- |
-| `href` / `src` anywhere | A model-invented URL is a phishing or exfiltration vector | The host maps a validated label to a URL it owns |
-| `datagrid`, `combobox`, `chat-panel` | Their props carry function values (`getRowKey`, `upload`, `ref`) | The host renders these itself; blueprint covers the surrounding layout |
-| `select`, `tabs`, `table` | Sub-vocabularies (`option`, `tab`, `th`/`td` markers) the contract does not model yet | Host fills the region, or wait for a registry addition |
-| Charts | `prism` is not a Refine dependency | Render a `box` with an `id`; the host mounts its chart into that element |
-| `speech-player`, `qr-scanner`, `cookie-banner` | Ambient browser capabilities and persistent consent state | Never model-triggerable; host code only |
+| Left out                                       | Why                                                                                   | Host-side answer                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `href` / `src` anywhere                        | A model-invented URL is a phishing or exfiltration vector                             | The host maps a validated label to a URL it owns                         |
+| `datagrid`, `combobox`, `chat-panel`           | Their props carry function values (`getRowKey`, `upload`, `ref`)                      | The host renders these itself; blueprint covers the surrounding layout   |
+| `select`, `tabs`, `table`                      | Sub-vocabularies (`option`, `tab`, `th`/`td` markers) the contract does not model yet | Host fills the region, or wait for a registry addition                   |
+| Charts                                         | `prism` is not a Refine dependency                                                    | Render a `box` with an `id`; the host mounts its chart into that element |
+| `speech-player`, `qr-scanner`, `cookie-banner` | Ambient browser capabilities and persistent consent state                             | Never model-triggerable; host code only                                  |
 
 Widening the registry is additive: a component joins with a validated rule, a renderer case, and a drift-guard test that pins its attributes to the real component source. Components whose props cannot be expressed as bounded data stay out.

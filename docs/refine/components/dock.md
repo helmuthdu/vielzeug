@@ -175,13 +175,13 @@ Set the properties on a parent for contextual theming, or on the dock itself:
 
 ### Attributes
 
-| Attribute       | Type                          | Default          | Description                                      |
-| --------------- | ----------------------------- | ---------------- | ------------------------------------------------ |
-| `side`          | `'top' \| 'bottom'`           | `'bottom'`       | Viewport edge the bar pins to                    |
-| `sticky`        | `boolean`                     | `true`           | Pin to the edge while the container scrolls      |
-| `attached`      | `boolean`                     | `false`          | Fuse the tool row into one segmented capsule     |
-| `mobile-layout` | `'auto' \| 'full' \| 'compact'` | `'auto'`       | Phone row sizing: adapt, fill, or hug and center |
-| `label`         | `string`                      | `'Page actions'` | Accessible name for the toolbar landmark         |
+| Attribute       | Type                            | Default          | Description                                      |
+| --------------- | ------------------------------- | ---------------- | ------------------------------------------------ |
+| `side`          | `'top' \| 'bottom'`             | `'bottom'`       | Viewport edge the bar pins to                    |
+| `sticky`        | `boolean`                       | `true`           | Pin to the edge while the container scrolls      |
+| `attached`      | `boolean`                       | `false`          | Fuse the tool row into one segmented capsule     |
+| `mobile-layout` | `'auto' \| 'full' \| 'compact'` | `'auto'`         | Phone row sizing: adapt, fill, or hug and center |
+| `label`         | `string`                        | `'Page actions'` | Accessible name for the toolbar landmark         |
 
 ### Slots
 

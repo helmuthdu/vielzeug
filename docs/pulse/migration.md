@@ -110,6 +110,7 @@ Presence is now a property of room scopes, not channel scopes. Use `pulse.room(n
 ### 5. `PulsePresenceError` removed
 
 Room join failures now use standard error types:
+
 - `PulseConnectionError`: transport close before confirmation.
 - `PulseRoomTimeoutError`: join timeout (new).
 - `PulseAbortError`: join aborted via AbortSignal.

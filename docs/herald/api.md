@@ -7,29 +7,27 @@ description: Reference for typed synchronous events, subscriptions, waits, traci
 
 ## API Overview
 
-| Symbol | Purpose | Execution | Common gotcha |
-| --- | --- | --- | --- |
-| `createBus()` | Create a typed temporal event bus | Sync | Events are not retained or replayed |
-| `emit()` | Deliver one event | Sync | Returns `void`; rethrows the first listener failure after dispatch |
-| `on()` / `once()` | Subscribe to one event | Sync | Keep the unsubscribe function or pass a signal |
-| `onAny()` | Subscribe to every event | Sync | Payload is `unknown` |
-| `wait()` / `waitAny()` | Await future one-shot events | Async | Disposal and external abort reject the promise |
-| `tap()` | Observe bus runtime activity | Sync | Tap-handler failures are swallowed |
-| `createTestBus()` | Record emitted payloads | Sync | Import from `/testing` |
+| Symbol                 | Purpose                           | Execution | Common gotcha                                                      |
+| ---------------------- | --------------------------------- | --------- | ------------------------------------------------------------------ |
+| `createBus()`          | Create a typed temporal event bus | Sync      | Events are not retained or replayed                                |
+| `emit()`               | Deliver one event                 | Sync      | Returns `void`; rethrows the first listener failure after dispatch |
+| `on()` / `once()`      | Subscribe to one event            | Sync      | Keep the unsubscribe function or pass a signal                     |
+| `onAny()`              | Subscribe to every event          | Sync      | Payload is `unknown`                                               |
+| `wait()` / `waitAny()` | Await future one-shot events      | Async     | Disposal and external abort reject the promise                     |
+| `tap()`                | Observe bus runtime activity      | Sync      | Tap-handler failures are swallowed                                 |
+| `createTestBus()`      | Record emitted payloads           | Sync      | Import from `/testing`                                             |
 
 ## Package Entry Points
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/herald` | Bus factory, errors, and public bus types |
-| `@vielzeug/herald/testing` | `createTestBus()` and `TestBus` |
+| Import                     | Purpose                                   |
+| -------------------------- | ----------------------------------------- |
+| `@vielzeug/herald`         | Bus factory, errors, and public bus types |
+| `@vielzeug/herald/testing` | `createTestBus()` and `TestBus`           |
 
 ## `createBus()`
 
 ```ts
-function createBus<T extends EventMap = Record<string, unknown>>(
-  options?: BusOptions,
-): Bus<T>
+function createBus<T extends EventMap = Record<string, unknown>>(options?: BusOptions): Bus<T>;
 ```
 
 Creates a synchronous bus for future event delivery. Construction has no external side effects.
@@ -57,10 +55,10 @@ type BusOptions = {
 };
 ```
 
-| Field | Description |
-| --- | --- |
+| Field          | Description                                                                                                                  |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `maxListeners` | Development warning threshold applied separately to one event's listeners and wildcard listeners. Omit to disable the check. |
-| `name` | Display name included in disposal errors and listener-threshold warnings. |
+| `name`         | Display name included in disposal errors and listener-threshold warnings.                                                    |
 
 ## `Bus`
 
@@ -162,9 +160,7 @@ type EventMap = object;
 type EventKey<T extends EventMap> = Extract<keyof T, string>;
 
 type WaitAnyResult<T extends EventMap, K extends readonly EventKey<T>[]> = {
-  [I in keyof K]: K[I] extends EventKey<T>
-    ? { event: K[I]; payload: T[K[I]] }
-    : never;
+  [I in keyof K]: K[I] extends EventKey<T> ? { event: K[I]; payload: T[K[I]] } : never;
 }[number];
 ```
 
@@ -177,9 +173,7 @@ Interfaces and object type aliases are valid event maps. Only string keys partic
 ```ts
 import { createTestBus } from '@vielzeug/herald/testing';
 
-function createTestBus<T extends EventMap = Record<string, unknown>>(
-  options?: BusOptions,
-): TestBus<T>
+function createTestBus<T extends EventMap = Record<string, unknown>>(options?: BusOptions): TestBus<T>;
 ```
 
 Creates a regular bus that records every dispatched payload through a `tap()` observer, including dispatches whose listeners throw.
@@ -199,7 +193,7 @@ type TestBus<T extends EventMap> = Bus<T> & {
 
 ## Errors
 
-| Error | Trigger | Notable properties |
-| --- | --- | --- |
+| Error              | Trigger                                                                   | Notable properties                         |
+| ------------------ | ------------------------------------------------------------------------- | ------------------------------------------ |
 | `BusDisposedError` | Bus disposal aborts `disposalSignal` or interrupts `wait()` / `waitAny()` | Configured bus name appears in the message |
-| `HeraldError` | Base class for Herald-originated errors | Use `instanceof HeraldError` |
+| `HeraldError`      | Base class for Herald-originated errors                                   | Use `instanceof HeraldError`               |

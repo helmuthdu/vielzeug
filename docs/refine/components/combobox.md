@@ -249,9 +249,7 @@ Add the `disabled` attribute on a `<ore-combobox-option>` to prevent selection. 
 The JavaScript `options` property uses the camelCase equivalent:
 
 ```js
-combobox.options = [
-  { value: 'viewer', label: 'Viewer', disabled: true, disabledReason: 'Requires editor access' },
-];
+combobox.options = [{ value: 'viewer', label: 'Viewer', disabled: true, disabledReason: 'Requires editor access' }];
 ```
 
 ## Disabled State
@@ -424,14 +422,14 @@ cb.addEventListener('open-change', (e) => {
 | `name`            | `string`                                                                  | `''`      | Form field name                                             |
 | `label`           | `string`                                                                  | `''`      | Label text                                                  |
 | `label-placement` | `'inset' \| 'outside'`                                                    | `'inset'` | Label positioning                                           |
-| `hide-label`      | `boolean`                                                                  | `false`   | Hide the visual label while retaining its accessible name   |
+| `hide-label`      | `boolean`                                                                 | `false`   | Hide the visual label while retaining its accessible name   |
 | `placeholder`     | `string`                                                                  | `''`      | Input placeholder text                                      |
 | `helper`          | `string`                                                                  | `''`      | Helper text shown below the field                           |
 | `error`           | `string`                                                                  | `''`      | Error message; overrides helper text                        |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Color theme                                                 |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A       | Color theme                                                 |
 | `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'` | Visual style variant                                        |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`    | Field size                                                  |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | N/A | Border radius override                                      |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | N/A       | Border radius override                                      |
 | `clearable`       | `boolean`                                                                 | `false`   | Show a clear button when a value is selected                |
 | `no-filter`       | `boolean`                                                                 | `false`   | Disable client-side option filtering (for server-side use)  |
 | `creatable`       | `boolean`                                                                 | `false`   | Show a "Create X" option when no match is found             |
@@ -439,20 +437,20 @@ cb.addEventListener('open-change', (e) => {
 | `multiple`        | `boolean`                                                                 | `false`   | Allow selecting multiple options (chips are shown in field) |
 | `fullwidth`       | `boolean`                                                                 | `false`   | Expand to fill the container width                          |
 | `disabled`        | `boolean`                                                                 | `false`   | Disable the control                                         |
-| `required`        | `boolean`                                                                 | `false`   | Require a non-blank selection for native-form validation     |
+| `required`        | `boolean`                                                                 | `false`   | Require a non-blank selection for native-form validation    |
 
 **`ore-combobox` Slots**
 
-| Slot      | Description                                            |
-| --------- | ------------------------------------------------------ |
+| Slot      | Description                                             |
+| --------- | ------------------------------------------------------- |
 | (default) | `ore-combobox-option` elements defining the option list |
 
 **`ore-combobox-option` Attributes**
 
 | Attribute  | Type      | Default | Description                                                                             |
 | ---------- | --------- | ------- | --------------------------------------------------------------------------------------- |
-| `value`    | `string`  | `''`    | The value submitted to the form and emitted in `ore-change`                              |
-| `label`    | `string`  | N/A | Explicit text used for display and filtering; falls back to the element's `textContent` |
+| `value`    | `string`  | `''`    | The value submitted to the form and emitted in `ore-change`                             |
+| `label`    | `string`  | N/A     | Explicit text used for display and filtering; falls back to the element's `textContent` |
 | `disabled` | `boolean` | `false` | Prevent this option from being selected                                                 |
 
 **`ore-combobox-option` Slots**
@@ -464,22 +462,22 @@ cb.addEventListener('open-change', (e) => {
 
 **Events**
 
-| Event    | Detail                                                                         | Description                                  |
-| -------- | ------------------------------------------------------------------------------ | -------------------------------------------- |
-| `change` | `{ value: string, values: string[], labels: string[], originalEvent?: Event }` | Emitted when selected value(s) change        |
-| `open-change` | `{ open: boolean, reason: string }`                                        | Emitted whenever the dropdown opens or closes |
-| `search` | `{ query: string }`                                                            | Emitted on every keystroke in the text input |
+| Event         | Detail                                                                         | Description                                   |
+| ------------- | ------------------------------------------------------------------------------ | --------------------------------------------- |
+| `change`      | `{ value: string, values: string[], labels: string[], originalEvent?: Event }` | Emitted when selected value(s) change         |
+| `open-change` | `{ open: boolean, reason: string }`                                            | Emitted whenever the dropdown opens or closes |
+| `search`      | `{ query: string }`                                                            | Emitted on every keystroke in the text input  |
 
 **CSS Custom Properties**
 
-| Property                              | Description                                       | Default           |
-| ------------------------------------- | ------------------------------------------------- | ----------------- |
-| `--combobox-dropdown-bg`              | Dropdown panel background color                   | Theme-dependent   |
-| `--combobox-dropdown-border-color`    | Dropdown panel border color                       | Theme-dependent   |
-| `--combobox-option-hover-bg`          | Option background on hover                        | Theme-dependent   |
-| `--combobox-option-focus-bg`          | Option background when keyboard-focused           | Theme-dependent   |
-| `--combobox-option-selected-bg`       | Option background when selected                   | Theme-dependent   |
-| `--combobox-option-selected-focus-bg` | Option background when selected and focused       | Theme-dependent   |
+| Property                              | Description                                        | Default           |
+| ------------------------------------- | -------------------------------------------------- | ----------------- |
+| `--combobox-dropdown-bg`              | Dropdown panel background color                    | Theme-dependent   |
+| `--combobox-dropdown-border-color`    | Dropdown panel border color                        | Theme-dependent   |
+| `--combobox-option-hover-bg`          | Option background on hover                         | Theme-dependent   |
+| `--combobox-option-focus-bg`          | Option background when keyboard-focused            | Theme-dependent   |
+| `--combobox-option-selected-bg`       | Option background when selected                    | Theme-dependent   |
+| `--combobox-option-selected-focus-bg` | Option background when selected and focused        | Theme-dependent   |
 | `--input-bg`                          | Field background (passed through to `ore-input`)   | Variant-dependent |
 | `--input-border-color`                | Field border color (passed through to `ore-input`) | Variant-dependent |
 

@@ -19,7 +19,9 @@ import { createWorker } from '@vielzeug/familiar';
 type ImageTask = { height: number; pixels: Uint8ClampedArray; width: number };
 type ImageResult = ImageTask;
 
-const pool = createWorker<ImageTask, ImageResult>(new URL('./grayscale.worker.ts', import.meta.url), { concurrency: 2 });
+const pool = createWorker<ImageTask, ImageResult>(new URL('./grayscale.worker.ts', import.meta.url), {
+  concurrency: 2,
+});
 const imageData = new ImageData(1, 1);
 
 try {

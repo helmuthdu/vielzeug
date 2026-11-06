@@ -301,32 +301,32 @@ dialog.addEventListener('close-request', (e) => {
 
 ### Attributes
 
-| Attribute     | Type                                              | Default    | Description                                                      |
-| ------------- | ------------------------------------------------- | ---------- | ---------------------------------------------------------------- |
-| `open`        | `boolean`                                         | N/A | Controlled visibility                                            |
-| `default-open`| `boolean`                                         | `false`    | Initial visibility when `open` is not provided                  |
-| `label`       | `string`                                          | `''`       | Dialog title shown in the header; used as `aria-label`           |
-| `size`        | `'sm' \| 'md' \| 'lg' \| 'xl' \| 'full'`          | `'md'`     | Panel width preset                                               |
-| `dismissible` | `boolean`                                         | `false`    | Show a close (×) button in the header                            |
-| `persistent`  | `boolean`                                         | `false`    | Prevent backdrop-click from closing the dialog                   |
-| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| ... \| 'full'` | N/A | Override the panel border radius                                 |
-| `backdrop`    | `'blur' \| 'opaque' \| 'transparent'`             | `'opaque'` | Backdrop style: dimming veil + blur, dimming veil only (default), or no overlay |
-| `elevation`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`     | Panel drop shadow depth                                          |
-| `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`          | `'md'`     | Padding for header, body, and footer                             |
+| Attribute      | Type                                              | Default    | Description                                                                     |
+| -------------- | ------------------------------------------------- | ---------- | ------------------------------------------------------------------------------- |
+| `open`         | `boolean`                                         | N/A        | Controlled visibility                                                           |
+| `default-open` | `boolean`                                         | `false`    | Initial visibility when `open` is not provided                                  |
+| `label`        | `string`                                          | `''`       | Dialog title shown in the header; used as `aria-label`                          |
+| `size`         | `'sm' \| 'md' \| 'lg' \| 'xl' \| 'full'`          | `'md'`     | Panel width preset                                                              |
+| `dismissible`  | `boolean`                                         | `false`    | Show a close (×) button in the header                                           |
+| `persistent`   | `boolean`                                         | `false`    | Prevent backdrop-click from closing the dialog                                  |
+| `rounded`      | `'none' \| 'sm' \| 'md' \| 'lg' \| ... \| 'full'` | N/A        | Override the panel border radius                                                |
+| `backdrop`     | `'blur' \| 'opaque' \| 'transparent'`             | `'opaque'` | Backdrop style: dimming veil + blur, dimming veil only (default), or no overlay |
+| `elevation`    | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`     | Panel drop shadow depth                                                         |
+| `padding`      | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`          | `'md'`     | Padding for header, body, and footer                                            |
 
 ### Events
 
-| Event           | Detail                                                                   | Description                                    |
-| --------------- | ------------------------------------------------------------------------ | ---------------------------------------------- |
-| `open-change`  | `{ open: boolean, reason: string }`                                      | Fired whenever the dialog opens or closes       |
-| `close-request` | `{ reason: 'trigger' \| 'escape' \| 'outside-click' }`                   | Fired before close and can be prevented        |
+| Event           | Detail                                                 | Description                               |
+| --------------- | ------------------------------------------------------ | ----------------------------------------- |
+| `open-change`   | `{ open: boolean, reason: string }`                    | Fired whenever the dialog opens or closes |
+| `close-request` | `{ reason: 'trigger' \| 'escape' \| 'outside-click' }` | Fired before close and can be prevented   |
 
 ### Slots
 
 | Slot      | Description                                                              |
 | --------- | ------------------------------------------------------------------------ |
 | (default) | Dialog body content                                                      |
-| `header`  | Custom header content: replaces the default title + close-button layout |
+| `header`  | Custom header content: replaces the default title + close-button layout  |
 | `footer`  | Action buttons or supplemental content pinned to the bottom of the panel |
 
 ### CSS Custom Properties
@@ -339,7 +339,7 @@ dialog.addEventListener('close-request', (e) => {
 | `--dialog-shadow`       | Panel drop shadow                             | `var(--shadow-xl)`          |
 | `--dialog-padding`      | Padding for header, body, and footer sections | `var(--size-6)`             |
 | `--dialog-gap`          | Gap between footer action buttons             | `var(--size-4)`             |
-| `--dialog-backdrop-bg`  | Backdrop veil color                         | `var(--overlay-veil)`       |
+| `--dialog-backdrop-bg`  | Backdrop veil color                           | `var(--overlay-veil)`       |
 | `--dialog-max-width`    | Maximum panel width (overridden by `size`)    | `32rem`                     |
 
 ## Accessibility

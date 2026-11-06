@@ -31,22 +31,21 @@ map.dispose();
 
 Use aliases to accept platform terminology while Keymap stores one canonical shortcut.
 
-| Input | Canonical modifier |
-| --- | --- |
-| `cmd`, `command`, `win` | `meta` |
-| `opt`, `option` | `alt` |
-| `ctrl`, `control` | `ctrl` |
-| `mod` | `meta` on Mac; `ctrl` elsewhere |
+| Input                   | Canonical modifier              |
+| ----------------------- | ------------------------------- |
+| `cmd`, `command`, `win` | `meta`                          |
+| `opt`, `option`         | `alt`                           |
+| `ctrl`, `control`       | `ctrl`                          |
+| `mod`                   | `meta` on Mac; `ctrl` elsewhere |
 
 Pass `modKey` when rendering or testing a specific platform.
 
 ```ts
 import { createKeymap } from '@vielzeug/keymap';
 
-const map = createKeymap(
-  [{ id: 'palette', shortcut: 'mod+k', handler: () => console.log('open palette') }],
-  { modKey: 'ctrl' },
-);
+const map = createKeymap([{ id: 'palette', shortcut: 'mod+k', handler: () => console.log('open palette') }], {
+  modKey: 'ctrl',
+});
 
 map.mount(document);
 ```
@@ -139,11 +138,13 @@ Use `event.composedPath()` to keep browser undo and redo inside inputs, textarea
 
 ```ts
 const isTypingInField = (event: KeyboardEvent): boolean =>
-  event.composedPath().some(
-    (target) =>
-      target instanceof HTMLElement &&
-      (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
-  );
+  event
+    .composedPath()
+    .some(
+      (target) =>
+        target instanceof HTMLElement &&
+        (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
+    );
 
 const map = createKeymap(
   [
@@ -161,9 +162,7 @@ Do not make editable-field suppression a hidden package default. Applications ma
 Bind on `keyup` when an action must run after key release.
 
 ```ts
-const map = createKeymap([
-  { id: 'confirm', shortcut: 'space', handler: confirmAction, trigger: 'keyup' },
-]);
+const map = createKeymap([{ id: 'confirm', shortcut: 'space', handler: confirmAction, trigger: 'keyup' }]);
 ```
 
 `keydown` and `keyup` maintain independent chord state.
@@ -260,15 +259,13 @@ A chord started on `editor` cannot complete on `preview`. Repeated `mount(editor
 Create separate keymaps for separate UI owners. If maps share a target and shortcut, guards must be mutually exclusive because Keymap has no implicit layer precedence.
 
 ```ts
-const baseMap = createKeymap(
-  [{ id: 'close-sidebar', shortcut: 'escape', handler: () => closeSidebar() }],
-  { when: () => !modalIsOpen() },
-);
+const baseMap = createKeymap([{ id: 'close-sidebar', shortcut: 'escape', handler: () => closeSidebar() }], {
+  when: () => !modalIsOpen(),
+});
 
-const modalMap = createKeymap(
-  [{ id: 'close-modal', shortcut: 'escape', handler: () => closeModal() }],
-  { when: () => modalIsOpen() },
-);
+const modalMap = createKeymap([{ id: 'close-modal', shortcut: 'escape', handler: () => closeModal() }], {
+  when: () => modalIsOpen(),
+});
 
 const unmountBase = baseMap.mount(document);
 const unmountModal = modalMap.mount(document);
@@ -279,11 +276,14 @@ const unmountModal = modalMap.mount(document);
 Use `tap()` for chord hints, diagnostics, and matched-binding telemetry. Observers cannot alter shortcut behavior.
 
 ```ts
-const stopTrace = map.tap((event) => {
-  if (event.type === 'chord-start') showChordHint(event.step);
-  if (event.type === 'chord-progress') updateChordHint(event.steps);
-  if (event.type === 'chord-cancel' || event.type === 'chord-timeout' || event.type === 'match') hideChordHint();
-}, { signal: owner.signal });
+const stopTrace = map.tap(
+  (event) => {
+    if (event.type === 'chord-start') showChordHint(event.step);
+    if (event.type === 'chord-progress') updateChordHint(event.steps);
+    if (event.type === 'chord-cancel' || event.type === 'chord-timeout' || event.type === 'match') hideChordHint();
+  },
+  { signal: owner.signal },
+);
 ```
 
 Tap handlers receive detached shortcut and binding snapshots. Handler errors are swallowed, and disposal emits a final `dispose` event before observers are cleared.
@@ -407,9 +407,7 @@ import { createBus } from '@vielzeug/herald';
 import { createKeymap } from '@vielzeug/keymap';
 
 const bus = createBus<{ 'shortcut:save': void }>();
-const map = createKeymap([
-  { id: 'save', shortcut: 'ctrl+s', handler: () => bus.emit('shortcut:save') },
-]);
+const map = createKeymap([{ id: 'save', shortcut: 'ctrl+s', handler: () => bus.emit('shortcut:save') }]);
 
 map.mount(document);
 ```

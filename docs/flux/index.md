@@ -5,7 +5,36 @@ package: flux
 category: reactive
 keywords: [streams, reactive, operators, cancellation, buffering, channels]
 related: [ripple, herald, pulse, sourcerer, courier]
-exports: [stream, fromStore, fromSubscribe, pipe, of, from, fromEvent, interval, timer, map, filter, scan, switchMap, mergeMap, concatMap, take, takeUntil, debounce, timeout, merge, concat, combineLatest, retry, toArray, first, last, toAsyncIterable]
+exports:
+  [
+    stream,
+    fromStore,
+    fromSubscribe,
+    pipe,
+    of,
+    from,
+    fromEvent,
+    interval,
+    timer,
+    map,
+    filter,
+    scan,
+    switchMap,
+    mergeMap,
+    concatMap,
+    take,
+    takeUntil,
+    debounce,
+    timeout,
+    merge,
+    concat,
+    combineLatest,
+    retry,
+    toArray,
+    first,
+    last,
+    toAsyncIterable,
+  ]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -37,13 +66,13 @@ const updates = pipe(
 updates.subscribe({ error: console.error, next: render });
 ```
 
-| Feature | Flux | RxJS | TC39 Observable |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="flux" type="size" /> | Varies by imported operators | Native proposal / polyfill |
-| Runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Feature                         | Flux                                         | RxJS                                         | TC39 Observable                                       |
+| ------------------------------- | -------------------------------------------- | -------------------------------------------- | ----------------------------------------------------- |
+| Bundle size                     | <PackageInfo package="flux" type="size" />   | Varies by imported operators                 | Native proposal / polyfill                            |
+| Runtime dependencies            | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>              |
 | Subscription-owned cancellation | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
-| Explicit async queue policy | <ore-icon name="check" size="16"></ore-icon> | Operator-dependent | No standard policy |
-| Vielzeug adapters | Ripple, Courier, Herald, Pulse | Manual adapters | Manual adapters |
+| Explicit async queue policy     | <ore-icon name="check" size="16"></ore-icon> | Operator-dependent                           | No standard policy                                    |
+| Vielzeug adapters               | Ripple, Courier, Herald, Pulse               | Manual adapters                              | Manual adapters                                       |
 
 <div class="decision-callout">
 

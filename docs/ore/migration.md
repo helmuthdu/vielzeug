@@ -145,13 +145,13 @@ elevation: prop.oneOf(ELEVATIONS),
 
 Use the underlying operation directly:
 
-| Removed | Replacement |
-| --- | --- |
-| `debugFlush()` | `flush({ logger: console.debug })` |
+| Removed                                    | Replacement                                                                                    |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `debugFlush()`                             | `flush({ logger: console.debug })`                                                             |
 | `mountComponent(tag, definition, options)` | `define(tag, definition)` followed by `mount(tag, options)`, or inline `mount(setup, options)` |
-| `mock(tag, template)` | `customElements.define()` with a minimal test element |
-| `resetOreForTests()` | `cleanup()` or `install(afterEach)` |
-| `walkFlatTree()` | `walkFlatTree()` from `@vielzeug/assay` |
+| `mock(tag, template)`                      | `customElements.define()` with a minimal test element                                          |
+| `resetOreForTests()`                       | `cleanup()` or `install(afterEach)`                                                            |
+| `walkFlatTree()`                           | `walkFlatTree()` from `@vielzeug/assay`                                                        |
 
 ## Account for keyed-list recovery
 

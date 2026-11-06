@@ -7,14 +7,14 @@ description: Factory, port and gateway contracts, events, and types for Tandem.
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
+| Symbol         | Purpose                                    | Execution mode           | Common gotcha                                               |
+| -------------- | ------------------------------------------ | ------------------------ | ----------------------------------------------------------- |
 | `createSync()` | Scheduler driving a port against a gateway | Sync (queues async work) | Boot runs pull-then-push; dispose before switching accounts |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import             | Purpose                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------- |
 | `@vielzeug/tandem` | `createSync`, `TandemError`, `TandemDisposedError`, port/gateway contracts, events, and types |
 
 ## Factories
@@ -22,18 +22,16 @@ description: Factory, port and gateway contracts, events, and types for Tandem.
 ### `createSync()`
 
 ```ts
-function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(
-  options: SyncOptions<TRecord>,
-): SyncHandle;
+function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(options: SyncOptions<TRecord>): SyncHandle;
 ```
 
 Starts a sync scheduler: it loads the persisted baseline, pulls remote changes, pushes anything dirty, then flushes on `changed()`, on tab hide, and on foreground return.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `options.gateway` | `SyncGateway<TRecord>` | The device's storage seam |
-| `options.idleDelayMs` | `number \| undefined` | Quiet period before a flush (default `3000`) |
-| `options.port` | `SyncPort<TRecord>` | The server seam |
+| Parameter             | Type                   | Description                                  |
+| --------------------- | ---------------------- | -------------------------------------------- |
+| `options.gateway`     | `SyncGateway<TRecord>` | The device's storage seam                    |
+| `options.idleDelayMs` | `number \| undefined`  | Quiet period before a flush (default `3000`) |
+| `options.port`        | `SyncPort<TRecord>`    | The server seam                              |
 
 **Returns** a `SyncHandle`. Ambient flushes never reject: they surface failures as `warning` events through `tap()`. An explicit `flush()` rejects when its cycle fails.
 
@@ -50,15 +48,15 @@ sync.dispose();
 
 #### `SyncHandle` methods
 
-| Member | Description |
-| --- | --- |
-| `changed()` | Notes a local change and (re)starts the idle flush timer; throws `TandemDisposedError` after `dispose` |
-| `dispose()` | Stops the scheduler, clears the timer, removes document/window listeners |
-| `disposed` | `true` once disposed |
-| `disposalSignal` | `AbortSignal` aborted on dispose |
-| `flush()` | Runs a full cycle: pull, then push; resolves when it completes, rejects when it fails, and rejects with `TandemDisposedError` after `dispose` |
-| `tap(handler, options?)` | Observes `TandemEvent`s; returns an unsubscribe function |
-| `[Symbol.dispose]()` | Calls `dispose()` for `using` scopes |
+| Member                   | Description                                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `changed()`              | Notes a local change and (re)starts the idle flush timer; throws `TandemDisposedError` after `dispose`                                        |
+| `dispose()`              | Stops the scheduler, clears the timer, removes document/window listeners                                                                      |
+| `disposed`               | `true` once disposed                                                                                                                          |
+| `disposalSignal`         | `AbortSignal` aborted on dispose                                                                                                              |
+| `flush()`                | Runs a full cycle: pull, then push; resolves when it completes, rejects when it fails, and rejects with `TandemDisposedError` after `dispose` |
+| `tap(handler, options?)` | Observes `TandemEvent`s; returns an unsubscribe function                                                                                      |
+| `[Symbol.dispose]()`     | Calls `dispose()` for `using` scopes                                                                                                          |
 
 ## Contracts
 
@@ -70,15 +68,15 @@ The server seam. `pull(since)` returns remote records, remote deletions, and the
 
 The storage seam. The engine owns every rev comparison: it calls your gateway with the decisions already made.
 
-| Member | Contract |
-| --- | --- |
-| `records()` | This device's own records, remote mirrors excluded; sync or async, so a disk-backed gateway can read from storage instead of holding a mirror |
-| `pendingDeletions()` | Tombstones the server has not acknowledged |
-| `applyRecords(records)` | Upsert the given records: already filtered to what the server is ahead on; return the ids that failed validation |
-| `applyDeletions(deletions)` | Remove records deleted remotely |
-| `clearDeletions(deletions)` | Drop the given tombstones a successful push carried |
-| `loadState()` | The persisted `SyncState`, or `null` on a fresh device |
-| `saveState(state)` | Persist the baseline after a completed pull or push |
+| Member                      | Contract                                                                                                                                      |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `records()`                 | This device's own records, remote mirrors excluded; sync or async, so a disk-backed gateway can read from storage instead of holding a mirror |
+| `pendingDeletions()`        | Tombstones the server has not acknowledged                                                                                                    |
+| `applyRecords(records)`     | Upsert the given records: already filtered to what the server is ahead on; return the ids that failed validation                              |
+| `applyDeletions(deletions)` | Remove records deleted remotely                                                                                                               |
+| `clearDeletions(deletions)` | Drop the given tombstones a successful push carried                                                                                           |
+| `loadState()`               | The persisted `SyncState`, or `null` on a fresh device                                                                                        |
+| `saveState(state)`          | Persist the baseline after a completed pull or push                                                                                           |
 
 ## Events
 

@@ -7,42 +7,38 @@ description: API reference for @vielzeug/orbit positioners, computation, updates
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createPositioner()` | Lifecycle-owned floating positioning | Sync | Starts immediately; create after mount |
-| `computePosition()` | Low-level geometry computation | Sync | Caller owns CSS application |
-| `autoUpdate()` | Listen for geometry changes | Sync | Call returned cleanup |
-| `createReactivePositioner()` | Optional Ripple position readable | Sync | Requires `@vielzeug/ripple` |
-| Middleware factories | Adjust placement and size | Sync | Order is explicit |
+| Symbol                       | Purpose                              | Execution mode | Common gotcha                          |
+| ---------------------------- | ------------------------------------ | -------------- | -------------------------------------- |
+| `createPositioner()`         | Lifecycle-owned floating positioning | Sync           | Starts immediately; create after mount |
+| `computePosition()`          | Low-level geometry computation       | Sync           | Caller owns CSS application            |
+| `autoUpdate()`               | Listen for geometry changes          | Sync           | Call returned cleanup                  |
+| `createReactivePositioner()` | Optional Ripple position readable    | Sync           | Requires `@vielzeug/ripple`            |
+| Middleware factories         | Adjust placement and size            | Sync           | Order is explicit                      |
 
 ## Package Entry Points
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/orbit` | Positioner, computation, updates, middleware, and types. |
-| `@vielzeug/orbit/reactive` | Optional Ripple position adapter. |
-| `@vielzeug/orbit/presets` | Preset placement and middleware options. |
-| `@vielzeug/orbit/devtools` | Development overlay. |
+| Import                     | Purpose                                                  |
+| -------------------------- | -------------------------------------------------------- |
+| `@vielzeug/orbit`          | Positioner, computation, updates, middleware, and types. |
+| `@vielzeug/orbit/reactive` | Optional Ripple position adapter.                        |
+| `@vielzeug/orbit/presets`  | Preset placement and middleware options.                 |
+| `@vielzeug/orbit/devtools` | Development overlay.                                     |
 
 ## Core Functions
 
 ### `createPositioner()`
 
 ```ts
-function createPositioner(
-  reference: ReferenceElement,
-  floating: HTMLElement,
-  options?: PositionerOptions,
-): Positioner;
+function createPositioner(reference: ReferenceElement, floating: HTMLElement, options?: PositionerOptions): Positioner;
 ```
 
 Creates an active positioner and applies its initial position before returning.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `reference` | `ReferenceElement` | DOM or virtual anchor. |
-| `floating` | `HTMLElement` | Positioned element. |
-| `options` | `PositionerOptions` | Strategy, clipping, middleware, updates, and application callback. |
+| Parameter   | Type                | Description                                                        |
+| ----------- | ------------------- | ------------------------------------------------------------------ |
+| `reference` | `ReferenceElement`  | DOM or virtual anchor.                                             |
+| `floating`  | `HTMLElement`       | Positioned element.                                                |
+| `options`   | `PositionerOptions` | Strategy, clipping, middleware, updates, and application callback. |
 
 **Returns:** `Positioner`.
 
@@ -53,11 +49,11 @@ const positioner = createPositioner(trigger, tooltip);
 positioner.dispose();
 ```
 
-| Member | Return | Contract |
-| --- | --- | --- |
-| `update()` | `void` | Recomputes and applies position. |
-| `getPosition()` | `ComputePositionResult` | Latest applied result. |
-| `dispose()` | `void` | Stops updates and aborts disposal signal. |
+| Member          | Return                  | Contract                                  |
+| --------------- | ----------------------- | ----------------------------------------- |
+| `update()`      | `void`                  | Recomputes and applies position.          |
+| `getPosition()` | `ComputePositionResult` | Latest applied result.                    |
+| `dispose()`     | `void`                  | Stops updates and aborts disposal signal. |
 
 ### `computePosition()`
 
@@ -321,7 +317,7 @@ interface PresetOptions {
 
 ## Errors
 
-| Error | Trigger | Notable properties |
-| --- | --- | --- |
-| `OrbitConfigError` | Invalid middleware reset configuration | Extends `OrbitError` |
-| `OrbitError` | Base Orbit error | `instanceof OrbitError` narrows Orbit errors |
+| Error              | Trigger                                | Notable properties                           |
+| ------------------ | -------------------------------------- | -------------------------------------------- |
+| `OrbitConfigError` | Invalid middleware reset configuration | Extends `OrbitError`                         |
+| `OrbitError`       | Base Orbit error                       | `instanceof OrbitError` narrows Orbit errors |

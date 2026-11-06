@@ -142,40 +142,40 @@ panel.labels = {
 
 ### Attributes
 
-| Attribute     | Type      | Default | Description                                                    |
-| ------------- | --------- | ------- | -------------------------------------------------------------- |
-| `label`       | `string`  | N/A | Accessible name for the panel region                            |
-| `open`        | `boolean` | `false` | Open state. Reflects as an attribute, so it can be toggled declaratively |
-| `initials`    | `string`  | `'V'`   | Assistant avatar initials                                       |
-| `maxlength`   | `number`  | `240`   | Composer character limit                                        |
+| Attribute   | Type      | Default | Description                                                              |
+| ----------- | --------- | ------- | ------------------------------------------------------------------------ |
+| `label`     | `string`  | N/A     | Accessible name for the panel region                                     |
+| `open`      | `boolean` | `false` | Open state. Reflects as an attribute, so it can be toggled declaratively |
+| `initials`  | `string`  | `'V'`   | Assistant avatar initials                                                |
+| `maxlength` | `number`  | `240`   | Composer character limit                                                 |
 
 `messages`, `suggestions`, and `labels` are JavaScript properties (not attributes): assign arrays/objects directly. Mutate by reassigning the property; the panel re-renders on each new array.
 
 ### Properties
 
-| Property      | Type                          | Default | Description                                                    |
-| ------------- | ----------------------------- | ------- | -------------------------------------------------------------- |
-| `messages`    | `OreChatPanelMessage[]`       | `[]`    | Transcript. Reassign to update.                                |
-| `suggestions` | `OreChatPanelSuggestion[]`    | `[]`    | Suggested questions shown while only the greeting is present.  |
-| `labels`      | `Partial<OreChatPanelLabels>` | `{}`    | Overrides for the rendered labels.                             |
+| Property      | Type                          | Default | Description                                                   |
+| ------------- | ----------------------------- | ------- | ------------------------------------------------------------- |
+| `messages`    | `OreChatPanelMessage[]`       | `[]`    | Transcript. Reassign to update.                               |
+| `suggestions` | `OreChatPanelSuggestion[]`    | `[]`    | Suggested questions shown while only the greeting is present. |
+| `labels`      | `Partial<OreChatPanelLabels>` | `{}`    | Overrides for the rendered labels.                            |
 
 An `OreChatPanelMessage` is `{ sender: 'user' \| 'assistant'; text: string; action?: { label: string; payload?: unknown } }`. A suggestion is `{ label: string; value: string }`.
 
 ### Methods
 
-| Method             | Description                                                              |
-| ------------------ | ------------------------------------------------------------------------ |
-| `show(trigger?)`   | Opens the panel, remembering `trigger` to restore focus to when it closes. |
-| `hide()`           | Closes the panel and restores focus to the element passed to `show()`.    |
+| Method           | Description                                                                |
+| ---------------- | -------------------------------------------------------------------------- |
+| `show(trigger?)` | Opens the panel, remembering `trigger` to restore focus to when it closes. |
+| `hide()`         | Closes the panel and restores focus to the element passed to `show()`.     |
 
 ### Events
 
-| Event         | Detail                              | Description                                                            |
-| ------------- | ----------------------------------- | ---------------------------------------------------------------------- |
-| `send`        | `{ text: string }`                  | A composer send or suggestion click was submitted. Append the reply to `messages`. |
+| Event         | Detail                              | Description                                                                         |
+| ------------- | ----------------------------------- | ----------------------------------------------------------------------------------- |
+| `send`        | `{ text: string }`                  | A composer send or suggestion click was submitted. Append the reply to `messages`.  |
 | `action`      | `{ payload: unknown }`              | A message's action button was activated. `payload` is whatever the message carried. |
-| `reset`       | `{}`                                | The **Start over** button was clicked. Reset `messages` to the greeting. |
-| `open-change` | `{ open: boolean; reason: string }` | Open state changed, with the reason it changed.                        |
+| `reset`       | `{}`                                | The **Start over** button was clicked. Reset `messages` to the greeting.            |
+| `open-change` | `{ open: boolean; reason: string }` | Open state changed, with the reason it changed.                                     |
 
 ### Slots
 
@@ -185,12 +185,12 @@ An `OreChatPanelMessage` is `{ sender: 'user' \| 'assistant'; text: string; acti
 
 ### CSS Custom Properties
 
-| Property                 | Description                          | Default                              |
-| ------------------------ | ------------------------------------ | ------------------------------------ |
-| `--chat-panel-width`     | Panel width                          | `min(420px, calc(100vw - var(--size-12)))` |
-| `--chat-panel-height`    | Panel height                         | `min(640px, calc(100dvh - var(--size-12)))` |
-| `--chat-panel-inset`     | Distance from the viewport corner    | `var(--size-6)`                      |
-| `--chat-panel-z-index`   | Stacking order                       | `var(--z-fixed)`                     |
+| Property               | Description                       | Default                                     |
+| ---------------------- | --------------------------------- | ------------------------------------------- |
+| `--chat-panel-width`   | Panel width                       | `min(420px, calc(100vw - var(--size-12)))`  |
+| `--chat-panel-height`  | Panel height                      | `min(640px, calc(100dvh - var(--size-12)))` |
+| `--chat-panel-inset`   | Distance from the viewport corner | `var(--size-6)`                             |
+| `--chat-panel-z-index` | Stacking order                    | `var(--z-fixed)`                            |
 
 ### Parts
 

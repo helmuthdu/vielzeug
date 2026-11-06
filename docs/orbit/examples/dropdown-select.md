@@ -21,7 +21,6 @@ const positioner = createPositioner(trigger, dropdown, {
   placement: 'bottom-start',
   strategy: 'absolute',
 });
-
 ```
 
 ### Pitfalls

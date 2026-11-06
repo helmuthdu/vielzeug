@@ -7,21 +7,21 @@ description: API reference for @vielzeug/assay queries, event dispatch, async wa
 
 ## API Overview
 
-| Symbol                                       | Purpose                                     | Execution mode | Common gotcha                                    |
-| -------------------------------------------- | ------------------------------------------- | -------------- | ------------------------------------------------ |
-| `within`                                     | Creates scoped query API                    | Sync           | Required `get*` methods throw `AssayQueryError`  |
-| `queryInShadow` / `queryPart` / `getSlotted` | Crosses custom-element boundaries           | Sync           | Open shadow roots are required                   |
+| Symbol                                       | Purpose                           | Execution mode | Common gotcha                                   |
+| -------------------------------------------- | --------------------------------- | -------------- | ----------------------------------------------- |
+| `within`                                     | Creates scoped query API          | Sync           | Required `get*` methods throw `AssayQueryError` |
+| `queryInShadow` / `queryPart` / `getSlotted` | Crosses custom-element boundaries | Sync           | Open shadow roots are required                  |
 
-| `fire*` / `dispatch`                         | Dispatches platform event instances         | Sync           | Does not reproduce browser default behavior      |
-| `waitUntil` / `eventually` / `waitForEvent`  | Waits for conditions, assertions, or events | Async          | Use a signal or timeout for bounded waits                     |
-| `delay`                                      | Schedules a cancellable timer               | Async          | Pass a signal to cancel a pending wait                        |
-| `walkFlatTree`                               | Walks the flat tree across slot boundaries  | Sync           | jsdom-only need: browsers already use the flat tree           |
-| `installFormInternalsPolyfill`               | Polyfills `ElementInternals` form association for jsdom | Sync | Global patches: only install in suites that need them |
+| `fire*` / `dispatch` | Dispatches platform event instances | Sync | Does not reproduce browser default behavior |
+| `waitUntil` / `eventually` / `waitForEvent` | Waits for conditions, assertions, or events | Async | Use a signal or timeout for bounded waits |
+| `delay` | Schedules a cancellable timer | Async | Pass a signal to cancel a pending wait |
+| `walkFlatTree` | Walks the flat tree across slot boundaries | Sync | jsdom-only need: browsers already use the flat tree |
+| `installFormInternalsPolyfill` | Polyfills `ElementInternals` form association for jsdom | Sync | Global patches: only install in suites that need them |
 
 ## Package Entry Point
 
-| Import            | Purpose                                              |
-| ----------------- | ---------------------------------------------------- |
+| Import            | Purpose                                                                        |
+| ----------------- | ------------------------------------------------------------------------------ |
 | `@vielzeug/assay` | DOM queries, events, wait helpers, test-environment helpers, errors, and types |
 
 ## Queries
@@ -106,10 +106,9 @@ await delay(100, { signal });
 | Function                               | Success condition        | Options                                    |
 | -------------------------------------- | ------------------------ | ------------------------------------------ |
 | `waitUntil(predicate, options?)`       | Predicate returns `true` | `timeout`, `interval`, `signal`            |
-| `eventually(assertion, options?)`       | Assertion stops throwing | `timeout`, `interval`, `signal`, `message`            |
+| `eventually(assertion, options?)`      | Assertion stops throwing | `timeout`, `interval`, `signal`, `message` |
 | `waitForEvent(target, type, options?)` | Target emits `type`      | `timeout`, `signal`                        |
 | `delay(ms?, options?)`                 | Timer elapses            | `signal`                                   |
-
 
 `waitUntil()`, `eventually()`, and `waitForEvent()` reject with `AssayTimeoutError` when their shared deadline expires. `waitUntil()` and `eventually()` remain bounded while an asynchronous callback is pending. Abort rejects with the signal reason and removes Assay-owned timers and listeners. Callback work itself must cooperate with application cancellation.
 

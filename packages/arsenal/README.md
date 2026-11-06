@@ -30,7 +30,12 @@ const responses = cache<string, unknown>({ ttlMs: 60_000 });
 const profile = await responses.getOrLoad('/profile', () => fetch('/profile').then((response) => response.json()));
 const cachedResponses = responses.entries();
 
-console.log(groupBy(matches, (user) => user.name), data, profile, cachedResponses);
+console.log(
+  groupBy(matches, (user) => user.name),
+  data,
+  profile,
+  cachedResponses,
+);
 pool.dispose();
 ```
 

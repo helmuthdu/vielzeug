@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       dry-run:
-        description: 'Do everything except the actual npm publish / git tag / GitHub release'
+        description: "Do everything except the actual npm publish / git tag / GitHub release"
         required: false
         default: false
         type: boolean
@@ -69,8 +69,8 @@ jobs:
       # install below.
       - uses: ./.github/actions/setup
         with:
-          root-install: 'false'
-          rush-install: 'false'
+          root-install: "false"
+          rush-install: "false"
 
       # Fails fast (non-zero exit) when nothing is pending, before paying for the full install.
       - name: Require pending change files
@@ -179,7 +179,7 @@ jobs:
   # `gate` job above already holds the human approval; re-declaring it per job is what made a
   # train need ~40 approvals.
   publish:
-    needs: [prepare, gate]
+    needs: [ prepare, gate ]
     if: needs.prepare.outputs.has-releases == 'true' && (inputs.dry-run || needs.gate.result == 'success')
     strategy:
       fail-fast: false
@@ -205,7 +205,7 @@ jobs:
   # re-run after every package already published): createTrainRelease is idempotent on the
   # train tag, so this closes the gap where a failed train-release job could never be retried.
   train-release:
-    needs: [prepare, gate, publish]
+    needs: [ prepare, gate, publish ]
     if: ${{ always() && needs.prepare.result == 'success' && (needs.gate.result == 'success' || needs.gate.result == 'skipped') && needs.publish.result != 'failure' && needs.publish.result != 'cancelled' && needs.prepare.outputs.train != '' }}
     runs-on: ubuntu-latest
     permissions:
@@ -222,8 +222,8 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          root-install: 'false'
-          rush-install: 'false'
+          root-install: "false"
+          rush-install: "false"
 
       - name: Create the aggregate train release
         run: node scripts/release/cli.mjs train-release ${{ needs.prepare.outputs.train }}

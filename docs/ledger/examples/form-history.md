@@ -25,10 +25,14 @@ async function updateField(field: keyof typeof form, next: string): Promise<void
   if (previous === next) return;
 
   await ledger.do({
-    apply: () => { form[field] = next; },
+    apply: () => {
+      form[field] = next;
+    },
     label: `Edit ${field}`,
     meta: { field },
-    revert: () => { form[field] = previous; },
+    revert: () => {
+      form[field] = previous;
+    },
   });
 }
 

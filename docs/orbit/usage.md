@@ -31,7 +31,6 @@ const positioner = createPositioner(trigger, dropdown, {
   placement: 'bottom-start',
   strategy: 'absolute',
 });
-
 ```
 
 Orbit resolves clipping ancestors by default. Pass an explicit `boundary` when your application owns a different visible region.
@@ -42,13 +41,7 @@ Pass middleware in the exact order it should execute.
 
 ```ts
 const positioner = createPositioner(trigger, panel, {
-  middleware: [
-    offset(8),
-    flip(),
-    shift({ padding: 8 }),
-    size(),
-    arrow({ element: arrowElement }),
-  ],
+  middleware: [offset(8), flip(), shift({ padding: 8 }), size(), arrow({ element: arrowElement })],
 });
 ```
 

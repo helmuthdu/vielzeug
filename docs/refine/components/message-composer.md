@@ -270,74 +270,74 @@ If you're building a Slack/Notion-style inline `/`-command menu anchored under t
 
 ### Attributes
 
-| Attribute         | Type                          | Default             | Description                                                                                          |
-| ----------------- | ------------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------- |
-| `value`           | `string`                       | N/A | Current text value                                                                                     |
-| `placeholder`     | `string`                       | N/A | Placeholder text                                                                                       |
-| `label`           | `string`                       | `'Message'`          | Accessible name for the field: never rendered visually, only as `aria-label`                          |
-| `name`            | `string`                       | N/A | Form field name                                                                                        |
-| `helper`          | `string`                       | N/A | Helper text shown below the field                                                                      |
-| `error`           | `string`                       | N/A | Error message shown below the field                                                                    |
-| `disabled`        | `boolean`                      | `false`              | Disable the whole composer (field, slots, and send action)                                             |
-| `readonly`        | `boolean`                      | `false`              | Read-only mode                                                                                          |
-| `required`        | `boolean`                      | `false`              | Fails constraint validation while blank: a native `<form>` blocks submit and `checkValidity()`/`reportValidity()` return `false` |
-| `loading`         | `boolean`                      | `false`              | Blocks further sends (e.g. a send is already in flight) without disabling editing                       |
-| `maxlength`       | `number`                       | N/A | Max character count; shows a counter                                                                   |
-| `rows`            | `number`                       | `1`                  | Visible rows before auto-resize grows the field                                                        |
-| `color`           | `ThemeColor`                   | N/A | Theme color (card focus ring + default send button color)                                              |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'` | `'solid'` | Visual variant of the card: same set as `ore-textarea`, see [Variants](#variants)         |
-| `size`            | `'sm' \| 'md' \| 'lg'`         | N/A | Component size                                                                                          |
-| `fullwidth`       | `boolean`                      | `false`              | Stretch the composer to the full width of its container                                                |
-| `send-icon`       | `string`                       | `'arrow-up'`         | Lucide icon name for the default send button                                                            |
-| `send-label`      | `string`                       | `'Send message'`     | Accessible label for the default send button                                                            |
-| `send-shortcut`   | `'enter' \| 'mod+enter'`       | `'enter'`            | Keyboard shortcut that sends                                                                            |
-| `clear-on-send`   | `boolean`                      | `true`               | Clear the value and refocus after a non-cancelled `send`                                                |
+| Attribute       | Type                                                      | Default          | Description                                                                                                                      |
+| --------------- | --------------------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `value`         | `string`                                                  | N/A              | Current text value                                                                                                               |
+| `placeholder`   | `string`                                                  | N/A              | Placeholder text                                                                                                                 |
+| `label`         | `string`                                                  | `'Message'`      | Accessible name for the field: never rendered visually, only as `aria-label`                                                     |
+| `name`          | `string`                                                  | N/A              | Form field name                                                                                                                  |
+| `helper`        | `string`                                                  | N/A              | Helper text shown below the field                                                                                                |
+| `error`         | `string`                                                  | N/A              | Error message shown below the field                                                                                              |
+| `disabled`      | `boolean`                                                 | `false`          | Disable the whole composer (field, slots, and send action)                                                                       |
+| `readonly`      | `boolean`                                                 | `false`          | Read-only mode                                                                                                                   |
+| `required`      | `boolean`                                                 | `false`          | Fails constraint validation while blank: a native `<form>` blocks submit and `checkValidity()`/`reportValidity()` return `false` |
+| `loading`       | `boolean`                                                 | `false`          | Blocks further sends (e.g. a send is already in flight) without disabling editing                                                |
+| `maxlength`     | `number`                                                  | N/A              | Max character count; shows a counter                                                                                             |
+| `rows`          | `number`                                                  | `1`              | Visible rows before auto-resize grows the field                                                                                  |
+| `color`         | `ThemeColor`                                              | N/A              | Theme color (card focus ring + default send button color)                                                                        |
+| `variant`       | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'` | `'solid'`        | Visual variant of the card: same set as `ore-textarea`, see [Variants](#variants)                                                |
+| `size`          | `'sm' \| 'md' \| 'lg'`                                    | N/A              | Component size                                                                                                                   |
+| `fullwidth`     | `boolean`                                                 | `false`          | Stretch the composer to the full width of its container                                                                          |
+| `send-icon`     | `string`                                                  | `'arrow-up'`     | Lucide icon name for the default send button                                                                                     |
+| `send-label`    | `string`                                                  | `'Send message'` | Accessible label for the default send button                                                                                     |
+| `send-shortcut` | `'enter' \| 'mod+enter'`                                  | `'enter'`        | Keyboard shortcut that sends                                                                                                     |
+| `clear-on-send` | `boolean`                                                 | `true`           | Clear the value and refocus after a non-cancelled `send`                                                                         |
 
 ### Events
 
-| Event   | Detail                                          | Description                                                                                 |
-| ------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| `input` | `{ value: string; originalEvent: Event }`        | Fired on every keystroke                                                                     |
+| Event   | Detail                                                          | Description                                                                                        |
+| ------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `input` | `{ value: string; originalEvent: Event }`                       | Fired on every keystroke                                                                           |
 | `send`  | `{ value: string; originalEvent: KeyboardEvent \| MouseEvent }` | Fired on a send attempt. Cancelable: `preventDefault()` keeps the current text instead of clearing |
 
 ### Slots
 
-| Slot      | Description                                                          |
-| --------- | ---------------------------------------------------------------------- |
-| `prefix`  | Toolbar-row content at the start, before the send button (e.g. an attach button) |
-| `suffix`  | Toolbar-row content at the end, right before the send button (e.g. an emoji trigger) |
-| `send`    | Replaces the default send button entirely                             |
+| Slot     | Description                                                                          |
+| -------- | ------------------------------------------------------------------------------------ |
+| `prefix` | Toolbar-row content at the start, before the send button (e.g. an attach button)     |
+| `suffix` | Toolbar-row content at the end, right before the send button (e.g. an emoji trigger) |
+| `send`   | Replaces the default send button entirely                                            |
 
 ### CSS Custom Properties
 
-| Property                            | Description                                              | Default                    |
-| -------------------------------------- | ------------------------------------------------------------ | ------------------------------ |
-| `--message-composer-bg`             | Card background color                                    | `var(--color-contrast-50)`  |
-| `--message-composer-border-color`   | Card border color                                         | `var(--color-contrast-300)` |
-| `--message-composer-radius`         | Card border radius                                        | `var(--rounded-2xl)`        |
-| `--message-composer-padding`        | Card inner padding                                        | `var(--size-3)`             |
-| `--message-composer-gap`            | Gap between the field/toolbar rows and between toolbar items | size-based, per `size`   |
-| `--message-composer-placeholder-color` | Field placeholder text color                           | `var(--color-contrast-500)` |
-| `--message-composer-min-height`      | Minimum field height                                       | `1lh` (one line)             |
-| `--message-composer-hover-bg`        | Card background on hover (`flat`/`ghost` variants)        | Variant-dependent            |
-| `--message-composer-hover-border-color` | Card border on hover (`flat`/`bordered` variants)      | Variant-dependent            |
-| `--message-composer-focus-bg`        | Card background when focused (`flat` variant)              | Variant-dependent            |
-| `--message-composer-focus-border-color` | Card border when focused (`flat` variant)              | Variant-dependent            |
+| Property                                | Description                                                  | Default                     |
+| --------------------------------------- | ------------------------------------------------------------ | --------------------------- |
+| `--message-composer-bg`                 | Card background color                                        | `var(--color-contrast-50)`  |
+| `--message-composer-border-color`       | Card border color                                            | `var(--color-contrast-300)` |
+| `--message-composer-radius`             | Card border radius                                           | `var(--rounded-2xl)`        |
+| `--message-composer-padding`            | Card inner padding                                           | `var(--size-3)`             |
+| `--message-composer-gap`                | Gap between the field/toolbar rows and between toolbar items | size-based, per `size`      |
+| `--message-composer-placeholder-color`  | Field placeholder text color                                 | `var(--color-contrast-500)` |
+| `--message-composer-min-height`         | Minimum field height                                         | `1lh` (one line)            |
+| `--message-composer-hover-bg`           | Card background on hover (`flat`/`ghost` variants)           | Variant-dependent           |
+| `--message-composer-hover-border-color` | Card border on hover (`flat`/`bordered` variants)            | Variant-dependent           |
+| `--message-composer-focus-bg`           | Card background when focused (`flat` variant)                | Variant-dependent           |
+| `--message-composer-focus-border-color` | Card border when focused (`flat` variant)                    | Variant-dependent           |
 
 The card owns all of the composer's visual chrome: there's no nested `ore-textarea` whose own background/border/box-shadow needs suppressing, since the `<textarea>` is rendered directly by this component and styled flush inside the card.
 
 ### Parts
 
-| Part            | Description                                                     |
-| --------------- | ---------------------------------------------------------------- |
-| `composer`      | Root card container                                             |
-| `field`         | The native `<textarea>` element                                 |
-| `helper`        | Helper text element                                              |
-| `error`         | Error text element (`role="alert"`)                              |
-| `toolbar`       | Toolbar row below the field                                     |
-| `toolbar-start` | Toolbar group holding the `prefix` slot                         |
-| `toolbar-end`   | Toolbar group holding the `suffix` slot and the send button      |
-| `send-button`   | The default send button (absent when the `send` slot is used)   |
+| Part            | Description                                                   |
+| --------------- | ------------------------------------------------------------- |
+| `composer`      | Root card container                                           |
+| `field`         | The native `<textarea>` element                               |
+| `helper`        | Helper text element                                           |
+| `error`         | Error text element (`role="alert"`)                           |
+| `toolbar`       | Toolbar row below the field                                   |
+| `toolbar-start` | Toolbar group holding the `prefix` slot                       |
+| `toolbar-end`   | Toolbar group holding the `suffix` slot and the send button   |
+| `send-button`   | The default send button (absent when the `send` slot is used) |
 
 ## Accessibility
 

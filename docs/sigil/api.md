@@ -7,21 +7,21 @@ description: 'Public API of @vielzeug/sigil: encoder, renderers, scanner, types,
 
 ## API Overview
 
-| Symbol | Purpose | Execution | Common gotcha |
-| --- | --- | --- | --- |
-| `encodeQr` | Encode a payload into a `QrMatrix` | Sync | Throws `SigilCapacityError` over capacity |
-| `qrCapacity` | Payload limit for a version/level/mode | Sync | Returns *characters* for numeric/alphanumeric, *bytes* for byte mode |
-| `toSvg` | Render a matrix as an SVG string | Sync | Escapes `dark`/`light` as raw CSS: pass values, not markup |
-| `drawToCanvas` | Paint a matrix onto a canvas | Sync | Browser only; resizes the canvas for DPR |
-| `detectQr` | One-shot detection on an image source | Async | Throws `SigilUnsupportedError` without `BarcodeDetector` |
-| `createQrScanner` | Camera scan loop | Async (start) | Must `dispose()`; camera tracks persist otherwise |
-| `isQrScanSupported` | Sync feature check | Sync | Constructor exists ≠ `qr_code` supported: prefer `qrScanSupport()` |
-| `qrScanSupport` | Async feature check incl. formats | Async | Never assume support per browser/version |
+| Symbol              | Purpose                                | Execution     | Common gotcha                                                        |
+| ------------------- | -------------------------------------- | ------------- | -------------------------------------------------------------------- |
+| `encodeQr`          | Encode a payload into a `QrMatrix`     | Sync          | Throws `SigilCapacityError` over capacity                            |
+| `qrCapacity`        | Payload limit for a version/level/mode | Sync          | Returns _characters_ for numeric/alphanumeric, _bytes_ for byte mode |
+| `toSvg`             | Render a matrix as an SVG string       | Sync          | Escapes `dark`/`light` as raw CSS: pass values, not markup           |
+| `drawToCanvas`      | Paint a matrix onto a canvas           | Sync          | Browser only; resizes the canvas for DPR                             |
+| `detectQr`          | One-shot detection on an image source  | Async         | Throws `SigilUnsupportedError` without `BarcodeDetector`             |
+| `createQrScanner`   | Camera scan loop                       | Async (start) | Must `dispose()`; camera tracks persist otherwise                    |
+| `isQrScanSupported` | Sync feature check                     | Sync          | Constructor exists ≠ `qr_code` supported: prefer `qrScanSupport()`   |
+| `qrScanSupport`     | Async feature check incl. formats      | Async         | Never assume support per browser/version                             |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import            | Purpose                   |
+| ----------------- | ------------------------- |
 | `@vielzeug/sigil` | Complete public Sigil API |
 
 ## Encoding
@@ -34,14 +34,14 @@ function encodeQr(data: string | Uint8Array, options?: QrEncodeOptions): QrMatri
 
 Encodes `data` into a QR symbol. Picks the most compact mode covering the whole input, the smallest fitting version, and the lowest-penalty mask.
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `data` | `string \| Uint8Array` | N/A | Payload; `Uint8Array` is raw binary and always byte mode (no UTF-8 round-trip) |
-| `options.errorCorrection` | `'L' \| 'M' \| 'Q' \| 'H'` | `'M'` | Error-correction level |
-| `options.version` | `1–40` | auto | Pin the version; throws if payload can't fit |
-| `options.minVersion` | `1–40` | `1` | Smallest acceptable version |
-| `options.mode` | `QrMode` | auto | Force a segment mode |
-| `options.mask` | `0–7` | auto | Force the mask (test vectors only) |
+| Parameter                 | Type                       | Default | Description                                                                    |
+| ------------------------- | -------------------------- | ------- | ------------------------------------------------------------------------------ |
+| `data`                    | `string \| Uint8Array`     | N/A     | Payload; `Uint8Array` is raw binary and always byte mode (no UTF-8 round-trip) |
+| `options.errorCorrection` | `'L' \| 'M' \| 'Q' \| 'H'` | `'M'`   | Error-correction level                                                         |
+| `options.version`         | `1–40`                     | auto    | Pin the version; throws if payload can't fit                                   |
+| `options.minVersion`      | `1–40`                     | `1`     | Smallest acceptable version                                                    |
+| `options.mode`            | `QrMode`                   | auto    | Force a segment mode                                                           |
+| `options.mask`            | `0–7`                      | auto    | Force the mask (test vectors only)                                             |
 
 **Returns** a frozen `QrMatrix` with `size`, `version`, `mode`, `errorCorrection`, `mask`, and `get(x, y)`.
 
@@ -80,14 +80,14 @@ function toSvg(matrix: QrMatrix, options?: QrSvgOptions): string;
 
 Returns a complete `<svg>` string. Runs in any environment: no DOM required.
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `options.dark` | `string` | `'currentColor'` | Dark module color |
-| `options.light` | `string` | `'transparent'` | Background color |
-| `options.margin` | `number` | `4` | Quiet-zone modules |
-| `options.scale` | `number` | `1` | User units per module |
-| `options.optimizePath` | `boolean` | `true` | Merge dark runs into one `<path>` |
-| `options.label` | `string` | N/A | `<title>` + `aria-label`; enables `role="img"` |
+| Parameter              | Type      | Default          | Description                                    |
+| ---------------------- | --------- | ---------------- | ---------------------------------------------- |
+| `options.dark`         | `string`  | `'currentColor'` | Dark module color                              |
+| `options.light`        | `string`  | `'transparent'`  | Background color                               |
+| `options.margin`       | `number`  | `4`              | Quiet-zone modules                             |
+| `options.scale`        | `number`  | `1`              | User units per module                          |
+| `options.optimizePath` | `boolean` | `true`           | Merge dark runs into one `<path>`              |
+| `options.label`        | `string`  | N/A              | `<title>` + `aria-label`; enables `role="img"` |
 
 ```ts
 const svg = toSvg(matrix, { label: 'Pairing code', dark: 'var(--qr-dark)' });
@@ -103,11 +103,11 @@ function drawToCanvas(matrix: QrMatrix, canvas: HTMLCanvasElement, options?: QrC
 
 Paints the matrix and returns the CSS-pixel edge length. Sizes the backing store for `devicePixelRatio` so output stays crisp on retina displays.
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `options.scale` | `number` | `1` | CSS px per module |
-| `options.margin` | `number` | `4` | Quiet-zone modules |
-| `options.dark` / `options.light` | `string` | `'#000'` / `'#fff'` | Fill colors |
+| Parameter                        | Type     | Default             | Description        |
+| -------------------------------- | -------- | ------------------- | ------------------ |
+| `options.scale`                  | `number` | `1`                 | CSS px per module  |
+| `options.margin`                 | `number` | `4`                 | Quiet-zone modules |
+| `options.dark` / `options.light` | `string` | `'#000'` / `'#fff'` | Fill colors        |
 
 ## Scanning (browser only)
 
@@ -119,27 +119,27 @@ function createQrScanner(options: QrScannerOptions): QrScanner;
 
 Creates a camera scan loop around the native `BarcodeDetector`.
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `options.video` | `HTMLVideoElement` | N/A | Element the stream attaches to (needs `autoplay playsinline muted`) |
-| `options.constraints` | `MediaTrackConstraints` | `{ facingMode: 'environment' }` | `getUserMedia` video constraints |
-| `options.intervalMs` | `number` | `200` | Minimum ms between detect passes |
-| `options.once` | `boolean` | `true` | Stop after the first result |
-| `options.signal` | `AbortSignal` | N/A | Abort → `stop()` |
-| `options.detector` | `QrDetector` | native | Injected detector for tests |
-| `options.mediaDevices` | `Pick<MediaDevices, 'getUserMedia'>` | `navigator.mediaDevices` | Injected media for tests |
+| Parameter              | Type                                 | Default                         | Description                                                         |
+| ---------------------- | ------------------------------------ | ------------------------------- | ------------------------------------------------------------------- |
+| `options.video`        | `HTMLVideoElement`                   | N/A                             | Element the stream attaches to (needs `autoplay playsinline muted`) |
+| `options.constraints`  | `MediaTrackConstraints`              | `{ facingMode: 'environment' }` | `getUserMedia` video constraints                                    |
+| `options.intervalMs`   | `number`                             | `200`                           | Minimum ms between detect passes                                    |
+| `options.once`         | `boolean`                            | `true`                          | Stop after the first result                                         |
+| `options.signal`       | `AbortSignal`                        | N/A                             | Abort → `stop()`                                                    |
+| `options.detector`     | `QrDetector`                         | native                          | Injected detector for tests                                         |
+| `options.mediaDevices` | `Pick<MediaDevices, 'getUserMedia'>` | `navigator.mediaDevices`        | Injected media for tests                                            |
 
 **Returns** a `QrScanner`:
 
-| Member | Signature | Description |
-| --- | --- | --- |
-| `start()` | `() => Promise<void>` | Request camera, attach stream, run the detect loop. Rejects with `SigilUnsupportedError` / `SigilPermissionError`. `stop()`/`dispose()` while the camera prompt is pending win: the late stream is released and the call resolves |
-| `stop()` | `() => void` | Stop the loop and tracks, return to `'idle'`; instance stays usable |
-| `onResult(handler)` | `(handler) => () => void` | Decode results; returns unsubscribe |
-| `tap(handler, options?)` | `(handler, { signal? }) => () => void` | Observe `SigilEvent`s; handler errors are swallowed |
-| `status` | `QrScannerStatus` | `'idle' \| 'starting' \| 'scanning' \| 'disposed'` |
-| `dispose()` / `[Symbol.dispose]` | `() => void` | Terminal teardown; `disposalSignal` aborts |
-| `disposed` | `boolean` | Whether `dispose()` ran |
+| Member                           | Signature                              | Description                                                                                                                                                                                                                       |
+| -------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start()`                        | `() => Promise<void>`                  | Request camera, attach stream, run the detect loop. Rejects with `SigilUnsupportedError` / `SigilPermissionError`. `stop()`/`dispose()` while the camera prompt is pending win: the late stream is released and the call resolves |
+| `stop()`                         | `() => void`                           | Stop the loop and tracks, return to `'idle'`; instance stays usable                                                                                                                                                               |
+| `onResult(handler)`              | `(handler) => () => void`              | Decode results; returns unsubscribe                                                                                                                                                                                               |
+| `tap(handler, options?)`         | `(handler, { signal? }) => () => void` | Observe `SigilEvent`s; handler errors are swallowed                                                                                                                                                                               |
+| `status`                         | `QrScannerStatus`                      | `'idle' \| 'starting' \| 'scanning' \| 'disposed'`                                                                                                                                                                                |
+| `dispose()` / `[Symbol.dispose]` | `() => void`                           | Terminal teardown; `disposalSignal` aborts                                                                                                                                                                                        |
+| `disposed`                       | `boolean`                              | Whether `dispose()` ran                                                                                                                                                                                                           |
 
 ```ts
 const scanner = createQrScanner({ video });
@@ -182,7 +182,7 @@ interface QrMatrix {
   readonly errorCorrection: QrErrorCorrection;
   readonly mask: number;
   readonly mode: QrMode;
-  readonly size: number;    // 17 + 4 * version
+  readonly size: number; // 17 + 4 * version
   readonly version: number; // 1–40
   get(x: number, y: number): boolean; // true = dark; false outside bounds
 }
@@ -193,9 +193,9 @@ interface QrScanResult {
 }
 
 interface QrDetector {
-  detect(source: ImageBitmapSource): Promise<
-    ReadonlyArray<{ rawValue: string; cornerPoints?: ReadonlyArray<{ x: number; y: number }> }>
-  >;
+  detect(
+    source: ImageBitmapSource,
+  ): Promise<ReadonlyArray<{ rawValue: string; cornerPoints?: ReadonlyArray<{ x: number; y: number }> }>>;
 }
 
 type SigilEvent =
@@ -210,13 +210,13 @@ type SigilEvent =
 
 ## Errors
 
-| Class | Trigger | Notable members |
-| --- | --- | --- |
-| `SigilError` | Base class for all sigil errors | N/A |
-| `SigilCapacityError` | Payload exceeds the version/mode limit | `bytes`, `maxBytes`, `version` |
-| `SigilOptionError` | Invalid option combination (forced mode can't represent input, bad mask/version) | N/A |
-| `SigilUnsupportedError` | `BarcodeDetector`/`getUserMedia`/canvas 2D context missing | N/A |
-| `SigilPermissionError` | Camera `NotAllowedError` | N/A |
-| `SigilDisposedError` | `start()` on a disposed scanner | N/A |
+| Class                   | Trigger                                                                          | Notable members                |
+| ----------------------- | -------------------------------------------------------------------------------- | ------------------------------ |
+| `SigilError`            | Base class for all sigil errors                                                  | N/A                            |
+| `SigilCapacityError`    | Payload exceeds the version/mode limit                                           | `bytes`, `maxBytes`, `version` |
+| `SigilOptionError`      | Invalid option combination (forced mode can't represent input, bad mask/version) | N/A                            |
+| `SigilUnsupportedError` | `BarcodeDetector`/`getUserMedia`/canvas 2D context missing                       | N/A                            |
+| `SigilPermissionError`  | Camera `NotAllowedError`                                                         | N/A                            |
+| `SigilDisposedError`    | `start()` on a disposed scanner                                                  | N/A                            |
 
 All carry `cause` when wrapping a platform error.

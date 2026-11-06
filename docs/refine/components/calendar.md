@@ -230,17 +230,17 @@ The calendar panel maintains a stable size across all three views: day view rese
 
 | Prop           | Type              | Default        | Description                                                                                           |
 | -------------- | ----------------- | -------------- | ----------------------------------------------------------------------------------------------------- |
-| `value`        | `string`          | N/A | Selected date in ISO 8601 format (`yyyy-MM-dd`)                                                       |
-| `min`          | `string`          | N/A | Earliest selectable date (`yyyy-MM-dd`, inclusive)                                                    |
-| `max`          | `string`          | N/A | Latest selectable date (`yyyy-MM-dd`, inclusive)                                                      |
+| `value`        | `string`          | N/A            | Selected date in ISO 8601 format (`yyyy-MM-dd`)                                                       |
+| `min`          | `string`          | N/A            | Earliest selectable date (`yyyy-MM-dd`, inclusive)                                                    |
+| `max`          | `string`          | N/A            | Latest selectable date (`yyyy-MM-dd`, inclusive)                                                      |
 | `weekend-days` | `number[]`        | `[]`           | JSON array of day-of-week indices to disable (0 = Sunday … 6 = Saturday). e.g. `weekend-days="[0,6]"` |
 | `locale`       | `string`          | browser locale | BCP 47 locale string for day/month names                                                              |
-| `color`        | `string`          | N/A | Theme color: `primary` \| `secondary` \| `info` \| `success` \| `warning` \| `error`                  |
+| `color`        | `string`          | N/A            | Theme color: `primary` \| `secondary` \| `info` \| `success` \| `warning` \| `error`                  |
 | `size`         | `string`          | `md`           | Component size: `sm` \| `md` \| `lg`                                                                  |
-| `rounded`      | `string`          | N/A | Border radius override                                                                                |
+| `rounded`      | `string`          | N/A            | Border radius override                                                                                |
 | `disabled`     | `boolean`         | `false`        | Disable all interaction                                                                               |
 | `required`     | `boolean`         | `false`        | Required field (form association)                                                                     |
-| `name`         | `string`          | N/A | Form field name                                                                                       |
+| `name`         | `string`          | N/A            | Form field name                                                                                       |
 | `events`       | `CalendarEvent[]` | `[]`           | Calendar events to display. Dots in normal mode, pills in expanded mode. Set via JS property          |
 | `expanded`     | `boolean`         | `false`        | Expanded calendar-app layout with tall cells and top-aligned day number circles                       |
 | `fullwidth`    | `boolean`         | `false`        | Expand calendar to full container width                                                               |
@@ -252,7 +252,7 @@ The calendar panel maintains a stable size across all three views: day view rese
 | `id`    | `string` | Yes      | Unique identifier                                              |
 | `date`  | `string` | Yes      | ISO 8601 date the event falls on (`yyyy-MM-dd`)                |
 | `label` | `string` | Yes      | Short label shown in the cell (pill text in expanded mode)     |
-| `color` | `string` | N/A | Any CSS color value. Falls back to the component's theme color |
+| `color` | `string` | N/A      | Any CSS color value. Falls back to the component's theme color |
 
 ### Events
 
@@ -268,9 +268,9 @@ The calendar panel maintains a stable size across all three views: day view rese
 | `--calendar-border-color`         | `--color-contrast-200` | Calendar border colour                                 |
 | `--calendar-radius`               | `--rounded-xl`         | Calendar border radius                                 |
 | `--calendar-shadow`               | `--shadow-md`          | Calendar drop shadow                                   |
-| `--calendar-day-selected-bg`      | theme base color     | Background of the selected day cell                   |
-| `--calendar-day-today-color`      | theme base color     | Color of today's date number                          |
-| `--calendar-day-outside-color`    | `--color-contrast-500` | Colour of day numbers outside the visible month       |
+| `--calendar-day-selected-bg`      | theme base color       | Background of the selected day cell                    |
+| `--calendar-day-today-color`      | theme base color       | Color of today's date number                           |
+| `--calendar-day-outside-color`    | `--color-contrast-500` | Colour of day numbers outside the visible month        |
 | `--calendar-expanded-cell-height` | `var(--size-28)`       | Minimum height of each day cell in the expanded layout |
 
 ### Parts
@@ -305,19 +305,19 @@ Selected days have `aria-selected="true"`; unselected days have `aria-selected="
 **Month and year grids**
 
 | Key               | Action                                          |
-| ----------------- | ------------------------------------------------ |
-| `ArrowRight`      | Move focus to the next cell                       |
-| `ArrowLeft`       | Move focus to the previous cell                   |
-| `ArrowDown`       | Move focus one row forward (4-column grid)        |
-| `ArrowUp`         | Move focus one row back (4-column grid)           |
-| `Home`            | Move focus to the first cell of the current row   |
-| `End`             | Move focus to the last cell of the current row    |
-| `Enter` / `Space` | Select the focused month / year                   |
+| ----------------- | ----------------------------------------------- |
+| `ArrowRight`      | Move focus to the next cell                     |
+| `ArrowLeft`       | Move focus to the previous cell                 |
+| `ArrowDown`       | Move focus one row forward (4-column grid)      |
+| `ArrowUp`         | Move focus one row back (4-column grid)         |
+| `Home`            | Move focus to the first cell of the current row |
+| `End`             | Move focus to the last cell of the current row  |
+| `Enter` / `Space` | Select the focused month / year                 |
 
 **Header controls**
 
-| Key             | Action                                              |
-| --------------- | --------------------------------------------------- |
+| Key             | Action                                             |
+| --------------- | -------------------------------------------------- |
 | Click / `Enter` | Previous / Next button: navigate by month or year  |
 | Click / `Enter` | Label button: cycle view: Day → Month → Year → Day |
 

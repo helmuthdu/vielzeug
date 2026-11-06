@@ -560,10 +560,7 @@ export function useRouter() {
 }
 
 // RouterView.tsx: exhaustive routes and an explicit fallback
-const views = router.createViewRegistry(
-  { home: HomePage, settings: SettingsPage },
-  { notFound: NotFoundPage },
-);
+const views = router.createViewRegistry({ home: HomePage, settings: SettingsPage }, { notFound: NotFoundPage });
 
 export function RouterView() {
   const { state } = useRouter();

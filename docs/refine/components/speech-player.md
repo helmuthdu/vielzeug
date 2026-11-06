@@ -183,70 +183,70 @@ ore-speech-player::part(play) {
 
 ### Attributes
 
-| Attribute    | Type     | Default   | Description                                                         |
-| ----------- | -------- | --------- | ------------------------------------------------------------------- |
-| `text`      | `string` | `''`      | The text to read aloud (empty text disables the toggle)               |
-| `lang`      | `string` | N/A | Standard HTML language tag of the text; selects the best voice for it |
-| `state`     | `string` | `idle`    | Reflected playback state: `idle` \| `playing` \| `paused` \| `unsupported` |
-| `rate`      | `number` | `1`       | Playback rate; the speed control cycles `1` → `1.15` → `1.5` → `0.85` |
-| `pitch`     | `number` | `1`       | Voice pitch passed to the engine, clamped to `0`–`2` (`1` is natural) |
-| `volume`    | `number` | `1`       | Voice loudness passed to the engine, clamped to `0`–`1`              |
-| `voice`     | `string` | N/A | Name of the voice to read with; unset, the most natural voice for `lang` is picked |
-| `resume-at` | `number` | N/A | The sentence index playback begins from                               |
+| Attribute   | Type     | Default | Description                                                                        |
+| ----------- | -------- | ------- | ---------------------------------------------------------------------------------- |
+| `text`      | `string` | `''`    | The text to read aloud (empty text disables the toggle)                            |
+| `lang`      | `string` | N/A     | Standard HTML language tag of the text; selects the best voice for it              |
+| `state`     | `string` | `idle`  | Reflected playback state: `idle` \| `playing` \| `paused` \| `unsupported`         |
+| `rate`      | `number` | `1`     | Playback rate; the speed control cycles `1` → `1.15` → `1.5` → `0.85`              |
+| `pitch`     | `number` | `1`     | Voice pitch passed to the engine, clamped to `0`–`2` (`1` is natural)              |
+| `volume`    | `number` | `1`     | Voice loudness passed to the engine, clamped to `0`–`1`                            |
+| `voice`     | `string` | N/A     | Name of the voice to read with; unset, the most natural voice for `lang` is picked |
+| `resume-at` | `number` | N/A     | The sentence index playback begins from                                            |
 
 ### Properties
 
-| Property | Type                             | Description                               |
-| -------- | -------------------------------- | ----------------------------------------- |
-| `labels` | `Partial<OreSpeechPlayerLabels>` | Overrides control names and announcements |
-| `pitch`  | `number`                         | Voice pitch passed to the engine, `0`–`2`  |
+| Property | Type                             | Description                                  |
+| -------- | -------------------------------- | -------------------------------------------- |
+| `labels` | `Partial<OreSpeechPlayerLabels>` | Overrides control names and announcements    |
+| `pitch`  | `number`                         | Voice pitch passed to the engine, `0`–`2`    |
 | `volume` | `number`                         | Voice loudness passed to the engine, `0`–`1` |
-| `voice`  | `string`                         | Name of the voice to read with             |
+| `voice`  | `string`                         | Name of the voice to read with               |
 
 ### Methods
 
-| Method   | Description                                                        |
-| -------- | ------------------------------------------------------------------ |
-| `play()` | Starts reading: from `resume-at` when bound, else the beginning   |
-| `pause()`| Pauses the current reading                                          |
-| `stop()` | Stops reading and cancels pending speech                           |
+| Method    | Description                                                     |
+| --------- | --------------------------------------------------------------- |
+| `play()`  | Starts reading: from `resume-at` when bound, else the beginning |
+| `pause()` | Pauses the current reading                                      |
+| `stop()`  | Stops reading and cancels pending speech                        |
 
 ### Events
 
-| Event         | Detail                        | Description                                         |
-| ------------- | ---------------------------- | --------------------------------------------------- |
-| `play`        | N/A | Reading started: from the control or `play()`       |
-| `progress`    | `{ sentence, total }`        | A sentence began: for surfaces that follow the voice |
-| `stop`        | N/A | Reading stopped before finishing                    |
-| `end`         | N/A | Reading finished on its own                         |
-| `error`       | N/A | The engine failed mid-read                          |
-| `rate-change` | `{ rate }`                   | The speed control moved to a new step                |
+| Event         | Detail                | Description                                          |
+| ------------- | --------------------- | ---------------------------------------------------- |
+| `play`        | N/A                   | Reading started: from the control or `play()`        |
+| `progress`    | `{ sentence, total }` | A sentence began: for surfaces that follow the voice |
+| `stop`        | N/A                   | Reading stopped before finishing                     |
+| `end`         | N/A                   | Reading finished on its own                          |
+| `error`       | N/A                   | The engine failed mid-read                           |
+| `rate-change` | `{ rate }`            | The speed control moved to a new step                |
 
 ### Exports
 
-| Export          | Description                                                       |
-| --------------- | ------------------------------------------------------------------ |
-| `speechSentences` | Splits text into the sentence list the reader follows: build highlighting displays from it |
-| `pickVoice`     | Ranks engine voices for a language (and optional name): the same choice the player makes, for a custom picker |
-| `SPEECH_RATES`   | The rate steps the speed control cycles through                     |
+| Export            | Description                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| `speechSentences` | Splits text into the sentence list the reader follows: build highlighting displays from it                    |
+| `pickVoice`       | Ranks engine voices for a language (and optional name): the same choice the player makes, for a custom picker |
+| `SPEECH_RATES`    | The rate steps the speed control cycles through                                                               |
 
 ### CSS Parts
 
-| Part    | Element       | Description                                                  |
-| ------- | ------------- | ------------------------------------------------------------ |
-| `player` | `<div>`      | Outer control group                                          |
-| `play`   | `<ore-button>` | The play/pause toggle (style its `button` part through it)  |
-| `rate`   | `<ore-button>` | The speed control                                            |
-| `stop`   | `<ore-button>` | The stop button (hidden while idle)                          |
+| Part     | Element        | Description                                                |
+| -------- | -------------- | ---------------------------------------------------------- |
+| `player` | `<div>`        | Outer control group                                        |
+| `play`   | `<ore-button>` | The play/pause toggle (style its `button` part through it) |
+| `rate`   | `<ore-button>` | The speed control                                          |
+| `stop`   | `<ore-button>` | The stop button (hidden while idle)                        |
 
 ### CSS Custom Properties
 
-| Property                          | Description                               | Default                       |
-| --------------------------------- | ----------------------------------------- | ----------------------------- |
-| `--speech-player-gap`             | Gap between the controls                  | `var(--size-2)` (coarse: `var(--size-3)`) |
-| `--speech-player-control-size`    | Each control's hit-area size              | `var(--size-8)` (coarse: `var(--size-11)`) |
-| `--speech-player-icon-color`      | Control icon color at rest                | `var(--text-color-secondary)` |
-| `--speech-player-hover-bg`        | Control background on hover               | `var(--color-contrast-100)`   |
+| Property                       | Description                  | Default                                    |
+| ------------------------------ | ---------------------------- | ------------------------------------------ |
+| `--speech-player-gap`          | Gap between the controls     | `var(--size-2)` (coarse: `var(--size-3)`)  |
+| `--speech-player-control-size` | Each control's hit-area size | `var(--size-8)` (coarse: `var(--size-11)`) |
+| `--speech-player-icon-color`   | Control icon color at rest   | `var(--text-color-secondary)`              |
+| `--speech-player-hover-bg`     | Control background on hover  | `var(--color-contrast-100)`                |
 
 ## Accessibility
 

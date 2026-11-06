@@ -7,13 +7,13 @@ description: Complete API reference for the Scroll virtual list engine.
 
 ## API Overview
 
-| Symbol                       | Purpose                                | Execution mode | Common gotcha                                                                         |
-| ---------------------------- | -------------------------------------- | -------------- | ------------------------------------------------------------------------------------- |
-| `createVirtualizer()`        | Core 1D virtualizer                    | Sync           | `onChange` fires on construction: wire DOM first                                     |
-| `createDomVirtualList()`     | DOM adapter for dropdown/listbox UIs   | Sync           | Virtualizer is created lazily on first `setItems()`                                   |
-| `createVirtualScroller()`    | Self-contained scroller (creates DOM)  | Sync           | `dispose()` removes the generated scroll element                                      |
-| `createGroupedVirtualizer()` | Sectioned list with sticky headers     | Sync           | `update()` preserves measured sizes: call `invalidate()` only on font/layout changes |
-| `createGridVirtualizer()`    | Two-dimensional grid virtualizer       | Sync           | `onRangeChange` fires even when `onChange` is omitted                                 |
+| Symbol                       | Purpose                               | Execution mode | Common gotcha                                                                        |
+| ---------------------------- | ------------------------------------- | -------------- | ------------------------------------------------------------------------------------ |
+| `createVirtualizer()`        | Core 1D virtualizer                   | Sync           | `onChange` fires on construction: wire DOM first                                     |
+| `createDomVirtualList()`     | DOM adapter for dropdown/listbox UIs  | Sync           | Virtualizer is created lazily on first `setItems()`                                  |
+| `createVirtualScroller()`    | Self-contained scroller (creates DOM) | Sync           | `dispose()` removes the generated scroll element                                     |
+| `createGroupedVirtualizer()` | Sectioned list with sticky headers    | Sync           | `update()` preserves measured sizes: call `invalidate()` only on font/layout changes |
+| `createGridVirtualizer()`    | Two-dimensional grid virtualizer      | Sync           | `onRangeChange` fires even when `onChange` is omitted                                |
 
 ## Package Entry Point
 
@@ -108,22 +108,22 @@ const virt = createVirtualizer(scrollEl, {
 
 ### `VirtualizerOptions`
 
-| Option              | Type                                         | Default          | Description                                                                                |
-| ------------------- | -------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------ |
-| `count`             | `number`                                     | required         | Total item count                                                                           |
-| `estimateSize`      | `number \| (index: number) => number`        | `36`             | Fixed size or per-index estimate in pixels                                                 |
-| `gap`               | `number`                                     | `0`              | Gap between adjacent items in pixels                                                       |
-| `getItemKey`        | `(index: number) => string \| number`        | `index => index` | Stable key for the measurement cache                                                       |
-| `horizontal`        | `boolean`                                    | `false`          | Virtualize along the X axis instead of Y                                                   |
-| `initialOffset`     | `number`                                     | N/A | Initial scroll position; applied once on construction                                      |
-| `autoMeasure`       | `boolean`                                    | `false`          | Automatically measure visible items via ResizeObserver                                     |
-| `measurementCache`  | `MeasurementCache`                           | N/A | Shared external cache for scroll restoration or SSR pre-measurement                        |
-| `onChange`          | `(state: VirtualizerState) => void`          | N/A | Called when the visible window changes; replace through `update()`.                         |
-| `onScrollEnd`       | `(offset: number) => void`                   | N/A | Called when scrolling settles; replace through `update()`. |
-| `onScrollingChange` | `(isScrolling: boolean) => void`             | N/A | Called when scroll activity starts or stops; replace through `update()`. |
-| `overscan`          | `number \| { start?: number; end?: number }` | `3`              | Extra items outside the viewport; number = symmetric on both sides                         |
-| `scrollEndDelay`    | `number`                                     | `150`            | Debounce delay (ms) used to detect scroll end when native `scrollend` is unavailable       |
-| `sticky`            | `(index: number) => boolean`                 | N/A | Mark an item as a sticky header (pinned at viewport top)                                   |
+| Option              | Type                                         | Default          | Description                                                                          |
+| ------------------- | -------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------ |
+| `count`             | `number`                                     | required         | Total item count                                                                     |
+| `estimateSize`      | `number \| (index: number) => number`        | `36`             | Fixed size or per-index estimate in pixels                                           |
+| `gap`               | `number`                                     | `0`              | Gap between adjacent items in pixels                                                 |
+| `getItemKey`        | `(index: number) => string \| number`        | `index => index` | Stable key for the measurement cache                                                 |
+| `horizontal`        | `boolean`                                    | `false`          | Virtualize along the X axis instead of Y                                             |
+| `initialOffset`     | `number`                                     | N/A              | Initial scroll position; applied once on construction                                |
+| `autoMeasure`       | `boolean`                                    | `false`          | Automatically measure visible items via ResizeObserver                               |
+| `measurementCache`  | `MeasurementCache`                           | N/A              | Shared external cache for scroll restoration or SSR pre-measurement                  |
+| `onChange`          | `(state: VirtualizerState) => void`          | N/A              | Called when the visible window changes; replace through `update()`.                  |
+| `onScrollEnd`       | `(offset: number) => void`                   | N/A              | Called when scrolling settles; replace through `update()`.                           |
+| `onScrollingChange` | `(isScrolling: boolean) => void`             | N/A              | Called when scroll activity starts or stops; replace through `update()`.             |
+| `overscan`          | `number \| { start?: number; end?: number }` | `3`              | Extra items outside the viewport; number = symmetric on both sides                   |
+| `scrollEndDelay`    | `number`                                     | `150`            | Debounce delay (ms) used to detect scroll end when native `scrollend` is unavailable |
+| `sticky`            | `(index: number) => boolean`                 | N/A              | Mark an item as a sticky header (pinned at viewport top)                             |
 
 Callbacks and `scrollEndDelay` can be replaced through `update()`; `horizontal` and `initialOffset` remain construction-only.
 
@@ -156,25 +156,25 @@ interface VirtualizerState {
 
 ### `Virtualizer`: methods
 
-| Method             | Signature                                                           | Description                                                          |
-| ------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `getSnapshot`      | `() => VirtualizerState`                                            | Return the current coherent state snapshot                           |
-| `subscribe`        | `(listener: () => void) => () => void`                              | Observe state changes; returns an unsubscribe function               |
-| `update`           | `(next: VirtualizerUpdateOptions) => void`                          | Atomically update live options                                       |
-| `measure`          | `(index: number, size: number) => void`                             | Record one measured size; rebuild batched in microtask               |
-| `measureBatch`     | `(entries: Array<{ index: number; size: number }>) => void`         | Record many sizes; single rebuild                                    |
-| `measureEl`        | `(index: number, el: HTMLElement) => () => void`                    | Attach ResizeObserver to auto-measure. Returns a disconnect function |
-| `refresh`          | `() => void`                                                        | Rebuild offset table and re-emit; preserves cached measurements      |
-| `remeasure`        | `() => void`                                                        | Re-read viewport size and scroll offset from the DOM and recompute   |
-| `prepend`          | `(additionalCount: number) => void`                                 | Add items at the top; adjusts scroll offset to keep viewport stable  |
-| `scrollToIndex`    | `(index: number, options?: ScrollToIndexOptions) => void`           | Scroll to an item; out-of-range indices are clamped                  |
-| `scrollToOffset`   | `(offset: number, options?: { behavior?: ScrollBehavior }) => void` | Scroll to a raw pixel offset                                         |
-| `scrollToTop`      | `(options?: { behavior?: ScrollBehavior }) => void`                 | Scroll to offset `0`                                                 |
-| `scrollToBottom`   | `(options?: { behavior?: ScrollBehavior }) => void`                 | Scroll to the end of the list                                        |
+| Method             | Signature                                                           | Description                                                                                                                                        |
+| ------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getSnapshot`      | `() => VirtualizerState`                                            | Return the current coherent state snapshot                                                                                                         |
+| `subscribe`        | `(listener: () => void) => () => void`                              | Observe state changes; returns an unsubscribe function                                                                                             |
+| `update`           | `(next: VirtualizerUpdateOptions) => void`                          | Atomically update live options                                                                                                                     |
+| `measure`          | `(index: number, size: number) => void`                             | Record one measured size; rebuild batched in microtask                                                                                             |
+| `measureBatch`     | `(entries: Array<{ index: number; size: number }>) => void`         | Record many sizes; single rebuild                                                                                                                  |
+| `measureEl`        | `(index: number, el: HTMLElement) => () => void`                    | Attach ResizeObserver to auto-measure. Returns a disconnect function                                                                               |
+| `refresh`          | `() => void`                                                        | Rebuild offset table and re-emit; preserves cached measurements                                                                                    |
+| `remeasure`        | `() => void`                                                        | Re-read viewport size and scroll offset from the DOM and recompute                                                                                 |
+| `prepend`          | `(additionalCount: number) => void`                                 | Add items at the top; adjusts scroll offset to keep viewport stable                                                                                |
+| `scrollToIndex`    | `(index: number, options?: ScrollToIndexOptions) => void`           | Scroll to an item; out-of-range indices are clamped                                                                                                |
+| `scrollToOffset`   | `(offset: number, options?: { behavior?: ScrollBehavior }) => void` | Scroll to a raw pixel offset                                                                                                                       |
+| `scrollToTop`      | `(options?: { behavior?: ScrollBehavior }) => void`                 | Scroll to offset `0`                                                                                                                               |
+| `scrollToBottom`   | `(options?: { behavior?: ScrollBehavior }) => void`                 | Scroll to the end of the list                                                                                                                      |
 | `isAtEnd`          | `(threshold?: number) => boolean`                                   | `true` when within `threshold` px (default `0`) of the end: check before appending items to decide whether to auto-follow (chat "stick to bottom") |
-| `invalidate`       | `() => void`                                                        | Clear all measurements and rebuild from estimates                    |
-| `dispose`          | `() => void`                                                        | Detach listeners; idempotent                                         |
-| `[Symbol.dispose]` | `() => void`                                                        | Delegates to `dispose()`: enables `using` declarations              |
+| `invalidate`       | `() => void`                                                        | Clear all measurements and rebuild from estimates                                                                                                  |
+| `dispose`          | `() => void`                                                        | Detach listeners; idempotent                                                                                                                       |
+| `[Symbol.dispose]` | `() => void`                                                        | Delegates to `dispose()`: enables `using` declarations                                                                                             |
 
 ### `update(next)`
 
@@ -302,29 +302,29 @@ ctrl.dispose();
 
 ### `DomVirtualListOptions<T>`
 
-| Option             | Type                                          | Default  | Description                                                |
-| ------------------ | --------------------------------------------- | -------- | ---------------------------------------------------------- |
-| `scrollElement`    | `HTMLElement \| Window`                       | required | Scroll container to observe                                |
-| `listElement`      | `HTMLElement`                                 | required | Element that receives height and item children             |
-| `render`           | `(args: DomVirtualListRenderArgs<T>) => void` | required | Called on every visible-window change                      |
-| `estimateSize`     | `number \| (index, item) => number`           | `36`     | Fixed or per-item size estimate                            |
-| `gap`              | `number`                                      | `0`      | Gap between items in pixels                                |
-| `getItemKey`       | `(index, item) => string \| number`           | N/A | Stable key; keeps measurements across `setItems()` calls   |
-| `horizontal`       | `boolean`                                     | `false`  | Virtualize along X axis                                    |
-| `measurementCache` | `MeasurementCache`                            | N/A | External measurement cache                                 |
-| `overscan`         | `number \| { start?: number; end?: number }`  | `3`      | Extra items outside the viewport; number = symmetric       |
-| `sticky`           | `(index: number, item: T) => boolean`         | N/A | Mark items as sticky headers                               |
-| `clear`            | `(listEl: HTMLElement) => void`               | N/A | Custom teardown for listEl; defaults to `textContent = ''` |
-| `stickToBottom`    | `boolean \| StickToBottomOptions`                       | N/A | Auto-scroll to the end after `setItems()` whenever the list was already at (or near) the end: the chat "stick to bottom on new message" pattern |
+| Option             | Type                                          | Default  | Description                                                                                                                                     |
+| ------------------ | --------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scrollElement`    | `HTMLElement \| Window`                       | required | Scroll container to observe                                                                                                                     |
+| `listElement`      | `HTMLElement`                                 | required | Element that receives height and item children                                                                                                  |
+| `render`           | `(args: DomVirtualListRenderArgs<T>) => void` | required | Called on every visible-window change                                                                                                           |
+| `estimateSize`     | `number \| (index, item) => number`           | `36`     | Fixed or per-item size estimate                                                                                                                 |
+| `gap`              | `number`                                      | `0`      | Gap between items in pixels                                                                                                                     |
+| `getItemKey`       | `(index, item) => string \| number`           | N/A      | Stable key; keeps measurements across `setItems()` calls                                                                                        |
+| `horizontal`       | `boolean`                                     | `false`  | Virtualize along X axis                                                                                                                         |
+| `measurementCache` | `MeasurementCache`                            | N/A      | External measurement cache                                                                                                                      |
+| `overscan`         | `number \| { start?: number; end?: number }`  | `3`      | Extra items outside the viewport; number = symmetric                                                                                            |
+| `sticky`           | `(index: number, item: T) => boolean`         | N/A      | Mark items as sticky headers                                                                                                                    |
+| `clear`            | `(listEl: HTMLElement) => void`               | N/A      | Custom teardown for listEl; defaults to `textContent = ''`                                                                                      |
+| `stickToBottom`    | `boolean \| StickToBottomOptions`             | N/A      | Auto-scroll to the end after `setItems()` whenever the list was already at (or near) the end: the chat "stick to bottom on new message" pattern |
 
 Without `getItemKey`, each `setItems()` call drops cached measurements.
 
 ### `StickToBottomOptions`
 
-| Option      | Type      | Default | Description                                                                |
-| ----------- | --------- | ------- | --------------------------------------------------------------------------- |
+| Option      | Type      | Default | Description                                                                   |
+| ----------- | --------- | ------- | ----------------------------------------------------------------------------- |
 | `enabled`   | `boolean` | `true`  | Enable/disable at runtime: pass the object form to toggle without removing it |
-| `threshold` | `number`  | `48`    | Distance in pixels from the end still considered "at the end"              |
+| `threshold` | `number`  | `48`    | Distance in pixels from the end still considered "at the end"                 |
 
 `stickToBottom` fires on **any** `setItems()` call made while the list is at the end: not just when the item count grows. This also follows a streaming last item that grows in place (same array length, bigger content) without you needing to detect that case yourself. It never fires while the user has scrolled away from the end, so reading older messages is never interrupted.
 
@@ -365,8 +365,8 @@ Extends `Virtualizer` (minus `prepend` and `update`) with `setItems()`. All virt
 
 | Member             | Description                                                                                 |
 | ------------------ | ------------------------------------------------------------------------------------------- |
-| `getSnapshot()`    | Return the current `VirtualizerState` snapshot                                            |
-| `subscribe(fn)`    | Observe state changes; works before the lazy virtualizer is created                       |
+| `getSnapshot()`    | Return the current `VirtualizerState` snapshot                                              |
+| `subscribe(fn)`    | Observe state changes; works before the lazy virtualizer is created                         |
 | `setItems(items)`  | Set the current item array. Spawns virtualizer on first non-empty call; destroys it on `[]` |
 | `count`            | Current item count (live getter)                                                            |
 | `disposalSignal`   | `AbortSignal` aborted on `dispose()`                                                        |
@@ -384,7 +384,7 @@ Extends `Virtualizer` (minus `prepend` and `update`) with `setItems()`. All virt
 | `scrollToIndex`    | Scroll to an item                                                                           |
 | `scrollToOffset`   | Scroll to a pixel offset                                                                    |
 | `scrollToTop`      | Scroll to offset `0`                                                                        |
-| `scrollToBottom`   | Scroll to the end of the list                                                                |
+| `scrollToBottom`   | Scroll to the end of the list                                                               |
 | `isAtEnd`          | `true` when within `threshold` px of the end                                                |
 | `dispose`          | Teardown; idempotent                                                                        |
 | `disposed`         | `true` after `dispose()` is called (live getter)                                            |
@@ -477,19 +477,19 @@ virt.dispose();
 
 ### `GroupVirtualizerOptions<T>`
 
-| Option               | Type                                                               | Default  | Description                                                             |
-| -------------------- | ------------------------------------------------------------------ | -------- | ----------------------------------------------------------------------- |
-| `sections`           | `Array<GroupSection<T>>`                                           | required | Initial sections                                                        |
-| `onChange`           | `(state: GroupVirtualizerState<T>) => void`                        | N/A | Called when the visible window changes; replace through `update()`. |
-| `onScrollEnd`        | `(offset: number) => void`                                         | N/A | Called when scrolling settles; replace through `update()`. |
-| `onScrollingChange`  | `(isScrolling: boolean) => void`                                   | N/A | Called when scroll activity starts or stops; replace through `update()`. |
-| `estimateHeaderSize` | `number \| (section, sectionIndex) => number`                      | `36`     | Header height estimate                                                  |
-| `estimateItemSize`   | `number \| (item, itemIndex, sectionIndex) => number`              | `36`     | Item height estimate                                                    |
-| `getItemKey`         | `(item: T, itemIndex: number, sectionIndex: number) => VirtualKey` | N/A | Stable key for measurement cache                                        |
-| `horizontal`         | `boolean`                                                          | `false`  | Virtualize along X axis                                                 |
-| `measurementCache`   | `MeasurementCache`                                                 | N/A | External measurement cache                                              |
-| `overscan`           | `number \| { start?: number; end?: number }`                       | `3`      | Overscan on each side (number = symmetric)                              |
-| `scrollEndDelay`     | `number`                                                           | `150`    | Debounce delay (ms) for scroll-end detection                            |
+| Option               | Type                                                               | Default  | Description                                                              |
+| -------------------- | ------------------------------------------------------------------ | -------- | ------------------------------------------------------------------------ |
+| `sections`           | `Array<GroupSection<T>>`                                           | required | Initial sections                                                         |
+| `onChange`           | `(state: GroupVirtualizerState<T>) => void`                        | N/A      | Called when the visible window changes; replace through `update()`.      |
+| `onScrollEnd`        | `(offset: number) => void`                                         | N/A      | Called when scrolling settles; replace through `update()`.               |
+| `onScrollingChange`  | `(isScrolling: boolean) => void`                                   | N/A      | Called when scroll activity starts or stops; replace through `update()`. |
+| `estimateHeaderSize` | `number \| (section, sectionIndex) => number`                      | `36`     | Header height estimate                                                   |
+| `estimateItemSize`   | `number \| (item, itemIndex, sectionIndex) => number`              | `36`     | Item height estimate                                                     |
+| `getItemKey`         | `(item: T, itemIndex: number, sectionIndex: number) => VirtualKey` | N/A      | Stable key for measurement cache                                         |
+| `horizontal`         | `boolean`                                                          | `false`  | Virtualize along X axis                                                  |
+| `measurementCache`   | `MeasurementCache`                                                 | N/A      | External measurement cache                                               |
+| `overscan`           | `number \| { start?: number; end?: number }`                       | `3`      | Overscan on each side (number = symmetric)                               |
+| `scrollEndDelay`     | `number`                                                           | `150`    | Debounce delay (ms) for scroll-end detection                             |
 
 ### `GroupSection<T>`
 
@@ -532,32 +532,32 @@ interface GroupVirtualHeader extends VirtualItem {
 
 `GroupVirtualizer<T>` is an independent interface that exposes all core virtualizer methods directly, plus grouped-specific navigation.
 
-| Method / Property                  | Description                                                              |
-| ---------------------------------- | ------------------------------------------------------------------------ |
-| `getSnapshot()`                    | Return the current `GroupVirtualizerState<T>` snapshot                         |
-| `subscribe(listener)`              | Observe grouped state changes; returns an unsubscribe function                 |
-| `update(sections, opts?)`           | Replace all sections with optional config overrides; see `GroupVirtualizerUpdateOptions<T>` |
-| `scrollToSection(i, options?)`     | Scroll to section header at index `i`. Out-of-range is a no-op           |
-| `scrollToItem(s, i, options?)`     | Scroll to item `i` in section `s`. Out-of-range is a no-op               |
-| `scrollToIndex(i, options?)`       | Scroll to flat index `i` (from underlying virtualizer)                   |
-| `scrollToOffset(offset, options?)` | Scroll to a raw pixel offset                                             |
-| `scrollToTop(options?)`            | Scroll to offset `0`                                                     |
-| `scrollToBottom(options?)`         | Scroll to the end of the list                                            |
-| `measure(index, size)`             | Record a measurement for a flat index                                    |
-| `measureBatch(entries)`            | Batch-record measurements for flat indices                               |
-| `measureEl(index, el)`             | Attach auto-measuring ResizeObserver. Returns disconnect function        |
-| `invalidate()`                     | Clear all measurements and rebuild                                       |
-| `refresh()`                        | Rebuild offset table without clearing measurements                       |
-| `count`                            | Total flat item count (live getter)                                      |
-| `disposalSignal`                   | `AbortSignal` aborted on `dispose()`                                     |
-| `isScrolling`                      | `true` while the user is scrolling; `false` once scroll settles          |
-| `items`                            | Currently rendered group items (live getter)                             |
-| `scrollOffset`                     | Current scroll position in pixels (live getter)                          |
-| `stickyItems`                      | Sticky items pinned at viewport top (live getter)                        |
-| `totalSize`                        | Total list size in pixels (live getter)                                  |
-| `dispose()`                        | Teardown; idempotent                                                     |
-| `disposed`                         | `true` after `dispose()` is called                                       |
-| `[Symbol.dispose]()`               | Delegates to `dispose()`                                                 |
+| Method / Property                  | Description                                                                                 |
+| ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `getSnapshot()`                    | Return the current `GroupVirtualizerState<T>` snapshot                                      |
+| `subscribe(listener)`              | Observe grouped state changes; returns an unsubscribe function                              |
+| `update(sections, opts?)`          | Replace all sections with optional config overrides; see `GroupVirtualizerUpdateOptions<T>` |
+| `scrollToSection(i, options?)`     | Scroll to section header at index `i`. Out-of-range is a no-op                              |
+| `scrollToItem(s, i, options?)`     | Scroll to item `i` in section `s`. Out-of-range is a no-op                                  |
+| `scrollToIndex(i, options?)`       | Scroll to flat index `i` (from underlying virtualizer)                                      |
+| `scrollToOffset(offset, options?)` | Scroll to a raw pixel offset                                                                |
+| `scrollToTop(options?)`            | Scroll to offset `0`                                                                        |
+| `scrollToBottom(options?)`         | Scroll to the end of the list                                                               |
+| `measure(index, size)`             | Record a measurement for a flat index                                                       |
+| `measureBatch(entries)`            | Batch-record measurements for flat indices                                                  |
+| `measureEl(index, el)`             | Attach auto-measuring ResizeObserver. Returns disconnect function                           |
+| `invalidate()`                     | Clear all measurements and rebuild                                                          |
+| `refresh()`                        | Rebuild offset table without clearing measurements                                          |
+| `count`                            | Total flat item count (live getter)                                                         |
+| `disposalSignal`                   | `AbortSignal` aborted on `dispose()`                                                        |
+| `isScrolling`                      | `true` while the user is scrolling; `false` once scroll settles                             |
+| `items`                            | Currently rendered group items (live getter)                                                |
+| `scrollOffset`                     | Current scroll position in pixels (live getter)                                             |
+| `stickyItems`                      | Sticky items pinned at viewport top (live getter)                                           |
+| `totalSize`                        | Total list size in pixels (live getter)                                                     |
+| `dispose()`                        | Teardown; idempotent                                                                        |
+| `disposed`                         | `true` after `dispose()` is called                                                          |
+| `[Symbol.dispose]()`               | Delegates to `dispose()`                                                                    |
 
 All scroll methods accept an optional `ScrollToIndexOptions` object (`{ align?, behavior?, onComplete? }`).
 
@@ -565,17 +565,17 @@ All scroll methods accept an optional `ScrollToIndexOptions` object (`{ align?, 
 
 Passed as the second argument to `groupVirtualizer.update()`. All fields are optional: omit any you don't want to change.
 
-| Option               | Type                                                          | Description                                              |
-| -------------------- | ------------------------------------------------------------- | -------------------------------------------------------- |
-| `estimateHeaderSize` | `number \| (section, sectionIndex) => number`                 | New header size estimate, applied on next rebuild        |
-| `estimateItemSize`   | `number \| (item, itemIndex, sectionIndex) => number`         | New item size estimate, applied on next rebuild          |
-| `getItemKey`         | `(item, itemIndex, sectionIndex) => VirtualKey`               | New item key function                                    |
-| `measurementCache`   | `MeasurementCache`                                            | Hot-swap the measurement cache                           |
-| `onChange`           | `(state: GroupVirtualizerState<T>) => void`                   | Replace the active onChange callback                     |
-| `onScrollEnd`        | `(offset: number) => void`                                    | Replace the active onScrollEnd callback                  |
-| `onScrollingChange`  | `(isScrolling: boolean) => void`                              | Replace the active onScrollingChange callback            |
-| `overscan`           | `number \| { start?, end? }`                                  | New overscan count                                       |
-| `scrollEndDelay`     | `number`                                                      | New debounce delay (ms) for scroll-end detection         |
+| Option               | Type                                                  | Description                                       |
+| -------------------- | ----------------------------------------------------- | ------------------------------------------------- |
+| `estimateHeaderSize` | `number \| (section, sectionIndex) => number`         | New header size estimate, applied on next rebuild |
+| `estimateItemSize`   | `number \| (item, itemIndex, sectionIndex) => number` | New item size estimate, applied on next rebuild   |
+| `getItemKey`         | `(item, itemIndex, sectionIndex) => VirtualKey`       | New item key function                             |
+| `measurementCache`   | `MeasurementCache`                                    | Hot-swap the measurement cache                    |
+| `onChange`           | `(state: GroupVirtualizerState<T>) => void`           | Replace the active onChange callback              |
+| `onScrollEnd`        | `(offset: number) => void`                            | Replace the active onScrollEnd callback           |
+| `onScrollingChange`  | `(isScrolling: boolean) => void`                      | Replace the active onScrollingChange callback     |
+| `overscan`           | `number \| { start?, end? }`                          | New overscan count                                |
+| `scrollEndDelay`     | `number`                                              | New debounce delay (ms) for scroll-end detection  |
 
 > `horizontal` remains construction-only.
 
@@ -626,12 +626,12 @@ grid.dispose();
 | `colGap`              | `number`                                | `0`                    | Gap between columns                    |
 | `overscanY`           | `{ start?: number; end?: number }`      | `{ start: 3, end: 3 }` | Row overscan                           |
 | `overscanX`           | `{ start?: number; end?: number }`      | `{ start: 3, end: 3 }` | Column overscan                        |
-| `initialScrollTop`    | `number`                                | N/A | Initial vertical scroll position       |
-| `initialScrollLeft`   | `number`                                | N/A | Initial horizontal scroll position     |
-| `onChange`            | `(state: GridVirtualizerState) => void` | N/A | Called when the visible window changes |
-| `onRangeChange`       | `(range: GridRangeChangeEvent) => void` | N/A | Zero-allocation range callback         |
-| `rowMeasurementCache` | `Map<number, number>`                   | N/A | External row measurement cache         |
-| `colMeasurementCache` | `Map<number, number>`                   | N/A | External column measurement cache      |
+| `initialScrollTop`    | `number`                                | N/A                    | Initial vertical scroll position       |
+| `initialScrollLeft`   | `number`                                | N/A                    | Initial horizontal scroll position     |
+| `onChange`            | `(state: GridVirtualizerState) => void` | N/A                    | Called when the visible window changes |
+| `onRangeChange`       | `(range: GridRangeChangeEvent) => void` | N/A                    | Zero-allocation range callback         |
+| `rowMeasurementCache` | `Map<number, number>`                   | N/A                    | External row measurement cache         |
+| `colMeasurementCache` | `Map<number, number>`                   | N/A                    | External column measurement cache      |
 
 ### `GridVirtualizerState`
 
@@ -1110,11 +1110,11 @@ interface GridVirtualizer extends ScrollStore<GridVirtualizerState> {
 
 ## Errors
 
-| Class | Thrown when | Notable properties |
-| --- | --- | --- |
-| `ScrollError` | Base class for every Scroll error. | Use `instanceof ScrollError` to narrow unknown errors narrows errors from this package. |
-| `ScrollConfigError` | A constructor or `update()` receives invalid static configuration. | Extends `ScrollError`; malformed JavaScript values also use this class. |
-| `ScrollRangeError` | A DOM virtual-list render detects that a caller mutated its items array without calling `setItems()` again. | Extends `ScrollError`; message includes stale index and current item count. |
+| Class               | Thrown when                                                                                                 | Notable properties                                                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `ScrollError`       | Base class for every Scroll error.                                                                          | Use `instanceof ScrollError` to narrow unknown errors narrows errors from this package. |
+| `ScrollConfigError` | A constructor or `update()` receives invalid static configuration.                                          | Extends `ScrollError`; malformed JavaScript values also use this class.                 |
+| `ScrollRangeError`  | A DOM virtual-list render detects that a caller mutated its items array without calling `setItems()` again. | Extends `ScrollError`; message includes stale index and current item count.             |
 
 Runtime estimator failures, stale measurements, and out-of-range navigation remain resilient: they fall back, no-op, or clamp as documented.
 

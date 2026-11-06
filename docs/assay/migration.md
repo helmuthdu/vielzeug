@@ -69,10 +69,14 @@ fireCustom(element, 'item-added', { detail: { id: '42' } });
 
 ```ts
 // Before
-if (AssayError.is(error)) { /* ... */ }
+if (AssayError.is(error)) {
+  /* ... */
+}
 
 // After
-if (error instanceof AssayError) { /* ... */ }
+if (error instanceof AssayError) {
+  /* ... */
+}
 ```
 
 ### Replace synthetic interactions

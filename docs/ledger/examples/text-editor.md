@@ -25,9 +25,15 @@ function recordEdit(next: string): Promise<void> {
   const before = committed;
 
   return ledger.do({
-    apply: () => { textarea.value = next; committed = next; },
+    apply: () => {
+      textarea.value = next;
+      committed = next;
+    },
     label: 'Type',
-    revert: () => { textarea.value = before; committed = before; },
+    revert: () => {
+      textarea.value = before;
+      committed = before;
+    },
   });
 }
 

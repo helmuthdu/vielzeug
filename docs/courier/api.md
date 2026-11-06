@@ -7,26 +7,26 @@ description: Reference for Courier HTTP, cached read, prefetch, middleware, and 
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createCourier()` | Creates transport client | Sync | Dispose only when whole scope ends |
-| `request()` | Sends one HTTP request of any method | Async | Direct calls never deduplicate |
-| `get()` | Sends a GET, optionally through the explicit cache | Async | One key must identify one representation |
-| `prefetch()` | Warms a cached GET | Async | Request failures resolve after surfacing through `tap()` |
-| `invalidateCache()` / `clearCache()` | Removes cached values | Sync | Invalidation matches structured key prefixes |
-| `post()` / `put()` / `patch()` / `delete()` | Common write method conveniences | Async | Use `request()` for custom methods |
-| `withBearerAuth()` | Adds authorization middleware | Sync | Token provider runs per request |
-| `withRequestId()` | Adds request identifier middleware | Sync | Default generator uses `crypto.randomUUID()` |
-| `withLogging()` | Logs request result metadata | Sync | Requires explicit logger; URLs may contain sensitive query values |
-| `tap()` | Observe structured transport events | Sync | Observation only; optional signal owns lifetime |
-| `CourierHttpError.problem` | Parsed RFC 9457 problem details from an error body | Sync | Present only when the response is `application/problem+json` |
-| `ProblemDetail` | RFC 9457 problem members and extension members | Sync | Extension values are `unknown`; Courier does not validate their shapes |
-| `problemDetailError()` | Build an HTTP error that carries problem details | Sync | Intended for mocks and middleware, not for parsing a response |
+| Symbol                                      | Purpose                                            | Execution mode | Common gotcha                                                          |
+| ------------------------------------------- | -------------------------------------------------- | -------------- | ---------------------------------------------------------------------- |
+| `createCourier()`                           | Creates transport client                           | Sync           | Dispose only when whole scope ends                                     |
+| `request()`                                 | Sends one HTTP request of any method               | Async          | Direct calls never deduplicate                                         |
+| `get()`                                     | Sends a GET, optionally through the explicit cache | Async          | One key must identify one representation                               |
+| `prefetch()`                                | Warms a cached GET                                 | Async          | Request failures resolve after surfacing through `tap()`               |
+| `invalidateCache()` / `clearCache()`        | Removes cached values                              | Sync           | Invalidation matches structured key prefixes                           |
+| `post()` / `put()` / `patch()` / `delete()` | Common write method conveniences                   | Async          | Use `request()` for custom methods                                     |
+| `withBearerAuth()`                          | Adds authorization middleware                      | Sync           | Token provider runs per request                                        |
+| `withRequestId()`                           | Adds request identifier middleware                 | Sync           | Default generator uses `crypto.randomUUID()`                           |
+| `withLogging()`                             | Logs request result metadata                       | Sync           | Requires explicit logger; URLs may contain sensitive query values      |
+| `tap()`                                     | Observe structured transport events                | Sync           | Observation only; optional signal owns lifetime                        |
+| `CourierHttpError.problem`                  | Parsed RFC 9457 problem details from an error body | Sync           | Present only when the response is `application/problem+json`           |
+| `ProblemDetail`                             | RFC 9457 problem members and extension members     | Sync           | Extension values are `unknown`; Courier does not validate their shapes |
+| `problemDetailError()`                      | Build an HTTP error that carries problem details   | Sync           | Intended for mocks and middleware, not for parsing a response          |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import              | Purpose                                                      |
+| ------------------- | ------------------------------------------------------------ |
 | `@vielzeug/courier` | Client factory, errors, middleware helpers, and public types |
 
 ## Client
@@ -39,15 +39,15 @@ createCourier(options?: CourierOptions): Courier;
 
 Returns an HTTP client sharing base URL, default headers, immutable middleware, optional parsed-value cache, timeout, and cancellation lifecycle.
 
-| `CourierOptions` field | Type | Default | Description |
-| --- | --- | --- | --- |
-| `baseUrl` | `string` | `''` | Prefix for relative request paths |
-| `cache.capacity` | `number` | `100` | Maximum cached entries; positive integer or `Infinity` |
-| `cache.ttlMs` | `number` | `30_000` | Default cache freshness; non-negative milliseconds or `Infinity` |
-| `fetch` | `typeof globalThis.fetch` | `globalThis.fetch` | Fetch implementation |
-| `headers` | `HeadersInit` | `{}` | Default request headers (immutable; merged lowercase) |
-| `middleware` | `readonly Middleware[]` | `[]` | Immutable middleware chain configured at construction |
-| `timeout` | `number` | `30_000` | Integer milliseconds from 1 to 2,147,483,647, or `Infinity` |
+| `CourierOptions` field | Type                      | Default            | Description                                                      |
+| ---------------------- | ------------------------- | ------------------ | ---------------------------------------------------------------- |
+| `baseUrl`              | `string`                  | `''`               | Prefix for relative request paths                                |
+| `cache.capacity`       | `number`                  | `100`              | Maximum cached entries; positive integer or `Infinity`           |
+| `cache.ttlMs`          | `number`                  | `30_000`           | Default cache freshness; non-negative milliseconds or `Infinity` |
+| `fetch`                | `typeof globalThis.fetch` | `globalThis.fetch` | Fetch implementation                                             |
+| `headers`              | `HeadersInit`             | `{}`               | Default request headers (immutable; merged lowercase)            |
+| `middleware`           | `readonly Middleware[]`   | `[]`               | Immutable middleware chain configured at construction            |
+| `timeout`              | `number`                  | `30_000`           | Integer milliseconds from 1 to 2,147,483,647, or `Infinity`      |
 
 **Returns:** `Courier`.
 
@@ -60,22 +60,22 @@ const courier = createCourier({
 });
 ```
 
-| `Courier` member | Signature | Description |
-| --- | --- | --- |
-| `request` | `<T, P>(path, config?) => Promise<T>` | Sends one HTTP request; `config.method` defaults to `GET` |
-| `get` | `<T, P>(path, config?) => Promise<T>` | Sends GET; `cache` opts parsed responses into bounded caching |
-| `prefetch` | `<T, P>(path, config) => Promise<void>` | Warms one required structured cache key; failures are tap-observed |
-| `invalidateCache` | `(prefix: CourierCacheKey) => void` | Invalidates matching settled and pending key prefixes |
-| `clearCache` | `() => void` | Removes every cached and pending entry |
-| `post` | `<T, P>(path, config?) => Promise<T>` | Sends POST |
-| `put` | `<T, P>(path, config?) => Promise<T>` | Sends PUT |
-| `patch` | `<T, P>(path, config?) => Promise<T>` | Sends PATCH |
-| `delete` | `<T, P>(path, config?) => Promise<T>` | Sends DELETE |
-| `tap` | `(handler, options?: { signal?: AbortSignal }) => () => void` | Observes structured request and disposal events |
-| `cancelAll` | `() => void` | Aborts active requests; client remains usable |
-| `dispose` | `() => void` | Final teardown; aborts work and marks client unusable |
-| `disposed` | `boolean` | Whether final disposal occurred |
-| `disposalSignal` | `AbortSignal` | Aborts on final disposal |
+| `Courier` member  | Signature                                                     | Description                                                        |
+| ----------------- | ------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `request`         | `<T, P>(path, config?) => Promise<T>`                         | Sends one HTTP request; `config.method` defaults to `GET`          |
+| `get`             | `<T, P>(path, config?) => Promise<T>`                         | Sends GET; `cache` opts parsed responses into bounded caching      |
+| `prefetch`        | `<T, P>(path, config) => Promise<void>`                       | Warms one required structured cache key; failures are tap-observed |
+| `invalidateCache` | `(prefix: CourierCacheKey) => void`                           | Invalidates matching settled and pending key prefixes              |
+| `clearCache`      | `() => void`                                                  | Removes every cached and pending entry                             |
+| `post`            | `<T, P>(path, config?) => Promise<T>`                         | Sends POST                                                         |
+| `put`             | `<T, P>(path, config?) => Promise<T>`                         | Sends PUT                                                          |
+| `patch`           | `<T, P>(path, config?) => Promise<T>`                         | Sends PATCH                                                        |
+| `delete`          | `<T, P>(path, config?) => Promise<T>`                         | Sends DELETE                                                       |
+| `tap`             | `(handler, options?: { signal?: AbortSignal }) => () => void` | Observes structured request and disposal events                    |
+| `cancelAll`       | `() => void`                                                  | Aborts active requests; client remains usable                      |
+| `dispose`         | `() => void`                                                  | Final teardown; aborts work and marks client unusable              |
+| `disposed`        | `boolean`                                                     | Whether final disposal occurred                                    |
+| `disposalSignal`  | `AbortSignal`                                                 | Aborts on final disposal                                           |
 
 ---
 
@@ -89,18 +89,18 @@ request<T, P extends string>(path: P, config?: RequestConfig<P, T> & { method?: 
 
 Sends one HTTP request. `config.method` defaults to `GET`; pass any method (including custom verbs) to support it consistently.
 
-| `RequestConfig<P, T>` field | Type | Description |
-| --- | --- | --- |
-| `method` | `string` | HTTP method; defaults to `GET` |
-| `params` | `Record<string, string \| number \| boolean>` | Path parameters for `{param}` placeholders |
-| `query` | `Params` | Query string parameters |
-| `body` | `unknown` | BodyInit values pass through; streams use Node duplex; GET/HEAD reject bodies; other values encode as JSON |
-| `headers` | `HeadersInit` | Per-request headers merged with (and overriding) defaults |
-| `responseType` | `ResponseType` | Response parsing strategy |
-| `schema` | `{ parse(data: unknown): T }` | Optional parsed-response validator; incompatible with `responseType: 'raw'` |
-| `signal` | `AbortSignal` | External abort signal merged with internal cancellation |
-| `timeout` | `number` | Integer milliseconds from 1 to 2,147,483,647, or `Infinity`; overrides default |
-| `fetchInit` | `Omit<RequestInit, 'body' \| 'headers' \| 'method' \| 'signal'>` | Raw fetch options for advanced use |
+| `RequestConfig<P, T>` field | Type                                                             | Description                                                                                                |
+| --------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `method`                    | `string`                                                         | HTTP method; defaults to `GET`                                                                             |
+| `params`                    | `Record<string, string \| number \| boolean>`                    | Path parameters for `{param}` placeholders                                                                 |
+| `query`                     | `Params`                                                         | Query string parameters                                                                                    |
+| `body`                      | `unknown`                                                        | BodyInit values pass through; streams use Node duplex; GET/HEAD reject bodies; other values encode as JSON |
+| `headers`                   | `HeadersInit`                                                    | Per-request headers merged with (and overriding) defaults                                                  |
+| `responseType`              | `ResponseType`                                                   | Response parsing strategy                                                                                  |
+| `schema`                    | `{ parse(data: unknown): T }`                                    | Optional parsed-response validator; incompatible with `responseType: 'raw'`                                |
+| `signal`                    | `AbortSignal`                                                    | External abort signal merged with internal cancellation                                                    |
+| `timeout`                   | `number`                                                         | Integer milliseconds from 1 to 2,147,483,647, or `Infinity`; overrides default                             |
+| `fetchInit`                 | `Omit<RequestInit, 'body' \| 'headers' \| 'method' \| 'signal'>` | Raw fetch options for advanced use                                                                         |
 
 **Returns:** Parsed response body (or `undefined` for empty bodies). With
 `responseType: 'raw'` the resolved value is the `Response` itself; a `204`/`205`
@@ -249,7 +249,10 @@ type GetRequestConfig<P extends string = string, T = unknown> = Omit<
   RequestConfig<P, T>,
   'body' | 'method' | 'responseType'
 > &
-  ({ cache?: CourierReadCache; responseType?: Exclude<ResponseType, 'raw'> } | { cache?: never; responseType: 'raw' }) & {
+  (
+    | { cache?: CourierReadCache; responseType?: Exclude<ResponseType, 'raw'> }
+    | { cache?: never; responseType: 'raw' }
+  ) & {
     body?: never;
   };
 
@@ -266,17 +269,17 @@ type PrefetchConfig<P extends string = string, T = unknown> = Omit<
 
 ## Errors
 
-| Error | Trigger | Notable properties |
-| --- | --- | --- |
-| `CourierError` | Base class for all Courier errors | Use `instanceof` to narrow |
-| `CourierHttpError` | Non-2xx HTTP response | `status`, `data`, `headers`, `method`, `url`, `problem`; `CourierHttpError.is(e, status?)` narrows by status |
-| `CourierNetworkError` | Request failure without response | `method`, `url`, `cause` |
-| `CourierTimeoutError` | Timeout signal aborts request | `method`, `url`, `cause` |
-| `CourierAbortError` | Caller or client cancellation | `method`, `url`, `cause` |
-| `CourierSchemaValidationError` | Response schema fails | `data`, `cause` |
-| `CourierParseError` | Response body cannot parse | N/A |
-| `CourierConfigError` | Invalid request config (GET/HEAD body, raw + schema) | N/A |
-| `CourierDisposedError` | Work starts after disposal | N/A |
+| Error                          | Trigger                                              | Notable properties                                                                                           |
+| ------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `CourierError`                 | Base class for all Courier errors                    | Use `instanceof` to narrow                                                                                   |
+| `CourierHttpError`             | Non-2xx HTTP response                                | `status`, `data`, `headers`, `method`, `url`, `problem`; `CourierHttpError.is(e, status?)` narrows by status |
+| `CourierNetworkError`          | Request failure without response                     | `method`, `url`, `cause`                                                                                     |
+| `CourierTimeoutError`          | Timeout signal aborts request                        | `method`, `url`, `cause`                                                                                     |
+| `CourierAbortError`            | Caller or client cancellation                        | `method`, `url`, `cause`                                                                                     |
+| `CourierSchemaValidationError` | Response schema fails                                | `data`, `cause`                                                                                              |
+| `CourierParseError`            | Response body cannot parse                           | N/A                                                                                                          |
+| `CourierConfigError`           | Invalid request config (GET/HEAD body, raw + schema) | N/A                                                                                                          |
+| `CourierDisposedError`         | Work starts after disposal                           | N/A                                                                                                          |
 
 Errors thrown directly by custom middleware are preserved rather than reclassified.
 
@@ -310,13 +313,13 @@ the parsed body is an object; it does not validate the types or contents of regi
 members. RFC 9457 treats an omitted `type` as `about:blank`, but Courier does not insert that value
 into the object.
 
-| Member | Purpose | Common gotcha |
-| --- | --- | --- |
-| `ProblemDetail` | The five registered RFC 9457 members plus extensions | Every member is optional; extension values have type `unknown` |
-| `CourierHttpError.problem` | Parsed problem document | For response errors, it is a frozen shallow copy and is `undefined` unless the media type matches and the body is an object |
-| `PROBLEM_JSON_MEDIA_TYPE` | Registered media type constant | Compare with `isProblemMediaType()`, not `===`, to allow parameters |
-| `isProblemMediaType()` | Match `application/problem+json` and its parameterised forms | Plain `application/json` never matches |
-| `problemDetailError()` | Build a problem-carrying `CourierHttpError` without a server | Status defaults to numeric `problem.status`, then `500`; a supplied `options.status` takes precedence |
+| Member                     | Purpose                                                      | Common gotcha                                                                                                               |
+| -------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `ProblemDetail`            | The five registered RFC 9457 members plus extensions         | Every member is optional; extension values have type `unknown`                                                              |
+| `CourierHttpError.problem` | Parsed problem document                                      | For response errors, it is a frozen shallow copy and is `undefined` unless the media type matches and the body is an object |
+| `PROBLEM_JSON_MEDIA_TYPE`  | Registered media type constant                               | Compare with `isProblemMediaType()`, not `===`, to allow parameters                                                         |
+| `isProblemMediaType()`     | Match `application/problem+json` and its parameterised forms | Plain `application/json` never matches                                                                                      |
+| `problemDetailError()`     | Build a problem-carrying `CourierHttpError` without a server | Status defaults to numeric `problem.status`, then `500`; a supplied `options.status` takes precedence                       |
 
 ```ts
 problemDetailError(problem, options?)

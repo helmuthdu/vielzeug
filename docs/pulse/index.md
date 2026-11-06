@@ -63,14 +63,14 @@ try {
 }
 ```
 
-| Feature | Pulse | Native WebSocket | socket.io-client |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="pulse" type="size" /> | 0 B | ~44 kB gzip |
-| Explicit readiness | <ore-icon name="check" size="16"></ore-icon> | Manual | <ore-icon name="check" size="16"></ore-icon> |
-| Session restoration | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Protocol-specific |
-| Typed scoped channels | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Basic |
-| Typed rooms with presence | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Zero runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Feature                   | Pulse                                        | Native WebSocket                             | socket.io-client                             |
+| ------------------------- | -------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size               | <PackageInfo package="pulse" type="size" />  | 0 B                                          | ~44 kB gzip                                  |
+| Explicit readiness        | <ore-icon name="check" size="16"></ore-icon> | Manual                                       | <ore-icon name="check" size="16"></ore-icon> |
+| Session restoration       | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | Protocol-specific                            |
+| Typed scoped channels     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | Basic                                        |
+| Typed rooms with presence | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Zero runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 

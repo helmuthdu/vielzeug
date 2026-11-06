@@ -4,7 +4,39 @@ description: Exact bigint monetary arithmetic with explicit currency definitions
 package: coins
 category: finance
 keywords: [money, currency, bigint, decimal, exchange, formatting]
-exports: [USD, EUR, GBP, JPY, KRW, BHD, KWD, money, decodeMoney, isMoney, currency, isCurrency, add, subtract, multiply, divide, compare, clamp, abs, negate, round, toDecimal, sum, allocate, exchangeRate, isExchangeRate, exchange, format, formatParts, toJSON]
+exports:
+  [
+    USD,
+    EUR,
+    GBP,
+    JPY,
+    KRW,
+    BHD,
+    KWD,
+    money,
+    decodeMoney,
+    isMoney,
+    currency,
+    isCurrency,
+    add,
+    subtract,
+    multiply,
+    divide,
+    compare,
+    clamp,
+    abs,
+    negate,
+    round,
+    toDecimal,
+    sum,
+    allocate,
+    exchangeRate,
+    isExchangeRate,
+    exchange,
+    format,
+    formatParts,
+    toJSON,
+  ]
 related: [vault, courier, spell]
 environments: [browser, node, ssr, deno]
 ---
@@ -27,13 +59,13 @@ import { USD, add, money, multiply } from '@vielzeug/coins';
 const total = multiply(add(money('19.99', USD), money('7.25', USD)), '1.08');
 ```
 
-| Feature | Coins | decimal.js | Dinero.js |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="coins" type="size" /> | External dependency | External dependency |
-| Bigint minor units | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Explicit currency scale | <ore-icon name="check" size="16"></ore-icon> | App-defined | Partial |
-| Exact allocation | <ore-icon name="check" size="16"></ore-icon> | Manual | <ore-icon name="check" size="16"></ore-icon> |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Feature                 | Coins                                        | decimal.js                               | Dinero.js                                    |
+| ----------------------- | -------------------------------------------- | ---------------------------------------- | -------------------------------------------- |
+| Bundle size             | <PackageInfo package="coins" type="size" />  | External dependency                      | External dependency                          |
+| Bigint minor units      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Explicit currency scale | <ore-icon name="check" size="16"></ore-icon> | App-defined                              | Partial                                      |
+| Exact allocation        | <ore-icon name="check" size="16"></ore-icon> | Manual                                   | <ore-icon name="check" size="16"></ore-icon> |
+| Zero dependencies       | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 

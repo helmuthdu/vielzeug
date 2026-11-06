@@ -100,9 +100,13 @@ Use `observe()` for current and future snapshots. Notifications are revision-ord
 ```ts
 const controller = new AbortController();
 
-store.observe('preferences', (preferences) => {
-  console.log(preferences);
-}, { signal: controller.signal });
+store.observe(
+  'preferences',
+  (preferences) => {
+    console.log(preferences);
+  },
+  { signal: controller.signal },
+);
 
 controller.abort();
 ```

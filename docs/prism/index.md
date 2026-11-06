@@ -3,7 +3,23 @@ title: 'Prism: Responsive SVG data visualization'
 description: 'Responsive SVG charts with explicit updates: line, bar, area, scatter, pie, radar, heatmap, sparkline'
 package: prism
 category: ui
-keywords: [chart, svg, visualization, responsive, line-chart, bar-chart, area-chart, scatter-chart, pie-chart, radar-chart, heatmap-chart, sparkline, accessibility, typescript]
+keywords:
+  [
+    chart,
+    svg,
+    visualization,
+    responsive,
+    line-chart,
+    bar-chart,
+    area-chart,
+    scatter-chart,
+    pie-chart,
+    radar-chart,
+    heatmap-chart,
+    sparkline,
+    accessibility,
+    typescript,
+  ]
 related: [refine, orbit]
 exports: [createLineChart, createBarChart, createPieChart, ChartHandle]
 environments: [browser]
@@ -48,23 +64,39 @@ drawLine([10, 25, 18, 32]);
 // After: keep the chart instance and replace its series data.
 const chart = createLineChart(host, {
   a11y: { ariaLabel: 'Revenue by month' },
-  series: [{ data: [{ key: 1, value: 10 }, { key: 2, value: 25 }, { key: 3, value: 18 }], name: 'Revenue' }],
+  series: [
+    {
+      data: [
+        { key: 1, value: 10 },
+        { key: 2, value: 25 },
+        { key: 3, value: 18 },
+      ],
+      name: 'Revenue',
+    },
+  ],
 });
-chart.update([{
-  data: [{ key: 1, value: 10 }, { key: 2, value: 25 }, { key: 3, value: 18 }, { key: 4, value: 32 }],
-  name: 'Revenue',
-}]);
+chart.update([
+  {
+    data: [
+      { key: 1, value: 10 },
+      { key: 2, value: 25 },
+      { key: 3, value: 18 },
+      { key: 4, value: 32 },
+    ],
+    name: 'Revenue',
+  },
+]);
 chart.dispose();
 ```
 
-| Feature | Prism | Hand-written SVG |
-| --- | --- | --- |
-| Bundle size | <PackageInfo package="prism" type="size" /> | No chart package |
-| Zero dependencies | <ore-icon name="x" size="16"></ore-icon> (uses Orbit) | <ore-icon name="check" size="16"></ore-icon> |
-| Data updates | `ChartHandle.update()` replaces chart data | You implement the update path |
-| Responsive sizing | `ResizeObserver` recalculates the chart layout | You implement the resize behavior |
-| Chart interactions | Built-in pointer and keyboard interactions on supported charts | You implement them |
-| SVG accessibility | Informative charts support an accessible name and keyboard focus | You implement the accessible behavior |
+| Feature            | Prism                                                            | Hand-written SVG                             |
+| ------------------ | ---------------------------------------------------------------- | -------------------------------------------- |
+| Bundle size        | <PackageInfo package="prism" type="size" />                      | No chart package                             |
+| Zero dependencies  | <ore-icon name="x" size="16"></ore-icon> (uses Orbit)            | <ore-icon name="check" size="16"></ore-icon> |
+| Data updates       | `ChartHandle.update()` replaces chart data                       | You implement the update path                |
+| Responsive sizing  | `ResizeObserver` recalculates the chart layout                   | You implement the resize behavior            |
+| Chart interactions | Built-in pointer and keyboard interactions on supported charts   | You implement them                           |
+| SVG accessibility  | Informative charts support an accessible name and keyboard focus | You implement the accessible behavior        |
 
 <div class="decision-callout">
 
@@ -106,17 +138,30 @@ document.body.append(host);
 
 const chart = createLineChart(host, {
   a11y: { ariaLabel: 'Revenue by month' },
-  series: [{
-    data: [{ key: 1, value: 10 }, { key: 2, value: 25 }, { key: 3, value: 18 }],
-    name: 'Revenue',
-  }],
+  series: [
+    {
+      data: [
+        { key: 1, value: 10 },
+        { key: 2, value: 25 },
+        { key: 3, value: 18 },
+      ],
+      name: 'Revenue',
+    },
+  ],
   tooltip: true,
 });
 
-chart.update([{
-  data: [{ key: 1, value: 10 }, { key: 2, value: 25 }, { key: 3, value: 18 }, { key: 4, value: 32 }],
-  name: 'Revenue',
-}]);
+chart.update([
+  {
+    data: [
+      { key: 1, value: 10 },
+      { key: 2, value: 25 },
+      { key: 3, value: 18 },
+      { key: 4, value: 32 },
+    ],
+    name: 'Revenue',
+  },
+]);
 
 chart.dispose();
 ```

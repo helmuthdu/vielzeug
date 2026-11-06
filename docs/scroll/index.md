@@ -57,14 +57,14 @@ const virtualizer = createVirtualizer(scrollEl, {
 });
 ```
 
-| Feature            | Scroll                                              | TanStack Virtual                           | react-window                                               |
-| ------------------ | --------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------- |
-| Bundle size        | <PackageInfo package="scroll" type="size" />        | ~5 kB                                      | ~8 kB                                                      |
-| Framework agnostic | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon> | React only                                                 |
+| Feature            | Scroll                                                | TanStack Virtual                             | react-window                                                 |
+| ------------------ | ----------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------ |
+| Bundle size        | <PackageInfo package="scroll" type="size" />          | ~5 kB                                        | ~8 kB                                                        |
+| Framework agnostic | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon> | React only                                                   |
 | Variable heights   | <ore-icon name="check" size="16"></ore-icon> Measured | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> Static |
 | O(log n) lookup    | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                 |
 | `using` support    | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>                     |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Zero dependencies  | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                 |
 
 <div class="decision-callout">
 

@@ -277,18 +277,18 @@ Combine indeterminate state on a parent checkbox with a `ore-checkbox-group` to 
 
 **`ore-checkbox` Attributes**
 
-| Attribute       | Type                                                                      | Default | Description                             |
-| --------------- | ------------------------------------------------------------------------- | ------- | --------------------------------------- |
-| `checked`       | `boolean`                                                                 | `false` | Checked state                           |
-| `indeterminate` | `boolean`                                                                 | `false` | Indeterminate (partially checked) state |
-| `disabled`      | `boolean`                                                                 | `false` | Disable interaction                     |
+| Attribute       | Type                                                                      | Default | Description                                                                              |
+| --------------- | ------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| `checked`       | `boolean`                                                                 | `false` | Checked state                                                                            |
+| `indeterminate` | `boolean`                                                                 | `false` | Indeterminate (partially checked) state                                                  |
+| `disabled`      | `boolean`                                                                 | `false` | Disable interaction                                                                      |
 | `required`      | `boolean`                                                                 | `false` | Require this checkbox to be checked for native-form validation (e.g. a consent checkbox) |
-| `value`         | `string`                                                                  | `'on'`  | Value submitted with the form           |
-| `name`          | `string`                                                                  | `''`    | Form field name                         |
-| `color`         | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Semantic color for the checked state    |
-| `size`          | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Checkbox size                           |
-| `helper`        | `string`                                                                  | `''`    | Helper text displayed below             |
-| `error`         | `string`                                                                  | `''`    | Error message (marks field invalid)     |
+| `value`         | `string`                                                                  | `'on'`  | Value submitted with the form                                                            |
+| `name`          | `string`                                                                  | `''`    | Form field name                                                                          |
+| `color`         | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A     | Semantic color for the checked state                                                     |
+| `size`          | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Checkbox size                                                                            |
+| `helper`        | `string`                                                                  | `''`    | Helper text displayed below                                                              |
+| `error`         | `string`                                                                  | `''`    | Error message (marks field invalid)                                                      |
 
 **`ore-checkbox` Slots**
 
@@ -328,12 +328,12 @@ Combine indeterminate state on a parent checkbox with a `ore-checkbox-group` to 
 
 | Attribute     | Type                                                                      | Default      | Description                                                  |
 | ------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------ |
-| `label`       | `string`                                                                  | `''`         | Legend text: required for accessibility                     |
+| `label`       | `string`                                                                  | `''`         | Legend text: required for accessibility                      |
 | `values`      | `string`                                                                  | `''`         | Comma-separated currently checked values (e.g. `"a,b"`)      |
 | `name`        | `string`                                                                  | `''`         | Form field name                                              |
 | `orientation` | `'vertical' \| 'horizontal'`                                              | `'vertical'` | Layout direction of options                                  |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Color propagated to all child checkboxes                     |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | N/A | Size propagated to all child checkboxes                      |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A          | Color propagated to all child checkboxes                     |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | N/A          | Size propagated to all child checkboxes                      |
 | `disabled`    | `boolean`                                                                 | `false`      | Disable all checkboxes in the group                          |
 | `required`    | `boolean`                                                                 | `false`      | Mark the group as required                                   |
 | `error`       | `string`                                                                  | `''`         | Error message shown below the group (also sets ARIA invalid) |
@@ -341,8 +341,8 @@ Combine indeterminate state on a parent checkbox with a `ore-checkbox-group` to 
 
 **`ore-checkbox-group` Slots**
 
-| Slot      | Description                       |
-| --------- | --------------------------------- |
+| Slot      | Description                        |
+| --------- | ---------------------------------- |
 | (default) | Place `ore-checkbox` elements here |
 
 **`ore-checkbox-group` Events**

@@ -27,8 +27,10 @@ const machine = defineMachine<Record<string, never>, Event>()({
 
 const actor = machine.createActor();
 const isEvent = (event: unknown): event is Event =>
-  typeof event === 'object' && event !== null &&
-  'type' in event && ((event as { type: unknown }).type === 'START' || (event as { type: unknown }).type === 'RESET');
+  typeof event === 'object' &&
+  event !== null &&
+  'type' in event &&
+  ((event as { type: unknown }).type === 'START' || (event as { type: unknown }).type === 'RESET');
 
 const dispatch = (event: unknown, authorized: boolean) => {
   if (!isEvent(event)) return 'invalid';

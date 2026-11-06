@@ -44,16 +44,16 @@ const index = createIndex(users, { fields: ['name', 'email'] });
 const matches = index.search(query);
 ```
 
-| Feature                  | Arsenal `fuzzy*`                               | Scout `createIndex`                                                                       | Fuse.js                                        |
-| ------------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Bundle size              | ~3 KB                                          | <PackageInfo package="scout" type="size" />                                               | ~23 KB                                         |
-| Zero dependencies        | <ore-icon name="check" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>     |
-| Algorithm                | Levenshtein                                    | Trigram + overlap coefficient                                                             | Bitap                                          |
-| Query time               | O(n·m)                                         | O(candidates)                                                                             | O(n·m)                                         |
-| Stateful index           | <ore-icon name="x" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>                                                | <ore-icon name="check" size="16"></ore-icon>     |
-| Match highlighting       | <ore-icon name="x" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>                                                | <ore-icon name="check" size="16"></ore-icon>     |
-| Reactive layer           | <ore-icon name="x" size="16"></ore-icon>         | Atomic external-store snapshots + debounce                                                | <ore-icon name="x" size="16"></ore-icon>         |
-| Incremental updates      | <ore-icon name="x" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>                                                | Partial                                        |
+| Feature             | Arsenal `fuzzy*`                             | Scout `createIndex`                          | Fuse.js                                      |
+| ------------------- | -------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size         | ~3 KB                                        | <PackageInfo package="scout" type="size" />  | ~23 KB                                       |
+| Zero dependencies   | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Algorithm           | Levenshtein                                  | Trigram + overlap coefficient                | Bitap                                        |
+| Query time          | O(n·m)                                       | O(candidates)                                | O(n·m)                                       |
+| Stateful index      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Match highlighting  | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Reactive layer      | <ore-icon name="x" size="16"></ore-icon>     | Atomic external-store snapshots + debounce   | <ore-icon name="x" size="16"></ore-icon>     |
+| Incremental updates | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> | Partial                                      |
 
 <div class="decision-callout">
 
@@ -92,10 +92,7 @@ const users = [
 ];
 
 const index = createIndex(users, {
-  fields: [
-    { field: 'name', weight: 2 },
-    { field: 'email' },
-  ],
+  fields: [{ field: 'name', weight: 2 }, { field: 'email' }],
 });
 
 const results = index.search('ada');

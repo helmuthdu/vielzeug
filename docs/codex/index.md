@@ -5,7 +5,17 @@ package: codex
 category: AI
 keywords: [mcp, docs, ai]
 related: [refine]
-exports: [loadSnapshot, SnapshotCatalog, createMcpServer, createMcpServerWithRefine, startHttpHost, StdioServerTransport, CatalogError, CodexError]
+exports:
+  [
+    loadSnapshot,
+    SnapshotCatalog,
+    createMcpServer,
+    createMcpServerWithRefine,
+    startHttpHost,
+    StdioServerTransport,
+    CatalogError,
+    CodexError,
+  ]
 environments: [node]
 ---
 

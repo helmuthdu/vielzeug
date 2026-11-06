@@ -63,7 +63,8 @@ describe('documentation tables', () => {
   /** api.md "| Area | Components |" rows: page slugs in backticks. */
   function parseApiAreaTable(): Map<string, string[]> {
     const markdown = readFileSync(resolve(REFINE_DOCS_DIR, 'api.md'), 'utf8');
-    const row = /^\| ([A-Z][A-Za-z ]+) \| (.+) \|$/gm;
+    // Cells are padded to align columns by the formatter, so allow surrounding spaces.
+    const row = /^\|\s+([A-Z][A-Za-z ]*?)\s+\|\s+(.+?)\s+\|\s*$/gm;
     const categories = new Map<string, string[]>();
 
     for (const match of markdown.matchAll(row)) {

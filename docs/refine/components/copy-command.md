@@ -54,10 +54,10 @@ Use `size="sm"` inside dense UI or inside other components (cards, sidebars).
 
 </ComponentPreview>
 
-| `size` | Padding                  | Font size      |
-| ------ | ------------------------ | -------------- |
-| `sm`   | `--size-1` × `--size-2`  | `--text-xs`    |
-| `md`   | `--size-2` × `--size-3`  | `--text-sm`    |
+| `size` | Padding                   | Font size     |
+| ------ | ------------------------- | ------------- |
+| `sm`   | `--size-1` × `--size-2`   | `--text-xs`   |
+| `md`   | `--size-2` × `--size-3`   | `--text-sm`   |
 | `lg`   | `--size-2-5` × `--size-4` | `--text-base` |
 
 ## Border Radius
@@ -159,12 +159,12 @@ ore-copy-command::part(copy-icon) {
 
 ### Attributes
 
-| Attribute | Type                                                                        | Default    | Description                                       |
-| --------- | --------------------------------------------------------------------------- | ---------- | ------------------------------------------------- |
-| `value`   | `string`                                                                    | `''`       | The command string to display and copy            |
-| `size`    | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`     | Component size (affects padding and font size)    |
-| `variant` | `'flat' \| 'bordered' \| 'ghost'`                                           | `'flat'`   | Visual style variant                              |
-| `rounded` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'md'`     | Border radius                                     |
+| Attribute | Type                                                                 | Default  | Description                                    |
+| --------- | -------------------------------------------------------------------- | -------- | ---------------------------------------------- |
+| `value`   | `string`                                                             | `''`     | The command string to display and copy         |
+| `size`    | `'sm' \| 'md' \| 'lg'`                                               | `'md'`   | Component size (affects padding and font size) |
+| `variant` | `'flat' \| 'bordered' \| 'ghost'`                                    | `'flat'` | Visual style variant                           |
+| `rounded` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'` | `'md'`   | Border radius                                  |
 
 ### Events
 
@@ -174,32 +174,32 @@ ore-copy-command::part(copy-icon) {
 
 ### Slots
 
-| Slot     | Description                                                                 |
-| -------- | --------------------------------------------------------------------------- |
-| `suffix` | Optional controls appended after the copy button, separated by a divider    |
+| Slot     | Description                                                              |
+| -------- | ------------------------------------------------------------------------ |
+| `suffix` | Optional controls appended after the copy button, separated by a divider |
 
 ### CSS Parts
 
-| Part           | Element                                  | Description                                |
-| -------------- | ---------------------------------------- | ------------------------------------------ |
-| `wrapper`      | `<div>`                                  | Outer flex container                       |
-| `command`      | `<button>`                               | The copy button                            |
-| `command-text` | `<code>`                                 | The command string display                 |
-| `copy-icon`    | `<span>`                                 | Icon wrapper (contains the copy/check icon)|
-| `suffix`       | `<div>`                                  | Suffix slot container                      |
+| Part           | Element    | Description                                 |
+| -------------- | ---------- | ------------------------------------------- |
+| `wrapper`      | `<div>`    | Outer flex container                        |
+| `command`      | `<button>` | The copy button                             |
+| `command-text` | `<code>`   | The command string display                  |
+| `copy-icon`    | `<span>`   | Icon wrapper (contains the copy/check icon) |
+| `suffix`       | `<div>`    | Suffix slot container                       |
 
 ### CSS Custom Properties
 
-| Property                     | Description                          | Default                         |
-| ---------------------------- | ------------------------------------ | ------------------------------- |
-| `--copy-command-bg`          | Background color                     | `var(--color-contrast-100)`     |
-| `--copy-command-color`       | Command text color                   | `var(--text-color-body)`        |
-| `--copy-command-border-color`| Border color                         | `var(--color-contrast-300)`     |
-| `--copy-command-radius`      | Border radius (overrides `rounded`)  | `var(--rounded-md)`             |
-| `--copy-command-padding`     | Inner padding of the command button  | Size-dependent (see Sizes)      |
-| `--copy-command-font-size`   | Command string font size             | Size-dependent (see Sizes)      |
-| `--copy-command-icon-color`  | Copy/check icon color                | `var(--text-color-secondary)`   |
-| `--copy-command-hover-bg`    | Background color on hover            | `var(--color-contrast-200)`     |
+| Property                      | Description                         | Default                       |
+| ----------------------------- | ----------------------------------- | ----------------------------- |
+| `--copy-command-bg`           | Background color                    | `var(--color-contrast-100)`   |
+| `--copy-command-color`        | Command text color                  | `var(--text-color-body)`      |
+| `--copy-command-border-color` | Border color                        | `var(--color-contrast-300)`   |
+| `--copy-command-radius`       | Border radius (overrides `rounded`) | `var(--rounded-md)`           |
+| `--copy-command-padding`      | Inner padding of the command button | Size-dependent (see Sizes)    |
+| `--copy-command-font-size`    | Command string font size            | Size-dependent (see Sizes)    |
+| `--copy-command-icon-color`   | Copy/check icon color               | `var(--text-color-secondary)` |
+| `--copy-command-hover-bg`     | Background color on hover           | `var(--color-contrast-200)`   |
 
 ## Accessibility
 

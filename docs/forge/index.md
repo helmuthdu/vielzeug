@@ -24,21 +24,20 @@ import { createForm } from '@vielzeug/forge';
 
 const form = createForm({
   initialValues: { email: '', profile: { name: '' } },
-  validate: (values) =>
-    values.email.includes('@') ? undefined : [{ path: ['email'], message: 'Invalid email' }],
+  validate: (values) => (values.email.includes('@') ? undefined : [{ path: ['email'], message: 'Invalid email' }]),
 });
 
 form.field('profile').field('name').set('Ada');
 const result = await form.validate();
 ```
 
-| Feature | Forge | Local component state |
-| --- | --- | --- |
-| Bundle size | <PackageInfo package="forge" type="size" /> | n/a |
-| Nested typed fields | <ore-icon name="check" size="16"></ore-icon> | Manual |
-| Flat validation issues | <ore-icon name="check" size="16"></ore-icon> | Manual |
-| Abortable validation | <ore-icon name="check" size="16"></ore-icon> | Manual |
-| Framework-neutral | <ore-icon name="check" size="16"></ore-icon> | Varies |
+| Feature                       | Forge                                        | Local component state                        |
+| ----------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size                   | <PackageInfo package="forge" type="size" />  | n/a                                          |
+| Nested typed fields           | <ore-icon name="check" size="16"></ore-icon> | Manual                                       |
+| Flat validation issues        | <ore-icon name="check" size="16"></ore-icon> | Manual                                       |
+| Abortable validation          | <ore-icon name="check" size="16"></ore-icon> | Manual                                       |
+| Framework-neutral             | <ore-icon name="check" size="16"></ore-icon> | Varies                                       |
 | Zero third-party dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">

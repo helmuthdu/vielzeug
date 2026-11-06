@@ -125,13 +125,13 @@ Every project needs UI primitives. Refine provides accessible web components tha
 <ore-button variant="solid" color="primary" loading>Save</ore-button>
 ```
 
-| Feature            | Refine                                       | Shoelace                                   | Material Web                               |
-| ------------------ | ------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
-| Bundle size        | <PackageInfo package="refine" type="size" /> | ~145 kB                                    | ~200 kB                                    |
-| Built with         | Ore                                       | Lit                                        | Lit                                        |
-| Runtime dependencies | Vielzeug UI primitives; Lucide only for the opt-in full-library registrar | Lit + utilities | Lit + Material foundations |
-| Accessible         | WCAG AA                                     | WCAG AA                                    | WCAG AA                                    |
-| Framework agnostic | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Feature              | Refine                                                                    | Shoelace                                     | Material Web                                 |
+| -------------------- | ------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size          | <PackageInfo package="refine" type="size" />                              | ~145 kB                                      | ~200 kB                                      |
+| Built with           | Ore                                                                       | Lit                                          | Lit                                          |
+| Runtime dependencies | Vielzeug UI primitives; Lucide only for the opt-in full-library registrar | Lit + utilities                              | Lit + Material foundations                   |
+| Accessible           | WCAG AA                                                                   | WCAG AA                                      | WCAG AA                                      |
+| Framework agnostic   | <ore-icon name="check" size="16"></ore-icon>                              | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
@@ -163,7 +163,7 @@ yarn add @vielzeug/refine
 
 ```ts
 // 1. Import global styles once
-import '@vielzeug/refine/fouc.css';   // Hide unupgraded custom elements until first paint
+import '@vielzeug/refine/fouc.css'; // Hide unupgraded custom elements until first paint
 import '@vielzeug/refine/tokens.css'; // Tokens, animations, cascade layers
 
 // 2. Register only the elements you need
@@ -218,10 +218,10 @@ For bundler-based projects that still want a CDN URL, use the ESM bundle via an 
 
 ### Package Entry Points
 
-| Import                   | Purpose                                   |
-| ------------------------ | ----------------------------------------- |
-| `@vielzeug/refine/fouc.css` | FOUC suppression for unupgraded custom elements |
-| `@vielzeug/refine/tokens.css` | Global design tokens and cascade layers |
+| Import                                  | Purpose                                                    |
+| --------------------------------------- | ---------------------------------------------------------- |
+| `@vielzeug/refine/fouc.css`             | FOUC suppression for unupgraded custom elements            |
+| `@vielzeug/refine/tokens.css`           | Global design tokens and cascade layers                    |
 | `@vielzeug/refine/styles/preflight.css` | Optional browser-default reset (includes FOUC suppression) |
 
 Component registration happens through side-effect imports such as `@vielzeug/refine/button` and `@vielzeug/refine/dialog`.

@@ -7,30 +7,30 @@ description: 'Complete API reference for @vielzeug/scout: createIndex, createRea
 
 ## API Overview
 
-| Symbol                    | Purpose                                               | Execution mode | Common gotcha                                                 |
-| ------------------------- | ----------------------------------------------------- | -------------- | ------------------------------------------------------------- |
-| `createIndex()`           | Build trigram index from an item array                | Sync           | Index is built at call time: pass all initial items          |
-| `ScoutIndex.search()`     | Query the index, returns scored + highlighted results | Sync           | Empty query returns all items with `score = 1`                |
-| `ScoutIndex.add()`        | Add one item to the index                             | Sync           | No-op if same reference already indexed                       |
-| `ScoutIndex.remove()`     | Remove one item by reference                          | Sync           | No-op for unknown references                                  |
-| `ScoutIndex.reindex()`    | Re-index a mutated item in-place; preserves order     | Sync           | Call after mutating item properties; no-op if not in index    |
-| `ScoutIndex.setItems()`   | Reconcile a refreshed corpus in one mutation          | Sync           | Uses reference identity; duplicate references collapse        |
-| `ScoutIndex.items`        | All indexed items in insertion order                  | Sync           | Returns a new array snapshot each call                        |
-| `ScoutIndex.revision`     | Monotonic counter incremented after each mutation     | Sync           | Use as a cache-busting token for external result caches       |
-| `ScoutIndex.onMutate()`   | Subscribe to changed index mutations                   | Sync           | A changed `setItems()` reconciliation emits once; no-ops emit nothing |
-| `createSearch()`          | Atomic search store backed by a `ScoutIndex`           | Sync           | Read one snapshot and dispose the store when done             |
-| `createReactiveSearch()`  | One-call index + reactive search state                | Sync           | Exposes `.index` for incremental mutations                    |
-| `findMatchRanges()`       | Compute match ranges for a text + query pair          | Sync           | Returns sorted, non-overlapping `[start, end]` ranges         |
-| `highlight()`             | Split text into highlighted/unhighlighted fragments   | Sync           | Ranges must be sorted and non-overlapping                     |
-| `highlightField()`        | Highlight a named field from a `SearchResult`         | Sync           | Shorthand for the `matches.find(…).ranges → highlight()` pattern |
-| `toSearchMatcher()`            | Adapt `ScoutIndex` to Sourcerer's local `filter` callback | Sync        | Recomputes cached query matches after index mutation          |
-| `toFilterPredicate()`     | Snapshot predicate from a one-time query              | Sync           | Re-call when query or corpus changes                          |
-| `segmentWords()`          | Split unsegmented-script text (CJK, Thai, ...) into words | Sync       | Uses native `Intl.Segmenter`: not applied inside `tokenize()` itself (see Pitfalls) |
+| Symbol                   | Purpose                                                   | Execution mode | Common gotcha                                                                       |
+| ------------------------ | --------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------- |
+| `createIndex()`          | Build trigram index from an item array                    | Sync           | Index is built at call time: pass all initial items                                 |
+| `ScoutIndex.search()`    | Query the index, returns scored + highlighted results     | Sync           | Empty query returns all items with `score = 1`                                      |
+| `ScoutIndex.add()`       | Add one item to the index                                 | Sync           | No-op if same reference already indexed                                             |
+| `ScoutIndex.remove()`    | Remove one item by reference                              | Sync           | No-op for unknown references                                                        |
+| `ScoutIndex.reindex()`   | Re-index a mutated item in-place; preserves order         | Sync           | Call after mutating item properties; no-op if not in index                          |
+| `ScoutIndex.setItems()`  | Reconcile a refreshed corpus in one mutation              | Sync           | Uses reference identity; duplicate references collapse                              |
+| `ScoutIndex.items`       | All indexed items in insertion order                      | Sync           | Returns a new array snapshot each call                                              |
+| `ScoutIndex.revision`    | Monotonic counter incremented after each mutation         | Sync           | Use as a cache-busting token for external result caches                             |
+| `ScoutIndex.onMutate()`  | Subscribe to changed index mutations                      | Sync           | A changed `setItems()` reconciliation emits once; no-ops emit nothing               |
+| `createSearch()`         | Atomic search store backed by a `ScoutIndex`              | Sync           | Read one snapshot and dispose the store when done                                   |
+| `createReactiveSearch()` | One-call index + reactive search state                    | Sync           | Exposes `.index` for incremental mutations                                          |
+| `findMatchRanges()`      | Compute match ranges for a text + query pair              | Sync           | Returns sorted, non-overlapping `[start, end]` ranges                               |
+| `highlight()`            | Split text into highlighted/unhighlighted fragments       | Sync           | Ranges must be sorted and non-overlapping                                           |
+| `highlightField()`       | Highlight a named field from a `SearchResult`             | Sync           | Shorthand for the `matches.find(…).ranges → highlight()` pattern                    |
+| `toSearchMatcher()`      | Adapt `ScoutIndex` to Sourcerer's local `filter` callback | Sync           | Recomputes cached query matches after index mutation                                |
+| `toFilterPredicate()`    | Snapshot predicate from a one-time query                  | Sync           | Re-call when query or corpus changes                                                |
+| `segmentWords()`         | Split unsegmented-script text (CJK, Thai, ...) into words | Sync           | Uses native `Intl.Segmenter`: not applied inside `tokenize()` itself (see Pitfalls) |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
+| Import            | Purpose                                                                                                                |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `@vielzeug/scout` | All exports: index/search/highlighting/adapters, `ScoutConfigError`, `ScoutDisposedError`, `ScoutError`, and all types |
 
 ---
@@ -40,18 +40,18 @@ description: 'Complete API reference for @vielzeug/scout: createIndex, createRea
 Builds a trigram inverted index from `items`. Construction is O(corpus × field_length); subsequent `search()` calls are O(candidates).
 
 ```ts
-function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): ScoutIndex<T>
+function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): ScoutIndex<T>;
 ```
 
 **Parameters**
 
-| Param | Type | Description |
-| --- | --- | --- |
-| `items` | `T[]` | Initial corpus to index. |
-| `options.fields` | `ReadonlyArray<FieldDef<T>>` | Fields to index. Required; at least one entry. |
-| `options.threshold` | `number` | Finite overlap score in `0..1` (default `0.2`). |
-| `options.limit` | `number` | Finite non-negative integer max results (default `50`). |
-| `options.minQueryLength` | `number` | Finite positive integer min chars before trigram scoring; shorter queries use O(n) containment scan (default `3`). |
+| Param                    | Type                         | Description                                                                                                        |
+| ------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `items`                  | `T[]`                        | Initial corpus to index.                                                                                           |
+| `options.fields`         | `ReadonlyArray<FieldDef<T>>` | Fields to index. Required; at least one entry.                                                                     |
+| `options.threshold`      | `number`                     | Finite overlap score in `0..1` (default `0.2`).                                                                    |
+| `options.limit`          | `number`                     | Finite non-negative integer max results (default `50`).                                                            |
+| `options.minQueryLength` | `number`                     | Finite positive integer min chars before trigram scoring; shorter queries use O(n) containment scan (default `3`). |
 
 **Example**
 
@@ -64,10 +64,7 @@ const products = [
 ];
 
 const index = createIndex(products, {
-  fields: [
-    { field: 'title', weight: 2 },
-    { field: 'sku' },
-  ],
+  fields: [{ field: 'title', weight: 2 }, { field: 'sku' }],
   threshold: 0.25,
   limit: 20,
 });
@@ -161,31 +158,31 @@ unsubscribe();
 Wraps a `ScoutIndex` in a zero-dependency external store. `getSnapshot()` returns the current query, loading flag, and results as one consistent snapshot; `subscribe()` notifies after the complete snapshot is committed.
 
 ```ts
-function createSearch<T>(index: ScoutIndex<T>, options?: CreateSearchOptions): SearchState<T>
+function createSearch<T>(index: ScoutIndex<T>, options?: CreateSearchOptions): SearchState<T>;
 ```
 
 **Parameters**
 
-| Param | Type | Description |
-| --- | --- | --- |
-| `options.debounce` | `number` | Finite non-negative integer milliseconds before query commit (default `200`). Pass `0` for immediate updates. |
-| `options.limit` | `number` | Finite non-negative integer override of index-level limit. |
-| `options.threshold` | `number` | Finite `0..1` override of index-level threshold. |
-| `options.minQueryLength` | `number` | Finite positive integer override of index-level minimum query length. |
+| Param                    | Type     | Description                                                                                                   |
+| ------------------------ | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `options.debounce`       | `number` | Finite non-negative integer milliseconds before query commit (default `200`). Pass `0` for immediate updates. |
+| `options.limit`          | `number` | Finite non-negative integer override of index-level limit.                                                    |
+| `options.threshold`      | `number` | Finite `0..1` override of index-level threshold.                                                              |
+| `options.minQueryLength` | `number` | Finite positive integer override of index-level minimum query length.                                         |
 
 **Returns `SearchState<T>`**
 
-| Member | Type | Description |
-| --- | --- | --- |
-| `getSnapshot()` | `() => SearchSnapshot<T>` | Returns the stable current snapshot. Identity changes only after a state transition. |
-| `setQuery(query)` | `(query: string) => void` | Starts or immediately commits a query according to `debounce`. |
-| `subscribe(listener, options?)` | `(listener, options?) => () => void` | Notifies after an atomic snapshot commit. Supports `{ signal }` cleanup. |
-| `tap(handler, options?)` | `(handler, options?) => () => void` | Observes typed state and disposal events. Handler errors are swallowed. |
-| `disposalSignal` | `AbortSignal` | Aborted when `dispose()` is called. Use to tie other lifecycles to this search. |
-| `disposed` | `boolean` | `true` after `dispose()` has been called. |
-| `clear()` | `() => void` | Resets query, cancels debounce, and restores empty-query results synchronously. |
-| `dispose()` | `() => void` | Releases timers and subscriptions. |
-| `[Symbol.dispose]()` | `() => void` | `using`-compatible disposal. |
+| Member                          | Type                                 | Description                                                                          |
+| ------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------ |
+| `getSnapshot()`                 | `() => SearchSnapshot<T>`            | Returns the stable current snapshot. Identity changes only after a state transition. |
+| `setQuery(query)`               | `(query: string) => void`            | Starts or immediately commits a query according to `debounce`.                       |
+| `subscribe(listener, options?)` | `(listener, options?) => () => void` | Notifies after an atomic snapshot commit. Supports `{ signal }` cleanup.             |
+| `tap(handler, options?)`        | `(handler, options?) => () => void`  | Observes typed state and disposal events. Handler errors are swallowed.              |
+| `disposalSignal`                | `AbortSignal`                        | Aborted when `dispose()` is called. Use to tie other lifecycles to this search.      |
+| `disposed`                      | `boolean`                            | `true` after `dispose()` has been called.                                            |
+| `clear()`                       | `() => void`                         | Resets query, cancels debounce, and restores empty-query results synchronously.      |
+| `dispose()`                     | `() => void`                         | Releases timers and subscriptions.                                                   |
+| `[Symbol.dispose]()`            | `() => void`                         | `using`-compatible disposal.                                                         |
 
 **Example**
 
@@ -210,27 +207,24 @@ search.setQuery('ada');
 Creates a `ScoutIndex` and a reactive `SearchState` in one call: the shorthand for `createIndex` + `createSearch`. Returns a `ReactiveSearch<T>` which extends `SearchState<T>` with a `.index` property for incremental mutations.
 
 ```ts
-function createReactiveSearch<T>(
-  items: T[],
-  options: ScoutIndexOptions<T> & { debounce?: number },
-): ReactiveSearch<T>
+function createReactiveSearch<T>(items: T[], options: ScoutIndexOptions<T> & { debounce?: number }): ReactiveSearch<T>;
 ```
 
 **Parameters**
 
-| Param | Type | Description |
-| --- | --- | --- |
-| `items` | `T[]` | Initial corpus to index. |
-| `options.fields` | `ReadonlyArray<FieldDef<T>>` | Fields to index. Required. |
-| `options.debounce` | `number` | Finite non-negative integer debounce milliseconds (default `200`). |
-| `options.threshold` | `number` | Finite overlap score in `0..1` (default `0.2`). |
-| `options.limit` | `number` | Finite non-negative integer max results (default `50`). |
-| `options.minQueryLength` | `number` | Finite positive integer min chars before trigram scoring (default `3`). |
+| Param                    | Type                         | Description                                                             |
+| ------------------------ | ---------------------------- | ----------------------------------------------------------------------- |
+| `items`                  | `T[]`                        | Initial corpus to index.                                                |
+| `options.fields`         | `ReadonlyArray<FieldDef<T>>` | Fields to index. Required.                                              |
+| `options.debounce`       | `number`                     | Finite non-negative integer debounce milliseconds (default `200`).      |
+| `options.threshold`      | `number`                     | Finite overlap score in `0..1` (default `0.2`).                         |
+| `options.limit`          | `number`                     | Finite non-negative integer max results (default `50`).                 |
+| `options.minQueryLength` | `number`                     | Finite positive integer min chars before trigram scoring (default `3`). |
 
 **Returns `ReactiveSearch<T>`**: all `SearchState<T>` members plus:
 
-| Member | Type | Description |
-| --- | --- | --- |
+| Member  | Type            | Description                                          |
+| ------- | --------------- | ---------------------------------------------------- |
 | `index` | `ScoutIndex<T>` | The underlying index for `add`, `remove`, `reindex`. |
 
 **Example**
@@ -257,7 +251,7 @@ search.dispose();
 Normalizes raw `query` with Scout's tokenizer, then computes sorted, non-overlapping literal ranges for each normalized token within `text`. Useful when you need to apply highlighting to a different string than the indexed field value (e.g. a truncated preview or a differently formatted display string).
 
 ```ts
-function findMatchRanges(text: string, query: string): [number, number][]
+function findMatchRanges(text: string, query: string): [number, number][];
 ```
 
 **Example**
@@ -281,7 +275,7 @@ Returns an empty array if either `text` or `query` is empty.
 Splits `text` into `HighlightPart[]` fragments based on `ranges` from `FieldMatch.ranges`.
 
 ```ts
-function highlight(text: string, ranges: [number, number][]): HighlightPart[]
+function highlight(text: string, ranges: [number, number][]): HighlightPart[];
 ```
 
 **Example**
@@ -302,7 +296,7 @@ Returns an empty array when `text` is empty. Returns a single unhighlighted part
 Convenience shorthand that finds the match ranges for `field` in `result.matches` and calls `highlight()` in one step. Eliminates the manual `result.matches.find(m => m.field === …).ranges` lookup.
 
 ```ts
-function highlightField<T>(result: SearchResult<T>, field: keyof T & string, text: string): HighlightPart[]
+function highlightField<T>(result: SearchResult<T>, field: keyof T & string, text: string): HighlightPart[];
 ```
 
 **Example**
@@ -315,7 +309,7 @@ const index = createIndex(users, { fields: ['name'] });
 
 for (const result of index.search('alice')) {
   const parts = highlightField(result, 'name', result.item.name);
-  console.log(parts.map((part) => part.highlighted ? `[${part.text}]` : part.text).join(''));
+  console.log(parts.map((part) => (part.highlighted ? `[${part.text}]` : part.text)).join(''));
 }
 ```
 
@@ -328,7 +322,7 @@ When the field has no match (e.g. the query matched via a different field), retu
 Returns an `(item, query) => boolean` matcher compatible with Sourcerer's local `filter` option.
 
 ```ts
-function toSearchMatcher<T>(index: ScoutIndex<T>, options?: SearchConstraints): (item: T, query: string) => boolean
+function toSearchMatcher<T>(index: ScoutIndex<T>, options?: SearchConstraints): (item: T, query: string) => boolean;
 ```
 
 One matching-item set is cached per query and index revision, so filtering does not repeat index work per item and stays current after index mutation.
@@ -351,11 +345,7 @@ source.setParams('ada');
 Returns a `(item: T) => boolean` predicate computed from a one-time query. Use with `Array.filter` or vault's `query.filter()`.
 
 ```ts
-function toFilterPredicate<T>(
-  index: ScoutIndex<T>,
-  query: string,
-  options?: SearchConstraints,
-): (item: T) => boolean
+function toFilterPredicate<T>(index: ScoutIndex<T>, query: string, options?: SearchConstraints): (item: T) => boolean;
 ```
 
 The predicate is a snapshot: re-call `toFilterPredicate` if the query or corpus changes.
@@ -377,7 +367,7 @@ const top5 = products.filter(toFilterPredicate(index, 'widget', { limit: 5 }));
 Splits `text` into whitespace-joined word segments using the runtime's native `Intl.Segmenter`: no dependency beyond the platform API. Falls back to returning `text` unchanged where `Intl.Segmenter` isn't available.
 
 ```ts
-function segmentWords(text: string): string
+function segmentWords(text: string): string;
 ```
 
 `tokenize()`'s trigram-based scoring already works on unsegmented scripts (Chinese, Japanese, Thai, ...) without this: trigrams are generated per-character, not per-word. `segmentWords()` is for `findMatchRanges()` / highlighting and the multi-word query semantics on `SearchConstraints`, which assume space-separated words. **Not applied inside `tokenize()` itself**: benchmarked at ~15x slower than the plain regex path for the common whitespace-delimited case, which would regress `createIndex()`'s construction cost for every caller, not just those indexing unsegmented scripts.
@@ -403,9 +393,9 @@ Shared search-tuning knobs used by `ScoutIndexOptions`, `CreateSearchOptions`, a
 
 ```ts
 type SearchConstraints = {
-  limit?: number;           // finite non-negative integer; default 50
-  minQueryLength?: number;  // finite positive integer; default 3
-  threshold?: number;       // finite 0..1 value; default 0.2
+  limit?: number; // finite non-negative integer; default 50
+  minQueryLength?: number; // finite positive integer; default 3
+  threshold?: number; // finite 0..1 value; default 0.2
 };
 ```
 
@@ -416,7 +406,7 @@ type FieldDef<T> =
   | (keyof T & string)
   | {
       field: keyof T & string;
-      weight?: number;      // default 1
+      weight?: number; // default 1
       stringify?: (value: unknown) => string;
     };
 ```
@@ -433,7 +423,7 @@ type ScoutIndexOptions<T> = SearchConstraints & {
 
 ```ts
 type CreateSearchOptions = SearchConstraints & {
-  debounce?: number;   // finite non-negative integer; default 200
+  debounce?: number; // finite non-negative integer; default 200
 };
 ```
 
@@ -442,8 +432,8 @@ type CreateSearchOptions = SearchConstraints & {
 ```ts
 type SearchResult<T> = {
   item: T;
-  matches: FieldMatch<keyof T & string>[];  // literal normalized-token ranges; may be empty for fuzzy-only results
-  score: number;                            // [0, 1]; 1 when query is empty
+  matches: FieldMatch<keyof T & string>[]; // literal normalized-token ranges; may be empty for fuzzy-only results
+  score: number; // [0, 1]; 1 when query is empty
 };
 ```
 
@@ -454,7 +444,7 @@ Generic over the union of field names: `match.field` is typed to the actual fiel
 ```ts
 type FieldMatch<F extends string = string> = {
   field: F;
-  ranges: [number, number][];  // literal normalized-token [start, end] ranges in original field value
+  ranges: [number, number][]; // literal normalized-token [start, end] ranges in original field value
 };
 ```
 
@@ -527,10 +517,10 @@ class ScoutError extends Error {}
 
 **Named subclasses**
 
-| Class               | Thrown when                                                            |
-| ------------------- | ---------------------------------------------------------------------- |
-| `ScoutConfigError` | An index, search, or reactive search receives invalid fields or numeric options |
-| `ScoutDisposedError` | A method is called on a disposed `SearchState` instance |
+| Class                | Thrown when                                                                     |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `ScoutConfigError`   | An index, search, or reactive search receives invalid fields or numeric options |
+| `ScoutDisposedError` | A method is called on a disposed `SearchState` instance                         |
 
 ## Entry Ranking
 

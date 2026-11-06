@@ -7,22 +7,22 @@ description: Job definitions, processor, store contracts, events, errors, and en
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `defineJobs()` | Typed job registry with validation | Sync | Throws on invalid version, missing fields, or bad retry config |
-| `createPostmaster()` | Processor with leased claims and retry | Sync | Store is borrowed, not disposed with the processor |
-| `createIndexedDbPostmasterStore()` | Durable browser store | Sync | Skips corrupt records and reports each issue through `onCorruptRecord` |
-| `createMemoryPostmasterStore()` | Deterministic in-memory store | Sync | Use for tests only |
-| `PostmasterError` | Base class for package errors | Sync | Catch a subtype when recovery is specific |
+| Symbol                             | Purpose                                | Execution mode | Common gotcha                                                          |
+| ---------------------------------- | -------------------------------------- | -------------- | ---------------------------------------------------------------------- |
+| `defineJobs()`                     | Typed job registry with validation     | Sync           | Throws on invalid version, missing fields, or bad retry config         |
+| `createPostmaster()`               | Processor with leased claims and retry | Sync           | Store is borrowed, not disposed with the processor                     |
+| `createIndexedDbPostmasterStore()` | Durable browser store                  | Sync           | Skips corrupt records and reports each issue through `onCorruptRecord` |
+| `createMemoryPostmasterStore()`    | Deterministic in-memory store          | Sync           | Use for tests only                                                     |
+| `PostmasterError`                  | Base class for package errors          | Sync           | Catch a subtype when recovery is specific                              |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/postmaster` | Job definitions, processor, events, errors |
-| `@vielzeug/postmaster/store` | Store-author interfaces (`StoredJob`, `StoreTx`, `PostmasterStore`) |
-| `@vielzeug/postmaster/indexeddb` | Durable browser store backed by Vault IndexedDB |
-| `@vielzeug/postmaster/testing` | Deterministic in-memory store and test helpers |
+| Import                           | Purpose                                                             |
+| -------------------------------- | ------------------------------------------------------------------- |
+| `@vielzeug/postmaster`           | Job definitions, processor, events, errors                          |
+| `@vielzeug/postmaster/store`     | Store-author interfaces (`StoredJob`, `StoreTx`, `PostmasterStore`) |
+| `@vielzeug/postmaster/indexeddb` | Durable browser store backed by Vault IndexedDB                     |
+| `@vielzeug/postmaster/testing`   | Deterministic in-memory store and test helpers                      |
 
 ## Factories
 
@@ -34,9 +34,9 @@ function defineJobs<const J extends JobDefinitions>(jobs: J): J;
 
 Returns the job registry after validating each definition. Rejects invalid versions, missing `execute`/`key`, retry configurations with non-positive `maxAttempts`, and migration ranges that contain gaps or do not lead into the current version.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `jobs` | `J extends JobDefinitions` | Map of job name to definition |
+| Parameter | Type                       | Description                   |
+| --------- | -------------------------- | ----------------------------- |
+| `jobs`    | `J extends JobDefinitions` | Map of job name to definition |
 
 **Returns:** `J`: the same registry, typed for payload inference.
 
@@ -72,13 +72,13 @@ function createPostmaster<J extends JobDefinitions>(options: CreatePostmasterOpt
 
 Returns a Postmaster processor that claims, executes, retries, and dead-letters jobs from the borrowed store.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `options.jobs` | `J` | Job registry from `defineJobs()` |
-| `options.store` | `PostmasterStore` | Borrowed store; not disposed with the processor |
-| `options.leaseDuration` | `number` | Lease duration in ms (default 30000, minimum 1000) |
-| `options.clock` | `() => number` | Deterministic clock for tests (default `Date.now`) |
-| `options.signal` | `AbortSignal` | External signal that disposes the processor |
+| Parameter               | Type              | Description                                        |
+| ----------------------- | ----------------- | -------------------------------------------------- |
+| `options.jobs`          | `J`               | Job registry from `defineJobs()`                   |
+| `options.store`         | `PostmasterStore` | Borrowed store; not disposed with the processor    |
+| `options.leaseDuration` | `number`          | Lease duration in ms (default 30000, minimum 1000) |
+| `options.clock`         | `() => number`    | Deterministic clock for tests (default `Date.now`) |
+| `options.signal`        | `AbortSignal`     | External signal that disposes the processor        |
 
 **Returns:** `Postmaster<J>`.
 
@@ -106,9 +106,9 @@ function createIndexedDbPostmasterStore(options: IndexedDbPostmasterStoreOptions
 
 Returns a durable Postmaster store backed by Vault IndexedDB. Uses one internal table indexed by `status`, `availableAt`, and `leaseExpiresAt`. All operations run inside Vault transactions. Persisted records are validated before use; invalid records are skipped so they cannot block valid work.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `options.name` | `string` | IndexedDB database name |
+| Parameter                 | Type                                 | Description                                                                                        |
+| ------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `options.name`            | `string`                             | IndexedDB database name                                                                            |
 | `options.onCorruptRecord` | `(record: CorruptStoredJob) => void` | Optional diagnostic called once for each distinct invalid-record issue; handler errors are ignored |
 
 **Returns:** `PostmasterStore`.
@@ -135,8 +135,8 @@ function createMemoryPostmasterStore(entries?: readonly StoredJob[]): Postmaster
 
 Returns a deterministic in-memory store for tests. Serializes all operations through a promise chain.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
+| Parameter | Type                   | Description                     |
+| --------- | ---------------------- | ------------------------------- |
 | `entries` | `readonly StoredJob[]` | Initial records (default empty) |
 
 **Returns:** `PostmasterStore`.
@@ -164,11 +164,11 @@ enqueue<K extends keyof J & string>(
 
 Validates the payload (if `validate` is defined), derives the key, persists the job, and wakes the processor. Throws `PostmasterError` for an empty key, non-JSON-serializable payload, or invalid `availableAt`.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `name` | `K` | Registered job name |
-| `payload` | `InferJobPayload<J[K]>` | Job payload (validated if `validate` is defined) |
-| `options.availableAt` | `number` | Earliest epoch timestamp (ms) the job may be claimed. Defaults to the Postmaster clock. Must be a finite non-negative safe integer. |
+| Parameter             | Type                    | Description                                                                                                                         |
+| --------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                | `K`                     | Registered job name                                                                                                                 |
+| `payload`             | `InferJobPayload<J[K]>` | Job payload (validated if `validate` is defined)                                                                                    |
+| `options.availableAt` | `number`                | Earliest epoch timestamp (ms) the job may be claimed. Defaults to the Postmaster clock. Must be a finite non-negative safe integer. |
 
 **Delayed eligibility.** The job persists immediately but cannot be claimed before `availableAt`. Postmaster does not guarantee execution at that time: only that the job will not be claimed earlier. A live processor (`start()` or `flush()`) is required for execution. Past timestamps remain immediately eligible.
 
@@ -408,9 +408,9 @@ Only a bounded error name/message/timestamp is persisted. Never persist arbitrar
 ### `PostmasterEntry`
 
 ```ts
-type PostmasterEntry = Pick<StoredJob,
-  'attempts' | 'availableAt' | 'createdAt' | 'failure' | 'id' |
-  'key' | 'name' | 'status' | 'updatedAt' | 'version'
+type PostmasterEntry = Pick<
+  StoredJob,
+  'attempts' | 'availableAt' | 'createdAt' | 'failure' | 'id' | 'key' | 'name' | 'status' | 'updatedAt' | 'version'
 >;
 ```
 
@@ -451,7 +451,10 @@ The store exposes transactional primitives. The processor owns all ownership and
 
 ```ts
 type PostmasterEvent =
-  | { readonly type: 'enqueued' | 'started' | 'completed' | 'retry-scheduled' | 'dead-lettered'; readonly entry: PostmasterEntry }
+  | {
+      readonly type: 'enqueued' | 'started' | 'completed' | 'retry-scheduled' | 'dead-lettered';
+      readonly entry: PostmasterEntry;
+    }
   | { readonly type: 'removed' | 'lease-lost'; readonly id: string }
   | { readonly type: 'processor-error'; readonly error: Error }
   | { readonly type: 'dispose' };
@@ -479,9 +482,7 @@ type RequeueResult =
   | { readonly status: 'not-found' | 'not-dead-letter' | 'running' }
   | { readonly status: 'requeued'; readonly entry: PostmasterEntry };
 
-type RemoveResult =
-  | { readonly status: 'not-found' | 'running' }
-  | { readonly status: 'removed'; readonly id: string };
+type RemoveResult = { readonly status: 'not-found' | 'running' } | { readonly status: 'removed'; readonly id: string };
 ```
 
 ## Errors

@@ -15,10 +15,13 @@ yarn add @vielzeug/lingua
 ```ts
 import { createTranslator } from '@vielzeug/lingua';
 
-const translator = createTranslator({
-  greeting: 'Hello, {name}!',
-  inbox: { plural: { one: 'One message', other: '{count} messages' } },
-}, { locale: 'en' });
+const translator = createTranslator(
+  {
+    greeting: 'Hello, {name}!',
+    inbox: { plural: { one: 'One message', other: '{count} messages' } },
+  },
+  { locale: 'en' },
+);
 
 translator.translate('greeting', { values: { name: 'Ada' } });
 translator.translate('inbox', { count: 3 });

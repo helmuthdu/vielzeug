@@ -877,20 +877,20 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
-    "@biomejs/biome": "^2.5.15",
+    "@biomejs/biome": "^2.6.5",
     "@custom-elements-manifest/analyzer": "^0.11.0",
-    "@playwright/test": "^1.64.1",
+    "@playwright/test": "^1.65.0",
     "@types/culori": "^4.0.1",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "@vielzeug/assay": "workspace:*",
     "axe-core": "^4.14.0",
-    "browserslist": "^4.29.4",
+    "browserslist": "^4.29.5",
     "culori": "^4.0.2",
     "lightningcss": "^1.33.0",
-    "lucide": "^1.59.0",
+    "lucide": "^1.69.0",
     "typescript": "^6.0.3",
-    "vite": "^8.3.4",
-    "vitest": "^5.0.5"
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
   },
   "customElements": "dist/custom-elements.json"
 }

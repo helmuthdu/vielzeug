@@ -128,48 +128,48 @@ Pass `helper` for a hint below the swatches, or `error` to mark the field invali
 
 ### Attributes
 
-| Attribute  | Type                   | Default | Description                                        |
-| ---------- | ---------------------- | ------- | -------------------------------------------------- |
-| `options`  | `OreColorPickerOption[]` | N/A | Selectable colors (JSON)                           |
-| `value`    | `string`               | N/A | Value of the selected option                       |
-| `label`    | `string`               | N/A | Group label, shown as the fieldset legend and used as the accessible name |
-| `name`     | `string`               | N/A | Form field name                                    |
-| `disabled` | `boolean`              | `false` | Disables every swatch                              |
-| `size`     | `'sm' \| 'md' \| 'lg'` | `'md'`  | Swatch diameter                                    |
-| `helper`   | `string`               | N/A | Helper text shown below the swatches               |
-| `error`    | `string`               | N/A | Error message below the swatches (takes precedence over `helper`) |
+| Attribute  | Type                     | Default | Description                                                               |
+| ---------- | ------------------------ | ------- | ------------------------------------------------------------------------- |
+| `options`  | `OreColorPickerOption[]` | N/A     | Selectable colors (JSON)                                                  |
+| `value`    | `string`                 | N/A     | Value of the selected option                                              |
+| `label`    | `string`                 | N/A     | Group label, shown as the fieldset legend and used as the accessible name |
+| `name`     | `string`                 | N/A     | Form field name                                                           |
+| `disabled` | `boolean`                | `false` | Disables every swatch                                                     |
+| `size`     | `'sm' \| 'md' \| 'lg'`   | `'md'`  | Swatch diameter                                                           |
+| `helper`   | `string`                 | N/A     | Helper text shown below the swatches                                      |
+| `error`    | `string`                 | N/A     | Error message below the swatches (takes precedence over `helper`)         |
 
 ### Option shape
 
-| Field      | Type      | Description                                                    |
-| ---------- | --------- | -------------------------------------------------------------- |
-| `color`    | `string`  | CSS color painted as the swatch (required)                     |
-| `value`    | `string`  | Value reported on selection; defaults to `color`               |
-| `label`    | `string`  | Accessible name; defaults to `value`, then `color`             |
-| `disabled` | `boolean` | Render the swatch but block selection                          |
+| Field      | Type      | Description                                        |
+| ---------- | --------- | -------------------------------------------------- |
+| `color`    | `string`  | CSS color painted as the swatch (required)         |
+| `value`    | `string`  | Value reported on selection; defaults to `color`   |
+| `label`    | `string`  | Accessible name; defaults to `value`, then `color` |
+| `disabled` | `boolean` | Render the swatch but block selection              |
 
 ### Events
 
-| Event    | Detail                                                        | Description                        |
-| -------- | ------------------------------------------------------------- | ---------------------------------- |
-| `change` | `{ values: string[]; labels: string[]; originalEvent?: Event }` | Fired when a color is selected     |
+| Event    | Detail                                                          | Description                    |
+| -------- | --------------------------------------------------------------- | ------------------------------ |
+| `change` | `{ values: string[]; labels: string[]; originalEvent?: Event }` | Fired when a color is selected |
 
 ### Parts
 
-| Part          | Description                    |
-| ------------- | ------------------------------ |
-| `swatches`    | Swatch container               |
-| `swatch`      | A swatch button                |
-| `legend`      | Group label                    |
-| `helper-text` | The helper/error text element  |
+| Part          | Description                   |
+| ------------- | ----------------------------- |
+| `swatches`    | Swatch container              |
+| `swatch`      | A swatch button               |
+| `legend`      | Group label                   |
+| `helper-text` | The helper/error text element |
 
 ### CSS Custom Properties
 
-| Property                     | Default                 | Description                          |
-| ---------------------------- | ----------------------- | ------------------------------------ |
-| `--color-picker-swatch-size` | size preset             | Swatch diameter                      |
-| `--color-picker-swatch-radius` | a circle              | Swatch corner radius                 |
-| `--color-picker-gap`         | `var(--size-2)`         | Gap between swatches                 |
+| Property                       | Default         | Description          |
+| ------------------------------ | --------------- | -------------------- |
+| `--color-picker-swatch-size`   | size preset     | Swatch diameter      |
+| `--color-picker-swatch-radius` | a circle        | Swatch corner radius |
+| `--color-picker-gap`           | `var(--size-2)` | Gap between swatches |
 
 ## Accessibility
 

@@ -7,28 +7,28 @@ description: createIllusion, all category functions, seed utilities, types, and 
 
 ## API Overview
 
-| Symbol | Purpose | Execution | Common gotcha |
-| --- | --- | --- | --- |
-| `createIllusion` | Create a bound, seeded instance | Sync | Locale is fixed for the instance lifetime |
-| `person.*` | Names, gender, job titles | Sync | Locale-specific datasets (`en`, `de`) |
-| `internet.*` | Emails, URLs, IPs, HTTP metadata | Sync | `ip()` defaults to IPv4 |
-| `commerce.*` | Product names, prices | Sync | `price()` returns coins `Money` |
-| `date.*` | Past, future, recent, birthday | Sync | Returns tempo `Temporal` objects |
-| `finance.*` | IBANs, cards, crypto addresses | Sync | IBANs pass mod-97; cards pass Luhn |
-| `location.*` | Cities, streets, GPS | Sync | Locale-specific datasets |
-| `lorem.*` | Words, sentences, paragraphs | Sync | Word pool is fixed |
-| `system.*` | Files, semver, UUIDs, ports | Sync | `port()` avoids well-known ports by default |
-| `createSeed` | Build a `RandomSource` from a seed | Sync | Non-finite numeric seeds throw |
-| `mulberry32` | Low-level 32-bit PRNG | Sync | Not cryptographically secure |
+| Symbol           | Purpose                            | Execution | Common gotcha                               |
+| ---------------- | ---------------------------------- | --------- | ------------------------------------------- |
+| `createIllusion` | Create a bound, seeded instance    | Sync      | Locale is fixed for the instance lifetime   |
+| `person.*`       | Names, gender, job titles          | Sync      | Locale-specific datasets (`en`, `de`)       |
+| `internet.*`     | Emails, URLs, IPs, HTTP metadata   | Sync      | `ip()` defaults to IPv4                     |
+| `commerce.*`     | Product names, prices              | Sync      | `price()` returns coins `Money`             |
+| `date.*`         | Past, future, recent, birthday     | Sync      | Returns tempo `Temporal` objects            |
+| `finance.*`      | IBANs, cards, crypto addresses     | Sync      | IBANs pass mod-97; cards pass Luhn          |
+| `location.*`     | Cities, streets, GPS               | Sync      | Locale-specific datasets                    |
+| `lorem.*`        | Words, sentences, paragraphs       | Sync      | Word pool is fixed                          |
+| `system.*`       | Files, semver, UUIDs, ports        | Sync      | `port()` avoids well-known ports by default |
+| `createSeed`     | Build a `RandomSource` from a seed | Sync      | Non-finite numeric seeds throw              |
+| `mulberry32`     | Low-level 32-bit PRNG              | Sync      | Not cryptographically secure                |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/illusionist` | `createIllusion`, `createSeed`, `mulberry32`, `Illusionist`, `IllusionistOptions`, `IllusionistLocale`, error classes |
-| `@vielzeug/illusionist/locales` | Tree-shakeable barrel: `en`, `de` locale objects |
-| `@vielzeug/illusionist/locales/en` | English locale object only |
-| `@vielzeug/illusionist/locales/de` | German locale object only |
+| Import                             | Purpose                                                                                                               |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `@vielzeug/illusionist`            | `createIllusion`, `createSeed`, `mulberry32`, `Illusionist`, `IllusionistOptions`, `IllusionistLocale`, error classes |
+| `@vielzeug/illusionist/locales`    | Tree-shakeable barrel: `en`, `de` locale objects                                                                      |
+| `@vielzeug/illusionist/locales/en` | English locale object only                                                                                            |
+| `@vielzeug/illusionist/locales/de` | German locale object only                                                                                             |
 
 ## createIllusion
 
@@ -38,10 +38,10 @@ function createIllusion(options: IllusionistOptions): Illusionist;
 
 Creates a bound instance. All categories share one seeded random source and one locale. Locale data is included only when its dedicated subpath is imported; the root entry does not statically import a default locale. For dynamic switching, use `await import('@vielzeug/illusionist/locales')` before calling this synchronous factory.
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `seed` | `number \| string` | `undefined` | Seed for deterministic output. Omit for cryptographic randomness. |
-| `locale` | `IllusionistLocale` | Required | Explicit locale object for locale-aware categories. |
+| Option   | Type                | Default     | Description                                                       |
+| -------- | ------------------- | ----------- | ----------------------------------------------------------------- |
+| `seed`   | `number \| string`  | `undefined` | Seed for deterministic output. Omit for cryptographic randomness. |
+| `locale` | `IllusionistLocale` | Required    | Explicit locale object for locale-aware categories.               |
 
 **Returns:** `Illusionist`: an object with `person`, `internet`, `commerce`, `date`, `finance`, `location`, `lorem`, and `system` categories, plus readonly `seed` and `locale` values. It owns no external resources and requires no cleanup.
 
@@ -139,9 +139,9 @@ Returns either a random alphanumeric string or a `firstname.lastname` pattern.
 function password(options?: PasswordOptions): string;
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `length` | `number` | `12` | Password length. |
+| Option      | Type      | Default | Description                           |
+| ----------- | --------- | ------- | ------------------------------------- |
+| `length`    | `number`  | `12`    | Password length.                      |
 | `memorable` | `boolean` | `false` | Build from name fragments and digits. |
 
 Returns a password mixing upper/lowercase letters, digits, and special characters.
@@ -260,10 +260,10 @@ Returns a random department name.
 function price(options?: PriceOptions): Money;
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `min` | `number` | `0.01` | Minimum price. |
-| `max` | `number` | `1000` | Maximum price. |
+| Option     | Type                      | Default | Description    |
+| ---------- | ------------------------- | ------- | -------------- |
+| `min`      | `number`                  | `0.01`  | Minimum price. |
+| `max`      | `number`                  | `1000`  | Maximum price. |
 | `currency` | `'USD' \| 'EUR' \| 'GBP'` | `'USD'` | Currency code. |
 
 Returns a coins `Money` value with two decimal places.
@@ -348,11 +348,11 @@ Returns a random month name. Uses the instance locale unless overridden.
 function amount(options?: AmountOptions): Money;
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `min` | `number` | `100` | Minimum amount. |
-| `max` | `number` | `10000` | Maximum amount. |
-| `currency` | `'USD' \| 'EUR' \| 'GBP'` | `'USD'` | Currency code. |
+| Option     | Type                      | Default | Description     |
+| ---------- | ------------------------- | ------- | --------------- |
+| `min`      | `number`                  | `100`   | Minimum amount. |
+| `max`      | `number`                  | `10000` | Maximum amount. |
+| `currency` | `'USD' \| 'EUR' \| 'GBP'` | `'USD'` | Currency code.  |
 
 Returns a coins `Money` value with two decimal places.
 
@@ -606,9 +606,9 @@ Returns a random MIME type.
 function semver(options?: { maxMajor?: number; includePrerelease?: boolean }): string;
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `maxMajor` | `number` | `20` | Maximum major version. |
+| Option              | Type      | Default | Description                             |
+| ------------------- | --------- | ------- | --------------------------------------- |
+| `maxMajor`          | `number`  | `20`    | Maximum major version.                  |
 | `includePrerelease` | `boolean` | `false` | Occasionally append a prerelease label. |
 
 Returns a semver string.
@@ -627,10 +627,10 @@ Returns a random UUID via `crypto.randomUUID()`. **Not deterministic**: ignores 
 function port(options?: { min?: number; max?: number }): number;
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `min` | `number` | `1024` | Minimum port. |
-| `max` | `number` | `65535` | Maximum port. |
+| Option | Type     | Default | Description   |
+| ------ | -------- | ------- | ------------- |
+| `min`  | `number` | `1024`  | Minimum port. |
+| `max`  | `number` | `65535` | Maximum port. |
 
 Returns a random port number.
 
@@ -667,9 +667,9 @@ function createSeed(seed?: number | string): RandomSource;
 Creates a `RandomSource` from a seed. Number seeds are used directly as mulberry32 state. String seeds are hashed to a 32-bit integer. Omit the seed for cryptographic randomness via `crypto.getRandomValues`. Throws `IllusionistSeedError` for non-finite numeric seeds.
 
 ```ts
-const a = createSeed(12345);    // deterministic
-const b = createSeed('hello');  // deterministic (hashed)
-const c = createSeed();         // cryptographic
+const a = createSeed(12345); // deterministic
+const b = createSeed('hello'); // deterministic (hashed)
+const c = createSeed(); // cryptographic
 ```
 
 ### `mulberry32(seed)`
@@ -762,10 +762,10 @@ Category helpers throw `RangeError` when a custom source returns a non-finite va
 
 All errors extend `IllusionistError`, which extends `Error`. Use `instanceof IllusionistError` to catch any illusionist-originated error.
 
-| Error | Trigger | Notable properties |
-| --- | --- | --- |
-| `IllusionistError` | Base class for all illusionist errors | `name`, `message` |
-| `IllusionistSeedError` | Non-finite numeric seed passed to `createSeed` (`NaN`, `Infinity`, `-Infinity`) | `name`, `message` |
+| Error                  | Trigger                                                                         | Notable properties |
+| ---------------------- | ------------------------------------------------------------------------------- | ------------------ |
+| `IllusionistError`     | Base class for all illusionist errors                                           | `name`, `message`  |
+| `IllusionistSeedError` | Non-finite numeric seed passed to `createSeed` (`NaN`, `Infinity`, `-Infinity`) | `name`, `message`  |
 
 ```ts
 import { IllusionistError, IllusionistSeedError, createSeed } from '@vielzeug/illusionist';

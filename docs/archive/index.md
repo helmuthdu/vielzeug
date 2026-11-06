@@ -1,11 +1,12 @@
 ---
 title: Archive
-description: "Community content publishing for Cloudflare Workers + D1: a hardened Worker core over per-collection payload schemas"
+description: 'Community content publishing for Cloudflare Workers + D1: a hardened Worker core over per-collection payload schemas'
 package: archive
 category: utilities
 keywords: [cloudflare, worker, d1, community, publishing, content, catalog, gdpr]
 related: [spell, courier, rune]
-exports: [defineArchiveCollection, createArchiveWorker, createAuthWorker, archiveAuthHealthSchema, ArchiveDerivationError]
+exports:
+  [defineArchiveCollection, createArchiveWorker, createAuthWorker, archiveAuthHealthSchema, ArchiveDerivationError]
 environments: [browser, node]
 ---
 
@@ -29,22 +30,23 @@ import { createArchiveWorker } from '@vielzeug/archive/worker';
 import { s } from '@vielzeug/spell';
 
 const notes = defineArchiveCollection({
-  name: 'notes', contentVersion: 1,
+  name: 'notes',
+  contentVersion: 1,
   payloadSchema: s.object({ title: s.string().min(1).max(128) }),
   index: ({ title }) => ({ title, filter: null, tags: [] }),
 });
 export default createArchiveWorker([notes]);
 ```
 
-| Feature                              | Archive                                                  | Hand-rolled Worker                  | BaaS (Firebase/Supabase)              |
-| ------------------------------------ | -------------------------------------------------------- | ------------------------------------ | ------------------------------------- |
-| Bundle size (core)                   | <PackageInfo package="archive" type="size" />        | Depends on deployment code | Depends on selected SDK |
-| Zero dependencies | No — Spell and jose | Depends on implementation | No — client SDK |
-| Content knowledge in the core        | <ore-icon name="check" size="16"></ore-icon> none — one collection seam | <ore-icon name="x" size="16"></ore-icon> baked in | <ore-icon name="x" size="16"></ore-icon> rules everywhere |
-| Canonical fresh-database D1 schema   | <ore-icon name="check" size="16"></ore-icon> in the package      | Deployment-owned | Not a D1 backend |
-| Idempotent publish w/ tombstones     | <ore-icon name="check" size="16"></ore-icon> built-in      | <ore-icon name="x" size="16"></ore-icon> rebuild it | <ore-icon name="x" size="16"></ore-icon> rebuild it |
-| GDPR erasure / export endpoints      | <ore-icon name="check" size="16"></ore-icon> built-in      | <ore-icon name="x" size="16"></ore-icon> rebuild it | <ore-icon name="triangle-alert" size="16"></ore-icon> partial |
-| Strict DTO re-validation on read     | <ore-icon name="check" size="16"></ore-icon> every entry   | <ore-icon name="x" size="16"></ore-icon> optional | <ore-icon name="x" size="16"></ore-icon> optional |
+| Feature                            | Archive                                                                 | Hand-rolled Worker                                  | BaaS (Firebase/Supabase)                                      |
+| ---------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------- |
+| Bundle size (core)                 | <PackageInfo package="archive" type="size" />                           | Depends on deployment code                          | Depends on selected SDK                                       |
+| Zero dependencies                  | No — Spell and jose                                                     | Depends on implementation                           | No — client SDK                                               |
+| Content knowledge in the core      | <ore-icon name="check" size="16"></ore-icon> none — one collection seam | <ore-icon name="x" size="16"></ore-icon> baked in   | <ore-icon name="x" size="16"></ore-icon> rules everywhere     |
+| Canonical fresh-database D1 schema | <ore-icon name="check" size="16"></ore-icon> in the package             | Deployment-owned                                    | Not a D1 backend                                              |
+| Idempotent publish w/ tombstones   | <ore-icon name="check" size="16"></ore-icon> built-in                   | <ore-icon name="x" size="16"></ore-icon> rebuild it | <ore-icon name="x" size="16"></ore-icon> rebuild it           |
+| GDPR erasure / export endpoints    | <ore-icon name="check" size="16"></ore-icon> built-in                   | <ore-icon name="x" size="16"></ore-icon> rebuild it | <ore-icon name="triangle-alert" size="16"></ore-icon> partial |
+| Strict DTO re-validation on read   | <ore-icon name="check" size="16"></ore-icon> every entry                | <ore-icon name="x" size="16"></ore-icon> optional   | <ore-icon name="x" size="16"></ore-icon> optional             |
 
 <div class="decision-callout">
 
@@ -119,7 +121,8 @@ import { defineArchiveCollection } from '@vielzeug/archive';
 import { s } from '@vielzeug/spell';
 
 const notes = defineArchiveCollection({
-  name: 'notes', contentVersion: 1,
+  name: 'notes',
+  contentVersion: 1,
   payloadSchema: s.object({ title: s.string().min(1).max(128) }),
   index: ({ title }) => ({ title, filter: null, tags: [] }),
 });

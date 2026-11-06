@@ -10,7 +10,7 @@ Accessible, themeable web components built on `ore`. Largest package; one custom
 - **Per-component sub-path exports are generated, not hand-edited.** The `exports` map in `package.json` is driven by `packages/refine/scripts/refine-manifest.mjs`:
   - `pnpm --filter @vielzeug/refine run sync:exports` regenerates the export map after adding/renaming/moving a component.
   - `check:manifest` runs in `build` and fails if exports are out of sync: run `sync:exports` to fix.
-- **A component that renders another component must TAG re-export it, never bare-import it.** The per-entry library build (Rolldown, `preserveModules`, 72+ entries) silently drops side-effect-only imports *between entry modules*, so `import '../icon/icon';` ships a sub-path that never registers its child. Write `export { ICON_TAG } from '../icon/icon';` instead: bindings survive cross-entry chunking, so importing the parent registers the child. Same-directory absorbed modules (`carousel-slide`, `datagrid-column`) are *not* entries and bare-import fine. `check:cross-entry` runs in `build` and fails on both regressions: a bare entry import in `src/`, or a re-export whose link did not survive into `dist/`.
+- **A component that renders another component must TAG re-export it, never bare-import it.** The per-entry library build (Rolldown, `preserveModules`, 72+ entries) silently drops side-effect-only imports _between entry modules_, so `import '../icon/icon';` ships a sub-path that never registers its child. Write `export { ICON_TAG } from '../icon/icon';` instead: bindings survive cross-entry chunking, so importing the parent registers the child. Same-directory absorbed modules (`carousel-slide`, `datagrid-column`) are _not_ entries and bare-import fine. `check:cross-entry` runs in `build` and fails on both regressions: a bare entry import in `src/`, or a re-export whose link did not survive into `dist/`.
 - Build also emits a Custom Elements Manifest (`dist/custom-elements.json`) via `analyze`, and copies `src/styles/*.css` to `dist/styles`. CSS ships through the `./styles*` exports.
 - `sideEffects` covers `dist/*.js`, `dist/*.cjs`, `dist/core/*`, `dist/icons/**`, `dist/styles/**`, `src/content/icon/icon.ts`, `src/icons/defaults.ts`, and `src/icons/lucide/all.ts`: keep new side-effectful entry points covered. Both icon registrars and the icon component must survive production tree-shaking, including source-aliased consumers such as VitePress. Defaults never overwrite app registrations, in either import order.
 - `src/_dev.ts` is private: never re-export.
@@ -91,22 +91,22 @@ Follow these when authoring or reviewing component styles and behaviour:
 
 Named improvement lenses to guide AI-driven design work on components. Each lists its recommended combinations and what refine already covers.
 
-| Mode | Intent | Recommended with | Refine coverage |
-|------|--------|-----------------|----------------|
-| **harden** | Error handling, text overflow, edge-case resilience | `normalize`, `clarify`, `adapt` | N/A |
-| **normalize** | Match design system; ensure consistency | `extract`, `polish`, `harden` | Shared tokenized spacing/radius/typography/color mixins; consistent `focus-visible` outlines |
-| **optimize** | Loading speed, rendering, animations, bundle size | `distill`, `adapt`, `animate` | Reduced-motion fallbacks; variant styling via reusable mixins |
-| **polish** | Alignment, spacing, consistency: good → great | `normalize`, `clarify`, `quieter` | Refined helper/counter/label text; consistent focus ring and hover affordances |
-| **bolder** | Amplify safe designs; more visual impact | `colorize`, `animate`, `delight` | Variant spectrum (solid/flat/bordered/outline/ghost/frost); optional rainbow/frost effects |
-| **quieter** | Tone down visually aggressive designs | `distill`, `normalize`, `polish` | Text/ghost variants and tokenized contrast levels |
-| **adapt** | Cross-device, cross-context consistency | `harden`, `optimize`, `onboard` | Small-screen dialog/drawer constraints; coarse-pointer touch targets; `dvh`-based overlay sizing |
-| **clarify** | UX copy, error messages, labels, microcopy | `harden`, `polish`, `onboard` | Input helper/error separation + ARIA wiring; accessible labels for close/clear/loading/password actions |
-| **distill** | Strip unnecessary complexity | `normalize`, `optimize`, `quieter` | Shared mixin architecture for size/rounded/color/state; no one-off per-component overrides |
-| **animate** | Purposeful animations and micro-interactions | `delight`, `optimize`, `bolder` | Transition and keyframe usage on key interactions with reduced-motion fallback |
-| **colorize** | Add strategic color to monochromatic UI | `bolder`, `normalize`, `polish` | Semantic theme colors via `colorThemeMixin`; variant styles use semantic theme roles |
-| **delight** | Joy, personality, memorable moments | `animate`, `bolder`, `onboard` | Optional rainbow effect and frost variant |
-| **onboard** | Onboarding flows, empty states, first-use UX | `clarify`, `adapt`, `distill` | Component-level labels, helper text, and error text patterns |
-| **extract** | Consolidate reusable tokens and patterns | `normalize`, `distill`, `optimize` | Shared token and mixin layer is the default implementation path for new components |
+| Mode          | Intent                                              | Recommended with                   | Refine coverage                                                                                         |
+| ------------- | --------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **harden**    | Error handling, text overflow, edge-case resilience | `normalize`, `clarify`, `adapt`    | N/A                                                                                                     |
+| **normalize** | Match design system; ensure consistency             | `extract`, `polish`, `harden`      | Shared tokenized spacing/radius/typography/color mixins; consistent `focus-visible` outlines            |
+| **optimize**  | Loading speed, rendering, animations, bundle size   | `distill`, `adapt`, `animate`      | Reduced-motion fallbacks; variant styling via reusable mixins                                           |
+| **polish**    | Alignment, spacing, consistency: good → great       | `normalize`, `clarify`, `quieter`  | Refined helper/counter/label text; consistent focus ring and hover affordances                          |
+| **bolder**    | Amplify safe designs; more visual impact            | `colorize`, `animate`, `delight`   | Variant spectrum (solid/flat/bordered/outline/ghost/frost); optional rainbow/frost effects              |
+| **quieter**   | Tone down visually aggressive designs               | `distill`, `normalize`, `polish`   | Text/ghost variants and tokenized contrast levels                                                       |
+| **adapt**     | Cross-device, cross-context consistency             | `harden`, `optimize`, `onboard`    | Small-screen dialog/drawer constraints; coarse-pointer touch targets; `dvh`-based overlay sizing        |
+| **clarify**   | UX copy, error messages, labels, microcopy          | `harden`, `polish`, `onboard`      | Input helper/error separation + ARIA wiring; accessible labels for close/clear/loading/password actions |
+| **distill**   | Strip unnecessary complexity                        | `normalize`, `optimize`, `quieter` | Shared mixin architecture for size/rounded/color/state; no one-off per-component overrides              |
+| **animate**   | Purposeful animations and micro-interactions        | `delight`, `optimize`, `bolder`    | Transition and keyframe usage on key interactions with reduced-motion fallback                          |
+| **colorize**  | Add strategic color to monochromatic UI             | `bolder`, `normalize`, `polish`    | Semantic theme colors via `colorThemeMixin`; variant styles use semantic theme roles                    |
+| **delight**   | Joy, personality, memorable moments                 | `animate`, `bolder`, `onboard`     | Optional rainbow effect and frost variant                                                               |
+| **onboard**   | Onboarding flows, empty states, first-use UX        | `clarify`, `adapt`, `distill`      | Component-level labels, helper text, and error text patterns                                            |
+| **extract**   | Consolidate reusable tokens and patterns            | `normalize`, `distill`, `optimize` | Shared token and mixin layer is the default implementation path for new components                      |
 
 ## Adding a component
 

@@ -132,7 +132,8 @@ describe('sortable scope touch input', () => {
     expect(preview).not.toBe(items[0]);
     expect(preview?.textContent).toBe('');
     expect(preview?.style.borderWidth).toBe('2px');
-    expect(preview?.style.transform).toBe('translate3d(10px, 5px, 0)');
+    // The unitless z (`0`) serializes to `0px` in jsdom and real browsers alike.
+    expect(preview?.style.transform).toBe('translate3d(10px, 5px, 0px)');
   });
 
   it('allows callers to opt out of the preview', () => {

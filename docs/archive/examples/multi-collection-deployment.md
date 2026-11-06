@@ -1,6 +1,6 @@
 ---
 title: 'Archive Examples: Multi-Collection Deployment'
-description: "Register independent JSON collections with shared publishers and isolated content contracts."
+description: 'Register independent JSON collections with shared publishers and isolated content contracts.'
 ---
 
 ## Multi-Collection Deployment
@@ -21,12 +21,14 @@ import { createArchiveWorker } from '@vielzeug/archive/worker';
 import { s } from '@vielzeug/spell';
 
 const notes = defineArchiveCollection({
-  name: 'notes', contentVersion: 1,
+  name: 'notes',
+  contentVersion: 1,
   payloadSchema: s.object({ title: s.string().min(1).max(128) }),
   index: ({ title }) => ({ title, filter: null, tags: [] }),
 });
 const recipes = defineArchiveCollection({
-  name: 'recipes', contentVersion: 1,
+  name: 'recipes',
+  contentVersion: 1,
   payloadSchema: s.object({
     name: s.string().min(1).max(32),
     cuisine: s.enum(['italian', 'japanese']),

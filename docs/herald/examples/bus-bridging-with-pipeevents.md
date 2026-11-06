@@ -29,11 +29,9 @@ const auditBus = createBus<AuditEvents>();
 const controller = new AbortController();
 
 const bridgeSignal = AbortSignal.any([auditBus.disposalSignal, controller.signal]);
-const stopBridge = appBus.on(
-  'user:login',
-  ({ userId }) => auditBus.emit('audit:login', { subject: userId }),
-  { signal: bridgeSignal },
-);
+const stopBridge = appBus.on('user:login', ({ userId }) => auditBus.emit('audit:login', { subject: userId }), {
+  signal: bridgeSignal,
+});
 
 appBus.emit('user:login', { userId: '42' });
 stopBridge();

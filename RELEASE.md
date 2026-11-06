@@ -1,6 +1,6 @@
 # Releases: CalVer lockstep trains
 
-Every `@vielzeug/*` package carries the same version: the release train it last shipped on. The number answers *when*, never *how big*: change size lives in the changelog sections and each package's `docs/<name>/migration.md`, not the version.
+Every `@vielzeug/*` package carries the same version: the release train it last shipped on. The number answers _when_, never _how big_: change size lives in the changelog sections and each package's `docs/<name>/migration.md`, not the version.
 
 ## The version grammar
 
@@ -25,7 +25,7 @@ The cost is honest and mechanical: most publishes in a train carry no code chang
 
 Dispatching `publish.yml` is the only release path. There is no per-package mode: "only one package changed this train" is already what a train does (that package gets a real changelog entry, everyone else rides alignment-only), and publishing a subset of the family is exactly what lockstep rules out.
 
-If a train's publish matrix fails partway — some packages on npm, others not — re-run the failed publish jobs from the Actions UI: each one skips a version that is already on npm, so a retry only publishes what is still missing. (Re-running the *whole* workflow does not work: the train commit already consumed the change files.)
+If a train's publish matrix fails partway — some packages on npm, others not — re-run the failed publish jobs from the Actions UI: each one skips a version that is already on npm, so a retry only publishes what is still missing. (Re-running the _whole_ workflow does not work: the train commit already consumed the change files.)
 
 When Actions itself is unavailable, `pnpm release:publish-local` (`scripts/release/local-publish.mjs`) runs the same backfill from a laptop: it publishes every `@vielzeug/*` version whose CHANGELOG entry exists but which is absent from npm, refuses a package whose dependency pin is neither in the same batch nor already on npm (`dangling-pins.mjs`), and shares the tested `publishMissing()` implementation with the CLI. Afterwards dispatch `release.yml` to land any missing tags and the aggregate release.
 
@@ -39,8 +39,8 @@ The first CalVer train (`26.10.0`) was an epoch: every publishable package carri
 
 ## Consequences
 
-- An npm version is "the train this package last shipped on": which is every train, since every package rides every train. A package's version number tells you *when*, and its changelog entry for that train tells you *whether anything changed*.
-- Consumers outside the monorepo should pin exact versions and read the changed packages' `migration.md` when moving between trains. Note what CalVer means for ranges: `^26.10.0` spans *months* (`>=26.10.0 <27.0.0` includes `26.11.x`, `26.12.x`:), and a breaking change rides the next train like any other, so a caret range can silently pull a breaking monthly train. Exact pins are the contract; upgrade deliberately, train by train.
+- An npm version is "the train this package last shipped on": which is every train, since every package rides every train. A package's version number tells you _when_, and its changelog entry for that train tells you _whether anything changed_.
+- Consumers outside the monorepo should pin exact versions and read the changed packages' `migration.md` when moving between trains. Note what CalVer means for ranges: `^26.10.0` spans _months_ (`>=26.10.0 <27.0.0` includes `26.11.x`, `26.12.x`:), and a breaking change rides the next train like any other, so a caret range can silently pull a breaking monthly train. Exact pins are the contract; upgrade deliberately, train by train.
 - The docs site and demos always track `main`, the latest train.
 
 ## Local use

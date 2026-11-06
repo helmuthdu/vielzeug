@@ -25,7 +25,6 @@ const positioner = createPositioner(trigger, popover, {
   },
   middleware: [offset(8), flip(), shift({ padding: 8 }), arrow({ element: arrowElement })],
 });
-
 ```
 
 ### Pitfalls

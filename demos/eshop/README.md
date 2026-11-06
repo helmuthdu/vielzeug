@@ -45,18 +45,17 @@ one model whose own catalog copy calls it "the Vielzeug flagship"). Product-medi
 tweens price changes instead of snapping, so the configurator's breakdown reads as a live
 calculation.
 
-
 ## Feature tour
 
-| Route | What it shows |
-| --- | --- |
-| `/catalog` | Editorial lineup: flagship first, distinct search/sort/refinement controls, URL-persisted discovery state |
+| Route           | What it shows                                                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `/catalog`      | Editorial lineup: flagship first, distinct search/sort/refinement controls, URL-persisted discovery state                       |
 | `/models/:slug` | Configurator: trim-first build flow, visible build summary, accessible paint/wheel/package controls, live pricing and financing |
-| `/cart` | Line items, quantity, promo code, order summary |
-| `/checkout/*` | Shipping → Payment → Review → Confirmation, guarded by a state machine |
-| `/orders` | Customer's own order history, cancel (ward-guarded) |
-| `/admin` | Sales/admin only: revenue chart, all-orders table, CSV export |
-| `/settings` | Locale, theme + accent color, currency, user switcher, debug log |
+| `/cart`         | Line items, quantity, promo code, order summary                                                                                 |
+| `/checkout/*`   | Shipping → Payment → Review → Confirmation, guarded by a state machine                                                          |
+| `/orders`       | Customer's own order history, cancel (ward-guarded)                                                                             |
+| `/admin`        | Sales/admin only: revenue chart, all-orders table, CSV export                                                                   |
+| `/settings`     | Locale, theme + accent color, currency, user switcher, debug log                                                                |
 
 Compare (up to 3 models) is deliberately not a route: the navbar's "Compare" item (and the
 command palette) open `ui/components/compare-drawer.ts`, a single bottom `ore-drawer` mounted
@@ -69,7 +68,7 @@ scrolling table, without ever leaving the page the shopper was already on.
 Every `@vielzeug/*` package this app actually needs (26 of the 29 published browser-runtime
 packages: `codex` is a dev-time MCP server, not a browser runtime dependency, so it's not part
 of this app's `package.json`) does real work here. `keymap`, `ledger`, and `pulse` are the three
-deliberately *not* used: a global ⌘Z/⌘⇧Z undo and a navbar undo/redo pair mostly demonstrated
+deliberately _not_ used: a global ⌘Z/⌘⇧Z undo and a navbar undo/redo pair mostly demonstrated
 those packages rather than solving a real shopper need: a car-shopping cart isn't a document you
 "undo" the way you'd undo a keystroke, "Remove" already covers it, and a hidden shortcut with no
 visible affordance is a discoverability dead end. `core/history.ts`'s cart/compare mutations are
@@ -77,33 +76,33 @@ plain synchronous functions instead. `pulse` backed a scripted "N shoppers confi
 model" presence badge on the configurator; it read as manufactured urgency rather than a useful
 signal, so the whole realtime layer (`core/realtime.ts`) was dropped.
 
-| Package | Where / why |
-| --- | --- |
-| `arsenal` | (transitively via other packages; see `core/pricing.ts`/`core/history.ts` for hand-rolled equivalents kept dependency-free) |
-| `clockwork` | `core/checkout-machine.ts`: shipping → payment → review → confirmed FSM |
-| `coins` | `core/pricing.ts`, `core/currency.ts`: exact price-breakdown and multi-currency math |
-| `conduit` | `core/container.ts`: DI container composing the admin `ReportService` from the api client + logger tokens |
-| `courier` | `core/api.ts`, `core/catalog.ts`, `core/orders.ts`: mock REST client, query cache, mutations |
-| `dnd` | `ui/components/compare-drawer.ts`: keyboard- and drag-reorderable compare list |
-| `familiar` | `core/worker-tasks.ts`: CSV export of orders on a Web Worker |
-| `flux` | Bridges router/i18n subscribe-APIs into `ripple` signals (`core/router.ts`, `core/i18n.ts`, `core/catalog.ts`) |
-| `forge` | `ui/views/checkout.ts`: shipping address form (values/validation/submit) |
-| `herald` | `core/events.ts`: app-wide toast/cart/order event bus |
-| `lingua` | `core/i18n.ts`: en/de catalog |
-| `orbit` | `ui/components/spec-tooltip.ts`: positioned directly with `createPositioner()` + the `tooltip` preset (not via refine's own tooltip wrapper) |
-| `ore` | Every custom element in `ui/` |
-| `prism` | `ui/views/admin.ts`: revenue bar chart |
-| `refine` | Every UI component + the theme (`styles/app.css` overrides `--color-primary-hue`) |
-| `ripple` | State layer throughout `core/` |
-| `rune` | `core/logger.ts`: structured logger + Settings' debug log viewer |
-| `sandbox` | `core/embed-preview.ts`: sandboxed iframe preview for "Share this build" |
-| `scout` | `core/search-index.ts`: fuzzy model search (catalog + command palette) |
-| `scroll` + `sourcerer` | `ui/views/admin.ts` / `core/inventory-source.ts`: paginated, virtualized all-orders table |
-| `spell` | `ui/views/cart.ts`: promo code format validation |
-| `tempo` | `core/format.ts`: delivery-date estimation and formatting |
-| `vault` | `core/persistence.ts`: cart/compare/preferences persisted to `localStorage` |
-| `ward` | `core/auth.ts`, `core/order-actions.ts`: customer/sales/admin permissions |
-| `wayfinder` | `core/router.ts`: client-side routing |
+| Package                | Where / why                                                                                                                                  |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `arsenal`              | (transitively via other packages; see `core/pricing.ts`/`core/history.ts` for hand-rolled equivalents kept dependency-free)                  |
+| `clockwork`            | `core/checkout-machine.ts`: shipping → payment → review → confirmed FSM                                                                      |
+| `coins`                | `core/pricing.ts`, `core/currency.ts`: exact price-breakdown and multi-currency math                                                         |
+| `conduit`              | `core/container.ts`: DI container composing the admin `ReportService` from the api client + logger tokens                                    |
+| `courier`              | `core/api.ts`, `core/catalog.ts`, `core/orders.ts`: mock REST client, query cache, mutations                                                 |
+| `dnd`                  | `ui/components/compare-drawer.ts`: keyboard- and drag-reorderable compare list                                                               |
+| `familiar`             | `core/worker-tasks.ts`: CSV export of orders on a Web Worker                                                                                 |
+| `flux`                 | Bridges router/i18n subscribe-APIs into `ripple` signals (`core/router.ts`, `core/i18n.ts`, `core/catalog.ts`)                               |
+| `forge`                | `ui/views/checkout.ts`: shipping address form (values/validation/submit)                                                                     |
+| `herald`               | `core/events.ts`: app-wide toast/cart/order event bus                                                                                        |
+| `lingua`               | `core/i18n.ts`: en/de catalog                                                                                                                |
+| `orbit`                | `ui/components/spec-tooltip.ts`: positioned directly with `createPositioner()` + the `tooltip` preset (not via refine's own tooltip wrapper) |
+| `ore`                  | Every custom element in `ui/`                                                                                                                |
+| `prism`                | `ui/views/admin.ts`: revenue bar chart                                                                                                       |
+| `refine`               | Every UI component + the theme (`styles/app.css` overrides `--color-primary-hue`)                                                            |
+| `ripple`               | State layer throughout `core/`                                                                                                               |
+| `rune`                 | `core/logger.ts`: structured logger + Settings' debug log viewer                                                                             |
+| `sandbox`              | `core/embed-preview.ts`: sandboxed iframe preview for "Share this build"                                                                     |
+| `scout`                | `core/search-index.ts`: fuzzy model search (catalog + command palette)                                                                       |
+| `scroll` + `sourcerer` | `ui/views/admin.ts` / `core/inventory-source.ts`: paginated, virtualized all-orders table                                                    |
+| `spell`                | `ui/views/cart.ts`: promo code format validation                                                                                             |
+| `tempo`                | `core/format.ts`: delivery-date estimation and formatting                                                                                    |
+| `vault`                | `core/persistence.ts`: cart/compare/preferences persisted to `localStorage`                                                                  |
+| `ward`                 | `core/auth.ts`, `core/order-actions.ts`: customer/sales/admin permissions                                                                    |
+| `wayfinder`            | `core/router.ts`: client-side routing                                                                                                        |
 
 ## AI tooling note
 

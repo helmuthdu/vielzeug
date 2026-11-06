@@ -16,7 +16,11 @@ Keep the counter in context and guard both the delayed and manual retry transiti
 ```ts
 import { defineMachine } from '@vielzeug/clockwork';
 
-type Event = { type: 'FETCH' } | { type: 'RETRY' } | { message: string; type: 'FAILED' } | { data: string; type: 'DONE' };
+type Event =
+  | { type: 'FETCH' }
+  | { type: 'RETRY' }
+  | { message: string; type: 'FAILED' }
+  | { data: string; type: 'DONE' };
 
 const request = defineMachine<{ attempts: number; data: string; error: string }, Event>()({
   context: { attempts: 0, data: '', error: '' },
@@ -24,19 +28,34 @@ const request = defineMachine<{ attempts: number; data: string; error: string },
   states: {
     idle: { on: { FETCH: { reduce: () => ({ attempts: 1, data: '', error: '' }), target: 'loading' } } },
     loading: {
-      invoke: [{
-        src: async ({ signal }) => fetch('/api/data', { signal }).then((response) => response.text()),
-        onDone: ({ result }) => ({ data: result as string, type: 'DONE' }),
-        onError: ({ error }) => ({ message: String(error), type: 'FAILED' }),
-      }],
+      invoke: [
+        {
+          src: async ({ signal }) => fetch('/api/data', { signal }).then((response) => response.text()),
+          onDone: ({ result }) => ({ data: result as string, type: 'DONE' }),
+          onError: ({ error }) => ({ message: String(error), type: 'FAILED' }),
+        },
+      ],
       on: {
         DONE: { reduce: ({ context, event }) => ({ ...context, data: event.data }), target: 'success' },
         FAILED: { reduce: ({ context, event }) => ({ ...context, error: event.message }), target: 'failed' },
       },
     },
     failed: {
-      after: [{ delay: 1_000, guard: ({ context }) => context.attempts < 3, reduce: ({ context }) => ({ ...context, attempts: context.attempts + 1 }), target: 'loading' }],
-      on: { RETRY: { guard: ({ context }) => context.attempts < 3, reduce: ({ context }) => ({ ...context, attempts: context.attempts + 1 }), target: 'loading' } },
+      after: [
+        {
+          delay: 1_000,
+          guard: ({ context }) => context.attempts < 3,
+          reduce: ({ context }) => ({ ...context, attempts: context.attempts + 1 }),
+          target: 'loading',
+        },
+      ],
+      on: {
+        RETRY: {
+          guard: ({ context }) => context.attempts < 3,
+          reduce: ({ context }) => ({ ...context, attempts: context.attempts + 1 }),
+          target: 'loading',
+        },
+      },
     },
     success: { on: { FETCH: { reduce: () => ({ attempts: 1, data: '', error: '' }), target: 'loading' } } },
   },

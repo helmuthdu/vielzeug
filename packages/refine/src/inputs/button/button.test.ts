@@ -13,10 +13,13 @@ beforeAll(async () => {
 /** Collects the selector text of every adopted-stylesheet rule containing `needle`. */
 function ruleSelectorsFor(shadowRoot: ShadowRoot, needle: string): string[] {
   const selectors: string[] = [];
+  // The CSSOM serializes attribute-selector quotes to double quotes; normalize both
+  // sides so the single-quoted needle matches regardless of the engine's choice.
+  const normalize = (value: string) => value.replaceAll("'", '"');
 
   for (const sheet of shadowRoot.adoptedStyleSheets) {
     for (const rule of Array.from(sheet.cssRules)) {
-      if (rule instanceof CSSStyleRule && rule.selectorText.includes(needle)) {
+      if (rule instanceof CSSStyleRule && normalize(rule.selectorText).includes(normalize(needle))) {
         selectors.push(rule.selectorText);
       }
     }

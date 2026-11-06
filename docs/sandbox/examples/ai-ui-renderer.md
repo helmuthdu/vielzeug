@@ -73,7 +73,7 @@ await preview.initialize();
 let accumulated = '';
 for await (const chunk of streamUI(userPrompt)) {
   accumulated += chunk;
-  preview.replaceBody(accumulated);  // live update, no page reset
+  preview.replaceBody(accumulated); // live update, no page reset
 }
 
 // Push theme without re-render

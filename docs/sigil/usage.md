@@ -25,17 +25,17 @@ The encoder chooses the most compact mode for the whole input and the smallest v
 
 Three segment modes cover every payload:
 
-| Mode | Alphabet | Max payload (v40-L) |
-| --- | --- | --- |
-| `numeric` | `0–9` | 7,089 digits |
-| `alphanumeric` | `0–9 A-Z space $%*+-./:` | 4,296 chars |
-| `byte` | UTF-8 (no ECI header) | 2,953 bytes |
+| Mode           | Alphabet                 | Max payload (v40-L) |
+| -------------- | ------------------------ | ------------------- |
+| `numeric`      | `0–9`                    | 7,089 digits        |
+| `alphanumeric` | `0–9 A-Z space $%*+-./:` | 4,296 chars         |
+| `byte`         | UTF-8 (no ECI header)    | 2,953 bytes         |
 
 Mode selection is automatic: `encodeQr('01234567')` uses `numeric`, `'HELLO WORLD'` uses `alphanumeric`, anything else uses `byte`. Force a mode with `mode`, but a forced mode that cannot represent the input throws `SigilOptionError`.
 
 `Uint8Array` input is raw binary: it always encodes in byte mode, byte-for-byte, with no UTF-8 round-trip: invalid UTF-8 (tokens, provisioning payloads) survives intact. Forcing a non-byte mode with binary input throws `SigilOptionError`.
 
-Check capacity before encoding with `qrCapacity(version, errorCorrection, mode)`: it returns the maximum *bytes* (for `byte` mode) or *characters* the symbol holds:
+Check capacity before encoding with `qrCapacity(version, errorCorrection, mode)`: it returns the maximum _bytes_ (for `byte` mode) or _characters_ the symbol holds:
 
 ```ts
 import { qrCapacity, SigilCapacityError } from '@vielzeug/sigil';
@@ -55,14 +55,14 @@ Use `minVersion` to keep a stable symbol size while a payload changes: useful wh
 
 ## Error Correction
 
-| Level | Recovery | Trade-off |
-| --- | --- | --- |
-| `L` | ~7% | Smallest matrix |
-| `M` | ~15% | Default: good balance |
-| `Q` | ~25% | Print, wear |
-| `H` | ~30% | Logos/overlays, dense codes |
+| Level | Recovery | Trade-off                   |
+| ----- | -------- | --------------------------- |
+| `L`   | ~7%      | Smallest matrix             |
+| `M`   | ~15%     | Default: good balance       |
+| `Q`   | ~25%     | Print, wear                 |
+| `H`   | ~30%     | Logos/overlays, dense codes |
 
-Higher levels shrink capacity at the same version. For an overlaid logo, prefer `H` *and* keep the logo inside the quiet zone's margin of safety.
+Higher levels shrink capacity at the same version. For an overlaid logo, prefer `H` _and_ keep the logo inside the quiet zone's margin of safety.
 
 ## Rendering
 
@@ -70,12 +70,12 @@ Higher levels shrink capacity at the same version. For an overlaid logo, prefer 
 
 ```ts
 const svg = toSvg(matrix, {
-  dark: 'currentColor',   // default: inherits text color
-  light: 'transparent',   // default
-  margin: 4,              // quiet zone in modules (spec minimum is 4)
-  scale: 1,               // user units per module: prefer scaling via CSS
-  optimizePath: true,     // merge adjacent modules into one path (default)
-  label: 'Pairing code',  // <title> + role="img"
+  dark: 'currentColor', // default: inherits text color
+  light: 'transparent', // default
+  margin: 4, // quiet zone in modules (spec minimum is 4)
+  scale: 1, // user units per module: prefer scaling via CSS
+  optimizePath: true, // merge adjacent modules into one path (default)
+  label: 'Pairing code', // <title> + role="img"
 });
 ```
 
@@ -94,31 +94,31 @@ Use canvas for print, download (`canvas.toBlob`), or compositing. SVG is the bet
 
 Scanning wraps the native `BarcodeDetector`. It is **not** universally available: feature-detect, never assume:
 
-| Engine | `BarcodeDetector` | Notes |
-| --- | --- | --- |
-| Chrome / Edge / Android WebView | Yes | `qr_code` format supported |
-| Firefox | No (behind flag in some builds) | `isQrScanSupported()` → `false` |
-| Safari | Varies by version | Check at runtime; do not rely on version sniffing |
+| Engine                          | `BarcodeDetector`               | Notes                                             |
+| ------------------------------- | ------------------------------- | ------------------------------------------------- |
+| Chrome / Edge / Android WebView | Yes                             | `qr_code` format supported                        |
+| Firefox                         | No (behind flag in some builds) | `isQrScanSupported()` → `false`                   |
+| Safari                          | Varies by version               | Check at runtime; do not rely on version sniffing |
 
 ```ts
 import { createQrScanner, isQrScanSupported, qrScanSupport } from '@vielzeug/sigil';
 
-isQrScanSupported();   // sync: BarcodeDetector constructor exists
+isQrScanSupported(); // sync: BarcodeDetector constructor exists
 await qrScanSupport(); // async: also verifies 'qr_code' is a supported format
 
 const scanner = createQrScanner({
-  video,                                   // <video autoplay playsinline muted>
+  video, // <video autoplay playsinline muted>
   constraints: { facingMode: 'environment' },
-  intervalMs: 200,                         // min ms between detect passes
-  once: true,                              // stop after first result
+  intervalMs: 200, // min ms between detect passes
+  once: true, // stop after first result
 });
 
 scanner.onResult((result) => showPairing(result.value));
 scanner.tap((event) => console.debug(event.type)); // status-change, detect, frame-skipped…
 
 await scanner.start(); // requests camera, attaches stream, starts the loop
-scanner.stop();        // releases the camera, back to 'idle'; start() resumes
-scanner.dispose();     // terminal: releases everything
+scanner.stop(); // releases the camera, back to 'idle'; start() resumes
+scanner.dispose(); // terminal: releases everything
 ```
 
 Statuses are `'idle' | 'starting' | 'scanning' | 'disposed'`. A `stop()` or `dispose()` that lands while the camera permission prompt is pending wins the race: the late stream is released and `start()` resolves without restarting the loop.
@@ -144,8 +144,8 @@ import { createQrScanner } from '@vielzeug/sigil';
 
 const fakeScanner = createQrScanner({
   video: document.createElement('video'),
-  detector: { detect: async () => [{ rawValue: 'payload' }] },   // fake BarcodeDetector
-  mediaDevices: { getUserMedia: async () => fakeStream },        // fake camera
+  detector: { detect: async () => [{ rawValue: 'payload' }] }, // fake BarcodeDetector
+  mediaDevices: { getUserMedia: async () => fakeStream }, // fake camera
 });
 ```
 

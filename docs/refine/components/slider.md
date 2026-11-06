@@ -138,25 +138,25 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 
 ### Attributes
 
-| Attribute         | Type                                                                      | Default | Description                                                                |
-| ----------------- | ------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------- |
-| `value`           | `number`                                                                  | `0`     | Current value (single mode)                                                |
-| `from`            | `number`                                                                  | `0`     | Lower bound value (range mode)                                             |
-| `to`              | `number`                                                                  | `100`   | Upper bound value (range mode)                                             |
-| `range`           | `boolean`                                                                 | `false` | Activate two-thumb range mode                                              |
-| `min`             | `number`                                                                  | `0`     | Minimum allowed value                                                      |
-| `max`             | `number`                                                                  | `100`   | Maximum allowed value                                                      |
-| `step`            | `number`                                                                  | `1`     | Value increment/decrement step                                             |
-| `disabled`        | `boolean`                                                                 | `false` | Disable slider interaction                                                 |
-| `fullwidth`       | `boolean`                                                                 | `false` | Expand to full width                                                       |
-| `name`            | `string`                                                                  | N/A | Form field name (single mode only)                                         |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Semantic color                                                             |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Slider size                                                                |
-| `value-text`      | `string`                                                                  | N/A | Human-readable ARIA value label for single mode (e.g. `"75%"`)             |
-| `from-value-text` | `string`                                                                  | N/A | Human-readable ARIA label for the start thumb in range mode (e.g. `"$20"`) |
-| `to-value-text`   | `string`                                                                  | N/A | Human-readable ARIA label for the end thumb in range mode (e.g. `"$80"`)   |
-| `helper`          | `string`                                                                  | N/A | Helper text shown below the slider                                        |
-| `error`           | `string`                                                                  | N/A | Error message shown below the slider (renders with `role="alert"` and takes precedence over `helper`) |
+| Attribute         | Type                                                                      | Default | Description                                                                                           |
+| ----------------- | ------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| `value`           | `number`                                                                  | `0`     | Current value (single mode)                                                                           |
+| `from`            | `number`                                                                  | `0`     | Lower bound value (range mode)                                                                        |
+| `to`              | `number`                                                                  | `100`   | Upper bound value (range mode)                                                                        |
+| `range`           | `boolean`                                                                 | `false` | Activate two-thumb range mode                                                                         |
+| `min`             | `number`                                                                  | `0`     | Minimum allowed value                                                                                 |
+| `max`             | `number`                                                                  | `100`   | Maximum allowed value                                                                                 |
+| `step`            | `number`                                                                  | `1`     | Value increment/decrement step                                                                        |
+| `disabled`        | `boolean`                                                                 | `false` | Disable slider interaction                                                                            |
+| `fullwidth`       | `boolean`                                                                 | `false` | Expand to full width                                                                                  |
+| `name`            | `string`                                                                  | N/A     | Form field name (single mode only)                                                                    |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A     | Semantic color                                                                                        |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Slider size                                                                                           |
+| `value-text`      | `string`                                                                  | N/A     | Human-readable ARIA value label for single mode (e.g. `"75%"`)                                        |
+| `from-value-text` | `string`                                                                  | N/A     | Human-readable ARIA label for the start thumb in range mode (e.g. `"$20"`)                            |
+| `to-value-text`   | `string`                                                                  | N/A     | Human-readable ARIA label for the end thumb in range mode (e.g. `"$80"`)                              |
+| `helper`          | `string`                                                                  | N/A     | Helper text shown below the slider                                                                    |
+| `error`           | `string`                                                                  | N/A     | Error message shown below the slider (renders with `role="alert"` and takes precedence over `helper`) |
 
 ### Slots
 
@@ -179,20 +179,20 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 
 ### Events
 
-| Event    | Detail: single mode | Detail: range mode            | Description                |
-| -------- | -------------------- | ------------------------------ | -------------------------- |
-| `change` | `{ value: number }`  | `{ from: number, to: number }` | Emitted when value changes |
+| Event    | Detail: single mode | Detail: range mode             | Description                |
+| -------- | ------------------- | ------------------------------ | -------------------------- |
+| `change` | `{ value: number }` | `{ from: number, to: number }` | Emitted when value changes |
 
 ### CSS Custom Properties
 
-| Property            | Description                | Default                     |
-| ------------------- | -------------------------- | --------------------------- |
-| `--slider-height`   | Height of the slider track | Size-dependent              |
-| `--slider-size`     | Thumb diameter             | Size-dependent              |
-| `--slider-thumb-inset` | Space reserved at each endpoint for a custom thumb size | Size-dependent |
-| `--slider-track-bg` | Track background color     | `var(--color-contrast-300)` |
-| `--slider-fill`     | Active fill color          | Theme color                 |
-| `--slider-thumb-bg` | Thumb background color     | `var(--color-contrast-100)` |
+| Property               | Description                                             | Default                     |
+| ---------------------- | ------------------------------------------------------- | --------------------------- |
+| `--slider-height`      | Height of the slider track                              | Size-dependent              |
+| `--slider-size`        | Thumb diameter                                          | Size-dependent              |
+| `--slider-thumb-inset` | Space reserved at each endpoint for a custom thumb size | Size-dependent              |
+| `--slider-track-bg`    | Track background color                                  | `var(--color-contrast-300)` |
+| `--slider-fill`        | Active fill color                                       | Theme color                 |
+| `--slider-thumb-bg`    | Thumb background color                                  | `var(--color-contrast-100)` |
 
 ## Accessibility
 

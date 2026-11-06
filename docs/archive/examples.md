@@ -1,6 +1,6 @@
 ---
-title: "Archive: Examples"
-description: "Task-oriented recipes for @vielzeug/archive, from first deployment to erasure."
+title: 'Archive: Examples'
+description: 'Task-oriented recipes for @vielzeug/archive, from first deployment to erasure.'
 ---
 
 - [Stand Up a Content Archive](./examples/stand-up-a-content-archive.md)

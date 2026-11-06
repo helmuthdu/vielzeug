@@ -24,23 +24,23 @@ Looking for full, multi-package example apps? Explore the [Showcase](/showcases)
 
 Jump to the packages most relevant to your work.
 
-| I'm building…                        | Start with                                                                   |
-| ------------------------------------ | ---------------------------------------------------------------------------- |
-| Reactive vanilla TS/JS               | [Ripple](#ripple) → [Arsenal](#arsenal)                                      |
-| Custom UI components or a design system | [Ore](#ore) → [Refine](#refine) → [Ripple](#ripple)                    |
-| A form-heavy application             | [Forge](#forge) → [Spell](#spell) → [Ripple](#ripple)                        |
-| A full SPA                           | [Wayfinder](#wayfinder) → [Courier](#courier) → [Ripple](#ripple)            |
-| Complex async or event-driven logic  | [Flux](#flux) → [Clockwork](#clockwork) → [Ripple](#ripple)                  |
-| Just utility functions               | [Arsenal](#arsenal)                                                          |
-| Real-time search UI (combobox, command palette) | [Scout](/scout/) → [Sourcerer](#sourcerer)                    |
-| App with undo/redo (editor, design tool)         | [Ledger](/ledger/) → [Ripple](#ripple)                        |
-| Offline-first mutations that survive reloads     | [Postmaster](/postmaster/) → [Courier](#courier) → [Vault](#vault) |
-| Global keyboard shortcuts or command palette    | [Keymap](/keymap/) → [Ledger](/ledger/)                       |
-| Accessible overlays, menus, or list widgets     | [Focus](/focus/) → [Refine](#refine)                          |
-| Swipe interactions and touch-first UI            | [Gesture](/gesture/) → [Refine](#refine) → [Dnd](/dnd/)       |
-| Test fixtures or mock data                       | [Illusionist](/illusionist/) → [Coins](/coins/) → [Tempo](/tempo/) |
-| Community publishing with shared sign-in         | [Archive](/archive/) → [Spell](#spell) → [Courier](#courier) |
-| A table or couch app with shared state           | [Tavern](/tavern/) → [Mesh](/mesh/) → [Ripple](#ripple)         |
+| I'm building…                                   | Start with                                                         |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| Reactive vanilla TS/JS                          | [Ripple](#ripple) → [Arsenal](#arsenal)                            |
+| Custom UI components or a design system         | [Ore](#ore) → [Refine](#refine) → [Ripple](#ripple)                |
+| A form-heavy application                        | [Forge](#forge) → [Spell](#spell) → [Ripple](#ripple)              |
+| A full SPA                                      | [Wayfinder](#wayfinder) → [Courier](#courier) → [Ripple](#ripple)  |
+| Complex async or event-driven logic             | [Flux](#flux) → [Clockwork](#clockwork) → [Ripple](#ripple)        |
+| Just utility functions                          | [Arsenal](#arsenal)                                                |
+| Real-time search UI (combobox, command palette) | [Scout](/scout/) → [Sourcerer](#sourcerer)                         |
+| App with undo/redo (editor, design tool)        | [Ledger](/ledger/) → [Ripple](#ripple)                             |
+| Offline-first mutations that survive reloads    | [Postmaster](/postmaster/) → [Courier](#courier) → [Vault](#vault) |
+| Global keyboard shortcuts or command palette    | [Keymap](/keymap/) → [Ledger](/ledger/)                            |
+| Accessible overlays, menus, or list widgets     | [Focus](/focus/) → [Refine](#refine)                               |
+| Swipe interactions and touch-first UI           | [Gesture](/gesture/) → [Refine](#refine) → [Dnd](/dnd/)            |
+| Test fixtures or mock data                      | [Illusionist](/illusionist/) → [Coins](/coins/) → [Tempo](/tempo/) |
+| Community publishing with shared sign-in        | [Archive](/archive/) → [Spell](#spell) → [Courier](#courier)       |
+| A table or couch app with shared state          | [Tavern](/tavern/) → [Mesh](/mesh/) → [Ripple](#ripple)            |
 
 ## Core
 
@@ -319,67 +319,67 @@ const api = await container.resolve(ApiToken);
 
 ### Other Packages
 
-| Package                          | What it does                                                                                       |
-| -------------------------------- | -------------------------------------------------------------------------------------------------- |
-| **[Archive](/archive/)**         | Typed community collections, moderation, and passwordless identity for Cloudflare Workers + D1 |
-| **[Prism](/prism/)**             | Reactive SVG charts: line, bar, area, pie, radar, scatter, and sparkline with signal-driven updates |
-| **[Orbit](/orbit/)**             | Floating element positioning for tooltips, dropdowns, menus, and popovers                          |
-| **[Scroll](/scroll/)**           | Virtual list engine with variable-height rows, smooth scrolling, and zero layout thrash            |
-| **[Sentinel](/sentinel/)**       | Reactive observables for external environment state: viewport, network, media queries, element sizing |
-| **[Dnd](/dnd/)**                 | Framework-agnostic drag-and-drop with sortable lists, file-drop zones, and MIME filtering          |
-| **[Focus](/focus/)**             | Keyboard list navigation and focus restoration primitives for composite widgets                      |
-| **[Gesture](/gesture/)**         | Pointer swipe recognition primitives with lifecycle-owned handles                                    |
-| **[Scout](/scout/)**             | Trigram fuzzy search with per-field weights, reactive query state, and match highlighting          |
-| **[Sourcerer](/sourcerer/)**     | Reactive paged sources and single-value resources with cancellation and observable loading state |
-| **[Pulse](/pulse/)**             | Typed WebSocket client with channel multiplexing, presence tracking, and auto-reconnect            |
-| **[Lingua](/lingua/)**           | Typed translations, pluralization, lazy locale catalogs, and SSR support                           |
-| **[Herald](/herald/)**           | Typed event bus: pub/sub with namespaces, wildcards, and once-listeners                           |
-| **[Keymap](/keymap/)**           | Headless keyboard shortcut manager with chord sequences, modifier aliases, and context guards      |
-| **[Ledger](/ledger/)**           | Async undo/redo command history with Ripple signals for reactive `canUndo`/`canRedo` state         |
-| **[Rune](/rune/)**               | Structured logging with scoped loggers, pluggable transports, and log levels                       |
-| **[Familiar](/familiar/)**       | Typed Web Worker pool with task queuing, streaming, and AbortSignal cancellation                   |
-| **[Postmaster](/postmaster/)**   | Typed durable job outbox with leased processing, retries, and dead-letter recovery                 |
-| **[Tempo](/tempo/)**             | Date and time utilities: timezone conversion, DST-safe arithmetic, and Intl formatting            |
-| **[Coins](/coins/)**             | Bigint-based monetary arithmetic with currency formatting and rounding policies                    |
-| **[Assay](/assay/)**             | Framework-agnostic DOM testing primitives: scoped queries, event dispatch, and async waiting      |
-| **[Mesh](/mesh/)**               | Backendless P2P WebRTC sessions with manual pairing: invitation/answer codes, typed protocols      |
-| **[Sigil](/sigil/)**             | SVG QR code generation and camera scanning with a unified result shape                            |
-| **[Tavern](/tavern/)**           | Table session replication over mesh: one host owns the state, guests mirror and forward commands |
+| Package                        | What it does                                                                                          |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| **[Archive](/archive/)**       | Typed community collections, moderation, and passwordless identity for Cloudflare Workers + D1        |
+| **[Prism](/prism/)**           | Reactive SVG charts: line, bar, area, pie, radar, scatter, and sparkline with signal-driven updates   |
+| **[Orbit](/orbit/)**           | Floating element positioning for tooltips, dropdowns, menus, and popovers                             |
+| **[Scroll](/scroll/)**         | Virtual list engine with variable-height rows, smooth scrolling, and zero layout thrash               |
+| **[Sentinel](/sentinel/)**     | Reactive observables for external environment state: viewport, network, media queries, element sizing |
+| **[Dnd](/dnd/)**               | Framework-agnostic drag-and-drop with sortable lists, file-drop zones, and MIME filtering             |
+| **[Focus](/focus/)**           | Keyboard list navigation and focus restoration primitives for composite widgets                       |
+| **[Gesture](/gesture/)**       | Pointer swipe recognition primitives with lifecycle-owned handles                                     |
+| **[Scout](/scout/)**           | Trigram fuzzy search with per-field weights, reactive query state, and match highlighting             |
+| **[Sourcerer](/sourcerer/)**   | Reactive paged sources and single-value resources with cancellation and observable loading state      |
+| **[Pulse](/pulse/)**           | Typed WebSocket client with channel multiplexing, presence tracking, and auto-reconnect               |
+| **[Lingua](/lingua/)**         | Typed translations, pluralization, lazy locale catalogs, and SSR support                              |
+| **[Herald](/herald/)**         | Typed event bus: pub/sub with namespaces, wildcards, and once-listeners                               |
+| **[Keymap](/keymap/)**         | Headless keyboard shortcut manager with chord sequences, modifier aliases, and context guards         |
+| **[Ledger](/ledger/)**         | Async undo/redo command history with Ripple signals for reactive `canUndo`/`canRedo` state            |
+| **[Rune](/rune/)**             | Structured logging with scoped loggers, pluggable transports, and log levels                          |
+| **[Familiar](/familiar/)**     | Typed Web Worker pool with task queuing, streaming, and AbortSignal cancellation                      |
+| **[Postmaster](/postmaster/)** | Typed durable job outbox with leased processing, retries, and dead-letter recovery                    |
+| **[Tempo](/tempo/)**           | Date and time utilities: timezone conversion, DST-safe arithmetic, and Intl formatting                |
+| **[Coins](/coins/)**           | Bigint-based monetary arithmetic with currency formatting and rounding policies                       |
+| **[Assay](/assay/)**           | Framework-agnostic DOM testing primitives: scoped queries, event dispatch, and async waiting          |
+| **[Mesh](/mesh/)**             | Backendless P2P WebRTC sessions with manual pairing: invitation/answer codes, typed protocols         |
+| **[Sigil](/sigil/)**           | SVG QR code generation and camera scanning with a unified result shape                                |
+| **[Tavern](/tavern/)**         | Table session replication over mesh: one host owns the state, guests mirror and forward commands      |
 
 ## Packages That Work Well Together
 
-| Combination                 | Why                                                                                                          |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Ripple + Ore**          | Ore templates are powered by Ripple signals: same reactive primitives, zero glue                          |
-| **Spell + Forge**           | Pass a Spell schema as a field validator: one schema for both form and API                                  |
-| **Courier + Ripple**        | Fetch with structured HTTP errors, then push results into a signal for reactive rendering                   |
-| **Archive + Spell**         | Define each collection's payload schema once; share its request and response contracts with the client       |
-| **Vault + Courier**         | Persist query results in IndexedDB for offline-capable apps                                                  |
-| **Ward + Wayfinder**        | Check permissions in router middleware before the route handler runs                                         |
-| **Conduit + Rune**          | Register a scoped logger per service in your DI container                                                    |
-| **Sourcerer + Courier**     | Use Courier in `createPageSource()` or `createResource()` loaders and forward their cancellation signal       |
-| **Sourcerer + Wayfinder**   | Sync source query state (page, filters, sort) with the URL so links stay shareable                           |
-| **Scroll + Orbit**          | Render a virtualised list inside an Orbit-positioned dropdown for high-count comboboxes                      |
-| **Dnd + Scroll**            | Combine sortable drag handles with a virtual list for large reorderable datasets                             |
-| **Focus + Refine**          | Use Focus primitives for roving keyboard navigation and return-focus behavior in overlay/list components      |
-| **Gesture + Refine**        | Reuse one swipe gesture model across overlays and interactive content components                              |
-| **Clockwork + Ripple**      | Clockwork state and context are signals: bind them directly to effects or UI templates                      |
-| **Clockwork + Ward**        | Call Ward predicates inside Clockwork guards to block unauthorized transitions                               |
-| **Clockwork + Herald**      | Publish state-change events to decouple multiple machines from each other                                    |
-| **Flux + Ripple**           | `fromStore()` bridges signal snapshots into Flux pipelines; explicit subscriptions write results back                         |
-| **Flux + Herald**           | `fromSubscribe()` bridges typed bus events; explicit subscriptions publish results back                                        |
-| **Flux + Sourcerer**        | `fromStore()` adapts query snapshots into stream pipelines                                                                      |
-| **Flux + Pulse**            | `fromSubscribe()` bridges WebSocket events while `fromStore()` bridges presence snapshots                                      |
-| **Scout + Ripple**          | `createReactiveSearch()` wraps the index in Ripple signals: query and results are reactive computed values  |
-| **Scout + Sourcerer**       | `toSearchMatcher()` adapts a Scout index into a filter predicate for derived arrays            |
-| **Keymap + Ledger**         | Wire `ctrl+z` / `ctrl+shift+z` to `ledger.undo()` / `ledger.redo()` with no boilerplate                    |
-| **Keymap + Herald**         | Publish shortcut events to a bus instead of calling handlers directly: decouples keyboard from logic       |
-| **Ledger + Ripple**         | `canUndo`, `canRedo`, and `isProcessing` are Ripple `Computed` values: bind directly to UI templates       |
-| **Illusionist + Coins**     | `commerce.price()` and `finance.amount()` return coins `Money`: format, add, or allocate directly          |
-| **Illusionist + Tempo**     | `date.past()` / `future()` / `recent()` return tempo `Temporal.ZonedDateTime`: shift, compare, or format   |
-| **Tavern + Ledger**         | Commands applied through the tavern host table land in the ledger: remote actions get undo like local ones |
-| **Tavern + Herald**         | Use a Herald bus as the notice stream tavern relays: typed keys cross the wire, each client translates     |
-| **Postmaster + Courier**    | Wrap Courier mutations in Postmaster jobs so writes survive reloads and retry on network failure            |
+| Combination               | Why                                                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Ripple + Ore**          | Ore templates are powered by Ripple signals: same reactive primitives, zero glue                           |
+| **Spell + Forge**         | Pass a Spell schema as a field validator: one schema for both form and API                                 |
+| **Courier + Ripple**      | Fetch with structured HTTP errors, then push results into a signal for reactive rendering                  |
+| **Archive + Spell**       | Define each collection's payload schema once; share its request and response contracts with the client     |
+| **Vault + Courier**       | Persist query results in IndexedDB for offline-capable apps                                                |
+| **Ward + Wayfinder**      | Check permissions in router middleware before the route handler runs                                       |
+| **Conduit + Rune**        | Register a scoped logger per service in your DI container                                                  |
+| **Sourcerer + Courier**   | Use Courier in `createPageSource()` or `createResource()` loaders and forward their cancellation signal    |
+| **Sourcerer + Wayfinder** | Sync source query state (page, filters, sort) with the URL so links stay shareable                         |
+| **Scroll + Orbit**        | Render a virtualised list inside an Orbit-positioned dropdown for high-count comboboxes                    |
+| **Dnd + Scroll**          | Combine sortable drag handles with a virtual list for large reorderable datasets                           |
+| **Focus + Refine**        | Use Focus primitives for roving keyboard navigation and return-focus behavior in overlay/list components   |
+| **Gesture + Refine**      | Reuse one swipe gesture model across overlays and interactive content components                           |
+| **Clockwork + Ripple**    | Clockwork state and context are signals: bind them directly to effects or UI templates                     |
+| **Clockwork + Ward**      | Call Ward predicates inside Clockwork guards to block unauthorized transitions                             |
+| **Clockwork + Herald**    | Publish state-change events to decouple multiple machines from each other                                  |
+| **Flux + Ripple**         | `fromStore()` bridges signal snapshots into Flux pipelines; explicit subscriptions write results back      |
+| **Flux + Herald**         | `fromSubscribe()` bridges typed bus events; explicit subscriptions publish results back                    |
+| **Flux + Sourcerer**      | `fromStore()` adapts query snapshots into stream pipelines                                                 |
+| **Flux + Pulse**          | `fromSubscribe()` bridges WebSocket events while `fromStore()` bridges presence snapshots                  |
+| **Scout + Ripple**        | `createReactiveSearch()` wraps the index in Ripple signals: query and results are reactive computed values |
+| **Scout + Sourcerer**     | `toSearchMatcher()` adapts a Scout index into a filter predicate for derived arrays                        |
+| **Keymap + Ledger**       | Wire `ctrl+z` / `ctrl+shift+z` to `ledger.undo()` / `ledger.redo()` with no boilerplate                    |
+| **Keymap + Herald**       | Publish shortcut events to a bus instead of calling handlers directly: decouples keyboard from logic       |
+| **Ledger + Ripple**       | `canUndo`, `canRedo`, and `isProcessing` are Ripple `Computed` values: bind directly to UI templates       |
+| **Illusionist + Coins**   | `commerce.price()` and `finance.amount()` return coins `Money`: format, add, or allocate directly          |
+| **Illusionist + Tempo**   | `date.past()` / `future()` / `recent()` return tempo `Temporal.ZonedDateTime`: shift, compare, or format   |
+| **Tavern + Ledger**       | Commands applied through the tavern host table land in the ledger: remote actions get undo like local ones |
+| **Tavern + Herald**       | Use a Herald bus as the notice stream tavern relays: typed keys cross the wire, each client translates     |
+| **Postmaster + Courier**  | Wrap Courier mutations in Postmaster jobs so writes survive reloads and retry on network failure           |
 
 ## Philosophy
 

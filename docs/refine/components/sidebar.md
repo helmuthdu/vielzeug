@@ -471,37 +471,37 @@ ore-sidebar-item {
 
 **`ore-sidebar` Attributes**
 
-| Attribute           | Type      | Default                | Description                                                  |
-| ------------------- | --------- | ---------------------- | ------------------------------------------------------------ |
-| `collapsed`         | `boolean` | N/A | Controlled collapsed state                                   |
-| `default-collapsed` | `boolean` | `false`                | Initial collapsed state in uncontrolled mode                 |
-| `collapsible`       | `boolean` | `false`                | Shows the collapse/expand toggle button in the header        |
-| `responsive`        | `string`  | N/A | Media query that enables compact (collapsed) sidebar mode    |
-| `bottom-nav-at`     | `string`  | N/A | Media query that switches to mobile bottom-nav + drawer mode |
-| `backdrop`          | `string`  | N/A                    | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` (unset = click-to-close, no dim) |
-| `close-on-select`   | `boolean` | `true`                 | Closes the drawer after primary item activation             |
-| `collapse-label`    | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                    |
-| `expand-label`      | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                      |
-| `drawer`            | `boolean` | `false`                | Drawer-only mode: the sidebar exists solely as the overlay drawer |
-| `drawer-close-label`| `string`  | `'Close sidebar'`      | Accessible label for the drawer close button                 |
-| `variant`           | `string`  | N/A | Visual variant: `'floating'` \| `'inset'`                    |
-| `label`             | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                        |
+| Attribute            | Type      | Default                | Description                                                                                       |
+| -------------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `collapsed`          | `boolean` | N/A                    | Controlled collapsed state                                                                        |
+| `default-collapsed`  | `boolean` | `false`                | Initial collapsed state in uncontrolled mode                                                      |
+| `collapsible`        | `boolean` | `false`                | Shows the collapse/expand toggle button in the header                                             |
+| `responsive`         | `string`  | N/A                    | Media query that enables compact (collapsed) sidebar mode                                         |
+| `bottom-nav-at`      | `string`  | N/A                    | Media query that switches to mobile bottom-nav + drawer mode                                      |
+| `backdrop`           | `string`  | N/A                    | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` (unset = click-to-close, no dim) |
+| `close-on-select`    | `boolean` | `true`                 | Closes the drawer after primary item activation                                                   |
+| `collapse-label`     | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                                                         |
+| `expand-label`       | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                                                           |
+| `drawer`             | `boolean` | `false`                | Drawer-only mode: the sidebar exists solely as the overlay drawer                                 |
+| `drawer-close-label` | `string`  | `'Close sidebar'`      | Accessible label for the drawer close button                                                      |
+| `variant`            | `string`  | N/A                    | Visual variant: `'floating'` \| `'inset'`                                                         |
+| `label`              | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                                                             |
 
 **`ore-sidebar` Slots**
 
-| Slot      | Description                                      |
-| --------- | ------------------------------------------------ |
-| `logo`    | Logo or icon, always visible at the top          |
-| `header`  | App name or branding text, hidden when collapsed |
+| Slot      | Description                                        |
+| --------- | -------------------------------------------------- |
+| `logo`    | Logo or icon, always visible at the top            |
+| `header`  | App name or branding text, hidden when collapsed   |
 | (default) | `ore-sidebar-group` or `ore-sidebar-item` elements |
-| `footer`  | User info, theme toggles, or secondary actions   |
+| `footer`  | User info, theme toggles, or secondary actions     |
 
 **`ore-sidebar` Events**
 
-| Event                | Detail                                                              | Description                                         |
-| -------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
-| `collapsed-change`   | `{ collapsed: boolean; source: 'toggle' \| 'responsive' \| 'api' }` | Fired when a collapse state change is requested     |
-| `drawer-change`      | `{ open: boolean; source: 'toggle' \| 'responsive' \| 'api' }`      | Fired when the drawer open state changes            |
+| Event              | Detail                                                              | Description                                     |
+| ------------------ | ------------------------------------------------------------------- | ----------------------------------------------- |
+| `collapsed-change` | `{ collapsed: boolean; source: 'toggle' \| 'responsive' \| 'api' }` | Fired when a collapse state change is requested |
+| `drawer-change`    | `{ open: boolean; source: 'toggle' \| 'responsive' \| 'api' }`      | Fired when the drawer open state changes        |
 
 **`ore-sidebar` Methods**
 
@@ -515,39 +515,39 @@ ore-sidebar-item {
 
 **`ore-sidebar` CSS Custom Properties**
 
-| Property                    | Description                 | Default  |
-| --------------------------- | --------------------------- | -------- |
-| `--sidebar-width`           | Expanded width              | `16rem`  |
-| `--sidebar-collapsed-width` | Collapsed (icon-only) width | `3.5rem` |
-| `--sidebar-bg`              | Sidebar background color    | canvas   |
-| `--sidebar-border-color`    | Border / divider color      | contrast |
-| `--sidebar-header-height`   | Header height in both states | `4rem`   |
-| `--sidebar-header-padding`  | Header padding in both states | `0.75rem` |
-| `--sidebar-z-index`         | Sidebar stacking level      | `1`      |
-| `--sidebar-toggle-offset`   | Toggle offset from the top  | `1rem`   |
-| `--sidebar-toggle-bg`       | Toggle background           | panel    |
-| `--sidebar-toggle-color`    | Toggle icon color           | contrast |
-| `--sidebar-toggle-border-color` | Toggle border color     | divider  |
-| `--sidebar-toggle-hover-bg` | Toggle hover background     | contrast |
-| `--sidebar-toggle-hover-color` | Toggle hover icon color  | contrast |
-| `--sidebar-drawer-width`  | Open drawer panel width     | `min(--sidebar-width, 85vw)` |
-| `--sidebar-drawer-backdrop-bg` | Drawer backdrop color  | `transparent` (`--overlay-veil` in the dimming modes) |
-| `--sidebar-drawer-shadow` | Shadow on the open drawer panel | `--shadow-xl` |
-| `--sidebar-bottom-nav-height` | Bottom bar height        | `3.75rem` |
+| Property                        | Description                     | Default                                               |
+| ------------------------------- | ------------------------------- | ----------------------------------------------------- |
+| `--sidebar-width`               | Expanded width                  | `16rem`                                               |
+| `--sidebar-collapsed-width`     | Collapsed (icon-only) width     | `3.5rem`                                              |
+| `--sidebar-bg`                  | Sidebar background color        | canvas                                                |
+| `--sidebar-border-color`        | Border / divider color          | contrast                                              |
+| `--sidebar-header-height`       | Header height in both states    | `4rem`                                                |
+| `--sidebar-header-padding`      | Header padding in both states   | `0.75rem`                                             |
+| `--sidebar-z-index`             | Sidebar stacking level          | `1`                                                   |
+| `--sidebar-toggle-offset`       | Toggle offset from the top      | `1rem`                                                |
+| `--sidebar-toggle-bg`           | Toggle background               | panel                                                 |
+| `--sidebar-toggle-color`        | Toggle icon color               | contrast                                              |
+| `--sidebar-toggle-border-color` | Toggle border color             | divider                                               |
+| `--sidebar-toggle-hover-bg`     | Toggle hover background         | contrast                                              |
+| `--sidebar-toggle-hover-color`  | Toggle hover icon color         | contrast                                              |
+| `--sidebar-drawer-width`        | Open drawer panel width         | `min(--sidebar-width, 85vw)`                          |
+| `--sidebar-drawer-backdrop-bg`  | Drawer backdrop color           | `transparent` (`--overlay-veil` in the dimming modes) |
+| `--sidebar-drawer-shadow`       | Shadow on the open drawer panel | `--shadow-xl`                                         |
+| `--sidebar-bottom-nav-height`   | Bottom bar height               | `3.75rem`                                             |
 
 **`ore-sidebar` Parts**
 
-| Part                | Description                                        |
-| ------------------- | -------------------------------------------------- |
-| `nav`               | The navigation panel (inline and drawer)           |
-| `header`            | Header container (logo, branding, controls)        |
-| `content`           | Scrollable navigation content                      |
-| `footer`            | Footer container                                   |
-| `toggle-btn`        | Collapse/expand toggle                             |
-| `drawer-close-btn`  | Close button shown while the drawer is open        |
-| `drawer-backdrop`   | Backdrop behind the open drawer (click closes it; dims only with `backdrop`) |
-| `swipe-handle`      | Grabber nub that drag-closes the open drawer       |
-| `bottom-bar`        | Mobile bottom tab bar                              |
+| Part               | Description                                                                  |
+| ------------------ | ---------------------------------------------------------------------------- |
+| `nav`              | The navigation panel (inline and drawer)                                     |
+| `header`           | Header container (logo, branding, controls)                                  |
+| `content`          | Scrollable navigation content                                                |
+| `footer`           | Footer container                                                             |
+| `toggle-btn`       | Collapse/expand toggle                                                       |
+| `drawer-close-btn` | Close button shown while the drawer is open                                  |
+| `drawer-backdrop`  | Backdrop behind the open drawer (click closes it; dims only with `backdrop`) |
+| `swipe-handle`     | Grabber nub that drag-closes the open drawer                                 |
+| `bottom-bar`       | Mobile bottom tab bar                                                        |
 
 ---
 
@@ -558,19 +558,19 @@ ore-sidebar-item {
 | `label`        | `string`  | `''`    | Visible group label text                                  |
 | `collapsible`  | `boolean` | `false` | Adds a toggle button to collapse/expand the group's items |
 | `default-open` | `boolean` | `true`  | Initial open state for uncontrolled collapsible groups    |
-| `open`         | `boolean` | N/A | Controlled group open state                               |
+| `open`         | `boolean` | N/A     | Controlled group open state                               |
 
 **`ore-sidebar-group` Slots**
 
 | Slot      | Description                                 |
 | --------- | ------------------------------------------- |
 | `icon`    | Optional icon displayed in the group header |
-| (default) | `ore-sidebar-item` elements                  |
+| (default) | `ore-sidebar-item` elements                 |
 
 **`ore-sidebar-group` Events**
 
-| Event        | Detail              | Description                                        |
-| ------------ | ------------------- | -------------------------------------------------- |
+| Event         | Detail              | Description                                             |
+| ------------- | ------------------- | ------------------------------------------------------- |
 | `open-change` | `{ open: boolean }` | Fired when an uncontrolled collapsible group is toggled |
 
 ---
@@ -579,13 +579,13 @@ ore-sidebar-item {
 
 | Attribute          | Type      | Default | Description                                                |
 | ------------------ | --------- | ------- | ---------------------------------------------------------- |
-| `href`             | `string`  | N/A | URL: renders an `<a>` when set, otherwise a `<button>`    |
+| `href`             | `string`  | N/A     | URL: renders an `<a>` when set, otherwise a `<button>`     |
 | `active`           | `boolean` | `false` | Marks the item as the current page (`aria-current="page"`) |
 | `bottom-nav`       | `boolean` | `false` | Promotes the item into an explicit mobile bottom-nav set   |
-| `bottom-nav-label` | `string`  | N/A | Overrides the item text in its promoted mobile tab         |
+| `bottom-nav-label` | `string`  | N/A     | Overrides the item text in its promoted mobile tab         |
 | `disabled`         | `boolean` | `false` | Disables the item and forces button rendering              |
-| `rel`              | `string`  | N/A | `rel` attribute on the inner `<a>` (link items only)       |
-| `target`           | `string`  | N/A | `target` attribute on the inner `<a>` (link items only)    |
+| `rel`              | `string`  | N/A     | `rel` attribute on the inner `<a>` (link items only)       |
+| `target`           | `string`  | N/A     | `target` attribute on the inner `<a>` (link items only)    |
 
 **`ore-sidebar-item` Slots**
 
@@ -606,13 +606,13 @@ ore-sidebar-item {
 
 **`ore-sidebar-item` CSS Custom Properties**
 
-| Property                      | Description                      |
-| ----------------------------- | -------------------------------- |
-| `--sidebar-item-color`        | Default text color               |
-| `--sidebar-item-hover-bg`     | Background on hover              |
-| `--sidebar-item-hover-color`  | Text color on hover              |
-| `--sidebar-item-active-bg`    | Background when active           |
-| `--sidebar-item-active-color` | Text color when active           |
+| Property                      | Description            |
+| ----------------------------- | ---------------------- |
+| `--sidebar-item-color`        | Default text color     |
+| `--sidebar-item-hover-bg`     | Background on hover    |
+| `--sidebar-item-hover-color`  | Text color on hover    |
+| `--sidebar-item-active-bg`    | Background when active |
+| `--sidebar-item-active-color` | Text color when active |
 
 ## Accessibility
 
@@ -630,11 +630,11 @@ When the sidebar is collapsed to icon-only mode, the toggle button updates `aria
 
 ### Keyboard Navigation
 
-| Key     | Behavior                                                        |
-| ------- | --------------------------------------------------------------- |
-| `Tab`   | Moves focus to the next focusable item in DOM order             |
-| `Enter` | Activates a focused item or toggles a collapsible header        |
-| `Space` | Same as `Enter` on collapsible group headers                    |
-| `Escape` | Closes the open drawer and returns focus to the opener        |
+| Key      | Behavior                                                 |
+| -------- | -------------------------------------------------------- |
+| `Tab`    | Moves focus to the next focusable item in DOM order      |
+| `Enter`  | Activates a focused item or toggles a collapsible header |
+| `Space`  | Same as `Enter` on collapsible group headers             |
+| `Escape` | Closes the open drawer and returns focus to the opener   |
 
 While the drawer is open, the rest of the page is `inert`: Tab cannot leave the drawer, and focus is pulled back to the panel if it escapes.

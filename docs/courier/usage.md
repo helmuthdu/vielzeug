@@ -57,10 +57,7 @@ import { withBearerAuth, withRequestId, createCourier } from '@vielzeug/courier'
 
 const courier = createCourier({
   baseUrl: 'https://api.example.com',
-  middleware: [
-    withBearerAuth(() => sessionStorage.getItem('access-token') ?? ''),
-    withRequestId(),
-  ],
+  middleware: [withBearerAuth(() => sessionStorage.getItem('access-token') ?? ''), withRequestId()],
 });
 ```
 

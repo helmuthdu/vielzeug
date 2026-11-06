@@ -69,10 +69,7 @@ const routes = {
   settings: { path: '/settings' },
 } as const;
 const router = createRouter({ routes, notFound: {} });
-const views = router.createViewRegistry(
-  { home: HomePage, settings: SettingsPage },
-  { notFound: NotFoundPage },
-);
+const views = router.createViewRegistry({ home: HomePage, settings: SettingsPage }, { notFound: NotFoundPage });
 const Component = views.resolve(state);
 ```
 
@@ -164,7 +161,7 @@ data: async ({ signal }) => {
     items.push(...batch);
   }
   return items;
-}
+};
 ```
 
 ### Migrate per-match `status` to top-level status

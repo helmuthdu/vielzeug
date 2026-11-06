@@ -453,18 +453,18 @@ Horizontal coverflow mirrors layout and Left/Right navigation for `dir="rtl"`. A
 
 **`ore-carousel` Attributes / Properties**
 
-| Name                | Type                                                                      | Default        | Description                                                                                                                                                                                                     |
-| ------------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `label`             | `string`                                                                  | `'Carousel'`   | `aria-label` for the `role="region"` landmark                                                                                                                                                                   |
-| `variant`           | `'default' \| 'fade' \| 'filmstrip' \| 'gallery' \| 'coverflow'`             | `'default'`    | Layout and transition style                                                                                                                                                                                     |
-| `orientation`       | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Slide direction and keyboard axis                                                                                                                                                                               |
-| `slide-index`       | `number`                                                                  | `0`            | Active slide (zero-based). Writable at any time; reflected as an attribute after navigation                                                                                                                     |
-| `loop`              | `boolean`                                                                 | `true`         | Wrap last→first and first→last.                                                                                                                                                                                 |
-| `autoplay`          | `boolean`                                                                 | `false`        | Advance slides on a timer; pauses on hover and focus                                                                                                                                                            |
-| `autoplay-interval` | `number`                                                                  | `5000`         | Milliseconds between automatic advances; reactive: changing it restarts the timer                                                                                                                              |
-| `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color for prev/next navigation buttons                                                                                                                                                                    |
-| `show-controls`     | `boolean`                                                                 | `true`         | Show prev/next navigation buttons                                                                                                                                                                               |
-| `show-indicators`   | `boolean`                                                                 | `true`         | Show indicator dot navigation                                                                                                                                                                                   |
+| Name                | Type                                                                      | Default        | Description                                                                                 |
+| ------------------- | ------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------- |
+| `label`             | `string`                                                                  | `'Carousel'`   | `aria-label` for the `role="region"` landmark                                               |
+| `variant`           | `'default' \| 'fade' \| 'filmstrip' \| 'gallery' \| 'coverflow'`          | `'default'`    | Layout and transition style                                                                 |
+| `orientation`       | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Slide direction and keyboard axis                                                           |
+| `slide-index`       | `number`                                                                  | `0`            | Active slide (zero-based). Writable at any time; reflected as an attribute after navigation |
+| `loop`              | `boolean`                                                                 | `true`         | Wrap last→first and first→last.                                                             |
+| `autoplay`          | `boolean`                                                                 | `false`        | Advance slides on a timer; pauses on hover and focus                                        |
+| `autoplay-interval` | `number`                                                                  | `5000`         | Milliseconds between automatic advances; reactive: changing it restarts the timer           |
+| `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A            | Theme color for prev/next navigation buttons                                                |
+| `show-controls`     | `boolean`                                                                 | `true`         | Show prev/next navigation buttons                                                           |
+| `show-indicators`   | `boolean`                                                                 | `true`         | Show indicator dot navigation                                                               |
 
 **`ore-carousel` Events**
 
@@ -474,44 +474,44 @@ Horizontal coverflow mirrors layout and Left/Right navigation for `dir="rtl"`. A
 
 **`ore-carousel` CSS Custom Properties**
 
-| Property                         | Default                     | Description                                                                                                                                      |
-| -------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--carousel-bg`                  | `var(--color-canvas)`       | Slide area background                                                                                                                            |
-| `--carousel-radius`              | `var(--rounded-xl)`         | Host border radius                                                                                                                               |
-| `--carousel-min-height`          | `240px`                     | Fallback minimum height: set an explicit height for `filmstrip` and `gallery`                                                                   |
-| `--carousel-transition-duration` | `var(--duration-350)`       | Slide transition duration, including coverflow. Zeroes under Motion Mode (see [Animation → Motion Mode](/refine/animation#motion-mode)) |
-| `--carousel-dot-bg`              | `var(--color-contrast-300)` | Inactive indicator dot color                                                                                                                     |
-| `--carousel-dot-active-bg`       | `var(--color-contrast-700)` | Active indicator fill color                                                                                                                      |
-| `--carousel-filmstrip-inactive`  | `var(--size-16)`            | Collapsed width (horizontal) or height (vertical) of inactive filmstrip slides                                                                   |
-| `--carousel-filmstrip-gap`       | `var(--size-2)`             | Gap between slides in `filmstrip` mode                                                                                                           |
-| `--carousel-gallery-thumbnail`   | `var(--size-24)`            | Thumbnail width (horizontal) or height (vertical) in `gallery` mode                                                                              |
-| `--carousel-gallery-gap`         | `var(--size-2)`             | Gap between slides in `gallery` mode                                                                                                             |
-| `--carousel-coverflow-size`      | `var(--size-40)`            | Card width (horizontal) or height (vertical), constrained by available track space |
-| `--carousel-coverflow-spacing`   | `var(--size-12)`            | Positive CSS length between neighboring card centers; controls overlap and fitted preview count |
-| `--carousel-coverflow-perspective` | `calc(var(--size-64) * 4)` | Perspective distance for coverflow depth |
+| Property                           | Default                     | Description                                                                                                                             |
+| ---------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `--carousel-bg`                    | `var(--color-canvas)`       | Slide area background                                                                                                                   |
+| `--carousel-radius`                | `var(--rounded-xl)`         | Host border radius                                                                                                                      |
+| `--carousel-min-height`            | `240px`                     | Fallback minimum height: set an explicit height for `filmstrip` and `gallery`                                                           |
+| `--carousel-transition-duration`   | `var(--duration-350)`       | Slide transition duration, including coverflow. Zeroes under Motion Mode (see [Animation → Motion Mode](/refine/animation#motion-mode)) |
+| `--carousel-dot-bg`                | `var(--color-contrast-300)` | Inactive indicator dot color                                                                                                            |
+| `--carousel-dot-active-bg`         | `var(--color-contrast-700)` | Active indicator fill color                                                                                                             |
+| `--carousel-filmstrip-inactive`    | `var(--size-16)`            | Collapsed width (horizontal) or height (vertical) of inactive filmstrip slides                                                          |
+| `--carousel-filmstrip-gap`         | `var(--size-2)`             | Gap between slides in `filmstrip` mode                                                                                                  |
+| `--carousel-gallery-thumbnail`     | `var(--size-24)`            | Thumbnail width (horizontal) or height (vertical) in `gallery` mode                                                                     |
+| `--carousel-gallery-gap`           | `var(--size-2)`             | Gap between slides in `gallery` mode                                                                                                    |
+| `--carousel-coverflow-size`        | `var(--size-40)`            | Card width (horizontal) or height (vertical), constrained by available track space                                                      |
+| `--carousel-coverflow-spacing`     | `var(--size-12)`            | Positive CSS length between neighboring card centers; controls overlap and fitted preview count                                         |
+| `--carousel-coverflow-perspective` | `calc(var(--size-64) * 4)`  | Perspective distance for coverflow depth                                                                                                |
 
 **`ore-carousel` CSS Parts**
 
-| Part         | Element       | Description                                   |
-| ------------ | ------------- | --------------------------------------------- |
-| `track`      | `<div>`       | The slide track: also the `aria-live` region |
-| `controls`   | `<div>`       | Prev/next button wrapper                      |
-| `prev-btn`   | `<ore-button>` | Previous-slide button                         |
-| `next-btn`   | `<ore-button>` | Next-slide button                             |
-| `indicators` | `<div>`       | Navigation bar containing the indicator `tablist` and controls |
+| Part         | Element        | Description                                                    |
+| ------------ | -------------- | -------------------------------------------------------------- |
+| `track`      | `<div>`        | The slide track: also the `aria-live` region                   |
+| `controls`   | `<div>`        | Prev/next button wrapper                                       |
+| `prev-btn`   | `<ore-button>` | Previous-slide button                                          |
+| `next-btn`   | `<ore-button>` | Next-slide button                                              |
+| `indicators` | `<div>`        | Navigation bar containing the indicator `tablist` and controls |
 
 **`ore-carousel-slide`**
 
 A transparent wrapper. It carries `role="group"` and `aria-roledescription="slide"` automatically. No public attributes or properties: all attributes below are set by `ore-carousel` to drive CSS layout and should not be set manually.
 
-| Attribute              | Set by        | Description                                                                |
-| ---------------------- | ------------- | -------------------------------------------------------------------------- |
-| `data-variant`         | `ore-carousel` | Mirrors the parent `variant` value                                         |
-| `data-orientation`     | `ore-carousel` | Mirrors the parent `orientation` value                                     |
-| `data-active`          | `ore-carousel` | Present on the currently active slide                                      |
-| `data-before`          | `ore-carousel` | Present on slides before the active one (`default` / `fade` variants)      |
-| `data-after`           | `ore-carousel` | Present on slides after the active one (`default` / `fade` variants)       |
-| `data-gallery-visible` | `ore-carousel` | Present on the active slide and its immediate neighbours in `gallery` mode |
+| Attribute                | Set by         | Description                                                                   |
+| ------------------------ | -------------- | ----------------------------------------------------------------------------- |
+| `data-variant`           | `ore-carousel` | Mirrors the parent `variant` value                                            |
+| `data-orientation`       | `ore-carousel` | Mirrors the parent `orientation` value                                        |
+| `data-active`            | `ore-carousel` | Present on the currently active slide                                         |
+| `data-before`            | `ore-carousel` | Present on slides before the active one (`default` / `fade` variants)         |
+| `data-after`             | `ore-carousel` | Present on slides after the active one (`default` / `fade` variants)          |
+| `data-gallery-visible`   | `ore-carousel` | Present on the active slide and its immediate neighbours in `gallery` mode    |
 | `data-coverflow-visible` | `ore-carousel` | Present on the active slide and container-fitted previews in `coverflow` mode |
 
 ## Touch and drag navigation

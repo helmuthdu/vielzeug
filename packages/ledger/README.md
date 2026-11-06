@@ -19,9 +19,13 @@ let value = 'before';
 const ledger = createLedger();
 
 await ledger.do({
-  apply: () => { value = 'after'; },
+  apply: () => {
+    value = 'after';
+  },
   label: 'Rename value',
-  revert: () => { value = 'before'; },
+  revert: () => {
+    value = 'before';
+  },
 });
 
 await ledger.undo();

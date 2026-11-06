@@ -25,7 +25,10 @@ const checkout = defineMachine<{ address: string; items: Item[] }, Event>()({
   states: {
     shopping: {
       on: {
-        ADD: { reduce: ({ context, event }) => ({ ...context, items: [...context.items, event.item] }), target: 'shopping' },
+        ADD: {
+          reduce: ({ context, event }) => ({ ...context, items: [...context.items, event.item] }),
+          target: 'shopping',
+        },
         CHECKOUT: { guard: ({ context }) => context.items.length > 0, target: 'shipping' },
       },
     },

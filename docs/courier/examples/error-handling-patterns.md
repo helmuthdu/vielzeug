@@ -57,9 +57,7 @@ async function submit(body: unknown): Promise<string> {
 
     const fieldErrors = error.problem?.['errors'] as Record<string, string> | undefined;
 
-    return fieldErrors
-      ? Object.values(fieldErrors).join(', ')
-      : error.problem?.detail ?? 'The request was rejected.';
+    return fieldErrors ? Object.values(fieldErrors).join(', ') : (error.problem?.detail ?? 'The request was rejected.');
   }
 }
 ```

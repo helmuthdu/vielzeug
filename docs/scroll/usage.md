@@ -551,6 +551,7 @@ scrollEl.addEventListener('keydown', (event) => {
 ```
 
 **Requirements:**
+
 - The scroll container (or a descendant) must have keyboard focus for events to fire: give it `tabindex="0"`
 - `align: 'auto'` scrolls only when the item is outside the visible area
 
@@ -581,17 +582,20 @@ const virt = createVirtualizer(scrollEl, {
 ```
 
 **Requirements:**
+
 - Every rendered item must have a `data-vz-key` attribute with a unique value
 - Must use a DOM scroll target (not `Window`)
 - Elements must be in the DOM by the time `ResizeObserver` fires (usually the next microtask)
 
 **Use cases:**
+
 - Chat lists where messages expand on load
 - Expandable sections with collapsing text
 - Lazy-loaded thumbnails that arrive with unknown heights
 - User-resizable rows or dynamic content (videos, iframes)
 
 **Performance notes:**
+
 - Auto-measurement queries the DOM every render cycle: avoid with very large visible windows (100+ items)
 - For finer control, use the manual `measureEl()` method instead
 - Enable only on lists with truly variable-height items

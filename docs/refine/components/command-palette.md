@@ -343,72 +343,72 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 
 **`ore-command-palette`** Attributes
 
-| Attribute              | Type      | Default                        | Description                                                                                        |
-| ---------------------- | --------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `open`                 | `boolean` | N/A | Controlled visibility                                                                               |
-| `default-open`         | `boolean` | `false`                          | Initial visibility when `open` is not provided                                                      |
-| `backdrop`             | `'opaque' \| 'blur' \| 'transparent'` | `'opaque'`          | Backdrop style: dimming veil only (default), veil + blur, or no overlay                        |
-| `back-text`            | `string`  | `'All commands'`               | Label of the back row shown above an opened category                                              |
-| `label`                | `string`  | `'Command palette'`              | Accessible label for the dialog                                                                     |
-| `placeholder`          | `string`  | `'Type a command or search…'`   | Placeholder text for the search input                                                               |
-| `shortcut`             | `string`  | `'mod+k'`                        | Global keyboard shortcut ([keymap syntax](/keymap/usage.md)) that toggles the palette; `''` disables it |
-| `no-filter`            | `boolean` | `false`                          | Disable built-in client-side filtering (for server-driven search)                                   |
-| `loading`               | `boolean` | `false`                          | Shows a loading indicator next to the search input                                                  |
-| `empty-text`           | `string`  | `'No results found.'`            | Message shown when no item matches the query                                                        |
-| `keep-open-on-select`  | `boolean` | `false`                          | Keep the palette open after an item is selected, refocusing the search input                        |
-| `search-debounce`      | `number`  | `0`                              | Milliseconds typed text waits before filtering the list and emitting `search`; `0` filters on every keystroke |
+| Attribute             | Type                                  | Default                       | Description                                                                                                   |
+| --------------------- | ------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `open`                | `boolean`                             | N/A                           | Controlled visibility                                                                                         |
+| `default-open`        | `boolean`                             | `false`                       | Initial visibility when `open` is not provided                                                                |
+| `backdrop`            | `'opaque' \| 'blur' \| 'transparent'` | `'opaque'`                    | Backdrop style: dimming veil only (default), veil + blur, or no overlay                                       |
+| `back-text`           | `string`                              | `'All commands'`              | Label of the back row shown above an opened category                                                          |
+| `label`               | `string`                              | `'Command palette'`           | Accessible label for the dialog                                                                               |
+| `placeholder`         | `string`                              | `'Type a command or search…'` | Placeholder text for the search input                                                                         |
+| `shortcut`            | `string`                              | `'mod+k'`                     | Global keyboard shortcut ([keymap syntax](/keymap/usage.md)) that toggles the palette; `''` disables it       |
+| `no-filter`           | `boolean`                             | `false`                       | Disable built-in client-side filtering (for server-driven search)                                             |
+| `loading`             | `boolean`                             | `false`                       | Shows a loading indicator next to the search input                                                            |
+| `empty-text`          | `string`                              | `'No results found.'`         | Message shown when no item matches the query                                                                  |
+| `keep-open-on-select` | `boolean`                             | `false`                       | Keep the palette open after an item is selected, refocusing the search input                                  |
+| `search-debounce`     | `number`                              | `0`                           | Milliseconds typed text waits before filtering the list and emitting `search`; `0` filters on every keystroke |
 
 **`ore-command-palette`** Properties
 
-| Property | Type                        | Description                                                                     |
-| -------- | --------------------------- | -------------------------------------------------------------------------------- |
+| Property | Type                        | Description                                                                               |
+| -------- | --------------------------- | ----------------------------------------------------------------------------------------- |
 | `items`  | `CommandPaletteItemInput[]` | JS-driven command list: takes precedence over slotted `ore-command-palette-item` elements |
 
 **`ore-command-palette`** Slots
 
-| Slot      | Description                                                          |
-| --------- | ---------------------------------------------------------------------- |
-| (default) | `ore-command-palette-item` elements (alternative/supplement to `items`) |
+| Slot      | Description                                                                                         |
+| --------- | --------------------------------------------------------------------------------------------------- |
+| (default) | `ore-command-palette-item` elements (alternative/supplement to `items`)                             |
 | `preview` | Optional detail pane rendered beside the list while the slot has content; pair with `active-change` |
 
 **`ore-command-palette-item`** Attributes
 
-| Attribute  | Type      | Default | Description                                             |
-| ---------- | --------- | ------- | -------------------------------------------------------- |
-| `value`    | `string`  | `''`    | Value emitted by the `select` event and matched by search |
-| `label`    | `string`  | N/A | Explicit label text; falls back to the element's text content |
-| `group`    | `string`  | N/A | Group heading the item is clustered under; the name is also matched by search |
-| `icon`     | `string`  | N/A | Lucide icon name rendered at the start of the row         |
-| `shortcut` | `string`  | N/A | Display-only keyboard hint rendered at the end of the row: one `<kbd>` per key, separated with `+` (e.g. `"⌘+S"`). A literal `+` key isn't representable this way: spell it out (e.g. `"Ctrl+Plus"`) |
-| `keywords` | `string`  | N/A | Comma-separated extra search terms matched in addition to the label |
-| `disabled` | `boolean` | `false` | Excludes the item from keyboard navigation and selection  |
+| Attribute  | Type      | Default | Description                                                                                                                                                                                          |
+| ---------- | --------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value`    | `string`  | `''`    | Value emitted by the `select` event and matched by search                                                                                                                                            |
+| `label`    | `string`  | N/A     | Explicit label text; falls back to the element's text content                                                                                                                                        |
+| `group`    | `string`  | N/A     | Group heading the item is clustered under; the name is also matched by search                                                                                                                        |
+| `icon`     | `string`  | N/A     | Lucide icon name rendered at the start of the row                                                                                                                                                    |
+| `shortcut` | `string`  | N/A     | Display-only keyboard hint rendered at the end of the row: one `<kbd>` per key, separated with `+` (e.g. `"⌘+S"`). A literal `+` key isn't representable this way: spell it out (e.g. `"Ctrl+Plus"`) |
+| `keywords` | `string`  | N/A     | Comma-separated extra search terms matched in addition to the label                                                                                                                                  |
+| `disabled` | `boolean` | `false` | Excludes the item from keyboard navigation and selection                                                                                                                                             |
 
 An item that contains nested `<ore-command-palette-item>` elements (or, data-driven, a `children` array) becomes a category row that opens on `ArrowRight`/`Enter`/click instead of selecting. Nesting is one level only: a nested item's own children are ignored with a development warning.
 
 **Events**
 
-| Event    | Detail                                                                          | Description                                        |
-| -------- | -------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `select` | `{ value: string, label: string, item: CommandPaletteItem }`                    | Emitted when a command is chosen (click or `Enter`) |
-| `category-open` | `{ value: string, label: string, count: number }`                   | Emitted when a category row is opened; `select` never carries a category value |
-| `active-change` | `{ value: string, label: string, item?: CommandPaletteItem }`          | Emitted when the focused row changes; `item` is `undefined` when no row is active |
-| `search` | `{ query: string }`                                                              | Emitted when the query reaches the list: every keystroke, or after `search-debounce` settles it. Also when a drill-in or back step clears a typed query |
-| `open-change` | `{ open: boolean, reason: string }`                                         | Emitted whenever the palette opens or closes        |
+| Event           | Detail                                                        | Description                                                                                                                                             |
+| --------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `select`        | `{ value: string, label: string, item: CommandPaletteItem }`  | Emitted when a command is chosen (click or `Enter`)                                                                                                     |
+| `category-open` | `{ value: string, label: string, count: number }`             | Emitted when a category row is opened; `select` never carries a category value                                                                          |
+| `active-change` | `{ value: string, label: string, item?: CommandPaletteItem }` | Emitted when the focused row changes; `item` is `undefined` when no row is active                                                                       |
+| `search`        | `{ query: string }`                                           | Emitted when the query reaches the list: every keystroke, or after `search-debounce` settles it. Also when a drill-in or back step clears a typed query |
+| `open-change`   | `{ open: boolean, reason: string }`                           | Emitted whenever the palette opens or closes                                                                                                            |
 
 **CSS Custom Properties**
 
-| Property                              | Description                | Default                |
-| --------------------------------------- | --------------------------- | ------------------------ |
-| `--command-palette-bg`                | Panel background color      | `var(--color-canvas)`  |
-| `--command-palette-border-color`      | Panel border color          | Theme-dependent         |
-| `--command-palette-radius`            | Panel border radius         | `var(--rounded-lg)`    |
-| `--command-palette-shadow`            | Panel drop shadow           | `var(--shadow-2xl)`    |
-| `--command-palette-max-width`         | Maximum panel width         | `40rem`                 |
-| `--command-palette-backdrop-bg`       | Backdrop veil color         | `var(--overlay-veil)`     |
-| `--command-palette-option-hover-bg`   | Item background on hover    | Theme-dependent         |
-| `--command-palette-option-focus-bg`   | Item background when keyboard-focused | Theme-dependent |
-| `--command-palette-group-sticky-bg`   | Background of the pinned group heading while it sticks | Theme-dependent |
-| `--command-palette-preview-width`     | Preview pane width (when the `preview` slot has content) | `18rem` |
+| Property                            | Description                                              | Default               |
+| ----------------------------------- | -------------------------------------------------------- | --------------------- |
+| `--command-palette-bg`              | Panel background color                                   | `var(--color-canvas)` |
+| `--command-palette-border-color`    | Panel border color                                       | Theme-dependent       |
+| `--command-palette-radius`          | Panel border radius                                      | `var(--rounded-lg)`   |
+| `--command-palette-shadow`          | Panel drop shadow                                        | `var(--shadow-2xl)`   |
+| `--command-palette-max-width`       | Maximum panel width                                      | `40rem`               |
+| `--command-palette-backdrop-bg`     | Backdrop veil color                                      | `var(--overlay-veil)` |
+| `--command-palette-option-hover-bg` | Item background on hover                                 | Theme-dependent       |
+| `--command-palette-option-focus-bg` | Item background when keyboard-focused                    | Theme-dependent       |
+| `--command-palette-group-sticky-bg` | Background of the pinned group heading while it sticks   | Theme-dependent       |
+| `--command-palette-preview-width`   | Preview pane width (when the `preview` slot has content) | `18rem`               |
 
 ## Accessibility
 

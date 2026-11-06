@@ -17,10 +17,14 @@ Parse the wall-clock value explicitly, then use `shift()` with `timeZone` and `d
 import { parse, shift } from '@vielzeug/tempo';
 
 const wallClock = parse('2026-11-01T01:30:00', { as: 'plainDateTime' });
-const nextHour = shift(wallClock, { hours: 1 }, {
-  disambiguation: 'later',
-  timeZone: 'America/New_York',
-});
+const nextHour = shift(
+  wallClock,
+  { hours: 1 },
+  {
+    disambiguation: 'later',
+    timeZone: 'America/New_York',
+  },
+);
 ```
 
 ### Pitfalls

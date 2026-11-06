@@ -151,23 +151,23 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 
 | Prop              | Type                   | Default   | Description                                                                 |
 | ----------------- | ---------------------- | --------- | --------------------------------------------------------------------------- |
-| `value`           | `string`               | N/A | Selected time in 24-hour `HH:MM` format                                     |
-| `min`             | `string`               | N/A | Minimum selectable time (`HH:MM`, inclusive)                                |
-| `max`             | `string`               | N/A | Maximum selectable time (`HH:MM`, inclusive)                                |
+| `value`           | `string`               | N/A       | Selected time in 24-hour `HH:MM` format                                     |
+| `min`             | `string`               | N/A       | Minimum selectable time (`HH:MM`, inclusive)                                |
+| `max`             | `string`               | N/A       | Maximum selectable time (`HH:MM`, inclusive)                                |
 | `time-format`     | `'12' \| '24'`         | `'24'`    | Display format; `'12'` adds an AM/PM column                                 |
 | `minute-step`     | `number`               | `5`       | Minute increment (1–59)                                                     |
-| `label`           | `string`               | N/A | Visible label                                                               |
+| `label`           | `string`               | N/A       | Visible label                                                               |
 | `label-placement` | `'inset' \| 'outside'` | `'inset'` | Label position                                                              |
-| `placeholder`     | `string`               | N/A | Trigger placeholder when no time is selected                                |
-| `name`            | `string`               | N/A | Form field name                                                             |
+| `placeholder`     | `string`               | N/A       | Trigger placeholder when no time is selected                                |
+| `name`            | `string`               | N/A       | Form field name                                                             |
 | `disabled`        | `boolean`              | `false`   | Disable the picker                                                          |
 | `required`        | `boolean`              | `false`   | Mark as required                                                            |
-| `error`           | `string`               | N/A | Error message (shown below trigger)                                         |
-| `helper`          | `string`               | N/A | Helper text (shown below trigger)                                           |
-| `color`           | `string`               | N/A | Theme color (`primary`, `secondary`, `info`, `success`, `warning`, `error`) |
+| `error`           | `string`               | N/A       | Error message (shown below trigger)                                         |
+| `helper`          | `string`               | N/A       | Helper text (shown below trigger)                                           |
+| `color`           | `string`               | N/A       | Theme color (`primary`, `secondary`, `info`, `success`, `warning`, `error`) |
 | `size`            | `string`               | `'md'`    | Size variant: `sm`, `md`, `lg`                                              |
-| `variant`         | `string`               | N/A | Visual variant: `flat`, `solid`, `bordered`, `outline`, `ghost`             |
-| `rounded`         | `string`               | N/A | Border radius override                                                      |
+| `variant`         | `string`               | N/A       | Visual variant: `flat`, `solid`, `bordered`, `outline`, `ghost`             |
+| `rounded`         | `string`               | N/A       | Border radius override                                                      |
 | `fullwidth`       | `boolean`              | `false`   | Expand to full container width                                              |
 
 ### Events
@@ -191,7 +191,7 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 
 | Part       | Description                                    |
 | ---------- | ---------------------------------------------- |
-| `field`    | The trigger field (`ore-input`)                 |
+| `field`    | The trigger field (`ore-input`)                |
 | `dropdown` | The floating time dropdown panel               |
 | `column`   | A scrollable column (hours / minutes / period) |
 | `option`   | An individual time option cell                 |

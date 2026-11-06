@@ -33,7 +33,11 @@ const player = defineMachine<{ position: number }, Event>()({
       on: {
         PAUSE: { effects: [() => media.pause()], target: 'paused' },
         SEEK: {
-          effects: [({ context }) => { media.currentTime = context.position; }],
+          effects: [
+            ({ context }) => {
+              media.currentTime = context.position;
+            },
+          ],
           reduce: ({ event }) => ({ position: event.position }),
           target: 'playing',
         },

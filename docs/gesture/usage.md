@@ -67,9 +67,7 @@ import { createLongPress } from '@vielzeug/gesture';
 
 const hold = createLongPress(grid, {
   durationMs: 500,
-  shouldStart: (event) =>
-    event.pointerType !== 'mouse' &&
-    (event.target as HTMLElement).closest('.tile') !== null,
+  shouldStart: (event) => event.pointerType !== 'mouse' && (event.target as HTMLElement).closest('.tile') !== null,
   onLongPress: (detail) => {
     const tile = (detail.event.target as HTMLElement).closest<HTMLElement>('.tile');
     openPreview(tile?.dataset.id);
@@ -151,9 +149,7 @@ const pan = createPanGesture(notification, {
   axis: 'x',
   pointerCapture: false,
   shouldStart: (event) =>
-    !event
-      .composedPath()
-      .some((node) => node instanceof Element && node.matches('button, a, input, select, textarea')),
+    !event.composedPath().some((node) => node instanceof Element && node.matches('button, a, input, select, textarea')),
   onMove,
   onEnd,
 });

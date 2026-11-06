@@ -33,13 +33,13 @@ const sync = createSync({ gateway, port, idleDelayMs: 3000 });
 sync.changed(); // a local edit happened: the engine batches and pushes dirty records
 ```
 
-| Feature                              | Tandem                                     | RxSync              | PowerSync            |
-| ------------------------------------ | ------------------------------------------ | ------------------- | -------------------- |
-| Bundle size                          | <PackageInfo package="tandem" type="size" /> | <ore-icon name="x" size="16" /> | <ore-icon name="x" size="16" /> |
-| Zero runtime dependencies            | <ore-icon name="check" size="16" />        | <ore-icon name="x" size="16" /> | <ore-icon name="x" size="16" /> |
-| Backend-agnostic (bring your `port`) | <ore-icon name="check" size="16" />        | <ore-icon name="x" size="16" /> | <ore-icon name="x" size="16" /> |
-| Storage-agnostic (bring your `gateway`) | <ore-icon name="check" size="16" />     | <ore-icon name="x" size="16" /> | <ore-icon name="check" size="16" /> |
-| Tombstoned deletions + rev conflicts | <ore-icon name="check" size="16" />        | <ore-icon name="check" size="16" /> | <ore-icon name="check" size="16" /> |
+| Feature                                 | Tandem                                       | RxSync                              | PowerSync                           |
+| --------------------------------------- | -------------------------------------------- | ----------------------------------- | ----------------------------------- |
+| Bundle size                             | <PackageInfo package="tandem" type="size" /> | <ore-icon name="x" size="16" />     | <ore-icon name="x" size="16" />     |
+| Zero runtime dependencies               | <ore-icon name="check" size="16" />          | <ore-icon name="x" size="16" />     | <ore-icon name="x" size="16" />     |
+| Backend-agnostic (bring your `port`)    | <ore-icon name="check" size="16" />          | <ore-icon name="x" size="16" />     | <ore-icon name="x" size="16" />     |
+| Storage-agnostic (bring your `gateway`) | <ore-icon name="check" size="16" />          | <ore-icon name="x" size="16" />     | <ore-icon name="check" size="16" /> |
+| Tombstoned deletions + rev conflicts    | <ore-icon name="check" size="16" />          | <ore-icon name="check" size="16" /> | <ore-icon name="check" size="16" /> |
 
 <div class="decision-callout">
 

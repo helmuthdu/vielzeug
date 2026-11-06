@@ -5,7 +5,20 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, catalog-loading]
 related: [ripple, wayfinder, courier]
-exports: [createI18n, createTranslator, LinguaError, LinguaDisposedError, LinguaInvalidCatalogError, LinguaInvalidLocaleError, LinguaInvalidPluralCountError, LinguaInvalidStateError, LinguaMissingCatalogError, LinguaMissingKeyError, LinguaMissingValueError]
+exports:
+  [
+    createI18n,
+    createTranslator,
+    LinguaError,
+    LinguaDisposedError,
+    LinguaInvalidCatalogError,
+    LinguaInvalidLocaleError,
+    LinguaInvalidPluralCountError,
+    LinguaInvalidStateError,
+    LinguaMissingCatalogError,
+    LinguaMissingKeyError,
+    LinguaMissingValueError,
+  ]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -25,13 +38,13 @@ const message = catalogs[locale]?.inbox?.[count === 1 ? 'one' : 'other'] ?? 'inb
 const output = i18n.translate('inbox', { count });
 ```
 
-| Feature | Lingua | i18next | FormatJS |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="lingua" type="size" /> | Varies by selected modules | Varies by selected modules |
-| Zero runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
-| Explicit plural catalog nodes | <ore-icon name="check" size="16"></ore-icon> | Convention/config dependent | ICU-message dependent |
-| Static and lazy locale catalogs | <ore-icon name="check" size="16"></ore-icon> | Plugin/config dependent | Application-defined |
-| Immutable locale snapshots | <ore-icon name="check" size="16"></ore-icon> | Application-defined | Application-defined |
+| Feature                         | Lingua                                       | i18next                                               | FormatJS                                              |
+| ------------------------------- | -------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| Bundle size                     | <PackageInfo package="lingua" type="size" /> | Varies by selected modules                            | Varies by selected modules                            |
+| Zero runtime dependencies       | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| Explicit plural catalog nodes   | <ore-icon name="check" size="16"></ore-icon> | Convention/config dependent                           | ICU-message dependent                                 |
+| Static and lazy locale catalogs | <ore-icon name="check" size="16"></ore-icon> | Plugin/config dependent                               | Application-defined                                   |
+| Immutable locale snapshots      | <ore-icon name="check" size="16"></ore-icon> | Application-defined                                   | Application-defined                                   |
 
 <div class="decision-callout">
 

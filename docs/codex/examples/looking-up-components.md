@@ -23,7 +23,11 @@ Result excerpt:
 
 ```json
 [
-  { "tagName": "ore-button", "description": "A clickable button element.", "attrs": [{ "name": "variant", "type": "string", "default": "primary" }] },
+  {
+    "tagName": "ore-button",
+    "description": "A clickable button element.",
+    "attrs": [{ "name": "variant", "type": "string", "default": "primary" }]
+  },
   { "tagName": "ore-input", "description": "A text input field.", "attrs": [] },
   { "tagName": "ore-dialog", "description": "A modal dialog.", "attrs": [] }
 ]
@@ -44,7 +48,10 @@ The result is the full CEM declaration including `attributes`, `members`, `event
 ```
 
 ```json
-{ "name": "refine-validate-usage", "arguments": { "tagName": "ore-button", "html": "<ore-button variant=\"primary\">Submit</ore-button>" } }
+{
+  "name": "refine-validate-usage",
+  "arguments": { "tagName": "ore-button", "html": "<ore-button variant=\"primary\">Submit</ore-button>" }
+}
 ```
 
 `refine-validate-usage` returns `[]` when the HTML is valid, or a list of `{ type, message }` issues

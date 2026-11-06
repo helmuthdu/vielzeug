@@ -22,13 +22,13 @@ These quadrants have hard boundaries. Mixing them degrades usability: a reader c
 
 Each standard doc page maps to one primary quadrant:
 
-| File            | Diátaxis type                                                 | Reader's question                                          |
-| --------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
-| `index.md`      | **Explanation**                                               | "What is this, why does it exist, and is it right for me?" |
-| `usage.md`      | **How-to Guide**                                              | "How do I accomplish this specific task?"                  |
-| `api.md`        | **Reference**                                                 | "What is the exact signature, behaviour, and contract?"    |
+| File            | Diátaxis type                                                | Reader's question                                          |
+| --------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| `index.md`      | **Explanation**                                              | "What is this, why does it exist, and is it right for me?" |
+| `usage.md`      | **How-to Guide**                                             | "How do I accomplish this specific task?"                  |
+| `api.md`        | **Reference**                                                | "What is the exact signature, behaviour, and contract?"    |
 | `examples.md`   | Navigation (not a Diátaxis quadrant: an organisational tool) | "Which recipe do I need?"                                  |
-| `examples/*.md` | **How-to Guide**                                              | "How do I solve this concrete problem end-to-end?"         |
+| `examples/*.md` | **How-to Guide**                                             | "How do I solve this concrete problem end-to-end?"         |
 
 Understanding this mapping is more important than memorising the structural rules. When in doubt about where content belongs, ask: _which reader need does this serve?_
 

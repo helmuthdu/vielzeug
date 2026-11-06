@@ -28,12 +28,7 @@ function ContactForm() {
 
   return (
     <form>
-      <ore-input
-        label="Email"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.currentTarget.value)}
-      />
+      <ore-input label="Email" type="email" value={email} onChange={(e) => setEmail(e.currentTarget.value)} />
       <ore-button variant="solid" color="primary" type="submit">
         Send
       </ore-button>
@@ -194,6 +189,7 @@ Svelte handles web components natively: no configuration needed.
 
 ::: tip Svelte 4
 In Svelte 4, use `on:eventname` syntax instead of `oneventname`:
+
 ```svelte
 <ore-input on:change={(e) => (email = e.currentTarget.value)} label="Email" />
 ```
@@ -254,6 +250,7 @@ export class AppModule {}
 
 ::: tip Boolean attributes
 Angular's `[attr.*]` binding sets string values. Pass `null` to remove the attribute entirely:
+
 ```html
 <ore-button [attr.disabled]="isDisabled || null">Save</ore-button>
 ```

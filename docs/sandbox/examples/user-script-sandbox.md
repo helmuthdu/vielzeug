@@ -75,7 +75,7 @@ const { logs, error } = await runner.run(`
   console.log('Average:', sum / nums.length);
 `);
 
-console.log(logs);  // ['Sum: 15', 'Average: 3']
+console.log(logs); // ['Sum: 15', 'Average: 3']
 console.log(error); // null
 ```
 

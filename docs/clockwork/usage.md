@@ -81,7 +81,7 @@ PAY: [
     target: 'success',
   },
   { target: 'insufficientFunds' },
-]
+];
 ```
 
 Call `actor.can(event)` for the current actor snapshot or `machine.can(snapshot, event)` for an arbitrary snapshot.
@@ -91,10 +91,7 @@ Call `actor.can(event)` for the current actor snapshot or `machine.can(snapshot,
 `machine.transition()` enables isolated unit tests and decision UIs. It returns the unchanged snapshot with `type: 'ignored'` when no transition matches; it does not expose or run effects.
 
 ```ts
-const result = counter.transition(
-  { context: { count: 3 }, state: 'idle' },
-  { type: 'INC' },
-);
+const result = counter.transition({ context: { count: 3 }, state: 'idle' }, { type: 'INC' });
 
 if (result.type === 'transition') {
   console.log(result.snapshot.context.count); // 4
@@ -143,15 +140,17 @@ const loader = defineMachine<{ error: string; items: string[] }, LoadEvent>()({
   states: {
     idle: { on: { FETCH: { target: 'loading' } } },
     loading: {
-      invoke: [{
-        src: async ({ signal }) => {
-          const response = await fetch('/api/items', { signal });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return response.json() as Promise<string[]>;
+      invoke: [
+        {
+          src: async ({ signal }) => {
+            const response = await fetch('/api/items', { signal });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json() as Promise<string[]>;
+          },
+          onDone: ({ result }) => ({ items: result, type: 'SUCCESS' }),
+          onError: ({ error }) => ({ message: String(error), type: 'FAILURE' }),
         },
-        onDone: ({ result }) => ({ items: result, type: 'SUCCESS' }),
-        onError: ({ error }) => ({ message: String(error), type: 'FAILURE' }),
-      }],
+      ],
       on: {
         FAILURE: { reduce: ({ event }) => ({ error: event.message, items: [] }), target: 'error' },
         SUCCESS: { reduce: ({ event }) => ({ error: '', items: event.items }), target: 'ready' },
@@ -212,7 +211,8 @@ Use `tap()` to observe either class without controlling disposition. The `error`
 ```ts
 const actor = machine.createActor();
 actor.tap((event) => {
-  if (event.type === 'error') console.error({ error: event.error, event: event.event, phase: event.phase, state: event.state });
+  if (event.type === 'error')
+    console.error({ error: event.error, event: event.event, phase: event.phase, state: event.state });
 });
 ```
 
@@ -248,10 +248,7 @@ Test deterministic state behavior through `machine.transition()`. Create actors 
 import { expect, test } from 'vitest';
 
 test('increments without an actor', () => {
-  const result = counter.transition(
-    { context: { count: 2 }, state: 'idle' },
-    { type: 'INC' },
-  );
+  const result = counter.transition({ context: { count: 2 }, state: 'idle' }, { type: 'INC' });
 
   expect(result).toMatchObject({
     snapshot: { context: { count: 3 }, state: 'idle' },
@@ -269,7 +266,10 @@ Bridge the current actor snapshot into renderer state through one subscription. 
 ```ts [React]
 import { useSyncExternalStore } from 'react';
 
-function useActor<Value>(actor: { readonly snapshot: Value; subscribe(listener: (snapshot: Value) => void): () => void }) {
+function useActor<Value>(actor: {
+  readonly snapshot: Value;
+  subscribe(listener: (snapshot: Value) => void): () => void;
+}) {
   return useSyncExternalStore(
     (notify) => actor.subscribe(() => notify()),
     () => actor.snapshot,

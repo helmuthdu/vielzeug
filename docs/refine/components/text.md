@@ -105,7 +105,7 @@ Choose from 7 size steps. The token scale resolved depends on the active variant
 
 | `size` | Body scale token | Value | Heading scale token | Value |
 | ------ | ---------------- | ----- | ------------------- | ----- |
-| `2xs`  | `--text-2xs`     | 11px  | (no heading step)     | 11px  |
+| `2xs`  | `--text-2xs`     | 11px  | (no heading step)   | 11px  |
 | `xs`   | `--text-xs`      | 12px  | `--heading-xs`      | 14px  |
 | `sm`   | `--text-sm`      | 14px  | `--heading-sm`      | 16px  |
 | `md`   | `--text-base`    | 16px  | `--heading-md`      | 24px  |
@@ -406,31 +406,31 @@ Show file information with truncation using width constraints.
 
 ### Attributes
 
-| Attribute  | Type                                                                                                                                                  | Default | Description                                                                                                                |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `variant`  | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                                                                 | N/A | Text variant style                                                                                                         |
-| `size`     | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'`                                                                                                       | N/A | Font size. `variant="heading"` resolves against `--heading-*` tokens; all other variants resolve against `--text-*` tokens |
-| `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                                                        | N/A | Font weight (falls back to variant default, then `normal`)                                                                 |
-| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'tertiary' \| 'disabled' \| 'contrast'` | N/A | Text color (falls back to variant default, then `inherit`)                                                                 |
-| `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                                                          | N/A | Text alignment (forces `display: block`)                                                                                   |
-| `truncate` | `boolean`                                                                                                                                             | N/A | Single-line truncation with ellipsis                                                                                       |
-| `lines`    | `number`                                                                                                                                              | N/A | Clamp to N lines with ellipsis (multi-line truncation)                                                                     |
-| `expandable` | `boolean`                                                                                                                                           | `false` | Reveal clamped text on click/tap; adds `role="button"` + `aria-expanded`. Pairs with `truncate` or `lines`            |
-| `expanded` | `boolean`                                                                                                                                             | N/A | Controlled expanded state. When set, the component shows this and only emits `expand-change`                               |
-| `default-expanded` | `boolean`                                                                                                                                     | `false` | Initial uncontrolled expanded state. Ignored when `expanded` is set                                                        |
-| `italic`   | `boolean`                                                                                                                                             | N/A | Italic font style                                                                                                          |
-| `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                                                         | N/A | Semantic element; `h1`–`h6` auto-sets `role="heading"` + `aria-level`                                                      |
+| Attribute          | Type                                                                                                                                                  | Default | Description                                                                                                                |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `variant`          | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                                                                 | N/A     | Text variant style                                                                                                         |
+| `size`             | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'`                                                                                                       | N/A     | Font size. `variant="heading"` resolves against `--heading-*` tokens; all other variants resolve against `--text-*` tokens |
+| `weight`           | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                                                        | N/A     | Font weight (falls back to variant default, then `normal`)                                                                 |
+| `color`            | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'tertiary' \| 'disabled' \| 'contrast'` | N/A     | Text color (falls back to variant default, then `inherit`)                                                                 |
+| `align`            | `'left' \| 'center' \| 'right' \| 'justify'`                                                                                                          | N/A     | Text alignment (forces `display: block`)                                                                                   |
+| `truncate`         | `boolean`                                                                                                                                             | N/A     | Single-line truncation with ellipsis                                                                                       |
+| `lines`            | `number`                                                                                                                                              | N/A     | Clamp to N lines with ellipsis (multi-line truncation)                                                                     |
+| `expandable`       | `boolean`                                                                                                                                             | `false` | Reveal clamped text on click/tap; adds `role="button"` + `aria-expanded`. Pairs with `truncate` or `lines`                 |
+| `expanded`         | `boolean`                                                                                                                                             | N/A     | Controlled expanded state. When set, the component shows this and only emits `expand-change`                               |
+| `default-expanded` | `boolean`                                                                                                                                             | `false` | Initial uncontrolled expanded state. Ignored when `expanded` is set                                                        |
+| `italic`           | `boolean`                                                                                                                                             | N/A     | Italic font style                                                                                                          |
+| `as`               | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                                                         | N/A     | Semantic element; `h1`–`h6` auto-sets `role="heading"` + `aria-level`                                                      |
 
 ### Variant Defaults
 
-| Variant    | Default size          | Default weight          | Default color                           | Line height              | Letter spacing                 |
-| ---------- | --------------------- | ----------------------- | --------------------------------------- | ------------------------ | ------------------------------ |
-| `body`     | `--text-base` (16px)  | `--font-normal` (400)   | `--text-color-body` (contrast-800)      | `--leading-normal` (1.5) | `normal`                       |
-| `heading`  | `--heading-md` (24px) | `--font-semibold` (600) | `--text-color-heading` (contrast-900)   | `--leading-tight` (1.15) | `--tracking-header` (-0.05em)  |
-| `label`    | `--text-sm` (14px)    | `--font-medium` (500)   | `--text-color-heading` (contrast-900)   | `--leading-snug` (1.375) | `normal`                       |
-| `caption`  | `--text-sm` (14px)    | `--font-normal` (400)   | `--text-color-secondary` (contrast-600) | `--leading-normal` (1.5) | `normal`                       |
-| `overline` | `--text-xs` (12px)    | `--font-semibold` (600) | `--text-color-body` (contrast-800)      | `--leading-none` (1)     | `0.08em`                       |
-| `code`     | `--text-sm` (14px)    | `--font-normal` (400)   | `--text-color-body` (contrast-800)      | `--leading-normal` (1.5) | `normal`                       |
+| Variant    | Default size          | Default weight          | Default color                           | Line height              | Letter spacing                |
+| ---------- | --------------------- | ----------------------- | --------------------------------------- | ------------------------ | ----------------------------- |
+| `body`     | `--text-base` (16px)  | `--font-normal` (400)   | `--text-color-body` (contrast-800)      | `--leading-normal` (1.5) | `normal`                      |
+| `heading`  | `--heading-md` (24px) | `--font-semibold` (600) | `--text-color-heading` (contrast-900)   | `--leading-tight` (1.15) | `--tracking-header` (-0.05em) |
+| `label`    | `--text-sm` (14px)    | `--font-medium` (500)   | `--text-color-heading` (contrast-900)   | `--leading-snug` (1.375) | `normal`                      |
+| `caption`  | `--text-sm` (14px)    | `--font-normal` (400)   | `--text-color-secondary` (contrast-600) | `--leading-normal` (1.5) | `normal`                      |
+| `overline` | `--text-xs` (12px)    | `--font-semibold` (600) | `--text-color-body` (contrast-800)      | `--leading-none` (1)     | `0.08em`                      |
+| `code`     | `--text-sm` (14px)    | `--font-normal` (400)   | `--text-color-body` (contrast-800)      | `--leading-normal` (1.5) | `normal`                      |
 
 ### Slots
 
@@ -440,9 +440,9 @@ Show file information with truncation using width constraints.
 
 ### Events
 
-| Event            | Detail                | Fires when                                    |
-| ---------------- | --------------------- | --------------------------------------------- |
-| `expand-change`  | `{ expanded: boolean }` | An `expandable` text is toggled by the reader |
+| Event           | Detail                  | Fires when                                    |
+| --------------- | ----------------------- | --------------------------------------------- |
+| `expand-change` | `{ expanded: boolean }` | An `expandable` text is toggled by the reader |
 
 ### CSS Custom Properties
 

@@ -122,12 +122,13 @@ When a persisted record shape evolves, records saved by older versions carry key
 ```ts
 import { s, tolerate } from '@vielzeug/spell';
 
-const Person = tolerate(
-  s.object({ name: s.string(), email: s.number() }),
-  'address',
-);
+const Person = tolerate(s.object({ name: s.string(), email: s.number() }), 'address');
 
-const parsed = Person.parse({ name: 'John Doe', address: 'p sherman 42 wallaby way sydney', email: 'johndoe@mail.com' });
+const parsed = Person.parse({
+  name: 'John Doe',
+  address: 'p sherman 42 wallaby way sydney',
+  email: 'johndoe@mail.com',
+});
 // { name: 'John Doe', email: 'johndoe@mail.com' }: the tolerated key never reaches the output
 ```
 

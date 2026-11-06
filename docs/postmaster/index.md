@@ -5,7 +5,16 @@ package: postmaster
 category: Async
 keywords: [durable, outbox, jobs, retry, dead-letter, idempotency, indexeddb, lease]
 related: [courier, vault, sentinel, familiar, ripple]
-exports: [createPostmaster, defineJobs, createIndexedDbPostmasterStore, createMemoryPostmasterStore, PostmasterError, PostmasterDisposedError, PostmasterJobError]
+exports:
+  [
+    createPostmaster,
+    defineJobs,
+    createIndexedDbPostmasterStore,
+    createMemoryPostmasterStore,
+    PostmasterError,
+    PostmasterDisposedError,
+    PostmasterJobError,
+  ]
 environments: [browser, node]
 ---
 
@@ -52,14 +61,14 @@ await postmaster.enqueue('createTodo', { id: crypto.randomUUID(), title: 'Buy mi
 postmaster.start();
 ```
 
-| Feature | Postmaster | Ad hoc outbox | Familiar |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="postmaster" type="size" /> | Application-defined | <PackageInfo package="familiar" type="size" /> |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Survives page reload | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Leased cross-tab processing | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Dead-letter recovery | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Typed job payloads | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Feature                     | Postmaster                                       | Ad hoc outbox                                | Familiar                                       |
+| --------------------------- | ------------------------------------------------ | -------------------------------------------- | ---------------------------------------------- |
+| Bundle size                 | <PackageInfo package="postmaster" type="size" /> | Application-defined                          | <PackageInfo package="familiar" type="size" /> |
+| Zero dependencies           | <ore-icon name="check" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>   |
+| Survives page reload        | <ore-icon name="check" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>       |
+| Leased cross-tab processing | <ore-icon name="check" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>       |
+| Dead-letter recovery        | <ore-icon name="check" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>       |
+| Typed job payloads          | <ore-icon name="check" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon>   |
 
 <div class="decision-callout">
 

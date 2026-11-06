@@ -148,12 +148,12 @@ Animated rainbow border effect: works on any variant.
 
 | Attribute   | Type                                                                      | Default | Description            |
 | ----------- | ------------------------------------------------------------------------- | ------- | ---------------------- |
-| `variant`   | `'solid' \| 'flat' \| 'frost'`                                 | -       | Style variant          |
+| `variant`   | `'solid' \| 'flat' \| 'frost'`                                            | -       | Style variant          |
 | `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -       | Color theme            |
 | `padding`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | `'md'`  | Internal padding       |
 | `elevation` | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | -       | Shadow depth (0–5)     |
 | `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'md'`  | Border radius          |
-| `effect`    | `'rainbow'`                                                               | N/A | Animated border effect |
+| `effect`    | `'rainbow'`                                                               | N/A     | Animated border effect |
 | `fullwidth` | `boolean`                                                                 | `false` | Expand to full width   |
 
 ### Slots
@@ -164,8 +164,8 @@ Animated rainbow border effect: works on any variant.
 
 ### Parts
 
-| Part  | Description                              |
-| ----- | ---------------------------------------- |
+| Part  | Description                             |
+| ----- | --------------------------------------- |
 | `box` | The inner `<div>`: target with `::part` |
 
 ### CSS Custom Properties

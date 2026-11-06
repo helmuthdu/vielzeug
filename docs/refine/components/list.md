@@ -218,60 +218,60 @@ individual item (also excludes it from arrow-key navigation).
 
 **`ore-list`** Attributes
 
-| Attribute    | Type                                      | Default   | Description                                              |
-| ------------ | ------------------------------------------ | --------- | ---------------------------------------------------------- |
-| `variant`    | `'plain' \| 'bordered' \| 'separated'`     | `'plain'` | Visual variant                                              |
-| `size`       | `'sm' \| 'md' \| 'lg'`                     | `'md'`    | Size applied to all items                                    |
-| `selectable` | `boolean`                                   | `false`   | Enable single-selection listbox behavior                    |
-| `disabled`   | `boolean`                                   | `false`   | Disable the entire list                                      |
-| `value`      | `string`                                    | N/A | Selected item's value (`selectable` only): the single source of truth for selection |
+| Attribute    | Type                                   | Default   | Description                                                                         |
+| ------------ | -------------------------------------- | --------- | ----------------------------------------------------------------------------------- |
+| `variant`    | `'plain' \| 'bordered' \| 'separated'` | `'plain'` | Visual variant                                                                      |
+| `size`       | `'sm' \| 'md' \| 'lg'`                 | `'md'`    | Size applied to all items                                                           |
+| `selectable` | `boolean`                              | `false`   | Enable single-selection listbox behavior                                            |
+| `disabled`   | `boolean`                              | `false`   | Disable the entire list                                                             |
+| `value`      | `string`                               | N/A       | Selected item's value (`selectable` only): the single source of truth for selection |
 
 **`ore-list`** Events
 
-| Event    | Detail                                     | Description                                    |
-| -------- | -------------------------------------------- | ------------------------------------------------- |
-| `change` | `{ value: string \| null }`                  | Fired when the selected value changes (`selectable` only) |
+| Event    | Detail                      | Description                                               |
+| -------- | --------------------------- | --------------------------------------------------------- |
+| `change` | `{ value: string \| null }` | Fired when the selected value changes (`selectable` only) |
 
 **`ore-list-item`** Attributes
 
-| Attribute  | Type                 | Default | Description                                                |
-| ---------- | ---------------------- | --------- | -------------------------------------------------------------- |
-| `actionable` | `boolean`            | `false`   | Give the row button semantics and emit `activate` on pointer or keyboard activation |
-| `disabled` | `boolean`              | `false`   | Disable this item                                              |
-| `selected` | `boolean` (read-only)  | `false`   | Derived: `true` when this item's `value` matches the parent list's `value`. Not independently settable. |
-| `value`    | `string`               | N/A | Opaque value compared against the parent list's `value` to derive `selected`; also reported in select/change events |
-| `revealed` | `'left' \| 'right'`    | N/A | Which action panel is revealed; settable programmatically      |
+| Attribute    | Type                  | Default | Description                                                                                                         |
+| ------------ | --------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| `actionable` | `boolean`             | `false` | Give the row button semantics and emit `activate` on pointer or keyboard activation                                 |
+| `disabled`   | `boolean`             | `false` | Disable this item                                                                                                   |
+| `selected`   | `boolean` (read-only) | `false` | Derived: `true` when this item's `value` matches the parent list's `value`. Not independently settable.             |
+| `value`      | `string`              | N/A     | Opaque value compared against the parent list's `value` to derive `selected`; also reported in select/change events |
+| `revealed`   | `'left' \| 'right'`   | N/A     | Which action panel is revealed; settable programmatically                                                           |
 
 **`ore-list-item`** Events
 
-| Event      | Detail                                        | Description                          |
-| ---------- | ------------------------------------------------ | ---------------------------------------- |
-| `activate` | `{ item: HTMLElement, value: string \| null }`   | Actionable row is activated by pointer or keyboard |
-| `select`   | `{ item: HTMLElement, value: string \| null }`   | Item becomes selected                    |
-| `deselect` | `{ item: HTMLElement, value: string \| null }`   | Item becomes deselected                  |
-| `reveal`   | `{ item: HTMLElement, side: 'left' \| 'right' }` | An action panel opens                    |
-| `conceal`  | `{ item: HTMLElement }`                          | The revealed action panel closes         |
+| Event      | Detail                                           | Description                                                        |
+| ---------- | ------------------------------------------------ | ------------------------------------------------------------------ |
+| `activate` | `{ item: HTMLElement, value: string \| null }`   | Actionable row is activated by pointer or keyboard                 |
+| `select`   | `{ item: HTMLElement, value: string \| null }`   | Item becomes selected                                              |
+| `deselect` | `{ item: HTMLElement, value: string \| null }`   | Item becomes deselected                                            |
+| `reveal`   | `{ item: HTMLElement, side: 'left' \| 'right' }` | An action panel opens                                              |
+| `conceal`  | `{ item: HTMLElement }`                          | The revealed action panel closes                                   |
 | `confirm`  | `{ item: HTMLElement, side: 'left' \| 'right' }` | Swiped all the way through; fires just before the slot's own click |
 
 **`ore-list-item`** Slots
 
-| Slot             | Description                                    |
-| ---------------- | ------------------------------------------------- |
-| (default)        | Item title                                         |
-| `leading`        | Content before the title (icon, avatar, …)         |
-| `description`    | Secondary line below the title                     |
-| `trailing`       | Content after the title (meta text, chevron, …)    |
-| `actions-left`   | Buttons revealed by swiping right (or focusing in) |
-| `actions-right`  | Buttons revealed by swiping left (or focusing in)  |
+| Slot            | Description                                        |
+| --------------- | -------------------------------------------------- |
+| (default)       | Item title                                         |
+| `leading`       | Content before the title (icon, avatar, …)         |
+| `description`   | Secondary line below the title                     |
+| `trailing`      | Content after the title (meta text, chevron, …)    |
+| `actions-left`  | Buttons revealed by swiping right (or focusing in) |
+| `actions-right` | Buttons revealed by swiping left (or focusing in)  |
 
 **`ore-list-item`** CSS Custom Properties
 
-| Property                       | Description                    | Default              |
-| -------------------------------- | --------------------------------- | ----------------------- |
-| `--list-item-actions-width`     | Width of each action panel        | `6rem`                  |
-| `--list-item-bg`                | Row background color              | `var(--color-canvas)`   |
-| `--list-item-hover-bg`          | Row background on hover           | `var(--color-contrast-100)` |
-| `--list-item-selected-bg`       | Row background when selected      | `color-mix(in oklch, var(--color-primary) 10%, transparent)` |
+| Property                    | Description                  | Default                                                      |
+| --------------------------- | ---------------------------- | ------------------------------------------------------------ |
+| `--list-item-actions-width` | Width of each action panel   | `6rem`                                                       |
+| `--list-item-bg`            | Row background color         | `var(--color-canvas)`                                        |
+| `--list-item-hover-bg`      | Row background on hover      | `var(--color-contrast-100)`                                  |
+| `--list-item-selected-bg`   | Row background when selected | `color-mix(in oklch, var(--color-primary) 10%, transparent)` |
 
 ## Accessibility
 

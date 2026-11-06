@@ -20,8 +20,14 @@ const form = createForm({
   initialValues: { address: { city: '', street: '' }, personal: { email: '', name: '' } },
   validate: (value) => ({
     fields: {
-      address: { city: value.address.city ? undefined : 'City is required', street: value.address.street ? undefined : 'Street is required' },
-      personal: { email: value.personal.email.includes('@') ? undefined : 'Enter a valid email', name: value.personal.name ? undefined : 'Name is required' },
+      address: {
+        city: value.address.city ? undefined : 'City is required',
+        street: value.address.street ? undefined : 'Street is required',
+      },
+      personal: {
+        email: value.personal.email.includes('@') ? undefined : 'Enter a valid email',
+        name: value.personal.name ? undefined : 'Name is required',
+      },
     },
   }),
 });

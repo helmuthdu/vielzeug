@@ -99,7 +99,7 @@ const results = index.search('widget', { limit: 10, threshold: 0.3 });
 
 Per-call options override the index-level defaults set in `createIndex`.
 
-Scores come from the overlap (Szymkiewicz–Simpson) coefficient: the fraction of the *shorter*
+Scores come from the overlap (Szymkiewicz–Simpson) coefficient: the fraction of the _shorter_
 trigram set (almost always the query) found in the longer one. This is deliberate for the
 autocomplete/command-palette use case `createIndex` targets: a short query that's a clean prefix
 of a much longer field value (e.g. `'fin'` against `'Finalize Q3 budget report'`) scores on how
@@ -232,7 +232,7 @@ index.setItems(latestProducts);
 Use `.items` to read all currently indexed items in insertion order, or `.size` for a count:
 
 ```ts
-console.log(index.size);  // 42
+console.log(index.size); // 42
 console.log(index.items); // [{ id: 1, title: ... }, ...]
 ```
 
@@ -314,7 +314,7 @@ Or use `highlight()` directly when you already have the ranges from `result.matc
 
 ```ts
 const [result] = index.search('alice');
-const nameMatch = result.matches.find(m => m.field === 'name');
+const nameMatch = result.matches.find((m) => m.field === 'name');
 const parts = highlight(result.item.name, nameMatch?.ranges ?? []);
 ```
 
@@ -372,10 +372,11 @@ type User = { id: number; name: string; email: string };
 
 function useScoutSearch(items: User[]) {
   const search = useMemo(
-    () => createReactiveSearch(items, {
-      fields: [{ field: 'name', weight: 2 }, 'email'],
-      debounce: 150,
-    }),
+    () =>
+      createReactiveSearch(items, {
+        fields: [{ field: 'name', weight: 2 }, 'email'],
+        debounce: 150,
+      }),
     [items],
   );
   const snapshot = useSyncExternalStore(search.subscribe, search.getSnapshot, search.getSnapshot);
@@ -398,9 +399,14 @@ function useScoutSearch(items: User[]) {
     debounce: 150,
   });
   const snapshot = shallowRef(search.getSnapshot());
-  const stop = search.subscribe(() => { snapshot.value = search.getSnapshot(); });
+  const stop = search.subscribe(() => {
+    snapshot.value = search.getSnapshot();
+  });
 
-  onScopeDispose(() => { stop(); search.dispose(); });
+  onScopeDispose(() => {
+    stop();
+    search.dispose();
+  });
 
   return { search, snapshot };
 }
@@ -465,9 +471,7 @@ const index = createIndex(products, { fields: ['title', 'sku'] });
 
 const matching = products.filter(toFilterPredicate(index, 'widget'));
 
-const rows = await db.query('products')
-  .filter(toFilterPredicate(index, searchTerm))
-  .toArray();
+const rows = await db.query('products').filter(toFilterPredicate(index, searchTerm)).toArray();
 ```
 
 Call `toFilterPredicate` again whenever the query or corpus changes: the predicate is a snapshot, not reactive.

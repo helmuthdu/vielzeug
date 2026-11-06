@@ -142,15 +142,15 @@ Use `open` as the controlled state and update it from `open-change`. Use `defaul
 
 ### Attributes
 
-| Attribute   | Type                                                                                                                                                                 | Default    | Description                                                  |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------ |
-| `placement` | `'top' \| 'top-start' \| 'top-end' \| 'bottom' \| 'bottom-start' \| 'bottom-end' \| 'left' \| 'left-start' \| 'left-end' \| 'right' \| 'right-start' \| 'right-end'` | `'bottom'` | Preferred placement                                          |
-| `trigger`   | `string`                                                                                                                                                             | `'click'`  | Trigger mode(s): `click`, `hover`, `focus`, comma-separated |
-| `open`      | `boolean`                                                                                                                                                            | N/A | Controlled open state                                        |
-| `default-open` | `boolean`                                                                                                                                                         | `false`    | Initial state when `open` is not provided                    |
-| `offset`    | `number`                                                                                                                                                             | `8`        | Gap in pixels between trigger and panel                      |
-| `disabled`  | `boolean`                                                                                                                                                            | `false`    | Prevent the popover from opening                             |
-| `label`     | `string`                                                                                                                                                             | N/A | `aria-label` for the panel                                   |
+| Attribute      | Type                                                                                                                                                                 | Default    | Description                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------- |
+| `placement`    | `'top' \| 'top-start' \| 'top-end' \| 'bottom' \| 'bottom-start' \| 'bottom-end' \| 'left' \| 'left-start' \| 'left-end' \| 'right' \| 'right-start' \| 'right-end'` | `'bottom'` | Preferred placement                                         |
+| `trigger`      | `string`                                                                                                                                                             | `'click'`  | Trigger mode(s): `click`, `hover`, `focus`, comma-separated |
+| `open`         | `boolean`                                                                                                                                                            | N/A        | Controlled open state                                       |
+| `default-open` | `boolean`                                                                                                                                                            | `false`    | Initial state when `open` is not provided                   |
+| `offset`       | `number`                                                                                                                                                             | `8`        | Gap in pixels between trigger and panel                     |
+| `disabled`     | `boolean`                                                                                                                                                            | `false`    | Prevent the popover from opening                            |
+| `label`        | `string`                                                                                                                                                             | N/A        | `aria-label` for the panel                                  |
 
 ### Slots
 
@@ -161,16 +161,16 @@ Use `open` as the controlled state and update it from `open-change`. Use `defaul
 
 ### Events
 
-| Event   | Detail                                                                   | Description                 |
-| ------- | ------------------------------------------------------------------------ | --------------------------- |
+| Event         | Detail                              | Description                              |
+| ------------- | ----------------------------------- | ---------------------------------------- |
 | `open-change` | `{ open: boolean, reason: string }` | Fired whenever the panel opens or closes |
 
 ### CSS Custom Properties
 
-| Property              | Description                         |
-| --------------------- | ----------------------------------- |
-| `--popover-min-width` | Minimum width of the floating panel |
-| `--popover-max-width` | Maximum width of the floating panel |
+| Property              | Description                                                          |
+| --------------------- | -------------------------------------------------------------------- |
+| `--popover-min-width` | Minimum width of the floating panel                                  |
+| `--popover-max-width` | Maximum width of the floating panel                                  |
 | `--popover-overflow`  | Panel overflow behavior; use `visible` for nested top-layer controls |
 
 ## Accessibility

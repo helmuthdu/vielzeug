@@ -1,6 +1,6 @@
 ---
 title: 'Archive Examples: Client Error Mapping'
-description: "Turn every Worker failure into an actionable UI decision from the validated error envelope."
+description: 'Turn every Worker failure into an actionable UI decision from the validated error envelope.'
 ---
 
 ## Client Error Mapping
@@ -15,7 +15,7 @@ without ever showing a raw error body to the user.
 
 Parse the Worker's one error envelope with the package's shared
 `archiveErrorResponseSchema` and map the validated `code` to a typed client reason.
-Only a *validated* envelope carries meaning: a hosting-layer 404 or a foreign body is
+Only a _validated_ envelope carries meaning: a hosting-layer 404 or a foreign body is
 unavailability, never "gone" or "invalid" by status alone. The 429 carries
 `Retry-After` seconds; surface that number instead of a generic failure.
 
@@ -45,8 +45,7 @@ const failureFrom = async (response: Response): Promise<ClientFailure> => {
   if (code === 'account-changed' || code === 'publisher-changed')
     return { reason: 'account-change', retryAfterSeconds: null };
   if (code === 'unauthenticated') return { reason: 'signed-out', retryAfterSeconds: null };
-  if (code === 'auth-unavailable')
-    return { reason: 'authentication-unavailable', retryAfterSeconds: null };
+  if (code === 'auth-unavailable') return { reason: 'authentication-unavailable', retryAfterSeconds: null };
   if (code === 'gone' || code === 'not-found') return { reason: 'gone', retryAfterSeconds: null };
   if (code === 'rate-limited') {
     const raw = response.headers.get('retry-after');

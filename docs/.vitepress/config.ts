@@ -209,8 +209,6 @@ export default defineConfig({
                 { link: '/arsenal/examples/array/dropLast', text: 'dropLast' },
                 { link: '/arsenal/examples/array/filterMap', text: 'filterMap' },
                 { link: '/arsenal/examples/array/first', text: 'first' },
-                { link: '/arsenal/examples/array/flatten', text: 'flatten' },
-                { link: '/arsenal/examples/array/compare', text: 'compare / compareBy' },
                 { link: '/arsenal/examples/array/fuzzyFilter', text: 'fuzzyFilter / fuzzyScore' },
                 { link: '/arsenal/examples/array/groupBy', text: 'groupBy' },
                 { link: '/arsenal/examples/array/indexBy', text: 'indexBy' },
@@ -237,7 +235,6 @@ export default defineConfig({
               items: [
                 { link: '/arsenal/examples/async/abortError', text: 'abortError' },
                 { link: '/arsenal/examples/async/attempt', text: 'attempt / isOk / isFail' },
-                { link: '/arsenal/examples/async/backoff', text: 'backoff' },
                 { link: '/arsenal/examples/async/parallel', text: 'parallel' },
                 { link: '/arsenal/examples/async/queue', text: 'taskPool' },
                 { link: '/arsenal/examples/async/retry', text: 'retry' },
@@ -292,7 +289,6 @@ export default defineConfig({
                 { link: '/arsenal/examples/math/median', text: 'median' },
                 { link: '/arsenal/examples/math/mod', text: 'mod' },
                 { link: '/arsenal/examples/math/normalize', text: 'normalize' },
-                { link: '/arsenal/examples/math/percent', text: 'percent' },
                 { link: '/arsenal/examples/math/range', text: 'range' },
                 { link: '/arsenal/examples/math/round', text: 'round' },
                 { link: '/arsenal/examples/math/standardDeviation', text: 'standardDeviation' },
@@ -329,7 +325,6 @@ export default defineConfig({
                 { link: '/arsenal/examples/random/draw', text: 'draw / drawMany' },
                 { link: '/arsenal/examples/random/random', text: 'random' },
                 { link: '/arsenal/examples/random/shuffle', text: 'shuffle' },
-                { link: '/arsenal/examples/random/uuid', text: 'uuid' },
               ],
               link: '/arsenal/examples/random',
               text: 'Random',
@@ -340,7 +335,6 @@ export default defineConfig({
                 { link: '/arsenal/examples/string/camelCase', text: 'camelCase' },
                 { link: '/arsenal/examples/string/escape', text: 'escape' },
                 { link: '/arsenal/examples/string/kebabCase', text: 'kebabCase' },
-                { link: '/arsenal/examples/string/pad', text: 'pad' },
                 { link: '/arsenal/examples/string/pascalCase', text: 'pascalCase' },
                 { link: '/arsenal/examples/string/similarity', text: 'similarity' },
                 { link: '/arsenal/examples/string/snakeCase', text: 'snakeCase' },
@@ -355,7 +349,6 @@ export default defineConfig({
             {
               collapsed: true,
               items: [
-                { link: '/arsenal/examples/function/allOf', text: 'allOf / anyOf / noneOf / not' },
                 { link: '/arsenal/examples/typed/isAbortError', text: 'isAbortError' },
                 { link: '/arsenal/examples/typed/isDate', text: 'isDate' },
                 { link: '/arsenal/examples/typed/isDefined', text: 'isDefined' },
@@ -597,6 +590,7 @@ export default defineConfig({
             { link: '/coins/examples/allocation', text: 'Allocation' },
             { link: '/coins/examples/exchange', text: 'Exchange' },
             { link: '/coins/examples/formatting', text: 'Formatting' },
+            { link: '/coins/examples/serialization', text: 'Serialization' },
           ],
           link: '/coins/examples',
           text: 'Examples',
@@ -678,7 +672,6 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/courier/examples/ai-token-stream', text: 'AI Token Stream' },
             { link: '/courier/examples/authentication', text: 'Authentication' },
             {
               link: '/courier/examples/service-discovery-and-custom-fetch',
@@ -689,7 +682,6 @@ export default defineConfig({
             { link: '/courier/examples/error-handling-patterns', text: 'Error Handling Patterns' },
             { link: '/courier/examples/file-uploads', text: 'File Uploads' },
             { link: '/courier/examples/optimistic-updates', text: 'Optimistic Updates' },
-            { link: '/courier/examples/polling', text: 'Polling' },
             { link: '/courier/examples/sse-events', text: 'SSE Events' },
           ],
           link: '/courier/examples',
@@ -698,6 +690,7 @@ export default defineConfig({
       ],
       '/dnd/': [
         { link: '/dnd/', text: 'Overview' },
+        { link: '/dnd/migration', text: 'Migration' },
         {
           items: [
             { link: '/dnd/usage#basic-usage', text: 'Basic Usage' },
@@ -745,6 +738,7 @@ export default defineConfig({
             { link: '/dnd/examples/file-upload-drop-zone', text: 'File upload drop zone' },
             { link: '/dnd/examples/optimistic-reorder-with-revert', text: 'Optimistic Reorder with Revert' },
             { link: '/dnd/examples/sortable-list', text: 'Sortable list' },
+            { link: '/dnd/examples/touch-enabled-sortable-list', text: 'Touch-enabled sortable list' },
             { link: '/dnd/examples/using-using-for-scoped-cleanup', text: 'Using `using` for scoped cleanup' },
             { link: '/dnd/examples/web-component-with-craft', text: 'Web Component with Ore' },
           ],
@@ -754,6 +748,7 @@ export default defineConfig({
       ],
       '/familiar/': [
         { link: '/familiar/', text: 'Overview' },
+        { link: '/familiar/migration', text: 'Migration' },
         {
           items: [
             { link: '/familiar/usage#basic-usage', text: 'Basic Usage' },
@@ -866,6 +861,7 @@ export default defineConfig({
       ],
       '/focus/': [
         { link: '/focus/', text: 'Overview' },
+        { link: '/focus/migration', text: 'Migration' },
         {
           items: [
             { link: '/focus/usage#basic-usage', text: 'Basic Usage' },
@@ -947,6 +943,7 @@ export default defineConfig({
       ],
       '/gesture/': [
         { link: '/gesture/', text: 'Overview' },
+        { link: '/gesture/migration', text: 'Migration' },
         {
           items: [
             { link: '/gesture/usage#basic-usage', text: 'Basic Usage' },
@@ -1038,6 +1035,7 @@ export default defineConfig({
       ],
       '/illusionist/': [
         { link: '/illusionist/', text: 'Overview' },
+        { link: '/illusionist/migration', text: 'Migration' },
         {
           items: [
             { link: '/illusionist/usage#basic-usage', text: 'Basic Usage' },
@@ -1192,6 +1190,7 @@ export default defineConfig({
       ],
       '/mesh/': [
         { link: '/mesh/', text: 'Overview' },
+        { link: '/mesh/migration', text: 'Migration' },
         {
           items: [
             { link: '/mesh/usage#basic-usage', text: 'Basic Usage' },
@@ -1503,6 +1502,7 @@ export default defineConfig({
             { link: '/prism/examples/time-series', text: 'Time Series' },
             { link: '/prism/examples/scatter-chart', text: 'Scatter Chart' },
             { link: '/prism/examples/bar-chart', text: 'Bar Chart' },
+            { link: '/prism/examples/heatmap-chart', text: 'Heatmap Chart' },
             { link: '/prism/examples/compact-charts', text: 'Compact Charts' },
             { link: '/prism/examples/radar-chart', text: 'Radar Chart' },
             { link: '/prism/examples/update-data', text: 'Update Data' },
@@ -1661,6 +1661,7 @@ export default defineConfig({
         {
           items: [
             { link: '/ripple/examples/reactive-counter', text: 'Reactive Counter' },
+            { link: '/ripple/examples/async-resource', text: 'Async Resource' },
             { link: '/ripple/examples/batch-and-untrack', text: 'Batch and Untrack' },
             { link: '/ripple/examples/scope-ownership', text: 'Scope Ownership' },
             { link: '/ripple/examples/watch-selected-value', text: 'Watch Selected Value' },
@@ -1932,6 +1933,7 @@ export default defineConfig({
             { link: '/sentinel/examples/respect-reduced-motion-preference', text: 'Reduced Motion' },
             { link: '/sentinel/examples/responsive-column-layout', text: 'Responsive Layout' },
             { link: '/sentinel/examples/lazy-load-images-on-intersection', text: 'Lazy Loading' },
+            { link: '/sentinel/examples/prevent-screen-sleep', text: 'Prevent Screen Sleep' },
           ],
           link: '/sentinel/examples',
           text: 'Examples',
@@ -1939,6 +1941,7 @@ export default defineConfig({
       ],
       '/sigil/': [
         { link: '/sigil/', text: 'Overview' },
+        { link: '/sigil/migration', text: 'Migration' },
         {
           items: [
             { link: '/sigil/usage#basic-usage', text: 'Basic Usage' },
@@ -2072,6 +2075,7 @@ export default defineConfig({
       ],
       '/tandem/': [
         { link: '/tandem/', text: 'Overview' },
+        { link: '/tandem/migration', text: 'Migration' },
         {
           items: [
             { link: '/tandem/usage#basic-usage', text: 'Basic Usage' },
@@ -2123,6 +2127,7 @@ export default defineConfig({
       ],
       '/tavern/': [
         { link: '/tavern/', text: 'Overview' },
+        { link: '/tavern/migration', text: 'Migration' },
         {
           items: [
             { link: '/tavern/usage#basic-usage', text: 'Basic Usage' },
@@ -2242,6 +2247,7 @@ export default defineConfig({
             { link: '/vault/examples/batch', text: 'Batch Writes' },
             { link: '/vault/examples/iterate', text: 'Lazy Iteration' },
             { link: '/vault/examples/plugins', text: 'Plugins and Error Handling' },
+            { link: '/vault/examples/sqlite', text: 'SQLite Transactions' },
           ],
           link: '/vault/examples',
           text: 'Examples',

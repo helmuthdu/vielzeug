@@ -3,162 +3,189 @@
 This log was last generated on Thu, 05 Nov 2026 21:44:45 GMT and should not be manually modified.
 
 ## 26.11.5
+
 Thu, 05 Nov 2026 21:44:45 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.4
+
 Wed, 04 Nov 2026 16:49:50 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.3
+
 Wed, 04 Nov 2026 05:52:43 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.2
+
 Tue, 03 Nov 2026 18:42:43 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.1
+
 Tue, 03 Nov 2026 17:00:37 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.0
+
 Tue, 03 Nov 2026 16:30:26 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.22
+
 Fri, 30 Oct 2026 19:07:28 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.21
+
 Tue, 27 Oct 2026 08:39:39 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.20
+
 Sun, 25 Oct 2026 05:13:02 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.19
+
 Sat, 24 Oct 2026 19:56:28 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.18
+
 Fri, 23 Oct 2026 14:23:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.17
+
 Fri, 23 Oct 2026 07:29:16 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.16
+
 Wed, 21 Oct 2026 07:30:45 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.15
+
 Mon, 19 Oct 2026 10:13:34 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.14
+
 Sun, 18 Oct 2026 09:46:30 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.13
+
 Sat, 17 Oct 2026 06:46:08 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.12
+
 Sat, 17 Oct 2026 05:06:33 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.11
+
 Thu, 15 Oct 2026 13:45:48 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.10
+
 Thu, 15 Oct 2026 05:00:39 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.9
+
 Wed, 14 Oct 2026 21:26:14 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.8
+
 Tue, 13 Oct 2026 07:49:18 GMT
 
 ### Minor changes
 
 - add PageSource.apply and createResource
 ## 26.10.7
+
 Mon, 12 Oct 2026 20:24:11 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.6
+
 Mon, 12 Oct 2026 18:44:06 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.5
+
 Thu, 08 Oct 2026 07:48:38 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.1
+
 Wed, 07 Oct 2026 07:25:55 GMT
 
 ### Patches
 
 - Standardize package text punctuation
 ## 26.10.0
+
 Fri, 02 Oct 2026 18:01:51 GMT
 
 ### Patches
 
 - fix: unify error naming on new.target.name
 ## 3.0.0
+
 Wed, 09 Sep 2026 22:15:14 GMT
 
 ### Breaking changes
@@ -166,6 +193,7 @@ Wed, 09 Sep 2026 22:15:14 GMT
 - refactor!: narrow Sourcerer to typed collection sources with consumer-owned params, direct commands, and simpler request succession
 
 ## 2.3.0
+
 Sun, 30 Aug 2026 13:16:08 GMT
 
 ### Minor changes
@@ -177,6 +205,7 @@ Sun, 30 Aug 2026 13:16:08 GMT
 - refactor: simplify internal asyncSource.fetch API: default failure and pending callbacks, reducing boilerplate in page/cursor/infinite source factories. No public API change.
 
 ## 2.2.1
+
 Wed, 26 Aug 2026 17:29:55 GMT
 
 ### Patches
@@ -184,6 +213,7 @@ Wed, 26 Aug 2026 17:29:55 GMT
 - chore: add sideEffects: false for tree-shaking.
 
 ## 2.2.0
+
 Wed, 19 Aug 2026 06:57:36 GMT
 
 ### Minor changes
@@ -191,6 +221,7 @@ Wed, 19 Aug 2026 06:57:36 GMT
 - fix: type InfiniteSourceConfig.load as LoadContext<InfiniteLoadQuery> instead of LoadContext<PageQuery> (load context no longer exposes phantom filter/sort fields); drop isLoadingMore from InfinitePagination (derive append state from isFetching + absent pendingQuery); stop setting pendingQuery during infinite append fetches (pendingQuery now consistently means a different query is in flight across all source types); preserve original rejection value via ErrorOptions.cause in toError non-Error branch; delete dead devOnly helper from _dev.ts
 
 ## 2.1.0
+
 Sat, 15 Aug 2026 10:39:54 GMT
 
 ### Minor changes
@@ -198,6 +229,7 @@ Sat, 15 Aug 2026 10:39:54 GMT
 - chore: remove debugSource() devtools subpath (zero consumers, trivially replaceable via subscribe); rename PageLoadContext to LoadContext (generic context used by all async sources, not page-specific); LocalSource methods return void instead of boolean (parallel with async source contracts, no consumer used the boolean); remove dead Predicate and Sorter type exports (never used internally or externally)
 
 ## 2.0.1
+
 Thu, 06 Aug 2026 07:20:49 GMT
 
 ### Patches
@@ -205,6 +237,7 @@ Thu, 06 Aug 2026 07:20:49 GMT
 - publish clean export metadata and classic TypeScript subpath mappings
 
 ## 2.0.0
+
 Wed, 05 Aug 2026 16:48:52 GMT
 
 ### Breaking changes
@@ -212,6 +245,7 @@ Wed, 05 Aug 2026 16:48:52 GMT
 - refactor!: replace source APIs with atomic snapshots
 
 ## 1.1.0
+
 Sun, 26 Jul 2026 06:43:54 GMT
 
 ### Minor changes
@@ -219,6 +253,7 @@ Sun, 26 Jul 2026 06:43:54 GMT
 - refactor(sourcerer): add dev-diagnostics layer, rename SourceTimeoutError/SourceDisposedError to SourcererTimeoutError/SourcererDisposedError for consistency with the SourcererError base, remove applyQuery() (use source.patch() directly), add debugSource() devtools sub-path (works with mergeSource() too, which has no meta), localSource reuses the shared debounced-search coordinator, mergeSource/deriveSource auto-dispose once every parent disposes (routed through the public dispose() method), sanitize untrusted decodeQuery() input before logging it, dedupe clampPositiveInt's dev warning per call site. core.ts stays a plain Set-based pub/sub (no @vielzeug/ripple dependency) after finding a real SSR/concurrent-request risk in ripple's scheduler for prefetchSource()'s documented SSR use case
 
 ## 1.0.6
+
 Fri, 24 Jul 2026 05:28:41 GMT
 
 ### Patches
@@ -226,6 +261,7 @@ Fri, 24 Jul 2026 05:28:41 GMT
 - chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement
 
 ## 1.0.5
+
 Fri, 17 Jul 2026 14:17:07 GMT
 
 ### Patches
@@ -233,6 +269,7 @@ Fri, 17 Jul 2026 14:17:07 GMT
 - fix: align async search orchestration and stale optimistic refresh
 
 ## 1.0.4
+
 Tue, 14 Jul 2026 06:12:09 GMT
 
 ### Patches
@@ -240,6 +277,7 @@ Tue, 14 Jul 2026 06:12:09 GMT
 - fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)
 
 ## 1.0.3
+
 Tue, 07 Jul 2026 09:20:39 GMT
 
 ### Patches
@@ -247,6 +285,7 @@ Tue, 07 Jul 2026 09:20:39 GMT
 - chore: declare minimum supported Node.js version (>=18) in package.json engines
 
 ## 1.0.2
+
 Sun, 05 Jul 2026 05:52:18 GMT
 
 ### Patches
@@ -254,6 +293,7 @@ Sun, 05 Jul 2026 05:52:18 GMT
 - fix(sourcerer): this-binding hazard breaks destructured methods, async filter/sort pipeline never ran on construction, immediate search()/patch() ignored a pending same-text debounce, LocalSource silently swallowed filterAsync/sortAsync errors
 
 ## 1.0.1
+
 Fri, 03 Jul 2026 06:00:47 GMT
 
 ### Patches
@@ -261,9 +301,9 @@ Fri, 03 Jul 2026 06:00:47 GMT
 - chore(sourcerer): rename internal _warn.ts to _dev.ts
 
 ## 1.0.0
+
 Wed, 01 Jul 2026 16:10:37 GMT
 
 ### Breaking changes
 
 - Initial public release
-

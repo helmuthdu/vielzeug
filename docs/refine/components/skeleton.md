@@ -142,10 +142,10 @@ The spacing between lines is adjustable via the `--skeleton-stripe-size` CSS cus
 | Attribute  | Type                           | Default  | Description                                            |
 | ---------- | ------------------------------ | -------- | ------------------------------------------------------ |
 | `variant`  | `'rect' \| 'circle' \| 'text'` | `'rect'` | Visual shape preset                                    |
-| `size`     | `'sm' \| 'md' \| 'lg'`         | N/A | Height preset for `rect`/`text`; diameter for `circle` |
-| `width`    | `string`                       | N/A | Width override (e.g. `12rem`, `70%`)                   |
-| `height`   | `string`                       | N/A | Height override                                        |
-| `radius`   | `string`                       | N/A | Border-radius override                                 |
+| `size`     | `'sm' \| 'md' \| 'lg'`         | N/A      | Height preset for `rect`/`text`; diameter for `circle` |
+| `width`    | `string`                       | N/A      | Width override (e.g. `12rem`, `70%`)                   |
+| `height`   | `string`                       | N/A      | Height override                                        |
+| `radius`   | `string`                       | N/A      | Border-radius override                                 |
 | `animated` | `boolean`                      | `true`   | Set `animated="false"` to disable shimmer              |
 | `lines`    | `number`                       | `1`      | Number of text lines (`variant="text"`)                |
 | `striped`  | `boolean`                      | `false`  | Diagonal stripe pattern instead of shimmer             |

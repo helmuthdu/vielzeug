@@ -1,6 +1,6 @@
 ---
 title: 'Archive Examples: GDPR Erasure and Export'
-description: "Export profile, publications, liked IDs, reports and issuer metadata, then coordinate account erasure."
+description: 'Export profile, publications, liked IDs, reports and issuer metadata, then coordinate account erasure.'
 ---
 
 ## GDPR Erasure and Export
@@ -19,13 +19,20 @@ publisher precondition. The issuer account ID and publisher ID are different.
 
 ```ts
 import {
-  archiveAccountSchema, archiveIdentitySchema, archiveLikesPageSchema, archiveOwnReportsSchema,
-  ACCOUNT_HEADER, defineArchiveCollection, PUBLISHER_HEADER, REQUEST_MARKER_HEADER,
+  archiveAccountSchema,
+  archiveIdentitySchema,
+  archiveLikesPageSchema,
+  archiveOwnReportsSchema,
+  ACCOUNT_HEADER,
+  defineArchiveCollection,
+  PUBLISHER_HEADER,
+  REQUEST_MARKER_HEADER,
 } from '@vielzeug/archive';
 import { s } from '@vielzeug/spell';
 
 const notes = defineArchiveCollection({
-  name: 'notes', contentVersion: 1,
+  name: 'notes',
+  contentVersion: 1,
   payloadSchema: s.object({ title: s.string().min(1).max(128) }),
   index: ({ title }) => ({ title, filter: null, tags: [] }),
 });
@@ -40,9 +47,7 @@ async function read(path: string, publisherId?: string): Promise<unknown> {
 
 const identity = archiveIdentitySchema.parse(await read('/me'));
 if (identity === null) throw new Error('Register a publisher before this export');
-const publications = notes.contract.ownedEntries.parse(
-  await read('/me/publications?collection=notes', identity.id),
-);
+const publications = notes.contract.ownedEntries.parse(await read('/me/publications?collection=notes', identity.id));
 const likes: string[] = [];
 let cursor: string | null = null;
 do {
@@ -65,7 +70,8 @@ const account = archiveAccountSchema.parse(await read('/auth/account'));
 console.log({ account, identity, publications, likes, reports });
 
 const erased = await fetch('/api/v1/auth/account', {
-  credentials: 'same-origin', method: 'DELETE',
+  credentials: 'same-origin',
+  method: 'DELETE',
   headers: {
     [ACCOUNT_HEADER]: account.id,
     [PUBLISHER_HEADER]: identity.id,

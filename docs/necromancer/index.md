@@ -27,13 +27,13 @@ const animation = animate(element, keyframes, { duration: 180 });
 animation.dispose();
 ```
 
-| Feature | Native WAAPI | Necromancer | Motion One |
-| --- | --- | --- | --- |
-| Bundle size | 0 B | <PackageInfo package="necromancer" type="size" /> | ~18 kB |
-| Root dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Lifecycle handle | Manual | `dispose()` | Library-specific controls |
-| Reduced motion | Manual | `motion: 'system'` default | Configuration required |
-| Layout transitions | Manual FLIP math | `captureLayout().animate()` | Separate API |
+| Feature            | Native WAAPI                                 | Necromancer                                       | Motion One                               |
+| ------------------ | -------------------------------------------- | ------------------------------------------------- | ---------------------------------------- |
+| Bundle size        | 0 B                                          | <PackageInfo package="necromancer" type="size" /> | ~18 kB                                   |
+| Root dependencies  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon> |
+| Lifecycle handle   | Manual                                       | `dispose()`                                       | Library-specific controls                |
+| Reduced motion     | Manual                                       | `motion: 'system'` default                        | Configuration required                   |
+| Layout transitions | Manual FLIP math                             | `captureLayout().animate()`                       | Separate API                             |
 
 <div class="decision-callout">
 
@@ -74,7 +74,10 @@ document.body.append(notice);
 
 const animation = animate(
   notice,
-  [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
+  [
+    { opacity: 0, transform: 'translateY(8px)' },
+    { opacity: 1, transform: 'translateY(0)' },
+  ],
   { duration: 180, easing: 'ease-out' },
 );
 

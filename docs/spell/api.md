@@ -7,20 +7,20 @@ description: Reference for Spell schema builders, parsing, errors, context, and 
 
 ## API Overview
 
-| Symbol                   | Purpose                         | Execution mode                     | Common gotcha                              |
-| ------------------------ | ------------------------------- | ---------------------------------- | ------------------------------------------ |
-| `s`                      | Creates schemas                 | Sync or async, depending on checks | `checkAsync()` requires async parsing      |
-| `createParseContext()`   | Creates request-local messages  | Sync                               | Pass the context to each parse call        |
-| `joinIssuePath()`        | Flattens issue paths to UI keys | Sync                               | Empty or undefined paths join to `''`      |
-| `SpellValidationError`   | Provides validation issues      | Sync/async parse failures          | Use `safeParse()` for expected invalid data |
+| Symbol                 | Purpose                         | Execution mode                     | Common gotcha                               |
+| ---------------------- | ------------------------------- | ---------------------------------- | ------------------------------------------- |
+| `s`                    | Creates schemas                 | Sync or async, depending on checks | `checkAsync()` requires async parsing       |
+| `createParseContext()` | Creates request-local messages  | Sync                               | Pass the context to each parse call         |
+| `joinIssuePath()`      | Flattens issue paths to UI keys | Sync                               | Empty or undefined paths join to `''`       |
+| `SpellValidationError` | Provides validation issues      | Sync/async parse failures          | Use `safeParse()` for expected invalid data |
 
 ## Package Entry Point
 
-| Import                       | Purpose                                         |
-| ---------------------------- | ----------------------------------------------- |
+| Import                       | Purpose                                            |
+| ---------------------------- | -------------------------------------------------- |
 | `@vielzeug/spell`            | Schema builders, errors, types, and parse contexts |
-| `@vielzeug/spell/json`       | Convert portable definitions to JSON Schema     |
-| `@vielzeug/spell/predicates` | Standalone format and type predicates           |
+| `@vielzeug/spell/json`       | Convert portable definitions to JSON Schema        |
+| `@vielzeug/spell/predicates` | Standalone format and type predicates              |
 
 ```ts
 import { createParseContext, s, type Infer } from '@vielzeug/spell';
@@ -32,13 +32,13 @@ import { isEmail } from '@vielzeug/spell/predicates';
 
 All builders live under `s`.
 
-| Builder                                                           | Purpose                    |
-| ----------------------------------------------------------------- | -------------------------- |
-| `string`, `number`, `boolean`, `bigint`, `date`                   | Primitive values           |
+| Builder                                                    | Purpose                    |
+| ---------------------------------------------------------- | -------------------------- |
+| `string`, `number`, `boolean`, `bigint`, `date`            | Primitive values           |
 | `literal`, `enum`, `null`, `undefined`, `unknown`, `never` | Exact and universal values |
-| `array`, `tuple`, `set`, `map`, `record`, `object`                | Collections                |
-| `union`, `intersect`, `discriminatedUnion`, `lazy`                | Composition                |
-| `coerce.*`                                                        | Coercing primitive schemas |
+| `array`, `tuple`, `set`, `map`, `record`, `object`         | Collections                |
+| `union`, `intersect`, `discriminatedUnion`, `lazy`         | Composition                |
+| `coerce.*`                                                 | Coercing primitive schemas |
 
 ```ts
 const User = s.object({
@@ -189,10 +189,10 @@ if (!result.success) {
 
 ### Inference types
 
-| Type | Resolves to |
-| --- | --- |
-| `Infer<TSchema>` | Parsed output; alias of `InferOutput<TSchema>` |
-| `InferInput<TSchema>` | Input accepted before parsing or transformation |
+| Type                   | Resolves to                                     |
+| ---------------------- | ----------------------------------------------- |
+| `Infer<TSchema>`       | Parsed output; alias of `InferOutput<TSchema>`  |
+| `InferInput<TSchema>`  | Input accepted before parsing or transformation |
 | `InferOutput<TSchema>` | Value returned after parsing and transformation |
 
 Composite schemas preserve child input types. Object input types make fields optional when their field schema accepts `undefined`.
@@ -213,10 +213,20 @@ namespace StandardSchemaV1 {
   }
 
   type Result<Output> = { readonly value: Output; readonly issues?: undefined } | { readonly issues: readonly Issue[] };
-  interface Options { readonly libraryOptions?: Record<string, unknown> }
-  interface Issue { readonly message: string; readonly path?: readonly (PropertyKey | PathSegment)[] }
-  interface PathSegment { readonly key: PropertyKey }
-  interface Types<Input = unknown, Output = Input> { readonly input: Input; readonly output: Output }
+  interface Options {
+    readonly libraryOptions?: Record<string, unknown>;
+  }
+  interface Issue {
+    readonly message: string;
+    readonly path?: readonly (PropertyKey | PathSegment)[];
+  }
+  interface PathSegment {
+    readonly key: PropertyKey;
+  }
+  interface Types<Input = unknown, Output = Input> {
+    readonly input: Input;
+    readonly output: Output;
+  }
   type InferInput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['input'];
   type InferOutput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['output'];
 }
@@ -296,20 +306,95 @@ type ValidateResult = boolean | null | undefined | string;
 type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> = string | ((ctx: Ctx) => string);
 
 type Messages = {
-  array: { length: (ctx: { exact: number; value: unknown[] }) => string; max: (ctx: { max: number; value: unknown[] }) => string; min: (ctx: { min: number; value: unknown[] }) => string; nonEmpty: () => string; type: () => string; unique: () => string };
-  bigint: { max: (ctx: { max: bigint; value: bigint }) => string; min: (ctx: { min: bigint; value: bigint }) => string; multipleOf: (ctx: { step: bigint; value: bigint }) => string; negative: () => string; nonNegative: () => string; nonPositive: () => string; positive: () => string; type: () => string };
+  array: {
+    length: (ctx: { exact: number; value: unknown[] }) => string;
+    max: (ctx: { max: number; value: unknown[] }) => string;
+    min: (ctx: { min: number; value: unknown[] }) => string;
+    nonEmpty: () => string;
+    type: () => string;
+    unique: () => string;
+  };
+  bigint: {
+    max: (ctx: { max: bigint; value: bigint }) => string;
+    min: (ctx: { min: bigint; value: bigint }) => string;
+    multipleOf: (ctx: { step: bigint; value: bigint }) => string;
+    negative: () => string;
+    nonNegative: () => string;
+    nonPositive: () => string;
+    positive: () => string;
+    type: () => string;
+  };
   boolean: { type: () => string };
   check: { default: () => string };
-  date: { max: (ctx: { max: Date; value: Date }) => string; min: (ctx: { min: Date; value: Date }) => string; type: () => string };
+  date: {
+    max: (ctx: { max: Date; value: Date }) => string;
+    min: (ctx: { min: Date; value: Date }) => string;
+    type: () => string;
+  };
   enum: { invalid: (ctx: { values: readonly unknown[] }) => string };
   instanceof: { type: (ctx: { className: string }) => string };
   literal: { expected: (ctx: { expected: unknown }) => string };
-  map: { max: (ctx: { max: number; value: Map<unknown, unknown> }) => string; min: (ctx: { min: number; value: Map<unknown, unknown> }) => string; nonEmpty: () => string; size: (ctx: { exact: number; value: Map<unknown, unknown> }) => string; type: () => string };
+  map: {
+    max: (ctx: { max: number; value: Map<unknown, unknown> }) => string;
+    min: (ctx: { min: number; value: Map<unknown, unknown> }) => string;
+    nonEmpty: () => string;
+    size: (ctx: { exact: number; value: Map<unknown, unknown> }) => string;
+    type: () => string;
+  };
   never: { invalid: () => string };
-  number: { finite: () => string; int: () => string; max: (ctx: { max: number; value: number }) => string; min: (ctx: { min: number; value: number }) => string; multipleOf: (ctx: { step: number; value: number }) => string; negative: () => string; nonNegative: () => string; nonPositive: () => string; positive: () => string; safe: () => string; type: () => string };
+  number: {
+    finite: () => string;
+    int: () => string;
+    max: (ctx: { max: number; value: number }) => string;
+    min: (ctx: { min: number; value: number }) => string;
+    multipleOf: (ctx: { step: number; value: number }) => string;
+    negative: () => string;
+    nonNegative: () => string;
+    nonPositive: () => string;
+    positive: () => string;
+    safe: () => string;
+    type: () => string;
+  };
   object: { invalidKeys: (ctx: { keys: string[] }) => string; type: () => string };
-  set: { max: (ctx: { max: number; value: Set<unknown> }) => string; min: (ctx: { min: number; value: Set<unknown> }) => string; nonEmpty: () => string; size: (ctx: { exact: number; value: Set<unknown> }) => string; type: () => string };
-  string: { base64: () => string; base64url: () => string; cuid: () => string; cuid2: () => string; date: () => string; dateTime: () => string; duration: () => string; email: () => string; emoji: () => string; endsWith: (ctx: { suffix: string; value: string }) => string; hex: () => string; hexColor: () => string; includes: (ctx: { substr: string; value: string }) => string; ip: () => string; jwt: () => string; length: (ctx: { exact: number; value: string }) => string; max: (ctx: { max: number; value: string }) => string; min: (ctx: { min: number; value: string }) => string; nanoid: () => string; nonEmpty: () => string; numeric: () => string; regex: (ctx: { value: string }) => string; semver: () => string; slug: () => string; startsWith: (ctx: { prefix: string; value: string }) => string; time: () => string; type: () => string; ulid: () => string; url: () => string; uuid: () => string };
+  set: {
+    max: (ctx: { max: number; value: Set<unknown> }) => string;
+    min: (ctx: { min: number; value: Set<unknown> }) => string;
+    nonEmpty: () => string;
+    size: (ctx: { exact: number; value: Set<unknown> }) => string;
+    type: () => string;
+  };
+  string: {
+    base64: () => string;
+    base64url: () => string;
+    cuid: () => string;
+    cuid2: () => string;
+    date: () => string;
+    dateTime: () => string;
+    duration: () => string;
+    email: () => string;
+    emoji: () => string;
+    endsWith: (ctx: { suffix: string; value: string }) => string;
+    hex: () => string;
+    hexColor: () => string;
+    includes: (ctx: { substr: string; value: string }) => string;
+    ip: () => string;
+    jwt: () => string;
+    length: (ctx: { exact: number; value: string }) => string;
+    max: (ctx: { max: number; value: string }) => string;
+    min: (ctx: { min: number; value: string }) => string;
+    nanoid: () => string;
+    nonEmpty: () => string;
+    numeric: () => string;
+    regex: (ctx: { value: string }) => string;
+    semver: () => string;
+    slug: () => string;
+    startsWith: (ctx: { prefix: string; value: string }) => string;
+    time: () => string;
+    type: () => string;
+    ulid: () => string;
+    url: () => string;
+    uuid: () => string;
+  };
   tuple: { length: (ctx: { exact: number }) => string; min: (ctx: { min: number }) => string; type: () => string };
   union: { invalid: () => string };
   variant: { invalidDiscriminator: (ctx: { discriminator: string; expected: string[] }) => string; type: () => string };
@@ -327,8 +412,23 @@ type SchemaDescriptor = BaseDescriptor &
   (
     | { kind: 'unknown' | 'never' | 'boolean' | 'bigint' | 'date' | 'lazy' }
     | { className: string; kind: 'instanceof' }
-    | { contentEncoding?: string; format?: string; kind: 'string'; maxLength?: number; minLength?: number; pattern?: string | null }
-    | { exclusiveMaximum?: number; exclusiveMinimum?: number; kind: 'number'; maximum?: number; minimum?: number; multipleOf?: number; typeHint?: 'integer' }
+    | {
+        contentEncoding?: string;
+        format?: string;
+        kind: 'string';
+        maxLength?: number;
+        minLength?: number;
+        pattern?: string | null;
+      }
+    | {
+        exclusiveMaximum?: number;
+        exclusiveMinimum?: number;
+        kind: 'number';
+        maximum?: number;
+        minimum?: number;
+        multipleOf?: number;
+        typeHint?: 'integer';
+      }
     | { kind: 'literal'; value: string | number | boolean | null | undefined }
     | { kind: 'enum'; values: readonly (string | number)[] }
     | { items: SchemaDescriptor; kind: 'array'; maxItems?: number; minItems?: number }

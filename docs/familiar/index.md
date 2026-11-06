@@ -5,7 +5,19 @@ package: familiar
 category: workers
 keywords: [web-workers, module-workers, pool, concurrency, timeout, cancellation, streaming]
 related: [ripple, herald]
-exports: [createWorker, createStreamWorker, runBatch, FamiliarError, FamiliarInvalidOptionsError, FamiliarTimeoutError, FamiliarTaskError, FamiliarQueueFullError, FamiliarTerminatedError, FamiliarRuntimeError]
+exports:
+  [
+    createWorker,
+    createStreamWorker,
+    runBatch,
+    FamiliarError,
+    FamiliarInvalidOptionsError,
+    FamiliarTimeoutError,
+    FamiliarTaskError,
+    FamiliarQueueFullError,
+    FamiliarTerminatedError,
+    FamiliarRuntimeError,
+  ]
 environments: [browser]
 ---
 
@@ -27,14 +39,14 @@ const pool = createWorker<number[], number>(new URL('./sum.worker.ts', import.me
 await pool.run([1, 2, 3]);
 ```
 
-| Feature | Familiar | Raw Worker | Comlink |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="familiar" type="size" /> | built-in | ~2 kB |
-| Module-worker contract | <ore-icon name="check" size="16"></ore-icon> | manual | <ore-icon name="check" size="16"></ore-icon> |
-| Pool scheduling | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| AbortSignal cancellation | <ore-icon name="check" size="16"></ore-icon> | manual | manual |
-| Versioned protocol | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | implementation-specific |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Feature                  | Familiar                                       | Raw Worker                                   | Comlink                                      |
+| ------------------------ | ---------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size              | <PackageInfo package="familiar" type="size" /> | built-in                                     | ~2 kB                                        |
+| Module-worker contract   | <ore-icon name="check" size="16"></ore-icon>   | manual                                       | <ore-icon name="check" size="16"></ore-icon> |
+| Pool scheduling          | <ore-icon name="check" size="16"></ore-icon>   | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| AbortSignal cancellation | <ore-icon name="check" size="16"></ore-icon>   | manual                                       | manual                                       |
+| Versioned protocol       | <ore-icon name="check" size="16"></ore-icon>   | <ore-icon name="x" size="16"></ore-icon>     | implementation-specific                      |
+| Zero dependencies        | <ore-icon name="check" size="16"></ore-icon>   | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 

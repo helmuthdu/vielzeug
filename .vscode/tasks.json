@@ -1,0 +1,113 @@
+{
+  "inputs": [
+    {
+      "description": "Package name (e.g. spell, ripple, courier)",
+      "id": "packageName",
+      "type": "promptString"
+    }
+  ],
+  "tasks": [
+    {
+      "args": ["--filter", "/${input:packageName}", "build"],
+      "command": "pnpm",
+      "detail": "Build a package (ESM + CJS + types)",
+      "group": "build",
+      "label": "pkg: build",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": ["$tsc"],
+      "type": "shell"
+    },
+    {
+      "args": ["vitest", "run", "packages/${input:packageName}/src/__tests__/"],
+      "command": "pnpm",
+      "detail": "Run all tests for a package (single run)",
+      "group": { "isDefault": true, "kind": "test" },
+      "label": "pkg: test",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": [],
+      "type": "shell"
+    },
+    {
+      "args": ["vitest", "packages/${input:packageName}/src/__tests__/"],
+      "command": "pnpm",
+      "detail": "Run tests in watch mode for a package",
+      "group": "test",
+      "isBackground": true,
+      "label": "pkg: test watch",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": [],
+      "type": "shell"
+    },
+    {
+      "args": ["--filter", "/${input:packageName}", "lint"],
+      "command": "pnpm",
+      "detail": "Lint a package with Biome",
+      "group": "build",
+      "label": "pkg: lint",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": [],
+      "type": "shell"
+    },
+    {
+      "args": ["--filter", "/${input:packageName}", "fix"],
+      "command": "pnpm",
+      "detail": "Auto-fix Biome diagnostics and sort imports/keys for a package",
+      "group": "build",
+      "label": "pkg: fix",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": [],
+      "type": "shell"
+    },
+    {
+      "command": "pnpm --filter /${input:packageName} fix && pnpm --filter /${input:packageName} lint && pnpm vitest run packages/${input:packageName}/src/__tests__/",
+      "detail": "Auto-fix, then verify lint and tests pass (full quality gate)",
+      "group": "build",
+      "label": "pkg: fix → lint → test",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": [],
+      "type": "shell"
+    },
+    {
+      "args": ["build"],
+      "command": "pnpm",
+      "detail": "Build all packages via Rush",
+      "group": "build",
+      "label": "monorepo: build all",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": ["$tsc"],
+      "type": "shell"
+    },
+    {
+      "args": ["test"],
+      "command": "pnpm",
+      "detail": "Run the full Vitest suite across all packages",
+      "group": "test",
+      "label": "monorepo: test all",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": [],
+      "type": "shell"
+    },
+    {
+      "args": ["lint"],
+      "command": "pnpm",
+      "detail": "Lint every package with Biome",
+      "group": "build",
+      "label": "monorepo: lint all",
+      "presentation": { "panel": "shared", "reveal": "always" },
+      "problemMatcher": [],
+      "type": "shell"
+    },
+    {
+      "args": ["docs:dev"],
+      "command": "pnpm",
+      "detail": "Start the VitePress docs dev server",
+      "group": "build",
+      "isBackground": true,
+      "label": "docs: dev",
+      "presentation": { "panel": "dedicated", "reveal": "always" },
+      "problemMatcher": [],
+      "type": "shell"
+    }
+  ],
+  "version": "2.0.0"
+}

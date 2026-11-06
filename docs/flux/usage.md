@@ -130,7 +130,12 @@ import { first, pipe, stream, timeout } from '@vielzeug/flux';
 
 it('fails after inactivity', async () => {
   vi.useFakeTimers();
-  const result = first(pipe(stream(() => {}), timeout(500)));
+  const result = first(
+    pipe(
+      stream(() => {}),
+      timeout(500),
+    ),
+  );
   const expectation = expect(result).rejects.toThrow('Timeout after 500ms');
 
   await vi.advanceTimersByTimeAsync(500);

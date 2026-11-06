@@ -36,11 +36,13 @@ const auth = defineMachine<{ attempts: number; token: string }, Event>()({
       },
     },
     loading: {
-      invoke: [{
-        src: async () => ({ token: 'session-token' }),
-        onDone: ({ result }) => ({ token: (result as { token: string }).token, type: 'AUTH_SUCCESS' }),
-        onError: () => ({ type: 'AUTH_FAILED' }),
-      }],
+      invoke: [
+        {
+          src: async () => ({ token: 'session-token' }),
+          onDone: ({ result }) => ({ token: (result as { token: string }).token, type: 'AUTH_SUCCESS' }),
+          onError: () => ({ type: 'AUTH_FAILED' }),
+        },
+      ],
       on: {
         AUTH_FAILED: { target: 'signedOut' },
         AUTH_SUCCESS: { reduce: ({ event }) => ({ attempts: 0, token: event.token }), target: 'signedIn' },

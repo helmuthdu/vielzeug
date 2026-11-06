@@ -18,6 +18,7 @@ Thanks for your interest in contributing! This guide covers the mechanics of get
 git clone https://github.com/YOUR_USERNAME/vielzeug.git
 cd vielzeug
 pnpm setup   # rush install: installs all package dependencies
+pnpm install # root workspace: vitest, Biome, VitePress (Rush covers packages/* only)
 pnpm build   # rush build: build every package
 pnpm test    # verify the setup works
 ```

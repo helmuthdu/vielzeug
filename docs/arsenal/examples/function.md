@@ -42,3 +42,4 @@ const isSpecialAge = anyOf<number>(
 
 // noneOf: true when no predicate matches: single predicate equivalent to logical NOT
 const odds = [1, 2, 3, 4].filter(noneOf((n: number) => n % 2 === 0));
+```

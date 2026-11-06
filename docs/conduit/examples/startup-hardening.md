@@ -15,9 +15,7 @@ Detect missing registrations and cycles before application services receive traf
 
 ```ts
 try {
-  createContainer([
-    factoryProvider(Service, [Api, Logger], (api, logger) => createService(api, logger)),
-  ]);
+  createContainer([factoryProvider(Service, [Api, Logger], (api, logger) => createService(api, logger))]);
 } catch (error) {
   // ConduitProviderNotFoundError: Api is not registered
 }

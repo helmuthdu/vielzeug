@@ -5,7 +5,45 @@ package: tempo
 category: time
 keywords: [temporal, date-time, timezone, formatting, arithmetic, dst, intl]
 related: [rune, vault]
-exports: [Temporal, parse, now, nowInstant, isValid, toInstant, inTimeZone, shift, difference, isBefore, isAfter, isSame, contains, clamp, startOf, endOf, dateRange, recurrence, format, formatParts, formatRange, formatRangeParts, formatInstant, formatZoned, formatRelative, parseDuration, formatDuration, formatTimer, classifyExpiry, timeDiff, humanize, TempoError, TempoInvalidInputError, TempoInvalidTzError, TempoMissingTzError, TempoUnsupportedInputError]
+exports:
+  [
+    Temporal,
+    parse,
+    now,
+    nowInstant,
+    isValid,
+    toInstant,
+    inTimeZone,
+    shift,
+    difference,
+    isBefore,
+    isAfter,
+    isSame,
+    contains,
+    clamp,
+    startOf,
+    endOf,
+    dateRange,
+    recurrence,
+    format,
+    formatParts,
+    formatRange,
+    formatRangeParts,
+    formatInstant,
+    formatZoned,
+    formatRelative,
+    parseDuration,
+    formatDuration,
+    formatTimer,
+    classifyExpiry,
+    timeDiff,
+    humanize,
+    TempoError,
+    TempoInvalidInputError,
+    TempoInvalidTzError,
+    TempoMissingTzError,
+    TempoUnsupportedInputError,
+  ]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -28,13 +66,13 @@ const localMeeting = parse('2026-03-21T10:30:00', { as: 'plainDateTime' });
 const reminder = shift(localMeeting, { minutes: -15 }, { timeZone: 'America/New_York' });
 ```
 
-| Feature | Tempo | date-fns | Native Date |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="tempo" type="size" /> | ~10 kB | 0 kB |
-| Zero dependencies | <ore-icon name="x" size="16"></ore-icon> `@js-temporal/polyfill` | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Explicit wall-time conversion | <ore-icon name="check" size="16"></ore-icon> | Manual | <ore-icon name="x" size="16"></ore-icon> |
-| DST-safe arithmetic | <ore-icon name="check" size="16"></ore-icon> | Manual | Manual |
-| Localized formatting | <ore-icon name="check" size="16"></ore-icon> `Intl` | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Feature                       | Tempo                                                            | date-fns                                     | Native Date                                  |
+| ----------------------------- | ---------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size                   | <PackageInfo package="tempo" type="size" />                      | ~10 kB                                       | 0 kB                                         |
+| Zero dependencies             | <ore-icon name="x" size="16"></ore-icon> `@js-temporal/polyfill` | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Explicit wall-time conversion | <ore-icon name="check" size="16"></ore-icon>                     | Manual                                       | <ore-icon name="x" size="16"></ore-icon>     |
+| DST-safe arithmetic           | <ore-icon name="check" size="16"></ore-icon>                     | Manual                                       | Manual                                       |
+| Localized formatting          | <ore-icon name="check" size="16"></ore-icon> `Intl`              | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">
 

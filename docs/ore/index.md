@@ -5,7 +5,44 @@ package: ore
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, refine, orbit]
-exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, onEvent, onElement, onFormReset, watchEffect, useEmit, useSlots, getHost, bind, each, when, classMap, styleMap, live, model, unsafeHtml, useField, createId, OreError, OreApiError, OreInternalError, OreLifecycleError, AttributeBindings, BindOptions, MaybeReactive]
+exports:
+  [
+    define,
+    prop,
+    html,
+    css,
+    ref,
+    createContext,
+    inject,
+    injectStrict,
+    provide,
+    onMounted,
+    onCleanup,
+    onEvent,
+    onElement,
+    onFormReset,
+    watchEffect,
+    useEmit,
+    useSlots,
+    getHost,
+    bind,
+    each,
+    when,
+    classMap,
+    styleMap,
+    live,
+    model,
+    unsafeHtml,
+    useField,
+    createId,
+    OreError,
+    OreApiError,
+    OreInternalError,
+    OreLifecycleError,
+    AttributeBindings,
+    BindOptions,
+    MaybeReactive,
+  ]
 environments: [browser]
 ---
 
@@ -47,15 +84,15 @@ define('my-counter', {
 });
 ```
 
-| Feature                    | Ore                                       | Lit                                                               | Stencil                                    |
-| -------------------------- | ------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------ |
-| Bundle size                | <PackageInfo package="ore" type="size" /> | ~12 kB                                                            | ~60 kB+ toolchain                          |
-| Signal-first runtime       | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon> (separate signals package) | <ore-icon name="x" size="16"></ore-icon>     |
-| Functional component setup | <ore-icon name="check" size="16"></ore-icon>  | Partial                                                           | <ore-icon name="x" size="16"></ore-icon>     |
-| Typed prop helpers         | <ore-icon name="check" size="16"></ore-icon>  | Partial                                                           | <ore-icon name="check" size="16"></ore-icon> |
-| Host binding helpers       | <ore-icon name="check" size="16"></ore-icon>  | Partial                                                           | Partial                                    |
-| Form-associated helpers    | <ore-icon name="check" size="16"></ore-icon>  | Manual                                                            | Partial                                    |
-| Zero dependencies          | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>                        | <ore-icon name="x" size="16"></ore-icon>     |
+| Feature                    | Ore                                          | Lit                                                                 | Stencil                                      |
+| -------------------------- | -------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------- |
+| Bundle size                | <PackageInfo package="ore" type="size" />    | ~12 kB                                                              | ~60 kB+ toolchain                            |
+| Signal-first runtime       | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> (separate signals package) | <ore-icon name="x" size="16"></ore-icon>     |
+| Functional component setup | <ore-icon name="check" size="16"></ore-icon> | Partial                                                             | <ore-icon name="x" size="16"></ore-icon>     |
+| Typed prop helpers         | <ore-icon name="check" size="16"></ore-icon> | Partial                                                             | <ore-icon name="check" size="16"></ore-icon> |
+| Host binding helpers       | <ore-icon name="check" size="16"></ore-icon> | Partial                                                             | Partial                                      |
+| Form-associated helpers    | <ore-icon name="check" size="16"></ore-icon> | Manual                                                              | Partial                                      |
+| Zero dependencies          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                        | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 
@@ -139,11 +176,11 @@ define('my-counter', {
 
 ## Package Entry Points
 
-| Import                      | Purpose                                                                       |
-| --------------------------- | ----------------------------------------------------------------------------- |
-| `@vielzeug/ore`            | All browser runtime APIs: components, directives, `useField`, and observers |
-| `@vielzeug/ore/testing`    | Ore-specific mounting, lifecycle flushing, hooks, cleanup, and form internals |
-| `@vielzeug/assay`          | Generic DOM events, scoped queries, and async waiting                         |
+| Import                  | Purpose                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `@vielzeug/ore`         | All browser runtime APIs: components, directives, `useField`, and observers   |
+| `@vielzeug/ore/testing` | Ore-specific mounting, lifecycle flushing, hooks, cleanup, and form internals |
+| `@vielzeug/assay`       | Generic DOM events, scoped queries, and async waiting                         |
 
 ## Documentation
 

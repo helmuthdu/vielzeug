@@ -100,12 +100,12 @@ The default is **250 WPM**, adjustable between **100 and 600 WPM**. The slider m
 
 Punctuation adds dwell to the base `60000 / wpm` milliseconds:
 
-| Boundary | Dwell |
-| --- | --- |
-| Ordinary word | 1× base |
-| Comma, semicolon, colon | 1.5× base |
-| Sentence ending or ellipsis | 2× base |
-| Blank line / paragraph break | 3× base |
+| Boundary                     | Dwell     |
+| ---------------------------- | --------- |
+| Ordinary word                | 1× base   |
+| Comma, semicolon, colon      | 1.5× base |
+| Sentence ending or ellipsis  | 2× base   |
+| Blank line / paragraph break | 3× base   |
 
 Only the largest applicable dwell is used. WPM describes the **base pace**, not the passage's effective average. Sentence segmentation avoids treating every dot in decimals or URLs as a boundary; common English abbreviations and initials also avoid sentence pauses. Language-dependent segmentation is not a complete abbreviation dictionary.
 
@@ -128,12 +128,12 @@ Set a starting pace declaratively:
 For Latin-script tokens, the focal letter follows the length of the word, counting letter/number graphemes and excluding punctuation:
 
 | Word length | Focal letter |
-| --- | --- |
-| 1 | First |
-| 2–5 | Second |
-| 6–9 | Third |
-| 10–13 | Fourth |
-| 14+ | Fifth |
+| ----------- | ------------ |
+| 1           | First        |
+| 2–5         | Second       |
+| 6–9         | Third        |
+| 10–13       | Fourth       |
+| 14+         | Fifth        |
 
 For example, `read` highlights `e`, `hello` highlights `e`, and `reading` highlights `a`. The focal letter's center stays on the display's fixed axis. This is a predictable display heuristic, not a claim of an optimal recognition point.
 
@@ -206,10 +206,12 @@ reader.labels = {
   guidance: 'Ein Wort nach dem anderen. Beginnen Sie in einem angenehmen Tempo.',
   hidden: 'Pausiert, weil der Tab ausgeblendet wurde.',
   shortcutsHeading: 'Tastenkürzel',
-  shortcuts: 'Fokussiertes Lesefeld: Leertaste startet oder pausiert; Pfeiltasten links/rechts wechseln ein Wort. Tippen Sie zum Wechseln auf die Seiten und zum Starten oder Pausieren in die Mitte.',
+  shortcuts:
+    'Fokussiertes Lesefeld: Leertaste startet oder pausiert; Pfeiltasten links/rechts wechseln ein Wort. Tippen Sie zum Wechseln auf die Seiten und zum Starten oder Pausieren in die Mitte.',
   paceHelp: 'WPM bestimmt das Grundtempo. Satzzeichen verlängern die Pausen.',
   tapHint: 'Tippen Sie auf die Seiten, um ein Wort zu wechseln, oder in die Mitte, um zu starten oder zu pausieren.',
-  viewport: 'Lesefeld. Leertaste oder Tippen in die Mitte startet oder pausiert; Pfeiltasten oder Tippen auf die Seiten wechseln Wörter.',
+  viewport:
+    'Lesefeld. Leertaste oder Tippen in die Mitte startet oder pausiert; Pfeiltasten oder Tippen auf die Seiten wechseln Wörter.',
 };
 ```
 
@@ -217,37 +219,37 @@ reader.labels = {
 
 ### Attributes and Properties
 
-| Name | Type | Default | Description |
-| --- | --- | --- | --- |
-| `text` | `string` | `''` | Plain text |
-| `wpm` | `number` | `250` | Base WPM, normalized to 100–600 |
-| `word-index` | `number` | `0` | Zero-based token index, rounded down and clamped |
-| `labels` | `Partial<OreSpeedReadingLabels>` | English | JavaScript-only labels |
-| `state` | `SpeedReadingState` | `idle` | Read-only reflected `idle`, `playing`, `paused`, or `ended` |
-| `fullscreen` | `boolean` | absent | Read-only; present while the reader fills the screen |
+| Name         | Type                             | Default | Description                                                 |
+| ------------ | -------------------------------- | ------- | ----------------------------------------------------------- |
+| `text`       | `string`                         | `''`    | Plain text                                                  |
+| `wpm`        | `number`                         | `250`   | Base WPM, normalized to 100–600                             |
+| `word-index` | `number`                         | `0`     | Zero-based token index, rounded down and clamped            |
+| `labels`     | `Partial<OreSpeedReadingLabels>` | English | JavaScript-only labels                                      |
+| `state`      | `SpeedReadingState`              | `idle`  | Read-only reflected `idle`, `playing`, `paused`, or `ended` |
+| `fullscreen` | `boolean`                        | absent  | Read-only; present while the reader fills the screen        |
 
 An external position change pauses playback. Reflected position updates do not emit duplicate progress events. Finite WPM values outside the range are clamped; invalid/nonfinite property values use 250 with a development warning. Slider input always stays within the allowed pace range. Invalid initial positions use zero with a warning; invalid `seek()` arguments leave the position unchanged and warn. Invalid `lang` falls back to `en` with a development warning.
 
 ### Methods
 
-| Method | Description |
-| --- | --- |
-| `play()` | Start/resume, or replay from zero after ending |
-| `pause()` | Cancel the timer and preserve the word |
-| `restart()` | Reset to zero and remain idle |
-| `seek(index)` | Pause and move to a clamped token index |
+| Method              | Description                                         |
+| ------------------- | --------------------------------------------------- |
+| `play()`            | Start/resume, or replay from zero after ending      |
+| `pause()`           | Cancel the timer and preserve the word              |
+| `restart()`         | Reset to zero and remain idle                       |
+| `seek(index)`       | Pause and move to a clamped token index             |
 | `enterFullscreen()` | Request browser fullscreen; requires a user gesture |
-| `exitFullscreen()` | Leave fullscreen while this reader holds it |
+| `exitFullscreen()`  | Leave fullscreen while this reader holds it         |
 
 ### Events
 
-| Event | Detail | Description |
-| --- | --- | --- |
-| `play` | — | Playback entered `playing` |
-| `pause` | — | A playing reader paused |
-| `end` | — | Final word completed its dwell, or the user explicitly finished an oversized final token |
-| `progress` | `{ index, total, start, end }` | A token is displayed |
-| `wpm-change` | `{ wpm }` | User committed a speed change |
+| Event        | Detail                         | Description                                                                              |
+| ------------ | ------------------------------ | ---------------------------------------------------------------------------------------- |
+| `play`       | —                              | Playback entered `playing`                                                               |
+| `pause`      | —                              | A playing reader paused                                                                  |
+| `end`        | —                              | Final word completed its dwell, or the user explicitly finished an oversized final token |
+| `progress`   | `{ index, total, start, end }` | A token is displayed                                                                     |
+| `wpm-change` | `{ wpm }`                      | User committed a speed change                                                            |
 
 ### Exported Types
 
@@ -255,25 +257,25 @@ An external position change pauses playback. Reflected position updates do not e
 
 ### CSS Custom Properties
 
-| Property | Default | Description |
-| --- | --- | --- |
-| `--speed-reading-font-size` | `var(--text-3xl)` | Maximum word display type size; the passage may be fitted smaller |
+| Property                               | Default                     | Description                                                           |
+| -------------------------------------- | --------------------------- | --------------------------------------------------------------------- |
+| `--speed-reading-font-size`            | `var(--text-3xl)`           | Maximum word display type size; the passage may be fitted smaller     |
 | `--speed-reading-fullscreen-font-size` | `min(10vw, var(--size-96))` | Maximum type size while fullscreen; the passage may be fitted smaller |
-| `--speed-reading-min-font-size` | `var(--text-base)` | Minimum passage-fitted type size |
-| `--speed-reading-height` | `var(--size-32)` | Minimum viewport height |
-| `--speed-reading-gap` | `var(--size-4)` | Gap between sections |
-| `--speed-reading-focal-color` | `var(--color-primary)` | Highlight color |
+| `--speed-reading-min-font-size`        | `var(--text-base)`          | Minimum passage-fitted type size                                      |
+| `--speed-reading-height`               | `var(--size-32)`            | Minimum viewport height                                               |
+| `--speed-reading-gap`                  | `var(--size-4)`             | Gap between sections                                                  |
+| `--speed-reading-focal-color`          | `var(--color-primary)`      | Highlight color                                                       |
 
 ### CSS Parts
 
-| Part | Description |
-| --- | --- |
-| `viewport` | Focusable display |
-| `word` | Visual word |
-| `focal` | Stationary focal grapheme |
-| `controls` | Playback button row |
-| `status` | Visible playback feedback and word count |
-| `full-text` | Selectable full text |
+| Part        | Description                              |
+| ----------- | ---------------------------------------- |
+| `viewport`  | Focusable display                        |
+| `word`      | Visual word                              |
+| `focal`     | Stationary focal grapheme                |
+| `controls`  | Playback button row                      |
+| `status`    | Visible playback feedback and word count |
+| `full-text` | Selectable full text                     |
 
 ## Accessibility
 

@@ -18,14 +18,30 @@ import { defineMachine, type MachineSnapshot } from '@vielzeug/clockwork';
 
 type State = 'info' | 'details' | 'confirm' | 'success';
 type Context = { details: string; email: string; name: string };
-type Event = { type: 'BACK' } | { details: string; type: 'DETAILS' } | { email: string; name: string; type: 'INFO' } | { type: 'CONFIRM' };
+type Event =
+  | { type: 'BACK' }
+  | { details: string; type: 'DETAILS' }
+  | { email: string; name: string; type: 'INFO' }
+  | { type: 'CONFIRM' };
 
 const wizard = defineMachine<Context, Event>()({
   context: { details: '', email: '', name: '' },
   initial: 'info',
   states: {
-    info: { on: { INFO: { reduce: ({ context, event }) => ({ ...context, email: event.email, name: event.name }), target: 'details' } } },
-    details: { on: { BACK: { target: 'info' }, DETAILS: { reduce: ({ context, event }) => ({ ...context, details: event.details }), target: 'confirm' } } },
+    info: {
+      on: {
+        INFO: {
+          reduce: ({ context, event }) => ({ ...context, email: event.email, name: event.name }),
+          target: 'details',
+        },
+      },
+    },
+    details: {
+      on: {
+        BACK: { target: 'info' },
+        DETAILS: { reduce: ({ context, event }) => ({ ...context, details: event.details }), target: 'confirm' },
+      },
+    },
     confirm: { on: { BACK: { target: 'details' }, CONFIRM: { target: 'success' } } },
     success: {},
   },
@@ -50,7 +66,10 @@ function parseSnapshot(raw: string | null): MachineSnapshot<State, Context> | un
       return undefined;
     }
 
-    return { context: { details: context.details, email: context.email, name: context.name }, state: candidate.state as State };
+    return {
+      context: { details: context.details, email: context.email, name: context.name },
+      state: candidate.state as State,
+    };
   } catch {
     return undefined;
   }

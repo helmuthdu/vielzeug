@@ -1,6 +1,6 @@
 ---
 title: 'Mesh: Backendless peer-to-peer sessions'
-description: "Backendless peer-to-peer session transport over WebRTC data channels with manual pairing and host-authoritative star topology"
+description: 'Backendless peer-to-peer session transport over WebRTC data channels with manual pairing and host-authoritative star topology'
 package: mesh
 category: webrtc
 keywords: [webrtc, p2p, peer-to-peer, datachannel, lan, pairing, backendless, signaling-free]
@@ -33,14 +33,14 @@ const peer = await host.acceptAnswer(meshCodec.decode(answerText));
 host.send(peer.id, 'snapshot', { rev: 1 });
 ```
 
-| Feature | Mesh | `pulse` (WebSocket) | Raw `RTCPeerConnection` |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="mesh" type="size" /> | <PackageInfo package="pulse" type="size" /> | 0 B |
-| Runtime dependencies | `@vielzeug/arsenal` | <ore-icon name="check" size="16"></ore-icon> none | <ore-icon name="check" size="16"></ore-icon> none |
-| Works without a server | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Typed message protocol | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Multi-peer sessions | Star, host-authoritative | Server rooms | Manual per-peer wiring |
-| Pairing safety | Proof + TTL + approval hook | Server auth | <ore-icon name="x" size="16"></ore-icon> |
+| Feature                | Mesh                                         | `pulse` (WebSocket)                               | Raw `RTCPeerConnection`                           |
+| ---------------------- | -------------------------------------------- | ------------------------------------------------- | ------------------------------------------------- |
+| Bundle size            | <PackageInfo package="mesh" type="size" />   | <PackageInfo package="pulse" type="size" />       | 0 B                                               |
+| Runtime dependencies   | `@vielzeug/arsenal`                          | <ore-icon name="check" size="16"></ore-icon> none | <ore-icon name="check" size="16"></ore-icon> none |
+| Works without a server | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon>      |
+| Typed message protocol | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>          |
+| Multi-peer sessions    | Star, host-authoritative                     | Server rooms                                      | Manual per-peer wiring                            |
+| Pairing safety         | Proof + TTL + approval hook                  | Server auth                                       | <ore-icon name="x" size="16"></ore-icon>          |
 
 <div class="decision-callout">
 

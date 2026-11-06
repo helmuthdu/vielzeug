@@ -3701,9 +3701,9 @@ body[data-route='booking'] .app-layout {
   *::before,
   *::after {
     scroll-behavior: auto;
+    transition-duration: 0.01ms;
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
-    transition-duration: 0.01ms;
   }
 
   .search-navbar[data-stuck]::part(bar) {

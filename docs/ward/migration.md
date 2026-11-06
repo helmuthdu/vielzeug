@@ -50,10 +50,7 @@ Priority, specificity scoring, conflict detection, and inheritance are removed. 
 allow('editor', 'posts', ['read'], { priority: 10 });
 
 // After
-createWard([
-  deny('suspended', 'posts', ['read']),
-  allow('editor', 'posts', ['read']),
-]);
+createWard([deny('suspended', 'posts', ['read']), allow('editor', 'posts', ['read'])]);
 ```
 
 ## Replace `explain()` with `decide()`

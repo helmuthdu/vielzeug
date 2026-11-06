@@ -225,8 +225,14 @@ const jans = await db.query('users').startsWith('name', 'Jan').toArray();
 const hasAdmin = await db.query('users').equals('role', 'admin').exists();
 
 // After
-const adults = await db.query('users').filter((u) => u.age >= 18 && u.age <= 65).toArray();
-const jans = await db.query('users').filter((u) => u.name.startsWith('Jan')).toArray();
+const adults = await db
+  .query('users')
+  .filter((u) => u.age >= 18 && u.age <= 65)
+  .toArray();
+const jans = await db
+  .query('users')
+  .filter((u) => u.name.startsWith('Jan'))
+  .toArray();
 const hasAdmin = (await db.query('users').equals('role', 'admin').count()) > 0;
 ```
 
@@ -299,12 +305,12 @@ Vault 2.0 redesigns browser storage around portable keys, fixed envelopes, capab
 
 ## Split adapter imports
 
-| Before | After |
-| --- | --- |
-| `import { createMemory, table } from '@vielzeug/vault'` | `import { table } from '@vielzeug/vault'; import { createMemory } from '@vielzeug/vault/memory'` |
-| `createLocalStorage` / `createSessionStorage` from the root | `/local-storage` or `/session-storage` |
-| `createIndexedDB`, `defineMigration`, or IndexedDB types from the root | `@vielzeug/vault/indexeddb` |
-The `/browser` aggregate was removed. Import each browser adapter from its focused subpath. `@vielzeug/vault/sqlite` remains the opt-in SQLite entry.
+| Before                                                                                                                                                | After                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `import { createMemory, table } from '@vielzeug/vault'`                                                                                               | `import { table } from '@vielzeug/vault'; import { createMemory } from '@vielzeug/vault/memory'` |
+| `createLocalStorage` / `createSessionStorage` from the root                                                                                           | `/local-storage` or `/session-storage`                                                           |
+| `createIndexedDB`, `defineMigration`, or IndexedDB types from the root                                                                                | `@vielzeug/vault/indexeddb`                                                                      |
+| The `/browser` aggregate was removed. Import each browser adapter from its focused subpath. `@vielzeug/vault/sqlite` remains the opt-in SQLite entry. |
 
 - Replace `Adapter` with `VaultStore`.
 - Replace `IndexedDbAdapter` with `TransactionalVaultStore`.
@@ -314,13 +320,13 @@ The `/browser` aggregate was removed. Import each browser adapter from its focus
 
 ## Replace removed APIs
 
-| Before | After |
-| --- | --- |
-| `Adapter` / `MemoryAdapter` | `VaultStore` from `createMemory()`, `createLocalStorage()`, or `createSessionStorage()` |
-| `IndexedDbAdapter` | `TransactionalVaultStore` from `createIndexedDB()` |
-| Codecs and versioned codecs | Fixed envelopes; migrate existing encoded data before construction |
-| `watch`, `observeMany`, signals, and streams | Per-table `store.observe()` |
-| Atomic adapter operations | `createIndexedDB().batch()` in browser code, or `createSQLite().batch()` with an injected SQLite connection |
+| Before                                       | After                                                                                                       |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `Adapter` / `MemoryAdapter`                  | `VaultStore` from `createMemory()`, `createLocalStorage()`, or `createSessionStorage()`                     |
+| `IndexedDbAdapter`                           | `TransactionalVaultStore` from `createIndexedDB()`                                                          |
+| Codecs and versioned codecs                  | Fixed envelopes; migrate existing encoded data before construction                                          |
+| `watch`, `observeMany`, signals, and streams | Per-table `store.observe()`                                                                                 |
+| Atomic adapter operations                    | `createIndexedDB().batch()` in browser code, or `createSQLite().batch()` with an injected SQLite connection |
 
 ## Migrate browser storage to portable keys and fixed envelopes
 

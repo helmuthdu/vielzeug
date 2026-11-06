@@ -220,55 +220,55 @@ applyOrientation();
 
 **`ore-stepper`** Attributes
 
-| Attribute          | Type                                                                      | Default      | Description                                                                             |
-| ------------------ | -------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------- |
-| `value`             | `string`                                                                    | N/A | The `value` of the currently active step                                                  |
-| `clickable`         | `boolean`                                                                   | `false`      | Allow clicking/focusing steps to navigate. Off by default (pure progress display)         |
-| `linear`            | `boolean`                                                                   | `false`      | Restrict navigation to completed steps and the current step                               |
-| `disabled`          | `boolean`                                                                   | `false`      | Disables the whole stepper: no step is navigable regardless of `clickable`               |
-| `orientation`       | `'horizontal' \| 'vertical'`                                               | `'horizontal'` | Layout direction: vertical suits mobile/narrow layouts                                  |
-| `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`  | N/A | Theme color for the current/completed step indicators                                     |
-| `size`              | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`       | Component size                                                                             |
-| `label`             | `string`                                                                    | `'Progress'` | `aria-label` for the nav landmark                                                          |
+| Attribute     | Type                                                                      | Default        | Description                                                                       |
+| ------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
+| `value`       | `string`                                                                  | N/A            | The `value` of the currently active step                                          |
+| `clickable`   | `boolean`                                                                 | `false`        | Allow clicking/focusing steps to navigate. Off by default (pure progress display) |
+| `linear`      | `boolean`                                                                 | `false`        | Restrict navigation to completed steps and the current step                       |
+| `disabled`    | `boolean`                                                                 | `false`        | Disables the whole stepper: no step is navigable regardless of `clickable`        |
+| `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Layout direction: vertical suits mobile/narrow layouts                            |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A            | Theme color for the current/completed step indicators                             |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Component size                                                                    |
+| `label`       | `string`                                                                  | `'Progress'`   | `aria-label` for the nav landmark                                                 |
 
 **`ore-stepper`** Slots
 
-| Slot      | Description             |
-| --------- | ------------------------ |
-| (default) | `ore-step` elements      |
+| Slot      | Description         |
+| --------- | ------------------- |
+| (default) | `ore-step` elements |
 
 **`ore-stepper`** Events
 
-| Event             | Detail            | Description                                             |
-| ------------------ | ----------------- | -------------------------------------------------------- |
-| `change`           | `{ value: string }` | Fired when the active step changes via click/keyboard   |
+| Event    | Detail              | Description                                           |
+| -------- | ------------------- | ----------------------------------------------------- |
+| `change` | `{ value: string }` | Fired when the active step changes via click/keyboard |
 
 **`ore-stepper`** CSS Custom Properties
 
-| Property                    | Description                             |
-| ---------------------------- | ---------------------------------------- |
-| `--stepper-gap`               | Gap between steps                        |
-| `--stepper-connector-size`    | Thickness of the connector line          |
-| `--stepper-connector-color`   | Color of the connector line between steps |
+| Property                    | Description                               |
+| --------------------------- | ----------------------------------------- |
+| `--stepper-gap`             | Gap between steps                         |
+| `--stepper-connector-size`  | Thickness of the connector line           |
+| `--stepper-connector-color` | Color of the connector line between steps |
 
 **`ore-step`** Attributes
 
-| Attribute   | Type      | Default | Description                                                                    |
-| ----------- | --------- | ------- | -------------------------------------------------------------------------------- |
-| `value`     | `string`  | N/A | Unique identifier, matches the parent `ore-stepper`'s `value` attribute (required) |
-| `disabled`  | `boolean` | `false` | Removes this step from navigation entirely                                       |
-| `error`     | `boolean` | `false` | Marks the step as failed/invalid                                                  |
-| `optional`  | `boolean` | `false` | Renders an "(optional)" hint next to the label                                    |
+| Attribute  | Type      | Default | Description                                                                        |
+| ---------- | --------- | ------- | ---------------------------------------------------------------------------------- |
+| `value`    | `string`  | N/A     | Unique identifier, matches the parent `ore-stepper`'s `value` attribute (required) |
+| `disabled` | `boolean` | `false` | Removes this step from navigation entirely                                         |
+| `error`    | `boolean` | `false` | Marks the step as failed/invalid                                                   |
+| `optional` | `boolean` | `false` | Renders an "(optional)" hint next to the label                                     |
 
 `current`, `completed`, `navigable`, `index`, and `total` are read-only: derived from this step's position relative to the parent `ore-stepper`'s `value`, `clickable`, and `linear`, and reflected onto this element for CSS/inspection only. `color`, `size`, and `orientation` are also inherited from the parent when nested inside one (overriding any value set directly), but remain independently settable for a standalone `ore-step`.
 
 **`ore-step`** Slots
 
-| Slot          | Description                                                    |
+| Slot          | Description                                                      |
 | ------------- | ---------------------------------------------------------------- |
-| (default)     | Step label                                                        |
+| (default)     | Step label                                                       |
 | `description` | Optional supporting text shown below the label                   |
-| `icon`        | Custom icon replacing the automatic number/check/error indicator  |
+| `icon`        | Custom icon replacing the automatic number/check/error indicator |
 
 ## Accessibility
 

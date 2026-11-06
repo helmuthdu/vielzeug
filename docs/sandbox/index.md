@@ -45,14 +45,14 @@ Common use cases:
 - **Widget embedding**: wrap third-party widgets with strict CSP and bidirectional messaging
 - **AI-generated UI**: render LLM-produced HTML components with guaranteed isolation
 
-| Feature                    | Raw `<iframe>`                               | Sandbox                                       |
-| -------------------------- | -------------------------------------------- | --------------------------------------------- |
-| Bundle size                | 0 B (built-in)                               | <PackageInfo package="sandbox" type="size" /> |
-| Zero dependencies          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>  |
-| Content-Security-Policy    | Manual                                       | Auto-generated, strict by default             |
-| Managed message protocol   | <ore-icon name="x" size="16"></ore-icon>     | Typed host state; untrusted inbound details   |
-| Error forwarding           | <ore-icon name="x" size="16"></ore-icon>     | `onerror` + `unhandledrejection` → host       |
-| Dispose / `using`          | Manual `remove()`                            | `dispose()` + `[Symbol.dispose]`              |
+| Feature                  | Raw `<iframe>`                               | Sandbox                                       |
+| ------------------------ | -------------------------------------------- | --------------------------------------------- |
+| Bundle size              | 0 B (built-in)                               | <PackageInfo package="sandbox" type="size" /> |
+| Zero dependencies        | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>  |
+| Content-Security-Policy  | Manual                                       | Auto-generated, strict by default             |
+| Managed message protocol | <ore-icon name="x" size="16"></ore-icon>     | Typed host state; untrusted inbound details   |
+| Error forwarding         | <ore-icon name="x" size="16"></ore-icon>     | `onerror` + `unhandledrejection` → host       |
+| Dispose / `using`        | Manual `remove()`                            | `dispose()` + `[Symbol.dispose]`              |
 
 <div class="decision-callout">
 

@@ -190,11 +190,7 @@ const chart = createLineChart(container, config);
 const onClick = () => recordChartClick();
 
 chart.el.addEventListener('click', onClick);
-chart.disposalSignal.addEventListener(
-  'abort',
-  () => chart.el.removeEventListener('click', onClick),
-  { once: true },
-);
+chart.disposalSignal.addEventListener('abort', () => chart.el.removeEventListener('click', onClick), { once: true });
 ```
 
 The plugin-only `LegendState`, `TooltipState`, and `Point` exports are also removed. `animate()` and `AnimationTarget` are no longer part of the package root.

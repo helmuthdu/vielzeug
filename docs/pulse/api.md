@@ -11,43 +11,43 @@ category: websockets
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `createPulse()` | Create a typed WebSocket session instance. | Sync (returns `Pulse`) | Does not open the connection: call `connect()`. |
-| `Pulse` | Main instance: channels, rooms, messaging, lifecycle. | Sync methods, async `connect()`/`wait()` | `send()` throws while disconnected. |
-| `PulseChannel` | Scoped channel namespace with independent disposal. | Sync methods, async `wait()` | Each call returns a new scope; ref-counted subscription. |
-| `RoomScope` | Ref-counted room membership with optional presence. | Sync methods, async `joined` | `joined` rejects on transport close or timeout. |
-| `PulseSchema` | Declares server/client events, channels, and rooms. | Type-only | Infer all named scope types from this schema. |
-| `PulseOptions` | Configuration: heartbeat, reconnect, transform. | Type-only | `reconnect` and `heartbeat` default to `false`. |
-| `Subscribable` | Framework-neutral snapshot and change subscription. | Sync | `subscribe()` does not emit the initial snapshot. |
-| `PulseError` | Base class for all Pulse errors. | Runtime | Check `instanceof` against subclasses. |
+| Symbol          | Purpose                                               | Execution mode                           | Common gotcha                                            |
+| --------------- | ----------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------- |
+| `createPulse()` | Create a typed WebSocket session instance.            | Sync (returns `Pulse`)                   | Does not open the connection: call `connect()`.          |
+| `Pulse`         | Main instance: channels, rooms, messaging, lifecycle. | Sync methods, async `connect()`/`wait()` | `send()` throws while disconnected.                      |
+| `PulseChannel`  | Scoped channel namespace with independent disposal.   | Sync methods, async `wait()`             | Each call returns a new scope; ref-counted subscription. |
+| `RoomScope`     | Ref-counted room membership with optional presence.   | Sync methods, async `joined`             | `joined` rejects on transport close or timeout.          |
+| `PulseSchema`   | Declares server/client events, channels, and rooms.   | Type-only                                | Infer all named scope types from this schema.            |
+| `PulseOptions`  | Configuration: heartbeat, reconnect, transform.       | Type-only                                | `reconnect` and `heartbeat` default to `false`.          |
+| `Subscribable`  | Framework-neutral snapshot and change subscription.   | Sync                                     | `subscribe()` does not emit the initial snapshot.        |
+| `PulseError`    | Base class for all Pulse errors.                      | Runtime                                  | Check `instanceof` against subclasses.                   |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/pulse` | All public exports: `createPulse`, types, and error classes. |
-| `@vielzeug/pulse/testing` | Wire-protocol-accurate `MockWebSocket` for tests and demos. |
+| Import                    | Purpose                                                      |
+| ------------------------- | ------------------------------------------------------------ |
+| `@vielzeug/pulse`         | All public exports: `createPulse`, types, and error classes. |
+| `@vielzeug/pulse/testing` | Wire-protocol-accurate `MockWebSocket` for tests and demos.  |
 
 ## `createPulse()`
 
 ```ts
-function createPulse<S extends PulseSchema = PulseSchema>(url: string, options?: PulseOptions): Pulse<S>
+function createPulse<S extends PulseSchema = PulseSchema>(url: string, options?: PulseOptions): Pulse<S>;
 ```
 
 Creates a Pulse instance. The WebSocket is not opened until `connect()` is called.
 
 ### Type parameters
 
-| Parameter | Constraint | Description |
-| --- | --- | --- |
-| `S` | `PulseSchema` | Schema declaring server events, client events, channels, and rooms. |
+| Parameter | Constraint    | Description                                                         |
+| --------- | ------------- | ------------------------------------------------------------------- |
+| `S`       | `PulseSchema` | Schema declaring server events, client events, channels, and rooms. |
 
 ### Parameters
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `url` | `string` | WebSocket URL. |
+| Parameter | Type           | Description             |
+| --------- | -------------- | ----------------------- |
+| `url`     | `string`       | WebSocket URL.          |
 | `options` | `PulseOptions` | Optional configuration. |
 
 ### Returns
@@ -69,12 +69,12 @@ type PulseSchema = {
 
 Declare all protocol surfaces once at construction. Named scopes infer their types from this schema.
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `server` | `MessageMap` | Root events the server sends. |
-| `client` | `MessageMap` | Root events the client sends. |
-| `channels` | `ChannelDefinitions` | Named channel schemas. |
-| `rooms` | `RoomDefinitions` | Named room schemas with optional presence. |
+| Field      | Type                 | Description                                |
+| ---------- | -------------------- | ------------------------------------------ |
+| `server`   | `MessageMap`         | Root events the server sends.              |
+| `client`   | `MessageMap`         | Root events the client sends.              |
+| `channels` | `ChannelDefinitions` | Named channel schemas.                     |
+| `rooms`    | `RoomDefinitions`    | Named room schemas with optional presence. |
 
 ---
 
@@ -89,12 +89,12 @@ type PulseOptions = {
 };
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `heartbeat` | `boolean \| HeartbeatOptions` | `false` | Ping/pong keep-alive. |
-| `protocols` | `string \| string[]` | N/A | Sub-protocols passed to the WebSocket constructor. |
-| `reconnect` | `boolean \| ReconnectOptions` | `false` | Auto-reconnect on unexpected close. |
-| `transform` | `OutgoingTransform` | N/A | Transform or filter outgoing application messages. |
+| Option      | Type                          | Default | Description                                        |
+| ----------- | ----------------------------- | ------- | -------------------------------------------------- |
+| `heartbeat` | `boolean \| HeartbeatOptions` | `false` | Ping/pong keep-alive.                              |
+| `protocols` | `string \| string[]`          | N/A     | Sub-protocols passed to the WebSocket constructor. |
+| `reconnect` | `boolean \| ReconnectOptions` | `false` | Auto-reconnect on unexpected close.                |
+| `transform` | `OutgoingTransform`           | N/A     | Transform or filter outgoing application messages. |
 
 ---
 
@@ -107,10 +107,10 @@ type HeartbeatOptions = {
 };
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `interval` | `number` | `30_000` | Interval between pings in ms. |
-| `timeout` | `number` | `5_000` | How long to wait for a pong before treating the connection as dead. |
+| Option     | Type     | Default  | Description                                                         |
+| ---------- | -------- | -------- | ------------------------------------------------------------------- |
+| `interval` | `number` | `30_000` | Interval between pings in ms.                                       |
+| `timeout`  | `number` | `5_000`  | How long to wait for a pong before treating the connection as dead. |
 
 ---
 
@@ -123,10 +123,10 @@ type ReconnectOptions = {
 };
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `delay` | `number \| ((attempt: number) => number)` | Full-jitter exponential backoff capped at 30 s | Delay between reconnect attempts in ms. `attempt` is zero-based. |
-| `maxAttempts` | `number` | `5` | Maximum number of reconnect attempts after initial failure. |
+| Option        | Type                                      | Default                                        | Description                                                      |
+| ------------- | ----------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
+| `delay`       | `number \| ((attempt: number) => number)` | Full-jitter exponential backoff capped at 30 s | Delay between reconnect attempts in ms. `attempt` is zero-based. |
+| `maxAttempts` | `number`                                  | `5`                                            | Maximum number of reconnect attempts after initial failure.      |
 
 ---
 
@@ -172,7 +172,10 @@ type Pulse<S extends PulseSchema = PulseSchema> = {
   on<K extends EventKey<ServerEvents<S>>>(event: K, handler: (payload: ServerEvents<S>[K]) => void): Unsubscribe;
   once<K extends EventKey<ServerEvents<S>>>(event: K, handler: (payload: ServerEvents<S>[K]) => void): Unsubscribe;
   send<K extends EventKey<ClientEvents<S>>>(event: K, payload: ClientEvents<S>[K]): void;
-  wait<K extends EventKey<ServerEvents<S>>>(event: K, opts?: { signal?: AbortSignal; timeout?: number }): Promise<ServerEvents<S>[K]>;
+  wait<K extends EventKey<ServerEvents<S>>>(
+    event: K,
+    opts?: { signal?: AbortSignal; timeout?: number },
+  ): Promise<ServerEvents<S>[K]>;
 
   // Rooms
   room<K extends keyof RoomMap<S> & string>(name: K, opts?: RoomOptions): RoomScope<RoomMap<S>[K]>;
@@ -236,10 +239,10 @@ Reactive connection status: `'connecting' | 'open' | 'reconnecting' | 'closed'`.
 
 Subscribes to lifecycle events emitted by the Pulse instance. The handler receives a discriminated-union `PulseEvent`. Returns an unsubscribe function.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `handler` | `(event: PulseEvent) => void` | Called for each lifecycle event. |
-| `options.signal` | `AbortSignal` | Optional signal to stop the subscription. |
+| Parameter        | Type                          | Description                               |
+| ---------------- | ----------------------------- | ----------------------------------------- |
+| `handler`        | `(event: PulseEvent) => void` | Called for each lifecycle event.          |
+| `options.signal` | `AbortSignal`                 | Optional signal to stop the subscription. |
 
 ```ts
 const pulse = createPulse(url, { reconnect: true });
@@ -275,11 +278,11 @@ type PulseEvent =
 
 A discriminated union of lifecycle events emitted by a `Pulse` instance. Inspect `event.type` to narrow the payload.
 
-| `type` | Payload | When |
-| --- | --- | --- |
-| `status-change` | `status: PulseStatus` | The connection status transitions. |
-| `error` | `error: PulseError` | A typed transport or protocol error occurs. |
-| `dispose` | N/A | The instance is disposed. |
+| `type`          | Payload               | When                                        |
+| --------------- | --------------------- | ------------------------------------------- |
+| `status-change` | `status: PulseStatus` | The connection status transitions.          |
+| `error`         | `error: PulseError`   | A typed transport or protocol error occurs. |
+| `dispose`       | N/A                   | The instance is disposed.                   |
 
 ---
 
@@ -337,12 +340,12 @@ type PresenceRoomScope<T = unknown> = RoomScopeBase & {
 };
 ```
 
-| Member | Type | Description |
-| --- | --- | --- |
-| `presence` | `Subscribable<ReadonlyMap<string, T>>` | Reactive map of `memberId → state`. |
-| `updatePresence(state)` | `(state: T) => void` | Broadcast this client's presence state. Throws `PulseConnectionError` unless open. |
-| `onJoin(handler)` | `(handler) => Unsubscribe` | Called whenever a new member joins with their initial state. |
-| `onLeave(handler)` | `(handler) => Unsubscribe` | Called whenever a member leaves. |
+| Member                  | Type                                   | Description                                                                        |
+| ----------------------- | -------------------------------------- | ---------------------------------------------------------------------------------- |
+| `presence`              | `Subscribable<ReadonlyMap<string, T>>` | Reactive map of `memberId → state`.                                                |
+| `updatePresence(state)` | `(state: T) => void`                   | Broadcast this client's presence state. Throws `PulseConnectionError` unless open. |
+| `onJoin(handler)`       | `(handler) => Unsubscribe`             | Called whenever a new member joins with their initial state.                       |
+| `onLeave(handler)`      | `(handler) => Unsubscribe`             | Called whenever a member leaves.                                                   |
 
 ### `RoomOptions`
 
@@ -353,10 +356,10 @@ type RoomOptions = {
 };
 ```
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `signal` | `AbortSignal` | Aborts the join, rejecting `joined` with `PulseAbortError`. |
-| `timeout` | `number` | Join timeout in ms. Rejects `joined` with `PulseRoomTimeoutError`. |
+| Option    | Type          | Description                                                        |
+| --------- | ------------- | ------------------------------------------------------------------ |
+| `signal`  | `AbortSignal` | Aborts the join, rejecting `joined` with `PulseAbortError`.        |
+| `timeout` | `number`      | Join timeout in ms. Rejects `joined` with `PulseRoomTimeoutError`. |
 
 ---
 

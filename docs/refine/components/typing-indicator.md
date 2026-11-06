@@ -1,6 +1,6 @@
 # Typing Indicator
 
-Three bouncing dots signaling that the other side of a conversation is composing a reply: the moment *before* any content exists. For a message whose content is already streaming in, use [`ore-chat-message`](./chat-message.md)'s `streaming` attribute (a blinking cursor) instead.
+Three bouncing dots signaling that the other side of a conversation is composing a reply: the moment _before_ any content exists. For a message whose content is already streaming in, use [`ore-chat-message`](./chat-message.md)'s `streaming` attribute (a blinking cursor) instead.
 
 ## Basic Usage
 
@@ -69,29 +69,29 @@ Trigger it from the `input` event on [`ore-message-composer`](./message-composer
 
 ### Attributes
 
-| Attribute | Type                                                                      | Default    | Description                                        |
-| --------- | -------------------------------------------------------------------------- | ---------- | ---------------------------------------------------- |
+| Attribute | Type                                                                      | Default     | Description                                                                            |
+| --------- | ------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------- |
 | `label`   | `string`                                                                  | `'Typing…'` | Announced once (and again on every change) via the shared polite live-region announcer |
-| `color`   | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color for the dots                             |
-| `size`    | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Dot size preset                                      |
+| `color`   | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A         | Theme color for the dots                                                               |
+| `size`    | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`      | Dot size preset                                                                        |
 
 ### CSS Custom Properties
 
-| Property                        | Description             | Default             |
-| --------------------------------- | -------------------------- | ---------------------- |
-| `--typing-indicator-color`      | Dot color                | Theme-dependent       |
-| `--typing-indicator-size`       | Dot diameter             | Size-preset-dependent |
-| `--typing-indicator-gap`        | Gap between dots         | Size-preset-dependent |
+| Property                   | Description      | Default               |
+| -------------------------- | ---------------- | --------------------- |
+| `--typing-indicator-color` | Dot color        | Theme-dependent       |
+| `--typing-indicator-size`  | Dot diameter     | Size-preset-dependent |
+| `--typing-indicator-gap`   | Gap between dots | Size-preset-dependent |
 
 ### CSS Parts
 
-| Part    | Description                          |
-| ------- | --------------------------------------- |
-| `dots`  | Dots container                          |
-| `dot`   | Individual dot element                  |
+| Part   | Description            |
+| ------ | ---------------------- |
+| `dots` | Dots container         |
+| `dot`  | Individual dot element |
 
 ## Accessibility
 
-The three dots are `aria-hidden`: they're a purely visual affordance and convey no information on their own. `label` is announced through Refine's shared singleton live region (the same one used elsewhere in the package for transient status messages) rather than a static `aria-live` element rendered in the component's own template. A live region populated in the same paint as its own insertion is unreliable across browsers and screen readers: many only announce a *subsequent* change, not content present the moment the region connects, so routing through an already-existing region avoids that gap entirely. The animation respects `prefers-reduced-motion`, falling back to static (non-bouncing) dots.
+The three dots are `aria-hidden`: they're a purely visual affordance and convey no information on their own. `label` is announced through Refine's shared singleton live region (the same one used elsewhere in the package for transient status messages) rather than a static `aria-live` element rendered in the component's own template. A live region populated in the same paint as its own insertion is unreliable across browsers and screen readers: many only announce a _subsequent_ change, not content present the moment the region connects, so routing through an already-existing region avoids that gap entirely. The animation respects `prefers-reduced-motion`, falling back to static (non-bouncing) dots.
 
 Mount the indicator when typing starts and remove it (rather than toggling `hidden`) when it stops: the announcement fires on mount and on every `label` change, so there's no need to manage re-announcing yourself.

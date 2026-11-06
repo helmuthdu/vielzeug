@@ -28,15 +28,17 @@ const fetcher = defineMachine<{ error: string; items: string[] }, Event>()({
   states: {
     idle: { on: { FETCH: { target: 'loading' } } },
     loading: {
-      invoke: [{
-        src: async ({ signal }) => {
-          const response = await fetch('/api/items', { signal });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return response.json() as Promise<string[]>;
+      invoke: [
+        {
+          src: async ({ signal }) => {
+            const response = await fetch('/api/items', { signal });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json() as Promise<string[]>;
+          },
+          onDone: ({ result }) => ({ items: result as string[], type: 'SUCCESS' }),
+          onError: ({ error }) => ({ message: String(error), type: 'FAILURE' }),
         },
-        onDone: ({ result }) => ({ items: result as string[], type: 'SUCCESS' }),
-        onError: ({ error }) => ({ message: String(error), type: 'FAILURE' }),
-      }],
+      ],
       on: {
         FAILURE: { reduce: ({ event }) => ({ error: event.message, items: [] }), target: 'error' },
         SUCCESS: { reduce: ({ event }) => ({ error: '', items: event.items }), target: 'ready' },

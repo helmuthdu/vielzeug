@@ -26,7 +26,6 @@ document.addEventListener('contextmenu', (event) => {
     middleware: [offset(2), flip(), shift({ padding: 8 })],
     placement: 'bottom-start',
   });
-
 });
 ```
 

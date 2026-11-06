@@ -67,7 +67,11 @@ const tour = createTour({
     // Rect: geometry with no element, such as a canvas region.
     { id: 'chart', target: { height: 120, width: 240, x: 400, y: 300 }, title: 'This trend' },
     // Resolver: computed on every activation, and on scroll/resize while the step is active.
-    { id: 'selection', target: () => window.getSelection()?.getRangeAt(0).getBoundingClientRect() ?? null, title: 'Your selection' },
+    {
+      id: 'selection',
+      target: () => window.getSelection()?.getRangeAt(0).getBoundingClientRect() ?? null,
+      title: 'Your selection',
+    },
   ],
   // Give up waiting after 4s and skip the step instead of hanging the tour.
   targetTimeoutMs: 4000,
@@ -170,23 +174,26 @@ share.dismiss(); // records it as seen; never shows again for this version
 ```ts
 const controller = new AbortController();
 
-tour.tap((event) => {
-  switch (event.type) {
-    case 'step:start':
-      analytics.track('tour_step', { id: tour.id, step: event.step.id });
-      break;
-    case 'tour:complete':
-      analytics.track('tour_complete', { id: tour.id, reason: event.reason });
-      break;
-    case 'target-missing':
-      // A step's target never mounted: your selector drifted from the DOM.
-      console.warn(event.message);
-      break;
-    case 'warning':
-      console.warn(event.message, event.error);
-      break;
-  }
-}, { signal: controller.signal });
+tour.tap(
+  (event) => {
+    switch (event.type) {
+      case 'step:start':
+        analytics.track('tour_step', { id: tour.id, step: event.step.id });
+        break;
+      case 'tour:complete':
+        analytics.track('tour_complete', { id: tour.id, reason: event.reason });
+        break;
+      case 'target-missing':
+        // A step's target never mounted: your selector drifted from the DOM.
+        console.warn(event.message);
+        break;
+      case 'warning':
+        console.warn(event.message, event.error);
+        break;
+    }
+  },
+  { signal: controller.signal },
+);
 ```
 
 `target-missing` is the event to alert on: it means a step was skipped because its target did not appear within `targetTimeoutMs`, which is exactly how stale tours announce themselves.

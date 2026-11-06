@@ -629,7 +629,7 @@ const source = createPageSource({
     url.searchParams.set('page', String(page));
     url.searchParams.set('pageSize', String(pageSize));
     url.searchParams.set('search', search);
-    const { data, total } = await fetch(url, { signal }).then(r => r.json());
+    const { data, total } = await fetch(url, { signal }).then((r) => r.json());
     return { items: data, totalItems: total };
   },
   pageSize: 20,
@@ -690,66 +690,66 @@ Provided `filterOptions` define available choices without activating those filte
 
 ### Attributes / Properties
 
-| Name                 | Type                                   | Default                   | Description                                                                                                                              |
-| -------------------- | -------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `columns`            | `DataGridColumn[]`                     | N/A | Column definitions with optional `cell` text formatting and safe `renderCell` `HTMLResult` output. Takes precedence over `<ore-column>` children |
-| `rows`               | `object[]`                             | `[]`                      | Row data (JS property only)                                                                                                              |
-| `getRowKey`          | `(row) => string`                      | `(row) => String(row.id)` | Returns a unique key per row. Required when rows lack an `id` field (JS property only)                                                   |
-| `views`              | `DataGridView[]`                       | N/A | Controlled tabs with optional client-side `filter(row)` predicates, rendered in the left controls region (JS property)                    |
-| `active-view`        | `string`                               | N/A | ID of the currently active view. Must match an `id` in `views`. Consumer keeps this in sync via `view-change`                             |
-| `label`              | `string`                               | N/A | Accessible label for the grid (`aria-label`)                                                                                             |
-| `labels`             | `Partial<DataGridLabels>`              | English defaults          | Localized built-in control labels, filter operators, and range/row formatters (JS property)                                              |
-| `selectedKeys`       | `string[]`                             | `[]`                      | Controlled selection: set externally to override the internal selection state (JS property)                                             |
-| `selection-mode`     | `'none' \| 'single' \| 'multi'`        | `'none'`                  | Row selection behaviour                                                                                                                  |
-| `sort-mode`          | `'client' \| 'server'`                 | `'client'`                | `'server'` disables client-side sorting; consumer handles it via `sort-change`                                                           |
-| `page-size`          | `number`                               | `10`                      | Rows per page; `0` disables pagination. Reactive: can be changed after mount                                                            |
-| `expandable`         | `boolean`                              | `false`                   | Enable row expansion. Requires at least one column to have `renderExpanded`                                                              |
-| `empty-text`         | `string`                               | `'No data'`               | Text shown when `rows` is empty                                                                                                          |
-| `density`            | `'compact' \| 'cozy' \| 'comfortable'` | `'cozy'`                  | Cell padding; `compact` = tight, `cozy` = default, `comfortable` = spacious                                                              |
-| `striped`            | `boolean`                              | `false`                   | Alternating row backgrounds                                                                                                              |
-| `fullwidth`          | `boolean`                              | `false`                   | Stretch the grid to fill its container's width                                                                                           |
-| `search-placeholder` | `string`                               | `'Search…'`               | Placeholder text for the inline search input in the controls bar                                                                         |
-| `filterOptions`      | `FilterOption[]`                       | N/A | Available choices for column or non-visible metadata filters. Definitions remain inactive until selected in the Filter popover (JS property) |
-| `pageSizeOptions`    | `number[]`                             | N/A | When set, renders a page-size `ore-select` in the footer (JS property)                                                                    |
-| `source`             | `DataGridSource`                       | N/A | A reactive source. When set, drives rows and pagination; string-param sources also drive search (JS property)                             |
-| `loading`            | `boolean`                              | `false`                   | Show busy/loading state. Also set automatically from `source.state.loading` when `source` is provided                                      |
-| `disabled`           | `boolean`                              | `false`                   | Disable all interaction                                                                                                                  |
+| Name                 | Type                                   | Default                   | Description                                                                                                                                      |
+| -------------------- | -------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `columns`            | `DataGridColumn[]`                     | N/A                       | Column definitions with optional `cell` text formatting and safe `renderCell` `HTMLResult` output. Takes precedence over `<ore-column>` children |
+| `rows`               | `object[]`                             | `[]`                      | Row data (JS property only)                                                                                                                      |
+| `getRowKey`          | `(row) => string`                      | `(row) => String(row.id)` | Returns a unique key per row. Required when rows lack an `id` field (JS property only)                                                           |
+| `views`              | `DataGridView[]`                       | N/A                       | Controlled tabs with optional client-side `filter(row)` predicates, rendered in the left controls region (JS property)                           |
+| `active-view`        | `string`                               | N/A                       | ID of the currently active view. Must match an `id` in `views`. Consumer keeps this in sync via `view-change`                                    |
+| `label`              | `string`                               | N/A                       | Accessible label for the grid (`aria-label`)                                                                                                     |
+| `labels`             | `Partial<DataGridLabels>`              | English defaults          | Localized built-in control labels, filter operators, and range/row formatters (JS property)                                                      |
+| `selectedKeys`       | `string[]`                             | `[]`                      | Controlled selection: set externally to override the internal selection state (JS property)                                                      |
+| `selection-mode`     | `'none' \| 'single' \| 'multi'`        | `'none'`                  | Row selection behaviour                                                                                                                          |
+| `sort-mode`          | `'client' \| 'server'`                 | `'client'`                | `'server'` disables client-side sorting; consumer handles it via `sort-change`                                                                   |
+| `page-size`          | `number`                               | `10`                      | Rows per page; `0` disables pagination. Reactive: can be changed after mount                                                                     |
+| `expandable`         | `boolean`                              | `false`                   | Enable row expansion. Requires at least one column to have `renderExpanded`                                                                      |
+| `empty-text`         | `string`                               | `'No data'`               | Text shown when `rows` is empty                                                                                                                  |
+| `density`            | `'compact' \| 'cozy' \| 'comfortable'` | `'cozy'`                  | Cell padding; `compact` = tight, `cozy` = default, `comfortable` = spacious                                                                      |
+| `striped`            | `boolean`                              | `false`                   | Alternating row backgrounds                                                                                                                      |
+| `fullwidth`          | `boolean`                              | `false`                   | Stretch the grid to fill its container's width                                                                                                   |
+| `search-placeholder` | `string`                               | `'Search…'`               | Placeholder text for the inline search input in the controls bar                                                                                 |
+| `filterOptions`      | `FilterOption[]`                       | N/A                       | Available choices for column or non-visible metadata filters. Definitions remain inactive until selected in the Filter popover (JS property)     |
+| `pageSizeOptions`    | `number[]`                             | N/A                       | When set, renders a page-size `ore-select` in the footer (JS property)                                                                           |
+| `source`             | `DataGridSource`                       | N/A                       | A reactive source. When set, drives rows and pagination; string-param sources also drive search (JS property)                                    |
+| `loading`            | `boolean`                              | `false`                   | Show busy/loading state. Also set automatically from `source.state.loading` when `source` is provided                                            |
+| `disabled`           | `boolean`                              | `false`                   | Disable all interaction                                                                                                                          |
 
 ### DataGridView
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `id` | `string` | Stable view identifier matched by `active-view` |
-| `label` | `string` | Tab label |
+| Property | Type               | Description                                                                                   |
+| -------- | ------------------ | --------------------------------------------------------------------------------------------- |
+| `id`     | `string`           | Stable view identifier matched by `active-view`                                               |
+| `label`  | `string`           | Tab label                                                                                     |
 | `filter` | `(row) => boolean` | Optional client-side predicate composed before search, field filters, sorting, and pagination |
 
 ### DataGridColumn
 
-| Property         | Type               | Description                                                                                      |
-| ---------------- | ------------------ | ------------------------------------------------------------------------------------------------ |
-| `key`            | `string`           | Row object property key to display                                                               |
-| `label`          | `string`           | Column header display text                                                                       |
-| `headerLabel`    | `string?`          | Alternative `aria-label` for the header cell                                                     |
-| `sortable`       | `boolean?`         | Enable sorting on this column                                                                    |
-| `sortType`       | `'text' \| 'number'` | Select semantic direction labels; raw numeric values are inferred when omitted                 |
-| `resizable`      | `boolean?`         | Add a drag handle to resize this column                                                          |
-| `cell`           | `(item) => string` | Formatted text used for display, search, cell titles, and fallback filter labels                   |
-| `filterLabel`    | `(item) => string` | Optional formatted label for derived filter choices                                                |
-| `filterValue`    | `(item) => string \| number` | Raw comparison value; return a number for range operators such as dates                |
-| `renderCell`     | `(item) => HTMLResult` | Trusted structured cell content rendered through Ore templates                               |
-| `renderExpanded` | `(item) => string` | Renders the expanded detail panel for a row as an HTML string. Requires `expandable` on the grid |
-| `width`          | `string?`          | Column width (any CSS value, e.g. `'12rem'`)                                                     |
+| Property         | Type                         | Description                                                                                      |
+| ---------------- | ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| `key`            | `string`                     | Row object property key to display                                                               |
+| `label`          | `string`                     | Column header display text                                                                       |
+| `headerLabel`    | `string?`                    | Alternative `aria-label` for the header cell                                                     |
+| `sortable`       | `boolean?`                   | Enable sorting on this column                                                                    |
+| `sortType`       | `'text' \| 'number'`         | Select semantic direction labels; raw numeric values are inferred when omitted                   |
+| `resizable`      | `boolean?`                   | Add a drag handle to resize this column                                                          |
+| `cell`           | `(item) => string`           | Formatted text used for display, search, cell titles, and fallback filter labels                 |
+| `filterLabel`    | `(item) => string`           | Optional formatted label for derived filter choices                                              |
+| `filterValue`    | `(item) => string \| number` | Raw comparison value; return a number for range operators such as dates                          |
+| `renderCell`     | `(item) => HTMLResult`       | Trusted structured cell content rendered through Ore templates                                   |
+| `renderExpanded` | `(item) => string`           | Renders the expanded detail panel for a row as an HTML string. Requires `expandable` on the grid |
+| `width`          | `string?`                    | Column width (any CSS value, e.g. `'12rem'`)                                                     |
 
 ### FilterOption
 
 Used with the `filterOptions` JS property to pre-define the choices available in the Filter by popover for a given column.
 
-| Property  | Type                                 | Description                                              |
-| --------- | ------------------------------------ | -------------------------------------------------------- |
-| `key`     | `string`                             | Column key this filter option definition applies to      |
-| `label`     | `string`                             | Display label shown as the rule header                   |
+| Property    | Type                                         | Description                                                       |
+| ----------- | -------------------------------------------- | ----------------------------------------------------------------- |
+| `key`       | `string`                                     | Column key this filter option definition applies to               |
+| `label`     | `string`                                     | Display label shown as the rule header                            |
 | `operators` | `{ label: string; value: FilterOperator }[]` | Operators available for this filter; the first is used by default |
-| `options`   | `{ label?: string; value: string }[]`| Selectable values; `label` is optional (falls back to `value`) |
+| `options`   | `{ label?: string; value: string }[]`        | Selectable values; `label` is optional (falls back to `value`)    |
 
 **`ore-column`**
 
@@ -766,18 +766,18 @@ When using the declarative `<ore-column>` API, the following attributes map dire
 
 ### Events
 
-| Event              | Detail                                                   | Description                                                                 |
-| ------------------ | -------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `sort-change`      | `{ key: string, direction: 'asc' \| 'desc' \| 'none' }` | Fired when sort state changes                                               |
-| `selection-change` | `{ keys: string[], rows: object[] }`                     | Fired when row selection changes                                            |
-| `page-change`      | `{ pageIndex: number, pageSize: number }`                | Fired when the active page changes                                          |
-| `row-expand`       | `{ key: string, expanded: boolean }`                     | Fired when a row is expanded or collapsed                                   |
-| `view-change`      | `{ id: string, label: string }`                          | Fired when the user clicks a view tab; consumer must update `active-view`   |
+| Event              | Detail                                                  | Description                                                               |
+| ------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `sort-change`      | `{ key: string, direction: 'asc' \| 'desc' \| 'none' }` | Fired when sort state changes                                             |
+| `selection-change` | `{ keys: string[], rows: object[] }`                    | Fired when row selection changes                                          |
+| `page-change`      | `{ pageIndex: number, pageSize: number }`               | Fired when the active page changes                                        |
+| `row-expand`       | `{ key: string, expanded: boolean }`                    | Fired when a row is expanded or collapsed                                 |
+| `view-change`      | `{ id: string, label: string }`                         | Fired when the user clicks a view tab; consumer must update `active-view` |
 
 ### Slots
 
-| Slot      | Description                                                                                                    |
-| --------- | -------------------------------------------------------------------------------------------------------------- |
+| Slot      | Description                                                                                                                                                                                                                                                  |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `actions` | Content rendered at the right end of the controls bar, after the built-in icon buttons. A divider is automatically shown when this slot has content and hidden when it is empty. Typical use: an "Add row" button, an export trigger, or any toolbar action. |
 
 ### CSS Custom Properties
@@ -800,15 +800,15 @@ When using the declarative `<ore-column>` API, the following attributes map dire
 
 ### CSS Parts
 
-| Part       | Element   | Description                                    |
-| ---------- | --------- | ---------------------------------------------- |
+| Part       | Element   | Description                                     |
+| ---------- | --------- | ----------------------------------------------- |
 | `controls` | `<div>`   | The controls bar (search, tabs, action buttons) |
-| `table`    | `<table>` | The table element                              |
-| `thead`    | `<thead>` | The header row group                           |
-| `tbody`    | `<tbody>` | The body row group                             |
-| `row`      | `<tr>`    | A body row                                     |
-| `cell`     | `<td>`    | A body cell                                    |
-| `footer`   | `<div>`   | The pagination footer bar                      |
+| `table`    | `<table>` | The table element                               |
+| `thead`    | `<thead>` | The header row group                            |
+| `tbody`    | `<tbody>` | The body row group                              |
+| `row`      | `<tr>`    | A body row                                      |
+| `cell`     | `<td>`    | A body cell                                     |
+| `footer`   | `<div>`   | The pagination footer bar                       |
 
 ## Accessibility
 

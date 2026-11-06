@@ -217,20 +217,20 @@ Prevent interaction with specific items.
 
 **`ore-accordion`** Attributes
 
-| Attribute        | Type                                                                                      | Default      | Description                                           |
-| ---------------- | ----------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------- |
-| `selection-mode` | `'single' \| 'multiple'`                                                                  | `'multiple'` | Whether multiple items can be expanded simultaneously |
+| Attribute        | Type                                                                           | Default      | Description                                           |
+| ---------------- | ------------------------------------------------------------------------------ | ------------ | ----------------------------------------------------- |
+| `selection-mode` | `'single' \| 'multiple'`                                                       | `'multiple'` | Whether multiple items can be expanded simultaneously |
 | `variant`        | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`    | Visual variant applied to all items                   |
-| `size`           | `'sm' \| 'md' \| 'lg'`                                                                    | `'md'`       | Size applied to all items                             |
+| `size`           | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`       | Size applied to all items                             |
 
 **`ore-accordion-item`** Attributes
 
-| Attribute  | Type                                                                                      | Default   | Description                             |
-| ---------- | ----------------------------------------------------------------------------------------- | --------- | --------------------------------------- |
-| `expanded` | `boolean`                                                                                 | `false`   | Whether the item is expanded            |
-| `disabled` | `boolean`                                                                                 | `false`   | Disable the item (prevents toggling)    |
+| Attribute  | Type                                                                           | Default   | Description                             |
+| ---------- | ------------------------------------------------------------------------------ | --------- | --------------------------------------- |
+| `expanded` | `boolean`                                                                      | `false`   | Whether the item is expanded            |
+| `disabled` | `boolean`                                                                      | `false`   | Disable the item (prevents toggling)    |
 | `variant`  | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'` | Visual variant (usually set via parent) |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                                                    | `'md'`    | Size (usually set via parent)           |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`    | Size (usually set via parent)           |
 
 ### Slots
 

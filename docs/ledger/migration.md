@@ -154,10 +154,13 @@ If active code ignores cancellation and finishes, its history transition is not 
 
 ```ts
 await ledger.do(
-  compose([
-    { apply: updateX, revert: restoreX },
-    { apply: updateY, revert: restoreY },
-  ], 'Move item'),
+  compose(
+    [
+      { apply: updateX, revert: restoreX },
+      { apply: updateY, revert: restoreY },
+    ],
+    'Move item',
+  ),
 );
 ```
 

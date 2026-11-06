@@ -33,14 +33,14 @@ const pan = createPanGesture(element, {
 });
 ```
 
-| Feature | Gesture | Ad-hoc pointer handling |
-| --- | --- | --- |
-| Bundle size | <PackageInfo package="gesture" type="size" /> | n/a |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | n/a |
-| Two-dimensional drag tracking | Built in | Manual |
-| Axis intent recognition | Built in | Manual |
-| Pointer ownership | Tracked across the document | Manual |
-| Lifecycle cleanup | `dispose()` + `disposalSignal` | Manual |
+| Feature                       | Gesture                                       | Ad-hoc pointer handling |
+| ----------------------------- | --------------------------------------------- | ----------------------- |
+| Bundle size                   | <PackageInfo package="gesture" type="size" /> | n/a                     |
+| Zero dependencies             | <ore-icon name="check" size="16"></ore-icon>  | n/a                     |
+| Two-dimensional drag tracking | Built in                                      | Manual                  |
+| Axis intent recognition       | Built in                                      | Manual                  |
+| Pointer ownership             | Tracked across the document                   | Manual                  |
+| Lifecycle cleanup             | `dispose()` + `disposalSignal`                | Manual                  |
 
 <div class="decision-callout">
 

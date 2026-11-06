@@ -25,7 +25,7 @@ try {
   const matrix = encodeQr(payload, { errorCorrection: level });
   document.querySelector('#qr')!.innerHTML = toSvg(matrix, {
     label: 'Vielzeug link', // <title> + role="img" for screen readers
-    margin: 4,              // keep the spec-minimum quiet zone
+    margin: 4, // keep the spec-minimum quiet zone
   });
 } catch (error) {
   if (error instanceof SigilCapacityError) {
@@ -47,7 +47,7 @@ The container needs no QR-specific CSS: `color` controls the modules:
 
 ### Pitfalls
 
-- Injecting `toSvg` output via `innerHTML` is safe for sigil's own output, but never interpolate *untrusted* values into the `label`/color options: they are emitted as raw attribute/CSS text.
+- Injecting `toSvg` output via `innerHTML` is safe for sigil's own output, but never interpolate _untrusted_ values into the `label`/color options: they are emitted as raw attribute/CSS text.
 - A payload near capacity produces a dense matrix that cheap scanners struggle with: raise the version (`minVersion`) or lower the error-correction level instead of shrinking the rendered size.
 - `encodeQr` throws `SigilCapacityError` synchronously; don't wrap it in a promise chain expecting rejection.
 

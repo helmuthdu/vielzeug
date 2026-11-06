@@ -134,12 +134,12 @@ Dispose nodes deterministically: `dispose()` is idempotent, aborts `disposalSign
 
 ## Timeouts and Limits
 
-| Option | Default | Meaning |
-| --- | --- | --- |
-| `invitationTtlMs` | `300_000` | How long an unanswered invitation stays valid. |
-| `iceGatheringTimeoutMs` | `5_000` | Caps ICE gathering: on timeout pairing proceeds with the candidates gathered so far. |
-| `channelOpenTimeoutMs` | `60_000` | How long `acceptAnswer` and the guest wait for the data channel to open: deliberately generous because it covers the human carry-back of the answer. |
-| `maxMessageBytes` | `65_536` | Serialized message cap, enforced in both directions. |
+| Option                  | Default   | Meaning                                                                                                                                              |
+| ----------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invitationTtlMs`       | `300_000` | How long an unanswered invitation stays valid.                                                                                                       |
+| `iceGatheringTimeoutMs` | `5_000`   | Caps ICE gathering: on timeout pairing proceeds with the candidates gathered so far.                                                                 |
+| `channelOpenTimeoutMs`  | `60_000`  | How long `acceptAnswer` and the guest wait for the data channel to open: deliberately generous because it covers the human carry-back of the answer. |
+| `maxMessageBytes`       | `65_536`  | Serialized message cap, enforced in both directions.                                                                                                 |
 
 `acceptAnswer` rejects with `MeshTimeoutError` when the channel never opens; the guest independently marks itself `'failed'` and taps an `'error'` event. Inject `clock` to drive TTLs deterministically in tests.
 

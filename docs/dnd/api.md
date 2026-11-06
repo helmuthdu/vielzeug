@@ -20,10 +20,10 @@ description: Complete API reference for Dnd.
 
 ## Package Entry Point
 
-| Import              | Purpose                          |
-| ------------------- | -------------------------------- |
-| `@vielzeug/dnd`     | Backward-compat root barrel      |
-| `@vielzeug/dnd/drop` | Drop-zone APIs plus `DndError` and `Disposable` |
+| Import                   | Purpose                                                          |
+| ------------------------ | ---------------------------------------------------------------- |
+| `@vielzeug/dnd`          | Backward-compat root barrel                                      |
+| `@vielzeug/dnd/drop`     | Drop-zone APIs plus `DndError` and `Disposable`                  |
 | `@vielzeug/dnd/sortable` | Sortable APIs plus `DndError`, `DndScopeError`, and `Disposable` |
 
 Dnd has no third-party runtime dependencies. Its sortable touch adapter uses `@vielzeug/gesture` for shared pointer recognition.
@@ -213,7 +213,7 @@ createSortable({
 type SortableTouchOptions = Readonly<{
   activationDistance?: number;
   preview?: false | ((item: HTMLElement) => HTMLElement | null);
-}>
+}>;
 ```
 
 `activationDistance` is the non-negative finite movement threshold in pixels before touch sorting starts (default `6`). Invalid values throw `DndError`.
@@ -230,20 +230,20 @@ declare function createDropZone(options: DropZoneOptions): DropZone;
 
 Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` handle.
 
-| Option           | Type                                             | Default  | Description                                                                                                                                                                                                                                      |
-| ---------------- | ------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `element`        | `HTMLElement`                                    | N/A | **Required.** The element to attach drag listeners to.                                                                                                                                                                                           |
-| `accept`         | `string[]`                                       | `[]`     | Accepted file types, normalized and snapshotted at construction. Empty array accepts everything; invalid MIME, wildcard, or extension patterns throw `DndError`.                                                                                       |
-| `maxFiles`       | `number`                                         | N/A | Non-negative safe-integer file limit. Excess files are passed to `onDropRejected`; invalid values throw `DndError` during construction.                                                                                                                         |
-| `onValidate`     | `(files, { signal }) => boolean \| Promise<boolean>` | N/A | Optional async gating step. Return or resolve `false` to reject all accepted files. `validating` remains true until every operation settles; `signal` aborts on disposal. |
-| `disabled`       | `boolean`                                        | N/A | When `true`, all drag and paste events are ignored. A disabled zone does not call `preventDefault` on `dragenter`, `dragover`, `drop`, or `paste`, so underlying elements (text editors, etc.) receive them normally.                            |
-| `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`           | `'copy'` | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                                                                                                         |
-| `onDrop`         | `(files: File[]) => void`                        | N/A | Called with accepted files only. Not called if all dropped files are rejected. Also receives paste events when `paste: true` and `onPaste` is omitted.                                                                                           |
-| `onDropRejected` | `(files: File[]) => void`                        | N/A | Called with files that did not match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`.                                                                                                                                            |
-| `onHoverChange`  | `(hovered: boolean) => void`                     | N/A | Called when hover state toggles. Use this callback for drag-over styling.                                                                                                                                                                        |
-| `onValidatingChange` | `(validating: boolean) => void`                | N/A | Called whenever the aggregate async validation state changes. |
-| `paste`          | `boolean`                                        | `false`  | When `true`, attaches a `paste` listener to `element`. Pasted files run through the same `accept`, `maxFiles`, and `onValidate` pipeline as dropped files.                                                                                        |
-| `onPaste`        | `(files: File[]) => void`                        | N/A | Called when files are pasted from the clipboard. Falls back to `onDrop` when omitted. Only active when `paste: true`.                                                                                                                            |
+| Option               | Type                                                 | Default  | Description                                                                                                                                                                                                           |
+| -------------------- | ---------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `element`            | `HTMLElement`                                        | N/A      | **Required.** The element to attach drag listeners to.                                                                                                                                                                |
+| `accept`             | `string[]`                                           | `[]`     | Accepted file types, normalized and snapshotted at construction. Empty array accepts everything; invalid MIME, wildcard, or extension patterns throw `DndError`.                                                      |
+| `maxFiles`           | `number`                                             | N/A      | Non-negative safe-integer file limit. Excess files are passed to `onDropRejected`; invalid values throw `DndError` during construction.                                                                               |
+| `onValidate`         | `(files, { signal }) => boolean \| Promise<boolean>` | N/A      | Optional async gating step. Return or resolve `false` to reject all accepted files. `validating` remains true until every operation settles; `signal` aborts on disposal.                                             |
+| `disabled`           | `boolean`                                            | N/A      | When `true`, all drag and paste events are ignored. A disabled zone does not call `preventDefault` on `dragenter`, `dragover`, `drop`, or `paste`, so underlying elements (text editors, etc.) receive them normally. |
+| `dropEffect`         | `'copy' \| 'move' \| 'link' \| 'none'`               | `'copy'` | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                                                                              |
+| `onDrop`             | `(files: File[]) => void`                            | N/A      | Called with accepted files only. Not called if all dropped files are rejected. Also receives paste events when `paste: true` and `onPaste` is omitted.                                                                |
+| `onDropRejected`     | `(files: File[]) => void`                            | N/A      | Called with files that did not match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`.                                                                                                                 |
+| `onHoverChange`      | `(hovered: boolean) => void`                         | N/A      | Called when hover state toggles. Use this callback for drag-over styling.                                                                                                                                             |
+| `onValidatingChange` | `(validating: boolean) => void`                      | N/A      | Called whenever the aggregate async validation state changes.                                                                                                                                                         |
+| `paste`              | `boolean`                                            | `false`  | When `true`, attaches a `paste` listener to `element`. Pasted files run through the same `accept`, `maxFiles`, and `onValidate` pipeline as dropped files.                                                            |
+| `onPaste`            | `(files: File[]) => void`                            | N/A      | Called when files are pasted from the clipboard. Falls back to `onDrop` when omitted. Only active when `paste: true`.                                                                                                 |
 
 **Returns:** `DropZone`
 
@@ -387,8 +387,8 @@ declare function createSortableScope(options?: SortableScopeOptions): SortableSc
 
 Use one scope per connected set of containers. `onMove` fires once for cross-list moves with both final orders; local reorders continue to call the sortable's `onReorder`.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
+| Parameter | Type                   | Description                                                           |
+| --------- | ---------------------- | --------------------------------------------------------------------- |
 | `options` | `SortableScopeOptions` | Optional cross-list move callback and scope-owned touch configuration |
 
 **Returns:** `SortableScope`.
@@ -516,7 +516,7 @@ const next = applyReorder(items, orderedIds, (item) => item.id);
 
 ## Errors
 
-| Error | Trigger | Notable property |
-| --- | --- | --- |
-| `DndError` | Invalid configuration, duplicate item data, or duplicate sortable registration in one scope | Base class for package errors |
-| `DndScopeError` | A sortable receives an invalid or disposed scope | Extends `DndError` |
+| Error           | Trigger                                                                                     | Notable property              |
+| --------------- | ------------------------------------------------------------------------------------------- | ----------------------------- |
+| `DndError`      | Invalid configuration, duplicate item data, or duplicate sortable registration in one scope | Base class for package errors |
+| `DndScopeError` | A sortable receives an invalid or disposed scope                                            | Extends `DndError`            |

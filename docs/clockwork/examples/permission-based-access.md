@@ -18,7 +18,8 @@ import { defineMachine } from '@vielzeug/clockwork';
 
 type Event = { payload: Record<string, unknown>; type: 'SUBMIT' } | { type: 'APPROVE' };
 type Context = { role: 'reviewer' | 'submitter'; submission: Record<string, unknown> };
-const can = (role: Context['role'], action: 'approve' | 'submit') => role === 'reviewer' ? action === 'approve' : action === 'submit';
+const can = (role: Context['role'], action: 'approve' | 'submit') =>
+  role === 'reviewer' ? action === 'approve' : action === 'submit';
 
 const approval = defineMachine<Context, Event>()({
   context: { role: 'submitter', submission: {} },

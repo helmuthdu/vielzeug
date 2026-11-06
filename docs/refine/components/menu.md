@@ -326,16 +326,16 @@ Use `value` on each item to handle selection in a single `select` listener rathe
 
 **`ore-menu`** Attributes
 
-| Attribute      | Type                                                                              | Default          | Description                                                                 |
-| -------------- | --------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------- |
-| `placement`    | `'bottom' \| 'bottom-start' \| 'bottom-end' \| 'top' \| 'top-start' \| 'top-end'` | `'bottom-start'` | Preferred panel placement (auto-flips near viewport edges)                  |
-| `color`        | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`         | N/A              | Color theme                                                                 |
-| `size`         | `'sm' \| 'md' \| 'lg'`                                                            | `'md'`           | Size theme                                                                  |
-| `disabled`     | `boolean`                                                                         | `false`          | Prevent the menu from opening                                               |
-| `open`         | `boolean`                                                                         | N/A              | Controlled panel visibility                                                 |
-| `default-open` | `boolean`                                                                         | `false`          | Initial visibility when `open` is not provided                              |
-| `layout`       | `'list' \| 'grid'`                                                                | `'list'`         | Panel layout: rows or a grid of cards                                       |
-| `columns`      | `number`                                                                          | `3`              | Cards per row in `grid` layout; sets both the tracks and the arrow-key rows |
+| Attribute      | Type                                                                              | Default          | Description                                                                  |
+| -------------- | --------------------------------------------------------------------------------- | ---------------- | ---------------------------------------------------------------------------- |
+| `placement`    | `'bottom' \| 'bottom-start' \| 'bottom-end' \| 'top' \| 'top-start' \| 'top-end'` | `'bottom-start'` | Preferred panel placement (auto-flips near viewport edges)                   |
+| `color`        | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`         | N/A              | Color theme                                                                  |
+| `size`         | `'sm' \| 'md' \| 'lg'`                                                            | `'md'`           | Size theme                                                                   |
+| `disabled`     | `boolean`                                                                         | `false`          | Prevent the menu from opening                                                |
+| `open`         | `boolean`                                                                         | N/A              | Controlled panel visibility                                                  |
+| `default-open` | `boolean`                                                                         | `false`          | Initial visibility when `open` is not provided                               |
+| `layout`       | `'list' \| 'grid'`                                                                | `'list'`         | Panel layout: rows or a grid of cards                                        |
+| `columns`      | `number`                                                                          | `3`              | Cards per row in `grid` layout; sets both the tracks and the arrow-key rows  |
 | `trigger`      | `'click' \| 'contextmenu'`                                                        | `'click'`        | How the menu opens: a left-click, or right-click / long-press at the pointer |
 
 **`ore-menu`** Slots
@@ -356,17 +356,17 @@ Use `value` on each item to handle selection in a single `select` listener rathe
 
 **`ore-menu-item`** Slots
 
-| Slot      | Description                         |
-| --------- | ----------------------------------- |
-| `icon`    | Optional leading icon or decoration |
+| Slot      | Description                                                                |
+| --------- | -------------------------------------------------------------------------- |
+| `icon`    | Optional leading icon or decoration                                        |
 | `submenu` | Nested `ore-menu-item` elements that turn this item into a submenu trigger |
-| (default) | Item label text                     |
+| (default) | Item label text                                                            |
 
 **Events**
 
-| Event         | Detail                                 | Description                                                                                                  |
-| ------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `select`      | `{ value: string, checked?: boolean }` | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items    |
+| Event         | Detail                                 | Description                                                                                                                                                                                         |
+| ------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `select`      | `{ value: string, checked?: boolean }` | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items                                                                                           |
 | `open-change` | `{ open: boolean, reason: string }`    | Emitted whenever the panel opens or closes. Opening reports `reason: "click"`, `"contextmenu"`, `"keyboard"`, or `"programmatic"`; closing after a plain item is chosen reports `reason: "select"`. |
 
 **CSS Custom Properties (`ore-menu`)**

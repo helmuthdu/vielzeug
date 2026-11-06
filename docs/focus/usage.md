@@ -59,7 +59,7 @@ Direction, orientation, and disabled state may be live getters:
 
 ```ts
 const nav = createListNavigation({
-  direction: () => document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr',
+  direction: () => (document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr'),
   disabled: () => panel.hidden,
   getItems: () => items,
   orientation: () => 'horizontal',
@@ -198,7 +198,13 @@ function Tabs({ tabs }: { tabs: string[] }) {
   return (
     <div ref={listRef} role="tablist">
       {tabs.map((tab, index) => (
-        <button key={tab} ref={(element) => { tabRefs.current[index] = element; }}>{tab}</button>
+        <button
+          key={tab}
+          ref={(element) => {
+            tabRefs.current[index] = element;
+          }}>
+          {tab}
+        </button>
       ))}
     </div>
   );

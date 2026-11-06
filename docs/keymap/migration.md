@@ -91,10 +91,13 @@ Set `preventDefault` and `stopPropagation` on the binding that owns the policy. 
 
 ```ts
 // Keymap 2
-const map = createKeymap({ 'ctrl+k': openPalette }, {
-  preventDefault: false,
-  stopPropagation: true,
-});
+const map = createKeymap(
+  { 'ctrl+k': openPalette },
+  {
+    preventDefault: false,
+    stopPropagation: true,
+  },
+);
 
 // Keymap 3
 const map = createKeymap([
@@ -211,8 +214,7 @@ const map = createKeymap({
 Zero-argument guards continue to run. Update guard annotations when logic needs keyboard-event context.
 
 ```ts
-const whenPanelOpen = (event: KeyboardEvent): boolean =>
-  panelIsOpen() && event.target !== document.body;
+const whenPanelOpen = (event: KeyboardEvent): boolean => panelIsOpen() && event.target !== document.body;
 
 const map = createKeymap({
   escape: { handler: closePanel, when: whenPanelOpen },

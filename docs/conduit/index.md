@@ -30,12 +30,12 @@ const container = createContainer([
 const services = await container.resolve({ service: Service });
 ```
 
-| Feature | Conduit | Inversify | tsyringe |
-| --- | --- | --- | --- |
-| Dependencies | Explicit token tuples | Decorators/runtime metadata | Decorators/runtime metadata |
-| Async factories | <ore-icon name="check" size="16"></ore-icon> | Partial | Partial |
-| Lifecycle scopes | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Runtime dependencies | 0 | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Feature              | Conduit                                      | Inversify                                    | tsyringe                                     |
+| -------------------- | -------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Dependencies         | Explicit token tuples                        | Decorators/runtime metadata                  | Decorators/runtime metadata                  |
+| Async factories      | <ore-icon name="check" size="16"></ore-icon> | Partial                                      | Partial                                      |
+| Lifecycle scopes     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Runtime dependencies | 0                                            | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 

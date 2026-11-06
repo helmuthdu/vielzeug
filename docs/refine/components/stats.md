@@ -96,60 +96,60 @@ Loading cards expose a busy state, while disabled cards expose their unavailable
 
 ### Attributes
 
-| Attribute         | Type                                                                      | Default      | Description                                      |
-| ----------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------ |
-| `label`           | `string`                                                                  | N/A | Metric label                                     |
-| `value`           | `string`                                                                  | N/A | Primary metric value                             |
-| `description`     | `string`                                                                  | N/A | Supporting context shown below the metric        |
-| `trend`           | `string`                                                                  | N/A | Displayed change or comparison text              |
-| `trend-direction` | `'up' \| 'down' \| 'neutral'`                                            | `'neutral'`  | Semantic and visual direction of the trend       |
-| `variant`         | `'outlined' \| 'plain' \| 'solid'`                                       | `'outlined'` | Surface treatment                                |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Semantic color theme                             |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                   | `'md'`       | Component size                                   |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'` | N/A | Border radius                                    |
-| `disabled`        | `boolean`                                                                 | `false`      | Marks the metric as unavailable                  |
-| `loading`         | `boolean`                                                                 | `false`      | Shows the loading state                          |
+| Attribute         | Type                                                                      | Default      | Description                                |
+| ----------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------ |
+| `label`           | `string`                                                                  | N/A          | Metric label                               |
+| `value`           | `string`                                                                  | N/A          | Primary metric value                       |
+| `description`     | `string`                                                                  | N/A          | Supporting context shown below the metric  |
+| `trend`           | `string`                                                                  | N/A          | Displayed change or comparison text        |
+| `trend-direction` | `'up' \| 'down' \| 'neutral'`                                             | `'neutral'`  | Semantic and visual direction of the trend |
+| `variant`         | `'outlined' \| 'plain' \| 'solid'`                                        | `'outlined'` | Surface treatment                          |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A          | Semantic color theme                       |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`       | Component size                             |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | N/A          | Border radius                              |
+| `disabled`        | `boolean`                                                                 | `false`      | Marks the metric as unavailable            |
+| `loading`         | `boolean`                                                                 | `false`      | Shows the loading state                    |
 
 Attribute content is used when the corresponding named slot is empty.
 
 ### Slots
 
-| Slot          | Description                                      |
-| ------------- | ------------------------------------------------ |
-| `icon`        | Leading icon or compact graphic                  |
-| `label`       | Custom label content                             |
-| `value`       | Custom value content                             |
-| `visual`      | Supporting visualization, such as a sparkline    |
-| `trend`       | Custom trend content                             |
-| `description` | Custom supporting description                    |
+| Slot          | Description                                   |
+| ------------- | --------------------------------------------- |
+| `icon`        | Leading icon or compact graphic               |
+| `label`       | Custom label content                          |
+| `value`       | Custom value content                          |
+| `visual`      | Supporting visualization, such as a sparkline |
+| `trend`       | Custom trend content                          |
+| `description` | Custom supporting description                 |
 
 ### CSS Custom Properties
 
-| Property                    | Description                         |
-| --------------------------- | ----------------------------------- |
-| `--stats-bg`           | Card background                     |
-| `--stats-color`        | Card text color                     |
-| `--stats-border-color` | Border color                        |
-| `--stats-radius`       | Border radius                       |
-| `--stats-padding`      | Internal padding                    |
-| `--stats-min-height`   | Minimum card height                 |
-| `--stats-value-size`   | Value font size                     |
-| `--stats-icon-bg`      | Icon container background           |
-| `--stats-trend-up`     | Upward trend color                  |
-| `--stats-trend-down`   | Downward trend color                |
+| Property               | Description               |
+| ---------------------- | ------------------------- |
+| `--stats-bg`           | Card background           |
+| `--stats-color`        | Card text color           |
+| `--stats-border-color` | Border color              |
+| `--stats-radius`       | Border radius             |
+| `--stats-padding`      | Internal padding          |
+| `--stats-min-height`   | Minimum card height       |
+| `--stats-value-size`   | Value font size           |
+| `--stats-icon-bg`      | Icon container background |
+| `--stats-trend-up`     | Upward trend color        |
+| `--stats-trend-down`   | Downward trend color      |
 
 ### CSS Parts
 
-| Part          | Description                              |
-| ------------- | ---------------------------------------- |
-| `card`        | Outer card surface                       |
-| `header`      | Header containing the icon and label     |
-| `icon`        | Icon container                           |
-| `label`       | Label container                          |
-| `body`        | Main metric content                      |
-| `value`       | Value container                          |
-| `visual`      | Visual slot container                    |
-| `footer`      | Footer containing trend and description  |
-| `trend`       | Trend container                          |
-| `description` | Description container                    |
-| `loading`     | Loading indicator                        |
+| Part          | Description                             |
+| ------------- | --------------------------------------- |
+| `card`        | Outer card surface                      |
+| `header`      | Header containing the icon and label    |
+| `icon`        | Icon container                          |
+| `label`       | Label container                         |
+| `body`        | Main metric content                     |
+| `value`       | Value container                         |
+| `visual`      | Visual slot container                   |
+| `footer`      | Footer containing trend and description |
+| `trend`       | Trend container                         |
+| `description` | Description container                   |
+| `loading`     | Loading indicator                       |

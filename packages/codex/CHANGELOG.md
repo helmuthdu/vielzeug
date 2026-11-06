@@ -3,90 +3,105 @@
 This log was last generated on Thu, 05 Nov 2026 21:44:45 GMT and should not be manually modified.
 
 ## 26.11.5
+
 Thu, 05 Nov 2026 21:44:45 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.11.4
+
 Wed, 04 Nov 2026 16:49:50 GMT
 
 ### Patches
 
 - chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.3
+
 Wed, 04 Nov 2026 05:52:43 GMT
 
 ### Minor changes
 
 - BREAKING: redesign the Codex catalog and server APIs; see docs/codex/migration.md.
 ## 26.11.2
+
 Tue, 03 Nov 2026 18:42:43 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.11.1
+
 Tue, 03 Nov 2026 17:00:37 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.11.0
+
 Tue, 03 Nov 2026 16:30:26 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.22
+
 Fri, 30 Oct 2026 19:07:28 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.21
+
 Tue, 27 Oct 2026 08:39:39 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.20
+
 Sun, 25 Oct 2026 05:13:02 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.19
+
 Sat, 24 Oct 2026 19:56:28 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.18
+
 Fri, 23 Oct 2026 14:23:06 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.17
+
 Fri, 23 Oct 2026 07:29:16 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.16
+
 Wed, 21 Oct 2026 07:30:45 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.15
+
 Mon, 19 Oct 2026 10:13:34 GMT
 
 ### Patches
 
 - Refresh bundled Refine query-bar documentation and metadata for the responsive filter drawer, additive per-key selection, optional option icons, quick filters, localized labels, state synchronization, and exact-value token helper contracts.
 ## 26.10.14
+
 Sun, 18 Oct 2026 09:46:30 GMT
 
 ### Patches
@@ -94,48 +109,56 @@ Sun, 18 Oct 2026 09:46:30 GMT
 - chore(codex): refresh bundled docs data
 - Bundle updated Refine metadata and documentation for adaptive coverflow, paced speed reading with an editable playground and responsive accessible icon controls, numeric speech playback speeds, and select keyboard navigation.
 ## 26.10.13
+
 Sat, 17 Oct 2026 06:46:08 GMT
 
 ### Patches
 
 - Fix MCP CLI startup through npm and npx executable symlinks.
 ## 26.10.12
+
 Sat, 17 Oct 2026 05:06:33 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.11
+
 Thu, 15 Oct 2026 13:45:48 GMT
 
 ### Patches
 
 - Document grouped Refine icon adapters, neutral SVG registration, migration, and supported Iconify collections.
 ## 26.10.10
+
 Thu, 15 Oct 2026 05:00:39 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.9
+
 Wed, 14 Oct 2026 21:26:14 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.8
+
 Tue, 13 Oct 2026 07:49:18 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.7
+
 Mon, 12 Oct 2026 20:24:11 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.6
+
 Mon, 12 Oct 2026 18:44:06 GMT
 
 ### Patches
@@ -143,6 +166,7 @@ Mon, 12 Oct 2026 18:44:06 GMT
 - chore(codex): refresh bundled docs data
 - Refresh bundled Archive, share-code, scatter-chart, Query Bar and HTTP integration documentation.
 ## 26.10.5
+
 Thu, 08 Oct 2026 07:48:38 GMT
 
 ### Patches
@@ -150,24 +174,28 @@ Thu, 08 Oct 2026 07:48:38 GMT
 - chore(codex): refresh bundled docs data
 - docs: full-family CalVer trains: every package rides every train, aggregate train release
 ## 26.10.4
+
 Wed, 07 Oct 2026 14:13:11 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.3
+
 Wed, 07 Oct 2026 11:33:21 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.2
+
 Wed, 07 Oct 2026 09:37:46 GMT
 
 ### Patches
 
 - chore(codex): refresh bundled docs data
 ## 26.10.1
+
 Wed, 07 Oct 2026 07:25:55 GMT
 
 ### Patches
@@ -176,6 +204,7 @@ Wed, 07 Oct 2026 07:25:55 GMT
 - Refresh tool documentation output
 - chore(codex): refresh bundled docs data
 ## 26.10.0
+
 Fri, 02 Oct 2026 18:01:51 GMT
 
 ### Minor changes
@@ -186,6 +215,7 @@ Fri, 02 Oct 2026 18:01:51 GMT
 
 - chore(codex): refresh bundled docs data
 ## 3.1.1
+
 Wed, 23 Sep 2026 03:47:55 GMT
 
 ### Patches
@@ -193,6 +223,7 @@ Wed, 23 Sep 2026 03:47:55 GMT
 - chore(codex): refresh bundled docs data
 
 ## 3.1.0
+
 Mon, 21 Sep 2026 15:19:01 GMT
 
 ### Minor changes
@@ -204,6 +235,7 @@ Mon, 21 Sep 2026 15:19:01 GMT
 - chore(codex): refresh bundled docs data
 
 ## 3.0.4
+
 Wed, 16 Sep 2026 09:18:24 GMT
 
 ### Patches
@@ -211,6 +243,7 @@ Wed, 16 Sep 2026 09:18:24 GMT
 - chore(codex): refresh bundled docs data
 
 ## 3.0.3
+
 Mon, 14 Sep 2026 14:08:11 GMT
 
 ### Patches
@@ -218,6 +251,7 @@ Mon, 14 Sep 2026 14:08:11 GMT
 - chore(codex): refresh bundled docs data
 
 ## 3.0.2
+
 Sun, 13 Sep 2026 05:56:08 GMT
 
 ### Patches
@@ -225,6 +259,7 @@ Sun, 13 Sep 2026 05:56:08 GMT
 - chore(codex): refresh bundled docs data
 
 ## 3.0.1
+
 Fri, 11 Sep 2026 11:19:30 GMT
 
 ### Patches
@@ -232,6 +267,7 @@ Fri, 11 Sep 2026 11:19:30 GMT
 - Update bundled Refine button, skeleton, and navbar documentation.
 
 ## 3.0.0
+
 Wed, 09 Sep 2026 22:15:14 GMT
 
 ### Breaking changes
@@ -239,6 +275,7 @@ Wed, 09 Sep 2026 22:15:14 GMT
 - refactor!: split generic, advanced, and Refine MCP contracts with typed exports and secured loopback HTTP hosting
 
 ## 2.3.2
+
 Sun, 30 Aug 2026 13:16:08 GMT
 
 ### Patches
@@ -246,6 +283,7 @@ Sun, 30 Aug 2026 13:16:08 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.3.1
+
 Fri, 28 Aug 2026 07:44:01 GMT
 
 ### Patches
@@ -253,6 +291,7 @@ Fri, 28 Aug 2026 07:44:01 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.3.0
+
 Wed, 26 Aug 2026 17:29:55 GMT
 
 ### Minor changes
@@ -264,6 +303,7 @@ Wed, 26 Aug 2026 17:29:55 GMT
 - chore: add sideEffects: false for tree-shaking.
 
 ## 2.2.9
+
 Fri, 21 Aug 2026 16:02:58 GMT
 
 ### Patches
@@ -271,6 +311,7 @@ Fri, 21 Aug 2026 16:02:58 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.2.8
+
 Thu, 20 Aug 2026 15:39:22 GMT
 
 ### Patches
@@ -278,6 +319,7 @@ Thu, 20 Aug 2026 15:39:22 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.2.7
+
 Thu, 20 Aug 2026 10:12:48 GMT
 
 ### Patches
@@ -285,6 +327,7 @@ Thu, 20 Aug 2026 10:12:48 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.2.6
+
 Wed, 19 Aug 2026 06:57:36 GMT
 
 ### Patches
@@ -292,6 +335,7 @@ Wed, 19 Aug 2026 06:57:36 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.2.5
+
 Tue, 18 Aug 2026 11:28:52 GMT
 
 ### Patches
@@ -299,6 +343,7 @@ Tue, 18 Aug 2026 11:28:52 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.2.4
+
 Tue, 18 Aug 2026 04:38:01 GMT
 
 ### Patches
@@ -306,6 +351,7 @@ Tue, 18 Aug 2026 04:38:01 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.2.3
+
 Mon, 17 Aug 2026 10:42:29 GMT
 
 ### Patches
@@ -314,6 +360,7 @@ Mon, 17 Aug 2026 10:42:29 GMT
 - chore(codex): refresh bundled pulse and flux docs for the Pulse 3.0 room/presence API redesign
 
 ## 2.2.2
+
 Sun, 16 Aug 2026 10:35:40 GMT
 
 ### Patches
@@ -321,6 +368,7 @@ Sun, 16 Aug 2026 10:35:40 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.2.1
+
 Sun, 16 Aug 2026 09:15:39 GMT
 
 ### Patches
@@ -328,6 +376,7 @@ Sun, 16 Aug 2026 09:15:39 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.2.0
+
 Sat, 15 Aug 2026 15:36:50 GMT
 
 ### Minor changes
@@ -335,6 +384,7 @@ Sat, 15 Aug 2026 15:36:50 GMT
 - chore: rename SnapshotCatalog interface to CatalogFile (eliminates name collision with SnapshotCatalog class); remove CodexError.is() static type guard (use instanceof CodexError); remove redundant cast in get-docs tool (InferArgs already infers DocPage from enum); extract EMPTY_SCHEMA to schema.ts (shared between packages.ts and refine.ts)
 
 ## 2.1.5
+
 Sat, 15 Aug 2026 10:39:54 GMT
 
 ### Patches
@@ -342,6 +392,7 @@ Sat, 15 Aug 2026 10:39:54 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.1.4
+
 Sat, 15 Aug 2026 06:26:02 GMT
 
 ### Patches
@@ -349,6 +400,7 @@ Sat, 15 Aug 2026 06:26:02 GMT
 - docs: update ripple documentation for 3.0 (api, usage, migration, examples, REPL, sidebar)
 
 ## 2.1.3
+
 Fri, 14 Aug 2026 09:10:58 GMT
 
 ### Patches
@@ -356,6 +408,7 @@ Fri, 14 Aug 2026 09:10:58 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.1.2
+
 Thu, 13 Aug 2026 06:06:28 GMT
 
 ### Patches
@@ -363,6 +416,7 @@ Thu, 13 Aug 2026 06:06:28 GMT
 - chore(codex): refresh bundled docs data
 
 ## 2.1.1
+
 Mon, 10 Aug 2026 21:21:35 GMT
 
 ### Patches
@@ -370,6 +424,7 @@ Mon, 10 Aug 2026 21:21:35 GMT
 - chore: refresh bundled Ripple documentation
 
 ## 2.1.0
+
 Mon, 10 Aug 2026 16:04:45 GMT
 
 ### Minor changes
@@ -377,6 +432,7 @@ Mon, 10 Aug 2026 16:04:45 GMT
 - feat(codex): migrate to @modelcontextprotocol/server 2.0.0 (2026-07-28 spec): replaces @modelcontextprotocol/sdk; stateless per-request HTTP host via createMcpHandler() over a Node/Fetch bridge, tools/list and tools/call registered via string-literal setRequestHandler(), MethodNotFound now thrown as ProtocolError(METHOD_NOT_FOUND, ...); wire behavior for tool list/call unchanged
 
 ## 2.0.2
+
 Mon, 10 Aug 2026 15:11:23 GMT
 
 ### Patches
@@ -386,6 +442,7 @@ Mon, 10 Aug 2026 15:11:23 GMT
 - refresh bundled Wayfinder documentation
 
 ## 2.0.1
+
 Wed, 05 Aug 2026 19:50:19 GMT
 
 ### Patches
@@ -393,6 +450,7 @@ Wed, 05 Aug 2026 19:50:19 GMT
 - refresh bundled Lingua documentation
 
 ## 2.0.0
+
 Wed, 05 Aug 2026 16:48:52 GMT
 
 ### Breaking changes
@@ -404,6 +462,7 @@ Wed, 05 Aug 2026 16:48:52 GMT
 - chore: refresh bundled docs data
 
 ## 1.0.4
+
 Sun, 26 Jul 2026 06:43:54 GMT
 
 ### Patches
@@ -411,6 +470,7 @@ Sun, 26 Jul 2026 06:43:54 GMT
 - chore(codex): refresh bundled docs data
 
 ## 1.0.3
+
 Sat, 25 Jul 2026 03:18:07 GMT
 
 ### Patches
@@ -418,6 +478,7 @@ Sat, 25 Jul 2026 03:18:07 GMT
 - chore: refresh bundled docs data
 
 ## 1.0.2
+
 Fri, 03 Jul 2026 10:09:41 GMT
 
 ### Patches
@@ -425,6 +486,7 @@ Fri, 03 Jul 2026 10:09:41 GMT
 - fix(codex): harden security, fix doc drift, add CLI --data flag
 
 ## 1.0.1
+
 Thu, 02 Jul 2026 06:05:59 GMT
 
 ### Patches
@@ -432,9 +494,9 @@ Thu, 02 Jul 2026 06:05:59 GMT
 - fix(codex): handle CLI data-load errors, add disposed to HttpServerHandle, close sandbox-document style breakout, expand test coverage
 
 ## 1.0.0
+
 Wed, 01 Jul 2026 16:10:37 GMT
 
 ### Breaking changes
 
 - Initial public release
-

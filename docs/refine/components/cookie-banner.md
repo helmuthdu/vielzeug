@@ -108,51 +108,51 @@ banner.labels = {
 
 ### Attributes
 
-| Attribute        | Type                  | Default    | Description                                   |
-| ---------------- | --------------------- | ---------- | --------------------------------------------- |
+| Attribute        | Type                | Default    | Description                                   |
+| ---------------- | ------------------- | ---------- | --------------------------------------------- |
 | `position`       | `'bottom' \| 'top'` | `'bottom'` | Viewport edge the banner docks to.            |
-| `hide-on-decide` | `boolean`             | `true`     | Hide the banner automatically after `decide`. |
+| `hide-on-decide` | `boolean`           | `true`     | Hide the banner automatically after `decide`. |
 
 `categories` and `labels` are JavaScript properties (not attributes): assign arrays/objects directly.
 
 ### Properties
 
-| Property       | Type                             | Default | Description                                                |
-| -------------- | -------------------------------- | ------- | ---------------------------------------------------------- |
-| `categories`   | `OreCookieBannerCategory[]`      | `[]`    | Opt-in categories rendered as checkboxes.                  |
-| `consent`      | `Record<string, boolean>`        | `{}`    | Stored consent record used to seed the checkboxes.         |
-| `hideOnDecide` | `boolean`                        | `true`  | Hides the banner automatically after `decide`.             |
-| `labels`       | `Partial<OreCookieBannerLabels>` | `{}`    | Overrides for the rendered labels.                         |
+| Property       | Type                             | Default | Description                                        |
+| -------------- | -------------------------------- | ------- | -------------------------------------------------- |
+| `categories`   | `OreCookieBannerCategory[]`      | `[]`    | Opt-in categories rendered as checkboxes.          |
+| `consent`      | `Record<string, boolean>`        | `{}`    | Stored consent record used to seed the checkboxes. |
+| `hideOnDecide` | `boolean`                        | `true`  | Hides the banner automatically after `decide`.     |
+| `labels`       | `Partial<OreCookieBannerLabels>` | `{}`    | Overrides for the rendered labels.                 |
 
 A category is `{ id: string; label: string; description?: string }`.
 
 ### Methods
 
-| Method    | Description                                                                        |
-| --------- | ---------------------------------------------------------------------------------- |
-| `show()`  | Reveals the banner and re-seeds the checkboxes from `consent`.                      |
-| `hide()`  | Hides the banner without emitting anything: persistence stays with the consumer.  |
+| Method   | Description                                                                      |
+| -------- | -------------------------------------------------------------------------------- |
+| `show()` | Reveals the banner and re-seeds the checkboxes from `consent`.                   |
+| `hide()` | Hides the banner without emitting anything: persistence stays with the consumer. |
 
 ### Events
 
-| Event     | Detail                             | Description                                                                     |
-| --------- | ---------------------------------- | ------------------------------------------------------------------------------- |
-| `decide`  | `{ consent: Record<string, boolean> }` | A decision was made. Every category id plus `essential: true`. Persist it; the banner hides itself unless `hide-on-decide` is false. |
+| Event    | Detail                                 | Description                                                                                                                          |
+| -------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `decide` | `{ consent: Record<string, boolean> }` | A decision was made. Every category id plus `essential: true`. Persist it; the banner hides itself unless `hide-on-decide` is false. |
 
 ### Slots
 
-| Slot      | Description                                                  |
-| --------- | ------------------------------------------------------------ |
-| (default) | Policy text, including links to the privacy policy/imprint.  |
+| Slot      | Description                                                 |
+| --------- | ----------------------------------------------------------- |
+| (default) | Policy text, including links to the privacy policy/imprint. |
 
 ### CSS Custom Properties
 
-| Property                   | Description                        | Default                              |
-| -------------------------- | ---------------------------------- | ------------------------------------ |
-| `--cookie-banner-width`    | Maximum width of the banner card   | `min(560px, calc(100vw - var(--size-8)))` |
-| `--cookie-banner-inset`    | Distance from the viewport edges   | `var(--size-4)`                      |
-| `--cookie-banner-z-index`  | Stacking order                     | `var(--z-modal)`                      |
-| `--cookie-banner-categories-max-height` | Scroll threshold for the category panel | `16rem` |
+| Property                                | Description                             | Default                                   |
+| --------------------------------------- | --------------------------------------- | ----------------------------------------- |
+| `--cookie-banner-width`                 | Maximum width of the banner card        | `min(560px, calc(100vw - var(--size-8)))` |
+| `--cookie-banner-inset`                 | Distance from the viewport edges        | `var(--size-4)`                           |
+| `--cookie-banner-z-index`               | Stacking order                          | `var(--z-modal)`                          |
+| `--cookie-banner-categories-max-height` | Scroll threshold for the category panel | `16rem`                                   |
 
 ### Parts
 

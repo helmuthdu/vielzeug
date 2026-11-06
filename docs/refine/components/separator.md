@@ -88,8 +88,8 @@ By default the separator is decorative (`aria-hidden="true"`). Set `decorative="
 | ------------- | ------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------------- |
 | `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Direction of the divider line                                           |
 | `decorative`  | `boolean`                                                                 | `true`         | When `true`, sets `aria-hidden`. Set to `false` for semantic separators |
-| `label`       | `string`                                                                  | N/A | Optional text centered on the separator line                            |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color for the line                                                |
+| `label`       | `string`                                                                  | N/A            | Optional text centered on the separator line                            |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A            | Theme color for the line                                                |
 
 ### CSS Custom Properties
 

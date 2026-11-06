@@ -16,10 +16,7 @@ Put the exact exception before the broad wildcard allow.
 ```ts
 import { allow, createWard, deny, WILDCARD } from '@vielzeug/ward';
 
-const ward = createWard([
-  deny('editor', 'secrets', ['read']),
-  allow('editor', WILDCARD, ['read']),
-]);
+const ward = createWard([deny('editor', 'secrets', ['read']), allow('editor', WILDCARD, ['read'])]);
 
 const editor = { id: 'u1', roles: ['editor'] };
 ward.decide({ action: 'read', principal: editor, resource: 'secrets' }).effect; // deny

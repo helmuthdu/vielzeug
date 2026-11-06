@@ -54,7 +54,7 @@ await db.delete('users', 1); // true if it existed
 await db.deleteMany('users', [2, 3, 99]); // count of deleted records
 await db.clear('users'); // removes all records
 
-(void alice, all, total, live, empty, missing, a, c, updated);
+void alice, all, total, live, empty, missing, a, c, updated;
 ```
 
 ### Pitfalls

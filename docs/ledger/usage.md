@@ -18,9 +18,13 @@ const previous = item.name;
 const next = 'New name';
 
 await ledger.do({
-  apply: () => { item.name = next; },
+  apply: () => {
+    item.name = next;
+  },
   label: 'Rename item',
-  revert: () => { item.name = previous; },
+  revert: () => {
+    item.name = previous;
+  },
 });
 
 await ledger.undo();
@@ -57,10 +61,14 @@ Set `label` for presentation and use the ledger's metadata type for application 
 const ledger = createLedger<{ field: string }>();
 
 await ledger.do({
-  apply: () => { form.email = next; },
+  apply: () => {
+    form.email = next;
+  },
   label: 'Edit email',
   meta: { field: 'email' },
-  revert: () => { form.email = previous; },
+  revert: () => {
+    form.email = previous;
+  },
 });
 
 console.log(ledger.state.getSnapshot().undo.at(-1));
@@ -76,10 +84,27 @@ Ledger snapshots command callbacks, label, and metadata references when `do()` i
 import { compose } from '@vielzeug/ledger';
 
 await ledger.do(
-  compose([
-    { apply: () => { node.x = nextX; }, revert: () => { node.x = previousX; } },
-    { apply: () => { node.y = nextY; }, revert: () => { node.y = previousY; } },
-  ], 'Move node'),
+  compose(
+    [
+      {
+        apply: () => {
+          node.x = nextX;
+        },
+        revert: () => {
+          node.x = previousX;
+        },
+      },
+      {
+        apply: () => {
+          node.y = nextY;
+        },
+        revert: () => {
+          node.y = previousY;
+        },
+      },
+    ],
+    'Move node',
+  ),
 );
 ```
 
@@ -88,11 +113,7 @@ If a child apply fails, already-applied children are compensated in reverse orde
 ## Handle Operation Failures
 
 ```ts
-import {
-  LedgerCancelledError,
-  LedgerExecutionError,
-  LedgerRollbackError,
-} from '@vielzeug/ledger';
+import { LedgerCancelledError, LedgerExecutionError, LedgerRollbackError } from '@vielzeug/ledger';
 
 try {
   await ledger.undo();
@@ -197,7 +218,11 @@ export function UndoStatus() {
   );
 
   useEffect(() => () => ledger.dispose(), [ledger]);
-  return <span>{state.undo.length} undo / {state.redo.length} redo</span>;
+  return (
+    <span>
+      {state.undo.length} undo / {state.redo.length} redo
+    </span>
+  );
 }
 ```
 
@@ -207,7 +232,9 @@ import { createLedger } from '@vielzeug/ledger';
 
 const ledger = createLedger();
 const state = shallowRef(ledger.state.getSnapshot());
-const stop = ledger.state.subscribe(() => { state.value = ledger.state.getSnapshot(); });
+const stop = ledger.state.subscribe(() => {
+  state.value = ledger.state.getSnapshot();
+});
 
 onUnmounted(() => {
   stop();
@@ -221,7 +248,9 @@ import { createLedger } from '@vielzeug/ledger';
 
 const ledger = createLedger();
 const state = signal(ledger.state.getSnapshot());
-const stop = ledger.state.subscribe(() => { state.value = ledger.state.getSnapshot(); });
+const stop = ledger.state.subscribe(() => {
+  state.value = ledger.state.getSnapshot();
+});
 
 function dispose(): void {
   stop();

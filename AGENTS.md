@@ -83,13 +83,14 @@ This section is the single owner of validation commands and workflow facts; each
 - VitePress local development aliases workspace packages to source, so package edits do not require a rebuild for `docs:dev` preview. Keep required production builds (including Codex before the docs build) for the final gate; preview is not a substitute for production-output verification.
 
 ```bash
-pnpm setup                                          # fresh checkout
+pnpm setup && pnpm install                          # fresh checkout: Rush deps, then root workspace deps
 pnpm vitest run packages/<name>/src/__tests__/      # standard test path
 pnpm --filter @vielzeug/<name> lint
 pnpm --filter @vielzeug/<name> build
 pnpm validate:docs -- --package=<name>
 pnpm validate:readme -- --package=<name>
 pnpm validate:repl -- --package=<name>
+pnpm validate:sidebar -- --package=<name>   # sidebar links vs. pages on disk
 pnpm --filter @vielzeug/codex build && pnpm docs:build   # docs changes (Codex bundles docs first)
 pnpm check:ai-data                                  # packages table and .agents/ cross-references
 ```
@@ -107,16 +108,16 @@ Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm f
 
 ## Repository layout
 
-| Path                  | Purpose                                                        |
-| --------------------- | -------------------------------------------------------------- |
-| `RELEASE.md`          | CalVer train versioning and release policy                    |
-| `packages/<name>/`    | Independent published packages                                 |
-| `docs/<name>/`        | Package documentation and recipes (VitePress)                  |
-| `demos/`              | Integration demos                                              |
-| `scripts/`            | Workspace, generation, validation, and release tooling         |
-| `.agents/`            | Agent contract: conventions, task skills, shared references    |
-| `common/`, `rush.json`| Rush workspace configuration                                   |
-| `.github/workflows/`  | CI and publishing workflows                                    |
+| Path                   | Purpose                                                     |
+| ---------------------- | ----------------------------------------------------------- |
+| `RELEASE.md`           | CalVer train versioning and release policy                  |
+| `packages/<name>/`     | Independent published packages                              |
+| `docs/<name>/`         | Package documentation and recipes (VitePress)               |
+| `demos/`               | Integration demos                                           |
+| `scripts/`             | Workspace, generation, validation, and release tooling      |
+| `.agents/`             | Agent contract: conventions, task skills, shared references |
+| `common/`, `rush.json` | Rush workspace configuration                                |
+| `.github/workflows/`   | CI and publishing workflows                                 |
 
 ### `.agents/` contents
 
@@ -131,6 +132,7 @@ Every `.agents/...` path mentioned anywhere in the repo must resolve; `pnpm chec
 Subtrees carry their own `AGENTS.md` only when they have rules not covered here or in `.agents/conventions.md`; most packages intentionally have none.
 
 - `packages/AGENTS.md`: source work for all `@vielzeug/*` libraries; indexes packages with extra local rules.
+- `demos/AGENTS.md`: integration demos: not Rush projects, local source loop, and the demo-gap-is-a-package-gap rule.
 - `docs/AGENTS.md`: VitePress documentation site and REPL.
 - `scripts/AGENTS.md`: repo tooling and the shared `scripts/lib/` primitives.
 - `.github/AGENTS.md`: CI/CD workflows and the release automation they call.

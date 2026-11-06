@@ -63,11 +63,11 @@ Higher levels tolerate more damage (logos, print wear) at the cost of a denser m
 
 </ComponentPreview>
 
-| Level | Recovery | Use for                |
-| ----- | -------- | ---------------------- |
-| `L`   | ~7%      | Dense codes, clean media |
-| `M`   | ~15%     | Default                |
-| `Q`   | ~25%     | Print                  |
+| Level | Recovery | Use for                          |
+| ----- | -------- | -------------------------------- |
+| `L`   | ~7%      | Dense codes, clean media         |
+| `M`   | ~15%     | Default                          |
+| `Q`   | ~25%     | Print                            |
 | `H`   | ~30%     | Overlaid logos, harsh conditions |
 
 ## Caption Slot
@@ -107,53 +107,53 @@ Higher levels tolerate more damage (logos, print wear) at the cost of a denser m
 
 ### Attributes
 
-| Attribute          | Type                                                              | Default      | Description                                  |
-| ------------------ | ----------------------------------------------------------------- | ------------ | -------------------------------------------- |
-| `value`            | `string`                                                          | `''`         | The payload to encode                        |
-| `error-correction` | `'L' \| 'M' \| 'Q' \| 'H'`                                        | `'M'`        | Error-correction level                       |
-| `margin`           | `number`                                                          | `4`          | Quiet-zone width in modules                  |
-| `size`             | `'sm' \| 'md' \| 'lg' \| number`                                  | `'md'`       | Rendered edge length                         |
-| `label`            | `string`                                                          | `'QR code'`  | Accessible name of the SVG                   |
-| `variant`          | `'flat' \| 'card'`                                                | `'flat'`     | Surface variant                              |
-| `rounded`          | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'` | `'md'`     | Border radius                                |
+| Attribute          | Type                                                                 | Default     | Description                 |
+| ------------------ | -------------------------------------------------------------------- | ----------- | --------------------------- |
+| `value`            | `string`                                                             | `''`        | The payload to encode       |
+| `error-correction` | `'L' \| 'M' \| 'Q' \| 'H'`                                           | `'M'`       | Error-correction level      |
+| `margin`           | `number`                                                             | `4`         | Quiet-zone width in modules |
+| `size`             | `'sm' \| 'md' \| 'lg' \| number`                                     | `'md'`      | Rendered edge length        |
+| `label`            | `string`                                                             | `'QR code'` | Accessible name of the SVG  |
+| `variant`          | `'flat' \| 'card'`                                                   | `'flat'`    | Surface variant             |
+| `rounded`          | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'` | `'md'`      | Border radius               |
 
 ### Events
 
-| Event    | Detail                             | Description                                  |
-| -------- | ---------------------------------- | -------------------------------------------- |
-| `render` | `{ version: number; size: number }` | Emitted after each successful encode         |
-| `error`  | `{ error: SigilError }`            | Emitted when encoding fails (e.g. capacity)  |
+| Event    | Detail                              | Description                                 |
+| -------- | ----------------------------------- | ------------------------------------------- |
+| `render` | `{ version: number; size: number }` | Emitted after each successful encode        |
+| `error`  | `{ error: SigilError }`             | Emitted when encoding fails (e.g. capacity) |
 
 ### Slots
 
-| Slot      | Description                          |
-| --------- | ------------------------------------ |
-| `caption` | Optional caption below the code      |
+| Slot      | Description                     |
+| --------- | ------------------------------- |
+| `caption` | Optional caption below the code |
 
 ### CSS Parts
 
-| Part      | Element     | Description              |
-| --------- | ----------- | ------------------------ |
-| `wrapper` | `<div>`     | Outer container          |
-| `svg`     | `<span>`    | Rendered SVG container   |
-| `caption` | `<span>`    | Caption slot container   |
-| `error`   | `<div>`     | Error-state container    |
+| Part      | Element  | Description            |
+| --------- | -------- | ---------------------- |
+| `wrapper` | `<div>`  | Outer container        |
+| `svg`     | `<span>` | Rendered SVG container |
+| `caption` | `<span>` | Caption slot container |
+| `error`   | `<div>`  | Error-state container  |
 
 ### CSS Custom Properties
 
-| Property                | Description                          | Default                 |
-| ----------------------- | ------------------------------------ | ----------------------- |
-| `--qr-code-dark`        | Module color                         | `currentColor`          |
-| `--qr-code-light`       | Module background                    | `transparent`           |
-| `--qr-code-size`        | Rendered edge (overrides `size`)     | size-derived px         |
-| `--qr-code-radius`      | Border radius (overrides `rounded`)  | `var(--rounded-md)`     |
-| `--qr-code-padding`     | Inner padding around the matrix      | `var(--size-3)`         |
-| `--qr-code-bg`          | Card background (`variant="card"`)   | `var(--color-canvas)`   |
-| `--qr-code-border`      | Card border width (`variant="card"`) | `var(--border)`         |
-| `--qr-code-border-color` | Card border color (`variant="card"`) | `var(--color-divider)`  |
-| `--qr-code-shadow`      | Card box shadow (`variant="card"`)   | `var(--shadow-sm)`      |
-| `--qr-code-error-color` | Error-state text color               | `var(--text-color-secondary)` |
+| Property                 | Description                          | Default                       |
+| ------------------------ | ------------------------------------ | ----------------------------- |
+| `--qr-code-dark`         | Module color                         | `currentColor`                |
+| `--qr-code-light`        | Module background                    | `transparent`                 |
+| `--qr-code-size`         | Rendered edge (overrides `size`)     | size-derived px               |
+| `--qr-code-radius`       | Border radius (overrides `rounded`)  | `var(--rounded-md)`           |
+| `--qr-code-padding`      | Inner padding around the matrix      | `var(--size-3)`               |
+| `--qr-code-bg`           | Card background (`variant="card"`)   | `var(--color-canvas)`         |
+| `--qr-code-border`       | Card border width (`variant="card"`) | `var(--border)`               |
+| `--qr-code-border-color` | Card border color (`variant="card"`) | `var(--color-divider)`        |
+| `--qr-code-shadow`       | Card box shadow (`variant="card"`)   | `var(--shadow-sm)`            |
+| `--qr-code-error-color`  | Error-state text color               | `var(--text-color-secondary)` |
 
 ## Accessibility
 
-The SVG carries `role="img"` with `aria-label` from `label` and a `<title>` element: give `label` a meaningful description of what the code *does* ("Pairing code", "Wi-Fi join code"), not the payload itself. The error state uses `role="alert"`. On dark surfaces prefer `variant="card"` or set `--qr-code-light` so the quiet zone keeps contrast for scanners.
+The SVG carries `role="img"` with `aria-label` from `label` and a `<title>` element: give `label` a meaningful description of what the code _does_ ("Pairing code", "Wi-Fi join code"), not the payload itself. The error state uses `role="alert"`. On dark surfaces prefer `variant="card"` or set `--qr-code-light` so the quiet zone keeps contrast for scanners.

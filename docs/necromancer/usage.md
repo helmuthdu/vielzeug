@@ -14,7 +14,10 @@ import { animate } from '@vielzeug/necromancer';
 
 const handle = animate(
   element,
-  [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }],
+  [
+    { opacity: 0, transform: 'translateY(8px)' },
+    { opacity: 1, transform: 'translateY(0)' },
+  ],
   { duration: 180, easing: 'ease-out', fill: 'both' },
 );
 
