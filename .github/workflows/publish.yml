@@ -15,7 +15,7 @@ name: Publish
 # pending change file, everyone else alignment-only) and publishes the whole family. There is
 # no mode dropdown: "only one package changed" is already what a train does, and publishing a
 # subset is what lockstep rules out. A matrix that failed partway is repaired by re-running the
-# failed publish jobs (each skips a version already on npm); `pnpm release:publish-local` is the
+# failed publish jobs (each skips a version already on npm); `bun run release:publish-local` is the
 # laptop fallback for when Actions itself cannot run.
 
 on:
@@ -69,12 +69,11 @@ jobs:
       # install below.
       - uses: ./.github/actions/setup
         with:
-          root-install: "false"
-          rush-install: "false"
+          install: "false"
 
       # Fails fast (non-zero exit) when nothing is pending, before paying for the full install.
       - name: Require pending change files
-        run: node scripts/release/cli.mjs changed-packages
+        run: bun scripts/release/cli.mjs changed-packages
 
       - name: Configure Git
         run: |
@@ -84,7 +83,7 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Build all packages
-        run: node common/scripts/install-run-rush.js build --verbose
+        run: bun run build
 
       # A release train must land on a tree the build didn't dirty: anything a build wrote
       # to a tracked file is a bug worth stopping for, not something to fold into the
@@ -101,7 +100,7 @@ jobs:
       - name: Apply release train
         id: apply
         run: |
-          OUT=$(node scripts/release/cli.mjs apply)
+          OUT=$(bun scripts/release/cli.mjs apply)
           echo "$OUT"
           TRAIN=$(echo "$OUT" | grep -oE 'release train [0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d' ' -f3)
           echo "train=$TRAIN" >> "$GITHUB_OUTPUT"
@@ -109,7 +108,7 @@ jobs:
       # The train publishes the full family, so every packed manifest is verified: the
       # workspace:* → exact-pin rewrite touches every package's tarball each train.
       - name: Verify packed consumer contracts
-        run: pnpm verify:packed -- --package=all
+        run: bun run verify:packed -- --package=all
 
       - name: Push train commit
         if: ${{ !inputs.dry-run }}
@@ -154,7 +153,7 @@ jobs:
       # so the Actions UI only shows real publish jobs.
       - id: plan
         run: |
-          PLAN=$(node scripts/release/cli.mjs plan)
+          PLAN=$(bun scripts/release/cli.mjs plan)
           echo "matrix={\"include\":${PLAN}}" >> "$GITHUB_OUTPUT"
           [ "$PLAN" = "[]" ] && echo "has-releases=false" >> "$GITHUB_OUTPUT" || echo "has-releases=true" >> "$GITHUB_OUTPUT"
 
@@ -222,8 +221,7 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          root-install: "false"
-          rush-install: "false"
+          install: "false"
 
       - name: Create the aggregate train release
-        run: node scripts/release/cli.mjs train-release ${{ needs.prepare.outputs.train }}
+        run: bun scripts/release/cli.mjs train-release ${{ needs.prepare.outputs.train }}

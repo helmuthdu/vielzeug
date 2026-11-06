@@ -1,6 +1,6 @@
 # Vielzeug Package Reference
 
-Generated from `packages/*/package.json` by `pnpm gen:ai-data`. Edit manifests, not this table.
+Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifests, not this table.
 
 <!-- GENERATED:packages-table:BEGIN -->
 

@@ -18,15 +18,16 @@
  * report every generated Refine component link as missing.
  *
  * Usage:
- *   pnpm validate:sidebar
- *   pnpm validate:sidebar -- --package=ripple
+ *   bun run validate:sidebar
+ *   bun run validate:sidebar -- --package=ripple
  */
 
 import { dirname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { isMain, parseArgs } from './lib/cli.mjs';
-import { type DocsWorkspace, loadDocsWorkspace, type ValidationResult } from './validate-docs.ts';
+import { isMain } from './lib/cli.mjs';
+import { type Diagnostic, runValidator, type ValidationResult } from './lib/validator.ts';
+import { type DocsWorkspace, loadDocsWorkspace } from './validate-docs.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const ROOT = resolve(__dirname, '..');
@@ -36,13 +37,7 @@ const DOCS_DIR = join(ROOT, 'docs');
 export type SidebarItem = { items?: readonly SidebarItem[]; link?: string; text?: string };
 export type SidebarMulti = Record<string, readonly SidebarItem[]>;
 
-export interface SidebarDiagnostic {
-  file: string;
-  hint?: string;
-  message: string;
-  package: string;
-  rule: string;
-}
+
 
 /**
  * Map a sidebar link to the docs page it should resolve to, or null for an external link.
@@ -81,7 +76,8 @@ export function indexSidebarLinks(sidebar: SidebarMulti): Map<string, Set<string
 
 /**
  * Import the real VitePress config to read its sidebar. The config imports VitePress and the
- * theme, so this runs under the same `node --import jiti/register` loader as validate-docs.
+ * theme, so this runs under Bun (`bun scripts/validate-sidebar.ts`), which imports the
+ * VitePress-flavored `.ts` config natively.
  */
 export async function loadSidebar(configPath: string): Promise<SidebarMulti> {
   const loaded: { default?: unknown } = await import(configPath);
@@ -111,7 +107,7 @@ export async function validateSidebar({
   filterPackage = null,
   workspace,
 }: SidebarValidationInput): Promise<ValidationResult> {
-  const diagnostics: SidebarDiagnostic[] = [];
+  const diagnostics: Diagnostic[] = [];
   const linksBySlug = indexSidebarLinks(await loadSidebar(configPath));
   const checkedPackages = [...workspace.packageDocs.keys()].filter((slug) => !filterPackage || slug === filterPackage).sort();
 
@@ -150,31 +146,14 @@ export async function validateSidebar({
   return { checkedPackages, diagnostics };
 }
 
-function sidebarDiagnostic(pkg: string, file: string, rule: string, message: string, hint?: string): SidebarDiagnostic {
+function sidebarDiagnostic(pkg: string, file: string, rule: string, message: string, hint?: string): Diagnostic {
   return { file, hint, message, package: pkg, rule };
 }
 
-async function main(): Promise<void> {
-  const { flags } = parseArgs(process.argv.slice(2));
-  const filterPackage = typeof flags.package === 'string' ? flags.package : null;
-  const result = await validateSidebar({ workspace: loadDocsWorkspace(), filterPackage });
-
-  if (result.diagnostics.length === 0) {
-    console.log(`Validated sidebar coverage for ${result.checkedPackages.length} package${result.checkedPackages.length === 1 ? '' : 's'}.`);
-    return;
-  }
-
-  for (const item of result.diagnostics) {
-    console.error(`[${item.rule}] ${item.file.replace(`${ROOT}/`, '')}: ${item.message}`);
-    if (item.hint) console.error(`  hint: ${item.hint}`);
-  }
-  console.error(`${result.diagnostics.length} sidebar validation failure${result.diagnostics.length === 1 ? '' : 's'}.`);
-  process.exitCode = 1;
-}
-
 if (isMain(import.meta.url)) {
-  main().catch((err) => {
-    console.error(err);
-    process.exitCode = 1;
+  void runValidator({
+    label: 'sidebar coverage',
+    root: ROOT,
+    validate: (filterPackage) => validateSidebar({ workspace: loadDocsWorkspace(), filterPackage }),
   });
 }

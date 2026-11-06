@@ -419,7 +419,7 @@
     --safe-area-inset-inline-start: env(safe-area-inset-left, 0px);
     --safe-area-inset-inline-end: env(safe-area-inset-right, 0px);
 
-    /* ── theme-tokens:generated:begin: run `pnpm run sync:theme`, do not hand-edit ── */
+    /* ── theme-tokens:generated:begin: run `bun run sync:theme`, do not hand-edit ── */
     /* ── Contrast scale: Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline ── */
     --color-contrast-50: light-dark(oklch(99% 0.001 264deg), oklch(17% 0.001 250deg)); /* Canvas, page background */
     --color-contrast-100: light-dark(oklch(97% 0.001 264deg), oklch(21% 0.001 250deg)); /* Cards, elevated surfaces */

@@ -6,15 +6,16 @@
  * Quick Start, optional Features, Documentation, License, and nothing else.
  *
  * Usage:
- *   pnpm validate:readme
- *   pnpm validate:readme -- --package=ripple
+ *   bun run validate:readme
+ *   bun run validate:readme -- --package=ripple
  */
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { isMain, parseArgs } from './lib/cli.mjs';
+import { isMain } from './lib/cli.mjs';
+import { type Diagnostic, runValidator, type ValidationResult } from './lib/validator.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -31,24 +32,6 @@ const PERMITTED_HEADINGS = new Set([
   'Documentation',
   'License',
 ]);
-
-export interface ReadmeDiagnostic {
-  file: string;
-  hint?: string;
-  line?: number;
-  message: string;
-  package: string;
-  rule: string;
-}
-
-export interface ReadmeValidationResult {
-  checkedPackages: readonly string[];
-  diagnostics: readonly ReadmeDiagnostic[];
-}
-
-export interface LoadReadmeWorkspaceOptions {
-  packagesDir?: string;
-}
 
 interface ReadmeFile {
   description: string | null;
@@ -70,8 +53,8 @@ function diagnostic(
   file: string,
   rule: string,
   message: string,
-  options: Pick<ReadmeDiagnostic, 'hint' | 'line'> = {},
-): ReadmeDiagnostic {
+  options: Pick<Diagnostic, 'hint' | 'line'> = {},
+): Diagnostic {
   return { file, message, package: slug, rule, ...options };
 }
 
@@ -102,8 +85,8 @@ function headingText(line: string): string | null {
   return match ? match[2].trim() : null;
 }
 
-function validateReadme(readme: ReadmeFile): readonly ReadmeDiagnostic[] {
-  const diagnostics: ReadmeDiagnostic[] = [];
+function validateReadme(readme: ReadmeFile): readonly Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
   const { description, lines, path, slug } = readme;
 
   // Rule: title
@@ -234,7 +217,6 @@ function validateReadme(readme: ReadmeFile): readonly ReadmeDiagnostic[] {
   // Rule: license line exact
   const licenseHeadingIndex = h2Headings.find((h) => h.text === 'License')?.index;
   if (licenseHeadingIndex !== undefined) {
-    const licenseLine = lines[licenseHeadingIndex]; // line after "## License" (0-based index == line number)
     // Find the first non-empty line after the License heading
     for (let i = licenseHeadingIndex; i < lines.length; i++) {
       const line = lines[i] ?? '';
@@ -252,13 +234,12 @@ function validateReadme(readme: ReadmeFile): readonly ReadmeDiagnostic[] {
   }
 
   // Rule: Documentation section links to vielzeug.dev
-  const docsHeadingIndex = h2Headings.find((h) => h.text === 'Documentation')?.index;
-  if (docsHeadingIndex !== undefined) {
-    const nextHeadingIndex = h2Headings
-      .slice(h2Headings.findIndex((h) => h.text === 'Documentation') + 1)
-      .find((h) => true)?.index;
-    const docsEnd = nextHeadingIndex ?? lines.length;
-    const docsSection = lines.slice(licenseHeadingIndex !== undefined && docsHeadingIndex < licenseHeadingIndex ? docsHeadingIndex : docsHeadingIndex, docsEnd);
+  const docsHeading = h2Headings.find((h) => h.text === 'Documentation');
+  if (docsHeading) {
+    // h2 indexes are 1-based line numbers, so slice from the heading's index starts at the
+    // line after it and ends just before the next heading (or end of file).
+    const nextHeading = h2Headings[h2Headings.indexOf(docsHeading) + 1];
+    const docsSection = lines.slice(docsHeading.index, nextHeading?.index ?? lines.length);
     const hasVielzeugLink = docsSection.some((line) => line?.includes('https://vielzeug.dev/'));
     if (!hasVielzeugLink) {
       diagnostics.push(
@@ -273,7 +254,7 @@ function validateReadme(readme: ReadmeFile): readonly ReadmeDiagnostic[] {
 export function validateReadmeWorkspace(
   readmes: ReadonlyMap<string, ReadmeFile>,
   filterPackage: string | null = null,
-): ReadmeValidationResult {
+): ValidationResult {
   const slugs = filterPackage
     ? [filterPackage]
     : [...readmes.keys()].sort();
@@ -282,7 +263,7 @@ export function validateReadmeWorkspace(
     throw new Error(`Unknown package: ${filterPackage}`);
   }
 
-  const diagnostics: ReadmeDiagnostic[] = [];
+  const diagnostics: Diagnostic[] = [];
   for (const slug of slugs) {
     const readme = readmes.get(slug);
     if (readme) diagnostics.push(...validateReadme(readme));
@@ -291,32 +272,10 @@ export function validateReadmeWorkspace(
   return { checkedPackages: slugs, diagnostics };
 }
 
-function main(): void {
-  const { flags } = parseArgs(process.argv.slice(2));
-  const filterPackage = typeof flags.package === 'string' ? flags.package : null;
-
-  const readmes = loadReadmes(DEFAULT_PACKAGES_DIR);
-  const result = validateReadmeWorkspace(readmes, filterPackage);
-
-  if (result.diagnostics.length === 0) {
-    console.log(`Validated README structure for ${result.checkedPackages.length} package${result.checkedPackages.length === 1 ? '' : 's'}.`);
-    return;
-  }
-
-  for (const item of result.diagnostics) {
-    const location = item.line ? `:${item.line}` : '';
-    console.error(`[${item.rule}] ${item.package}/README.md${location}: ${item.message}`);
-    if (item.hint) console.error(`  hint: ${item.hint}`);
-  }
-  console.error(`${result.diagnostics.length} README validation failure${result.diagnostics.length === 1 ? '' : 's'}.`);
-  process.exitCode = 1;
-}
-
 if (isMain(import.meta.url)) {
-  try {
-    main();
-  } catch (err) {
-    console.error(err);
-    process.exitCode = 1;
-  }
+  void runValidator({
+    label: 'README structure',
+    root: ROOT,
+    validate: (filterPackage) => validateReadmeWorkspace(loadReadmes(DEFAULT_PACKAGES_DIR), filterPackage),
+  });
 }

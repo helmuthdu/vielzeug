@@ -8,8 +8,8 @@
   ],
   "tasks": [
     {
-      "args": ["--filter", "/${input:packageName}", "build"],
-      "command": "pnpm",
+      "args": ["run", "--filter", "./packages/${input:packageName}", "build"],
+      "command": "bun",
       "detail": "Build a package (ESM + CJS + types)",
       "group": "build",
       "label": "pkg: build",
@@ -18,8 +18,8 @@
       "type": "shell"
     },
     {
-      "args": ["vitest", "run", "packages/${input:packageName}/src/__tests__/"],
-      "command": "pnpm",
+      "args": ["x", "vitest", "run", "packages/${input:packageName}/src/__tests__/"],
+      "command": "bun",
       "detail": "Run all tests for a package (single run)",
       "group": { "isDefault": true, "kind": "test" },
       "label": "pkg: test",
@@ -28,8 +28,8 @@
       "type": "shell"
     },
     {
-      "args": ["vitest", "packages/${input:packageName}/src/__tests__/"],
-      "command": "pnpm",
+      "args": ["x", "vitest", "packages/${input:packageName}/src/__tests__/"],
+      "command": "bun",
       "detail": "Run tests in watch mode for a package",
       "group": "test",
       "isBackground": true,
@@ -39,8 +39,8 @@
       "type": "shell"
     },
     {
-      "args": ["--filter", "/${input:packageName}", "lint"],
-      "command": "pnpm",
+      "args": ["run", "--filter", "./packages/${input:packageName}", "lint"],
+      "command": "bun",
       "detail": "Lint a package with Biome",
       "group": "build",
       "label": "pkg: lint",
@@ -49,8 +49,8 @@
       "type": "shell"
     },
     {
-      "args": ["--filter", "/${input:packageName}", "fix"],
-      "command": "pnpm",
+      "args": ["run", "--filter", "./packages/${input:packageName}", "fix"],
+      "command": "bun",
       "detail": "Auto-fix Biome diagnostics and sort imports/keys for a package",
       "group": "build",
       "label": "pkg: fix",
@@ -59,7 +59,7 @@
       "type": "shell"
     },
     {
-      "command": "pnpm --filter /${input:packageName} fix && pnpm --filter /${input:packageName} lint && pnpm vitest run packages/${input:packageName}/src/__tests__/",
+      "command": "bun run --filter ./packages/${input:packageName} fix && bun run --filter ./packages/${input:packageName} lint && bun x vitest run packages/${input:packageName}/src/__tests__/",
       "detail": "Auto-fix, then verify lint and tests pass (full quality gate)",
       "group": "build",
       "label": "pkg: fix → lint → test",
@@ -68,9 +68,9 @@
       "type": "shell"
     },
     {
-      "args": ["build"],
-      "command": "pnpm",
-      "detail": "Build all packages via Rush",
+      "args": ["run", "build"],
+      "command": "bun",
+      "detail": "Build all packages (topological, parallel within each level)",
       "group": "build",
       "label": "monorepo: build all",
       "presentation": { "panel": "shared", "reveal": "always" },
@@ -78,8 +78,8 @@
       "type": "shell"
     },
     {
-      "args": ["test"],
-      "command": "pnpm",
+      "args": ["run", "test"],
+      "command": "bun",
       "detail": "Run the full Vitest suite across all packages",
       "group": "test",
       "label": "monorepo: test all",
@@ -88,8 +88,8 @@
       "type": "shell"
     },
     {
-      "args": ["lint"],
-      "command": "pnpm",
+      "args": ["run", "lint"],
+      "command": "bun",
       "detail": "Lint every package with Biome",
       "group": "build",
       "label": "monorepo: lint all",
@@ -98,8 +98,8 @@
       "type": "shell"
     },
     {
-      "args": ["docs:dev"],
-      "command": "pnpm",
+      "args": ["run", "docs:dev"],
+      "command": "bun",
       "detail": "Start the VitePress docs dev server",
       "group": "build",
       "isBackground": true,

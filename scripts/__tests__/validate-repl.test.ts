@@ -4,7 +4,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { buildExampleFiles, discoverPackages, resolvePackageFilter, resolveVitestBin, sanitize } from '../validate-repl';
+import { resolvePackageFilter } from '../lib/validator';
+import { buildExampleFiles, discoverPackages, resolveVitestBin, sanitize } from '../validate-repl';
 
 describe('module has no import-time side effects', () => {
   it('only exports functions, does not touch the filesystem', () => {

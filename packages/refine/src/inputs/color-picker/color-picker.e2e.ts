@@ -3,7 +3,7 @@
  * evaluate (real focus traversal through the swatch ring), plus axe on the
  * `radiogroup`/`radio` shape. Complements `color-picker.test.ts`.
  *
- * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
+ * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

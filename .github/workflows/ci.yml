@@ -22,9 +22,9 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          root-install: "false"
+          install: "false"
 
-      - run: node common/scripts/install-run-rush.js change --verify
+      - run: bun run check:change-files
 
   test:
     name: Build, test, docs
@@ -36,32 +36,32 @@ jobs:
 
       - name: Build packages
         run: |
-          node common/scripts/install-run-rush.js rebuild --verbose
-          pnpm verify:prod-gate
+          bun run build
+          bun run verify:prod-gate
 
       # Packed-consumer icon contract (tarball install + jsdom + tsc resolution matrix).
       # Excluded from refine's own `build` because it packs the whole @vielzeug/* closure
       # and runs a real npm install (~40s): a release-shaped gate, not an inner-loop check.
       - name: Verify packed icon contract (refine)
-        run: pnpm --filter @vielzeug/refine run check:packed-icons
+        run: bun run --filter @vielzeug/refine check:packed-icons
 
       - name: Unit tests
-        run: pnpm test --run ${{ github.event_name == 'push' && '--coverage' || '' }}
+        run: bun run test --run ${{ github.event_name == 'push' && '--coverage' || '' }}
 
       - name: Archive integration tests
         env:
           WRANGLER_SEND_METRICS: "false"
-        run: pnpm --filter @vielzeug/archive test:integration
+        run: bun run --filter @vielzeug/archive test:integration
 
-      # Real-browser tests against the built dist IIFE bundles (rush rebuild above produced
+      # Real-browser tests against the built dist IIFE bundles (bun run build above produced
       # them). The fixture loads bundles directly via page.setContent(), so no dev server.
       # - name: Browser e2e tests (refine)
       #   run: |
-      #     pnpm exec playwright install --with-deps chromium
-      #     pnpm --filter @vielzeug/refine test:e2e
+      #     bun x playwright install --with-deps chromium
+      #     bun run --filter @vielzeug/refine test:e2e
 
       - name: Build and test demos
-        run: pnpm validate:demos
+        run: bun run validate:demos
 
       # Every demo that ships a Worker API validates it: typecheck + integration suite
       # (real workerd + local D1) + wrangler dry-run bundle check. The api:* scripts
@@ -73,15 +73,15 @@ jobs:
           for dir in demos/*/; do
             [ -f "${dir}package.json" ] || continue
             if grep -q '"api:test"' "${dir}package.json"; then
-              (cd "$dir" && pnpm api:typecheck && pnpm api:test && pnpm api:build) || exit 1
+              (cd "$dir" && bun run api:typecheck && bun run api:test && bun run api:build) || exit 1
             fi
           done
 
       - name: Validate REPL examples
-        run: pnpm validate:repl
+        run: bun run validate:repl
 
       - name: Build docs site
-        run: pnpm docs:build
+        run: bun run docs:build
 
       - name: Upload coverage report
         if: github.event_name == 'push'
@@ -98,11 +98,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/setup
-        with:
-          rush-install: "false"
 
       - name: Biome
-        run: pnpm lint
+        run: bun run lint
 
       - name: Lint GitHub Actions workflows
         uses: reviewdog/action-actionlint@3cbf14efd750961dba35fccbf00f9e14028cb1f5 # v1.80.2
@@ -110,13 +108,13 @@ jobs:
           fail_level: error
 
       - name: Package manifests
-        run: pnpm check:package-manifests
+        run: bun run check:package-manifests
 
       - name: AI metadata
-        run: pnpm check:ai-data
+        run: bun run check:ai-data
 
       - name: Docs, README, and sidebar structure
         run: |
-          pnpm validate:docs
-          pnpm validate:readme
-          pnpm validate:sidebar
+          bun run validate:docs
+          bun run validate:readme
+          bun run validate:sidebar

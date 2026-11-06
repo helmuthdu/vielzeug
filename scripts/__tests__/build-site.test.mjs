@@ -10,10 +10,10 @@ describe('buildSite()', () => {
     buildSite({ environment: { NODE_ENV: 'production' }, root, runCommand });
 
     expect(runCommand).toHaveBeenCalledTimes(SITE_DEMOS.length + 1);
-    expect(runCommand).toHaveBeenNthCalledWith(1, 'pnpm', ['docs:build'], { cwd: root, inherit: true });
+    expect(runCommand).toHaveBeenNthCalledWith(1, 'bun', ['run', 'docs:build'], { cwd: root, inherit: true });
 
     for (const [index, demo] of SITE_DEMOS.entries()) {
-      expect(runCommand).toHaveBeenNthCalledWith(index + 2, 'pnpm', ['--dir', `demos/${demo}`, 'build'], {
+      expect(runCommand).toHaveBeenNthCalledWith(index + 2, 'bun', ['run', '--cwd', `demos/${demo}`, 'build'], {
         cwd: root,
         env: {
           DEMO_BASE: `/demos/${demo}/`,

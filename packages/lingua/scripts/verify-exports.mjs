@@ -1,6 +1,6 @@
 // Smoke check for `package.json`'s `exports` map: dynamically imports every declared
 // subpath from the *built* package and fails loudly if Node's module resolution can't
-// find the file. Run after `pnpm build`: catches drift between `exports` and the actual
+// find the file. Run after `bun run build`: catches drift between `exports` and the actual
 // vite entry / output layout that unit tests (which import from `src/`, not `dist/`) cannot see.
 import { createRequire } from 'node:module';
 import { access, readFile } from 'node:fs/promises';

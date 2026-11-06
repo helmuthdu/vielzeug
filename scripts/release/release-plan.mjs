@@ -9,7 +9,7 @@
  */
 
 import { versionExists } from './npm-version-exists.mjs';
-import { findProject } from './rush-project.mjs';
+import { findProject } from './workspace.mjs';
 
 export async function planReleases(packageNames, { checkVersion = versionExists, resolve = findProject } = {}) {
   const plan = [];

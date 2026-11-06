@@ -3,7 +3,7 @@
  * jsdom can't evaluate (no CSS box model, no real focus management edge cases). Complements
  * `dialog.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
+ * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

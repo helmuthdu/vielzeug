@@ -1,4 +1,4 @@
-// .ts extension required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
+// Explicit .ts import extensions are the repo convention for these scripts (run directly under bun, never compiled by tsc).
 /**
  * Extracts REPL example metadata + code from docs/.vitepress/theme/components/repl/examples/<slug>/
  * via the TypeScript compiler API (no dynamic import / execution of repo code at build time :

@@ -176,7 +176,7 @@ export async function main({ check = false } = {}) {
   }
 
   if (check && stale) {
-    console.error('\nRun `pnpm gen:ai-data` to regenerate.');
+    console.error('\nRun `bun run gen:ai-data` to regenerate.');
     return false;
   }
   if (dangling.length > 0) {

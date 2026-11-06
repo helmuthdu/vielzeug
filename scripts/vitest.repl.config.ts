@@ -15,7 +15,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const vielzeugAliases: Record<string, string> = {
   ...buildVielzeugSrcAliases(path.resolve(ROOT, 'packages'), REPL_EXCLUDED_PACKAGES),
   '@vielzeug/orbit/presets': path.resolve(ROOT, 'packages/orbit/src/presets.ts'),
-  'fake-indexeddb/auto': path.resolve(ROOT, 'packages/vault/node_modules/fake-indexeddb/auto/index.mjs'),
+  // The generated examples live in scripts/.repl-tmp, which cannot resolve vault's
+  // devDependency by itself; Bun's hoisted linker places it in the root node_modules.
+  'fake-indexeddb/auto': path.resolve(ROOT, 'node_modules/fake-indexeddb/auto/index.mjs'),
 };
 
 export default defineConfig({
@@ -32,9 +34,7 @@ export default defineConfig({
         url: 'https://repl.vielzeug.test',
       },
     },
-    setupFiles: [
-      path.resolve(__dirname, 'repl-setup.ts'),
-    ],
+    setupFiles: [path.resolve(ROOT, 'scripts/repl-setup.ts')],
     include: TMP_DIR ? [`${TMP_DIR}/**/*.test.ts`] : [],
     testTimeout: 15_000,
     name: 'repl',

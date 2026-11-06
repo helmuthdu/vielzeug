@@ -4,7 +4,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { applyTrain, listChangedPackageNames, listChangeFiles } from '../apply-train.mjs';
+import { listChangeFiles } from '../../lib/change-files.mjs';
+import { applyTrain, listChangedPackageNames } from '../apply-train.mjs';
 
 let root;
 
@@ -40,7 +41,7 @@ function writeProject(slug, version) {
 }
 
 function writeChangeFile(name, type, comment) {
-  const dir = path.join(root, 'common', 'changes', name);
+  const dir = path.join(root, 'changes', name);
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     path.join(dir, 'agent_1.json'),
@@ -50,15 +51,6 @@ function writeChangeFile(name, type, comment) {
 
 function makeRepo() {
   root = mkdtempSync(path.join(tmpdir(), 'apply-train-test-'));
-  writeFileSync(
-    path.join(root, 'rush.json'),
-    JSON.stringify({
-      projects: [
-        { packageName: '@vielzeug/ore', projectFolder: 'packages/ore' },
-        { packageName: '@vielzeug/orbit', projectFolder: 'packages/orbit' },
-      ],
-    }),
-  );
   writeProject('ore', '3.0.0');
   writeProject('orbit', '2.5.0');
   writeChangeFile('@vielzeug/ore', 'minor', 'feat: ore rides trains');
@@ -73,7 +65,7 @@ describe('listChangeFiles()', () => {
 
   it('lists every *.json change file, one per package directory', () => {
     const repo = makeRepo();
-    const files = listChangeFiles(path.join(repo, 'common', 'changes')).sort();
+    const files = listChangeFiles(path.join(repo, 'changes')).sort();
     expect(files).toEqual([path.join('@vielzeug/orbit', 'agent_1.json'), path.join('@vielzeug/ore', 'agent_1.json')]);
   });
 });
@@ -123,8 +115,8 @@ describe('applyTrain()', () => {
     expect(oreJson.entries[1].version).toBe('1.0.0');
 
     // …and both packages' change files are consumed.
-    expect(existsSync(path.join(repo, 'common', 'changes', '@vielzeug/ore', 'agent_1.json'))).toBe(false);
-    expect(existsSync(path.join(repo, 'common', 'changes', '@vielzeug/orbit', 'agent_1.json'))).toBe(false);
+    expect(existsSync(path.join(repo, 'changes', '@vielzeug/ore', 'agent_1.json'))).toBe(false);
+    expect(existsSync(path.join(repo, 'changes', '@vielzeug/orbit', 'agent_1.json'))).toBe(false);
 
     // One commit lands the train: the stamp, the changelogs, and the change-file removals.
     const commands = run.mock.calls.filter(([cmd]) => cmd === 'git').map(([, args]) => args.join(' '));
@@ -137,7 +129,7 @@ describe('applyTrain()', () => {
     // lockstep orbit still rides with an alignment entry, so an exact pin to orbit@26.10.0
     // resolves on npm (the historical prism -> orbit 26.10.2 breakage stays impossible).
     const repo = makeRepo();
-    rmSync(path.join(repo, 'common', 'changes', '@vielzeug/orbit', 'agent_1.json')); // orbit no longer a rider
+    rmSync(path.join(repo, 'changes', '@vielzeug/orbit', 'agent_1.json')); // orbit no longer a rider
 
     const run = vi.fn(() => '');
     const result = applyTrain({ now: NOW, root: repo, run });
@@ -183,7 +175,7 @@ describe('applyTrain()', () => {
     });
     expect(JSON.parse(readFileSync(path.join(repo, 'packages', 'ore', 'package.json'), 'utf8')).version).toBe('3.0.0');
     expect(readFileSync(path.join(repo, 'packages', 'ore', 'CHANGELOG.md'), 'utf8')).not.toContain('## 26.10.0');
-    expect(existsSync(path.join(repo, 'common', 'changes', '@vielzeug/ore', 'agent_1.json'))).toBe(true);
+    expect(existsSync(path.join(repo, 'changes', '@vielzeug/ore', 'agent_1.json'))).toBe(true);
     expect(run).not.toHaveBeenCalled();
   });
 

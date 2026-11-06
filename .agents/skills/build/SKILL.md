@@ -49,8 +49,8 @@ When tests are the primary scope:
 ## Tooling and agent contract
 
 - For tooling changes, read affected script entry points and `scripts/AGENTS.md`; run focused script tests and a direct smoke command where practical.
-- For `.agents/` changes, run `pnpm gen:ai-data` when the generated package table must change, then `pnpm check:ai-data`.
-- New package: `pnpm new:package <name> "<description>"`, then follow the printed next steps.
+- For `.agents/` changes, run `bun run gen:ai-data` when the generated package table must change, then `bun run check:ai-data`.
+- New package: `bun run new:package <name> "<description>"`, then follow the printed next steps.
 
 ## Propagation
 
@@ -71,15 +71,15 @@ After renaming a path or prefix, search for the old name with hidden files inclu
 
 | Changed surface                | Run                                                                                                                                       |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Package source                 | `pnpm vitest run packages/<name>/src/__tests__/`, `pnpm --filter @vielzeug/<name> lint`, `pnpm --filter @vielzeug/<name> build` (subtree `AGENTS.md` may add package-local gates to `build`: they fail this row) |
-| Real-browser behavior (packages declaring `test:e2e` in their manifest; find with `rg '"test:e2e"' packages/*/package.json`) | `pnpm --filter @vielzeug/<name> run test:e2e` scoped to the affected component or module. Some packages build internally first; refine needs a prior `build:e2e` (full `build` only when validating the shipped artifact). Each package's `AGENTS.md`/`test:e2e` script is authoritative |
+| Package source                 | `bun x vitest run packages/<name>/src/__tests__/`, `bun run --filter @vielzeug/<name> lint`, `bun run --filter @vielzeug/<name> build` (subtree `AGENTS.md` may add package-local gates to `build`: they fail this row) |
+| Real-browser behavior (packages declaring `test:e2e` in their manifest; find with `rg '"test:e2e"' packages/*/package.json`) | `bun run --filter @vielzeug/<name> test:e2e` scoped to the affected component or module. Some packages build internally first; refine needs a prior `build:e2e` (full `build` only when validating the shipped artifact). Each package's `AGENTS.md`/`test:e2e` script is authoritative |
 | Public API                     | package validation above, plus the docs/REPL rows of the `document` skill                                                                 |
 | Tests only                     | focused tests; lint/build only when config or imports changed                                                                             |
 | Cross-package call sites       | focused tests, lint, and build for every affected package                                                                                 |
-| Demo or integration            | owning-package validation when library behavior changed; affected demo test/build; `pnpm validate:demos` for shared or broad demo impact |
-| Production dev-warning gate    | `pnpm verify:prod-gate` after any change to build config or `_dev.ts` gating                                                              |
-| Tooling (`scripts/`)           | `pnpm vitest run scripts/` and a direct smoke run of the changed script                                                                   |
-| `.agents/` or package manifest | `pnpm check:ai-data`; `pnpm check:package-manifests` for manifests                                                                        |
+| Demo or integration            | owning-package validation when library behavior changed; affected demo test/build; `bun run validate:demos` for shared or broad demo impact |
+| Production dev-warning gate    | `bun run verify:prod-gate` after any change to build config or `_dev.ts` gating                                                              |
+| Tooling (`scripts/`)           | `bun x vitest run scripts/` and a direct smoke run of the changed script                                                                   |
+| `.agents/` or package manifest | `bun run check:ai-data`; `bun run check:package-manifests` for manifests                                                                        |
 
 ## Report
 

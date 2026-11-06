@@ -40,7 +40,7 @@
 
 ## Checklist \*
 
-- [ ] One change file per changed package: `node scripts/rush-change.mjs <pkg> <patch|minor|major> "<message>"` (the type only picks the changelog section; versions are CalVer trains)
+- [ ] One change file per changed package: `bun scripts/change.mjs <pkg> <patch|minor|major> "<message>"` (the type only picks the changelog section; versions are CalVer trains)
 - [ ] Docs, README, recipes, and REPL examples updated when the public surface changed
 - [ ] Tests cover the changed behavior (assert observable behavior, not internals)
 - [ ] No new dependencies added (or explicitly approved)

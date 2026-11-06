@@ -144,10 +144,10 @@ place of the `replace-with-…` value. Replace the example host, sender and oper
 addresses with your deployment values, then apply each fresh schema:
 
 ```sh
-pnpm exec wrangler d1 create archive-catalog
-pnpm exec wrangler d1 create archive-issuer
-pnpm exec wrangler d1 migrations apply archive-catalog --remote --config wrangler.catalog.jsonc
-pnpm exec wrangler d1 migrations apply archive-issuer --remote --config wrangler.issuer.jsonc
+bun x wrangler d1 create archive-catalog
+bun x wrangler d1 create archive-issuer
+bun x wrangler d1 migrations apply archive-catalog --remote --config wrangler.catalog.jsonc
+bun x wrangler d1 migrations apply archive-issuer --remote --config wrangler.issuer.jsonc
 ```
 
 Generate the secrets straight into Wrangler so they never touch a file or `vars`.
@@ -162,7 +162,7 @@ Do not route frontend traffic until both runtime deploys and readiness checks pa
 
 ```sh
 node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))' |
-  pnpm exec wrangler secret put RATE_LIMIT_KEY_SECRET --config wrangler.catalog.jsonc
+  bun x wrangler secret put RATE_LIMIT_KEY_SECRET --config wrangler.catalog.jsonc
 node --input-type=module -e '
 const { privateKey } = await crypto.subtle.generateKey(
   { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
@@ -170,9 +170,9 @@ const { privateKey } = await crypto.subtle.generateKey(
   ["sign", "verify"],
 );
 process.stdout.write(JSON.stringify(await crypto.subtle.exportKey("jwk", privateKey)));
-' | pnpm exec wrangler secret put AUTH_JWT_PRIVATE_JWK --config wrangler.issuer.jsonc
-pnpm exec wrangler deploy --config wrangler.issuer.jsonc
-pnpm exec wrangler deploy --config wrangler.catalog.jsonc
+' | bun x wrangler secret put AUTH_JWT_PRIVATE_JWK --config wrangler.issuer.jsonc
+bun x wrangler deploy --config wrangler.issuer.jsonc
+bun x wrangler deploy --config wrangler.catalog.jsonc
 ```
 
 Use separate, deployment-specific random values for the rate-limit pepper and the

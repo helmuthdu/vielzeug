@@ -1,8 +1,9 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { chmodSync, createWriteStream, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { createServer as createHttpServer, type Server } from 'node:http';
+import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { decodeJwt, exportJWK, generateKeyPair } from 'jose';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ACCOUNT_HEADER, AUTH_SCHEMA_VERSION, archiveAuthHealthSchema } from '../../src/contract';
@@ -21,7 +22,13 @@ import { ACCOUNT_HEADER, AUTH_SCHEMA_VERSION, archiveAuthHealthSchema } from '..
  */
 const PKG = resolve(__dirname, '../..');
 const RUNTIME = resolve(PKG, 'node_modules/.cache/archive-integration/auth-smoke');
-const WRANGLER = resolve(PKG, 'node_modules/wrangler/bin/wrangler.js');
+// Layout-independent: resolve the installed wrangler entry (its bin is not an
+// exports subpath) and walk up to the package's bin script.
+const WRANGLER = join(
+  dirname(dirname(createRequire(resolve(PKG, 'package.json')).resolve('wrangler'))),
+  'bin',
+  'wrangler.js',
+);
 const AUDIENCE = 'community-archive';
 const EMAIL = 'smoke.reader@example.test';
 const SENDER = 'no-reply@example.test';

@@ -36,10 +36,10 @@ const refineDir = resolve(pkgDir, 'refine/dist');
 const refineSrcStylesDir = resolve(pkgDir, 'refine/src/styles');
 const prismDir = resolve(pkgDir, 'prism/dist');
 
-// createRequire from within .pnpm/node_modules so it can resolve hoisted
-// pnpm packages. Subpath exports on these packages don't expose dist files
-// directly, so we resolve the CJS main entry and navigate to the UMD build.
-const req = createRequire(resolve(__dirname, '../../../../node_modules/.pnpm/node_modules/placeholder'));
+// createRequire from the repo root manifest so it can resolve the workspace's
+// hoisted dependencies. Subpath exports on these packages don't expose dist
+// files directly, so we resolve the CJS main entry and navigate to the UMD build.
+const req = createRequire(resolve(__dirname, '../../../../package.json'));
 const temporalUmd = resolve(dirname(req.resolve('@js-temporal/polyfill')), '../dist/index.umd.js');
 const lucideUmd = resolve(dirname(req.resolve('lucide')), '../../dist/umd/lucide.js');
 
@@ -110,7 +110,7 @@ export function componentPreviewPlugin(): Plugin {
       server.watcher.add(depPaths);
       server.watcher.add(prismDir);
 
-      // `pnpm build` empties `dist/` before rewriting it (rimraf + vite `emptyOutDir`), which
+      // `bun run build` empties `dist/` before rewriting it (rimraf + vite `emptyOutDir`), which
       // chokidar reports as `unlink` + `add` rather than `change`. Listening to `change` only
       // meant a full package rebuild while `docs:dev` was running left the virtual modules
       // pinned to whatever they resolved to mid-rebuild (often an empty/missing dist file),

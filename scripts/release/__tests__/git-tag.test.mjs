@@ -63,8 +63,6 @@ describe('trainRiders()', () => {
   /** A temp repo where each slug's CHANGELOG.json entry for 26.10.0 carries `comments`. */
   function makeChangelogs(entries) {
     root = mkdtempSync(path.join(tmpdir(), 'git-tag-test-'));
-    const projects = Object.keys(entries).map((slug) => ({ packageName: `@vielzeug/${slug}`, projectFolder: `packages/${slug}` }));
-    writeFileSync(path.join(root, 'rush.json'), JSON.stringify({ projects }));
 
     for (const [slug, comments] of Object.entries(entries)) {
       const dir = path.join(root, 'packages', slug);
@@ -100,10 +98,6 @@ describe('trainRiders()', () => {
 
   it('ignores packages whose changelog has no entry for the train', () => {
     root = mkdtempSync(path.join(tmpdir(), 'git-tag-test-'));
-    writeFileSync(
-      path.join(root, 'rush.json'),
-      JSON.stringify({ projects: [{ packageName: '@vielzeug/ore', projectFolder: 'packages/ore' }] }),
-    );
     const dir = path.join(root, 'packages', 'ore');
     mkdirSync(dir, { recursive: true });
     writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: '@vielzeug/ore', version: '26.10.0' }));
@@ -160,7 +154,6 @@ describe('createTrainRelease()', () => {
 
   it('throws when no train version can be resolved', () => {
     root = mkdtempSync(path.join(tmpdir(), 'git-tag-test-'));
-    writeFileSync(path.join(root, 'rush.json'), JSON.stringify({ projects: [] }));
 
     expect(() => createTrainRelease({ list: () => [], root, run: vi.fn() })).toThrow(/nothing to release/);
   });

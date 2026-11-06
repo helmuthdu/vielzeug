@@ -20,6 +20,6 @@ Responsive SVG charting library with explicit data updates. Each chart factory m
 
 ## Verification
 
-- Tests: `pnpm vitest run packages/prism/src/__tests__/` (or `pnpm --filter @vielzeug/prism test`)
-- Lint: `pnpm --filter @vielzeug/prism lint`
-- Build: `pnpm --filter @vielzeug/prism build`
+- Tests: `bun x vitest run packages/prism/src/__tests__/` (or `bun run --filter @vielzeug/prism test`)
+- Lint: `bun run --filter @vielzeug/prism lint`
+- Build: `bun run --filter @vielzeug/prism build`

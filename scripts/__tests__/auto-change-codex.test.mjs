@@ -19,13 +19,13 @@ describe('ensureCodexChangeFile()', () => {
 
     const filepath = ensureCodexChangeFile({ now: () => 123, root });
 
-    expect(filepath).toBe(path.join(root, 'common/changes/@vielzeug/codex/agent_123.json'));
+    expect(filepath).toBe(path.join(root, 'changes/@vielzeug/codex/agent_123.json'));
     expect(readdirSync(path.dirname(filepath))).toEqual(['agent_123.json']);
   });
 
   it('skips and returns null when a codex change file is already pending', () => {
     root = mkdtempSync(path.join(tmpdir(), 'auto-change-codex-test-'));
-    const dir = path.join(root, 'common/changes/@vielzeug/codex');
+    const dir = path.join(root, 'changes/@vielzeug/codex');
     mkdirSync(dir, { recursive: true });
     writeFileSync(path.join(dir, 'agent_1.json'), '{}');
 
@@ -35,7 +35,7 @@ describe('ensureCodexChangeFile()', () => {
 
   it('does not treat a non-json file in the dir as a pending change', () => {
     root = mkdtempSync(path.join(tmpdir(), 'auto-change-codex-test-'));
-    const dir = path.join(root, 'common/changes/@vielzeug/codex');
+    const dir = path.join(root, 'changes/@vielzeug/codex');
     mkdirSync(dir, { recursive: true });
     writeFileSync(path.join(dir, '.gitkeep'), '');
 

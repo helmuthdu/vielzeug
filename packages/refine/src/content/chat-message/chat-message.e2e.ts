@@ -1,10 +1,10 @@
 /**
  * CSS layout regression tests for `ore-chat-message`. jsdom has no layout engine and silently
  * drops `@layer` rules, so
- * flex/box-model regressions here are invisible to `pnpm test`. Complements
+ * flex/box-model regressions here are invisible to `bun run test`. Complements
  * `chat-message.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm --filter @vielzeug/refine test:e2e (requires built dist).
+ * Run with: bun run --filter @vielzeug/refine test:e2e (requires built dist).
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

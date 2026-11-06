@@ -1,12 +1,9 @@
 name: Setup monorepo
-description: Install Node, pnpm, Rush, root workspace tools and restore caches. Single source of truth for toolchain versions.
+description: Install Node, Bun, and workspace dependencies with caches restored. Single source of truth for toolchain versions.
 
 inputs:
-  rush-install:
-    description: Run rush install after cache restore (installs each package's workspace deps)
-    default: "true"
-  root-install:
-    description: Run pnpm install for the root workspace (packages/*, demos/*, repo tooling), which Rush does not manage
+  install:
+    description: Run `bun ci` (frozen-lockfile workspace install) after cache restore
     default: "true"
   trusted-publishing:
     description: Prepare npm for Trusted Publishing (OIDC). Only jobs that run `npm publish` need this.
@@ -17,51 +14,31 @@ runs:
   steps:
     # node-version-file keeps this the one place the Node version is declared: every other
     # workflow step that needs Node/npm relies on what this step installed instead of pinning
-    # its own `node-version`.
+    # its own `node-version`. Node stays the runtime for Vitest/jsdom, Vite/VitePress, and npm
+    # Trusted Publishing; Bun (next step) is the package manager and script runner.
     - name: Setup Node.js
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version-file: ".nvmrc"
 
     # Reads the version from root package.json#packageManager.
-    - name: Setup pnpm
-      uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
-      with:
-        install: false
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
-    - name: Get pnpm store path
-      id: pnpm-store
-      shell: bash
-      run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
-
-    - name: Cache pnpm store
+    - name: Cache Bun install
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        path: ${{ steps.pnpm-store.outputs.path }}
-        key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-        restore-keys: ${{ runner.os }}-pnpm-
+        path: ~/.bun/install/cache
+        key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+        restore-keys: ${{ runner.os }}-bun-
 
-    - name: Cache Rush
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: |
-          common/temp/install-run
-          common/temp/pnpm-store
-          ~/.rush
-        key: ${{ runner.os }}-rush-${{ hashFiles('rush.json', 'common/config/rush/pnpm-lock.yaml', 'common/config/rush/pnpm-config.json') }}
-        restore-keys: ${{ runner.os }}-rush-
-
-    - name: Rush Install
-      if: inputs.rush-install == 'true'
+    # `bun ci` refuses to install when bun.lock is out of date or missing: the same
+    # frozen-lockfile guarantee `pnpm install --frozen-lockfile` gave. One install covers
+    # packages/*, demos/*, and repo tooling: the root workspaces glob is the whole registry.
+    - name: Install workspace
+      if: inputs.install == 'true'
       shell: bash
-      run: node common/scripts/install-run-rush.js install
-
-    # Root package.json owns vitest/Biome/VitePress and links packages/* and demos/* as one
-    # pnpm workspace: Rush only manages packages/*.
-    - name: Install root workspace
-      if: inputs.root-install == 'true'
-      shell: bash
-      run: pnpm install --frozen-lockfile
+      run: bun ci
 
     # Pin npm 11: npm 12.0.0 (released 2026-07-08) omits the `sigstore` module from its
     # tarball, breaking OIDC trusted publishing with a misleading ENEEDAUTH (npm/cli#9722).

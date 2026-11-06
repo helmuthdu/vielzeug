@@ -1,20 +1,20 @@
 # `.github/`: CI/CD
 
 Workflow YAML is glue. Every non-trivial release operation is a plain Node module under
-[`scripts/release/`](../scripts/release) with its own tests (`pnpm vitest run scripts/release`);
+[`scripts/release/`](../scripts/release) with its own tests (`bun x vitest run scripts/release`);
 `scripts/release/cli.mjs` is the single entrypoint workflows call. Debug release failures there,
 not in the YAML.
 
 ## Workflows
 
-| File                         | Trigger               | Does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ---------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workflows/ci.yml`           | push `main`, PR       | Build, test (coverage on push), demos, REPL examples, docs build; lint and structure validators; `rush change --verify` on PRs.                                                                                                                                                                                                                                                                                                                                                                                           |
-| `workflows/deploy-docs.yml`  | push `main`, dispatch | Builds packages, docs and demos, deploys to GitHub Pages.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `workflows/publish.yml`      | dispatch              | **The only workflow that publishes.** Applies the CalVer release train (lockstep stamp + changelog entry for every package: full-family publishing: see `RELEASE.md`), push, then publish the whole family as a matrix via `_publish-one.yml` and create the train's single aggregate GitHub release. No mode dropdown: a train always publishes the full family; a partially published train is repaired by re-running the failed publish jobs, or `pnpm release:publish-local` when Actions can't run. `dry-run` input. |
-| `workflows/_publish-one.yml` | `workflow_call`       | Publish + git tag for one package (the matrix body). The train's aggregate GitHub release is created by publish.yml's `train-release` job, not per package.                                                                                                                                                                                                                                                                                                                                                               |
-| `workflows/release.yml`      | dispatch              | Git tags + GitHub release only, for versions published via `pnpm release:publish-local` (which never tags). Scans for "on npm, not yet tagged", tags each, then creates the train's aggregate release; no inputs besides `dry-run`.                                                                                                                                                                                                                                                                                       |
-| `actions/setup/`             | composite             | Node (`.nvmrc`), pnpm (`package.json#packageManager`), caches, `rush install`, root `pnpm install`. Inputs let a job skip installs it doesn't need; `trusted-publishing` pins npm for OIDC.                                                                                                                                                                                                                                                                                                                               |
+| File                         | Trigger               | Does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workflows/ci.yml`           | push `main`, PR       | Build, test (coverage on push), demos, REPL examples, docs build; lint and structure validators; `bun run check:change-files` on PRs.                                                                                                                                                                                                                                                                                                                                                                                        |
+| `workflows/deploy-docs.yml`  | push `main`, dispatch | Builds packages, docs and demos, deploys to GitHub Pages.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `workflows/publish.yml`      | dispatch              | **The only workflow that publishes.** Applies the CalVer release train (lockstep stamp + changelog entry for every package: full-family publishing: see `RELEASE.md`), push, then publish the whole family as a matrix via `_publish-one.yml` and create the train's single aggregate GitHub release. No mode dropdown: a train always publishes the full family; a partially published train is repaired by re-running the failed publish jobs, or `bun run release:publish-local` when Actions can't run. `dry-run` input. |
+| `workflows/_publish-one.yml` | `workflow_call`       | Publish + git tag for one package (the matrix body). The train's aggregate GitHub release is created by publish.yml's `train-release` job, not per package.                                                                                                                                                                                                                                                                                                                                                                  |
+| `workflows/release.yml`      | dispatch              | Git tags + GitHub release only, for versions published via `bun run release:publish-local` (which never tags). Scans for "on npm, not yet tagged", tags each, then creates the train's aggregate release; no inputs besides `dry-run`.                                                                                                                                                                                                                                                                                       |
+| `actions/setup/`             | composite             | Node (`.nvmrc`, the runtime for Vitest/Vite/npm), Bun (`package.json#packageManager`), the Bun install cache, and `bun ci`. The `install` input lets a job skip the install it doesn't need; `trusted-publishing` pins npm for OIDC.                                                                                                                                                                                                                                                                                         |
 
 Dispatched production workflows refuse to run off `main`.
 
@@ -36,20 +36,21 @@ Dispatched production workflows refuse to run off `main`.
    matrix `needs` it, so a full-family train is one approval, not one per package; the matrix
    jobs deliberately do NOT declare the environment. Keep it that way: re-declaring the environment
    on each matrix job reintroduces ~40 approval prompts per train.
-5. **Rush does not run npm `pre*`/`post*` hooks.** Anything a package build needs must be in its
-   `build` script itself (see `@vielzeug/codex`).
+5. **Build prerequisites stay explicit in the `build` script.** Lifecycle `pre*`/`post*` hooks are
+   runner-dependent (Bun runs them for `bun run`, npm only for pack/publish), so anything a
+   package build needs must be a step of its `build` script itself (see `@vielzeug/codex`).
 
 ## Local use
 
 ```bash
-node scripts/release/cli.mjs                          # list subcommands
-DRY_RUN=1 node scripts/release/cli.mjs publish @vielzeug/ore 1.2.3 packages/ore
-node scripts/release/cli.mjs changed-packages         # packages with a pending change file
-DRY_RUN=1 pnpm release:publish-local                  # the publish-missing backfill, from a laptop
-pnpm ci:local                                         # run ci.yml under act (see .actrc)
+bun scripts/release/cli.mjs                          # list subcommands
+DRY_RUN=1 bun scripts/release/cli.mjs publish @vielzeug/ore 1.2.3 packages/ore
+bun scripts/release/cli.mjs changed-packages         # packages with a pending change file
+DRY_RUN=1 bun run release:publish-local                  # the publish-missing backfill, from a laptop
+bun run ci:local                                         # run ci.yml under act (see .actrc)
 ```
 
-`pnpm release:publish-local` is the human-at-a-terminal fallback when `publish.yml` itself
+`bun run release:publish-local` is the human-at-a-terminal fallback when `publish.yml` itself
 can't run. Its header comment (`scripts/release/local-publish.mjs`) and
 `scripts/release/npm-publish.mjs` cover npm auth, `--otp`, `--interactive` (WebAuthn) and why
 you want an Automation/Granular token for more than a package or two. Tag afterwards by

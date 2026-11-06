@@ -19,7 +19,7 @@ The cost is honest and mechanical: most publishes in a train carry no code chang
 ## Releasing a train
 
 1. Land changes. Every publishable package that changed carries a change file:
-   `node scripts/rush-change.mjs <pkg> <patch|minor|major> "<message>"`.
+   `bun scripts/change.mjs <pkg> <patch|minor|major> "<message>"`.
    The type only picks the changelog section: it never touches the version.
 2. Dispatch the **Publish** workflow (`publish.yml`). It applies the train: stamps every manifest with the train number and writes a CHANGELOG entry for every package (alignment-only where there is no change file), consumes the riders' change files in one commit: then verifies every packed package, publishes the full family as a matrix, tags each published version, and creates the train's single aggregate GitHub release. CI details: `.github/AGENTS.md`.
 
@@ -27,7 +27,7 @@ Dispatching `publish.yml` is the only release path. There is no per-package mode
 
 If a train's publish matrix fails partway — some packages on npm, others not — re-run the failed publish jobs from the Actions UI: each one skips a version that is already on npm, so a retry only publishes what is still missing. (Re-running the _whole_ workflow does not work: the train commit already consumed the change files.)
 
-When Actions itself is unavailable, `pnpm release:publish-local` (`scripts/release/local-publish.mjs`) runs the same backfill from a laptop: it publishes every `@vielzeug/*` version whose CHANGELOG entry exists but which is absent from npm, refuses a package whose dependency pin is neither in the same batch nor already on npm (`dangling-pins.mjs`), and shares the tested `publishMissing()` implementation with the CLI. Afterwards dispatch `release.yml` to land any missing tags and the aggregate release.
+When Actions itself is unavailable, `bun run release:publish-local` (`scripts/release/local-publish.mjs`) runs the same backfill from a laptop: it publishes every `@vielzeug/*` version whose CHANGELOG entry exists but which is absent from npm, refuses a package whose dependency pin is neither in the same batch nor already on npm (`dangling-pins.mjs`), and shares the tested `publishMissing()` implementation with the CLI. Afterwards dispatch `release.yml` to land any missing tags and the aggregate release.
 
 ## Releases and tags
 
@@ -46,7 +46,7 @@ The first CalVer train (`26.10.0`) was an epoch: every publishable package carri
 ## Local use
 
 ```sh
-node scripts/release/cli.mjs changed-packages      # packages with a pending change file
-DRY_RUN=1 node scripts/release/cli.mjs apply       # print the next train number, touch nothing
-pnpm release:publish-local                          # laptop fallback, see scripts/release/local-publish.mjs
+bun scripts/release/cli.mjs changed-packages      # packages with a pending change file
+DRY_RUN=1 bun scripts/release/cli.mjs apply       # print the next train number, touch nothing
+bun run release:publish-local                          # laptop fallback, see scripts/release/local-publish.mjs
 ```

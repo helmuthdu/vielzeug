@@ -5,13 +5,13 @@ Vielzeug CRM is a fictional B2B sales workspace built to show how small `@vielze
 ## Running it
 
 ```bash
-pnpm install
-pnpm dev
-pnpm dev:local       # resolve @vielzeug/* directly to sibling package source
-pnpm build
-pnpm build:local
-pnpm test
-pnpm test:e2e
+bun install
+bun run dev
+bun run dev:local       # resolve @vielzeug/* directly to sibling package source
+bun run build
+bun run build:local
+bun run test
+bun run test:e2e
 ```
 
 ## Design direction

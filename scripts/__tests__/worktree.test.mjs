@@ -128,7 +128,7 @@ describe('describeCoupling() / isIndependent() / formatDep()', () => {
 // Flag parsing itself (--branch=<name>, bare --force) is covered by scripts/lib/__tests__/cli.test.mjs
 //: worktree.mjs's own main() just wires parseArgs()'s output into cmdAdd(), tested below.
 
-describe('cmdAdd(): dependency-graph gating, with a fake runner (no real git/rush spawned)', () => {
+describe('cmdAdd(): dependency-graph gating, with a fake runner (no real git/bun spawned)', () => {
   function fakeRun() {
     const calls = [];
     const run = (cmd, args, cwd) => calls.push({ args, cmd, cwd });
@@ -155,7 +155,7 @@ describe('cmdAdd(): dependency-graph gating, with a fake runner (no real git/rus
       created: true,
       dir: expect.stringContaining('.worktrees/ripple'),
     });
-    expect(calls.map((c) => c.cmd)).toEqual(['git', 'git', 'rush']);
+    expect(calls.map((c) => c.cmd)).toEqual(['git', 'git', 'bun']);
     expect(calls[0].args).toEqual(['worktree', 'prune']);
     expect(calls[1].args).toEqual([
       'worktree',
@@ -164,14 +164,15 @@ describe('cmdAdd(): dependency-graph gating, with a fake runner (no real git/rus
       '-b',
       'test-branch',
     ]);
-    expect(calls[2].args).toEqual(['install', '--to', 'ripple']);
+    expect(calls[2].args).toEqual(['install']);
+    expect(calls[2].cwd).toEqual(expect.stringContaining('.worktrees/ripple'));
   });
 
   it('proceeds for an independent package without needing --force', () => {
     const { calls, run } = fakeRun();
     const result = cmdAdd(leafPkg, { run });
     expect(result.created).toBe(true);
-    expect(calls.map((c) => c.cmd)).toEqual(['git', 'git', 'rush']);
+    expect(calls.map((c) => c.cmd)).toEqual(['git', 'git', 'bun']);
   });
 
   it('generates a timestamped branch name when none is given', () => {

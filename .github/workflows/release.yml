@@ -1,6 +1,6 @@
 name: Release (git tags + GitHub release only)
 
-# Backfill for versions published outside publish.yml: normally `pnpm release:publish-local`
+# Backfill for versions published outside publish.yml: normally `bun run release:publish-local`
 # (scripts/release/local-publish.mjs), which deliberately never tags so a stale local clone
 # can't push a wrong tag. Scans every publishable package whose committed version is on npm but
 # not yet tagged, tags each, then creates the train's single aggregate GitHub release. Never
@@ -44,12 +44,11 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          root-install: "false"
-          rush-install: "false"
+          install: "false"
 
       - id: plan
         run: |
-          PLAN=$(node scripts/release/cli.mjs release-plan)
+          PLAN=$(bun scripts/release/cli.mjs release-plan)
           echo "matrix={\"include\":${PLAN}}" >> "$GITHUB_OUTPUT"
           [ "$PLAN" = "[]" ] && echo "has-releases=false" >> "$GITHUB_OUTPUT" || echo "has-releases=true" >> "$GITHUB_OUTPUT"
 
@@ -68,13 +67,12 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          root-install: "false"
-          rush-install: "false"
+          install: "false"
 
       - name: Tag the published version
         env:
           DRY_RUN: ${{ inputs.dry-run && '1' || '' }}
-        run: node scripts/release/cli.mjs tag "${{ matrix.package }}" "${{ matrix.version }}"
+        run: bun scripts/release/cli.mjs tag "${{ matrix.package }}" "${{ matrix.version }}"
 
   # One aggregate GitHub release per train (git-tag.mjs), after every package tag is pushed.
   # Runs even when the tag matrix was empty (createTrainRelease is idempotent on the train
@@ -97,8 +95,7 @@ jobs:
 
       - uses: ./.github/actions/setup
         with:
-          root-install: "false"
-          rush-install: "false"
+          install: "false"
 
       - name: Create the aggregate train release
-        run: node scripts/release/cli.mjs train-release
+        run: bun scripts/release/cli.mjs train-release

@@ -43,21 +43,21 @@ Without `--target`, the first existing directory among `.agents/skills`, `.githu
 Requires Node 22+ and root setup:
 
 ```sh
-pnpm setup
+bun install
 cd packages/codex
-pnpm test:unit
-pnpm test:integration
-pnpm dev
+bun run test:unit
+bun run test:integration
+bun run dev
 ```
 
 `test:unit` uses fixtures only. `test:integration` regenerates a current snapshot then checks real monorepo inputs.
 
-`pnpm dev` watches documentation and package inputs, atomically publishes snapshots, then restarts server when snapshot changes.
+`bun run dev` watches documentation and package inputs, atomically publishes snapshots, then restarts server when snapshot changes.
 
 ## Debugging
 
 ```sh
-pnpm dev
+bun run dev
 node src/cli.ts --port=3100 --debug
 curl http://127.0.0.1:3100/health
 ```
@@ -94,4 +94,4 @@ await server.connect(new StdioServerTransport());
 - Pass `validateContents: true` to `loadSnapshot()` for artifact verification; normal startup keeps package chunks lazy.
 - Return a fresh configured server from `startHttpHost`'s `createServer` factory.
 - Keep HTTP local. Use stdio for normal client integration.
-- Run `pnpm test:unit` before `pnpm test:integration`.
+- Run `bun run test:unit` before `bun run test:integration`.

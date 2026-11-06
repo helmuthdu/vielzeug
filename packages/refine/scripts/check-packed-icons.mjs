@@ -13,12 +13,17 @@ const packedPackage = join(consumerRoot, 'node_modules/@vielzeug/refine');
 const bundleDir = join(consumerRoot, 'bundle');
 const workspaceRoot = resolve(packageRoot, '../..');
 const require = createRequire(import.meta.url);
+// The consumer fixture and tsc must run under Node: the runtime a real `npm install` consumer
+// uses, and the one this gate exists to verify against (the fixture hooks resolution through
+// `module.registerHooks`, which is Node-only). Under `bun run check:packed-icons`,
+// process.execPath is the bun binary, so pin node explicitly rather than following the parent.
+const node = 'node';
 
 function pack(folder) {
   const before = new Set(readdirSync(archiveDir));
   const manifest = JSON.parse(readFileSync(join(folder, 'package.json'), 'utf8'));
   if (manifest.name.startsWith('@vielzeug/')) {
-    execFileSync('pnpm', ['pack', '--pack-destination', archiveDir], { cwd: folder, stdio: 'pipe' });
+    execFileSync('bun', ['pm', 'pack', '--destination', archiveDir], { cwd: folder, stdio: 'pipe' });
   } else {
     // Snapshot installed distributions without running third-party prepare scripts.
     const snapshot = join(tempRoot, 'snapshot');
@@ -49,6 +54,19 @@ function install(dependencies) {
   });
 }
 
+function installedDependencyRoot(fromFolder, name) {
+  let dependencyRoot = dirname(createRequire(join(fromFolder, 'package.json')).resolve(name));
+  while (
+    !existsSync(join(dependencyRoot, 'package.json')) ||
+    JSON.parse(readFileSync(join(dependencyRoot, 'package.json'), 'utf8')).name !== name
+  ) {
+    const parent = dirname(dependencyRoot);
+    if (parent === dependencyRoot) throw new Error(`Cannot locate installed dependency: ${name}`);
+    dependencyRoot = parent;
+  }
+  return dependencyRoot;
+}
+
 try {
   mkdirSync(archiveDir, { recursive: true });
   mkdirSync(consumerRoot, { recursive: true });
@@ -63,16 +81,7 @@ try {
       if (name.startsWith('@vielzeug/')) {
         packWorkspace(join(workspaceRoot, 'packages', name.slice('@vielzeug/'.length)));
       } else if (manifest.dependencies?.[name]) {
-        let dependencyRoot = dirname(createRequire(join(folder, 'package.json')).resolve(name));
-        while (
-          !existsSync(join(dependencyRoot, 'package.json')) ||
-          JSON.parse(readFileSync(join(dependencyRoot, 'package.json'), 'utf8')).name !== name
-        ) {
-          const parent = dirname(dependencyRoot);
-          if (parent === dependencyRoot) throw new Error(`Cannot locate installed dependency: ${name}`);
-          dependencyRoot = parent;
-        }
-        packWorkspace(dependencyRoot);
+        packWorkspace(installedDependencyRoot(folder, name));
       }
     }
   };
@@ -93,11 +102,12 @@ import assert from 'node:assert/strict';
 import { createRequire, registerHooks } from 'node:module';
 import { JSDOM } from ${JSON.stringify(require.resolve('jsdom'))};
 const { window } = new JSDOM('', { url: 'http://localhost' });
-for (const key of ['window', 'document', 'customElements', 'HTMLElement', 'Element', 'Document', 'ShadowRoot', 'Node', 'MutationObserver', 'CustomEvent', 'DOMParser']) {
+for (const key of ['window', 'document', 'customElements', 'HTMLElement', 'Element', 'Document', 'ShadowRoot', 'Node', 'MutationObserver', 'CustomEvent', 'DOMParser', 'CSSStyleSheet']) {
   globalThis[key] = key === 'window' ? window : window[key];
 }
-// This fixture verifies SVG/runtime wiring, not stylesheet layout.
-globalThis.CSSStyleSheet = class { replaceSync() {} };
+// jsdom 31 brand-checks adoptedStyleSheets entries, so the fixture must adopt
+// jsdom's real constructable CSSStyleSheet (replaceSync works); a stub class
+// fails the setter's type check. Stylesheet layout is still not verified here.
 const withoutLucide = process.argv[2] === 'without';
 const require = createRequire(import.meta.url);
 const load = process.argv[3] === 'cjs' ? (specifier) => require(specifier) : (specifier) => import(specifier);
@@ -143,7 +153,7 @@ if (!withoutLucide) {
 }
 `);
   for (const format of ['esm', 'cjs']) {
-    execFileSync(process.execPath, ['verify.mjs', 'without', format], { cwd: consumerRoot, stdio: 'inherit' });
+    execFileSync(node, ['verify.mjs', 'without', format], { cwd: consumerRoot, stdio: 'inherit' });
   }
 
   await build({
@@ -203,16 +213,16 @@ mdiIcons({ Home: 'M0 0h24' });
       compilerOptions: { ...options, ignoreDeprecations: '6.0', noEmit: true, skipLibCheck: true, strict: true, target: 'ES2022' },
       files: ['adapters.ts'],
     }));
-    execFileSync(process.execPath, [join(workspaceRoot, 'node_modules/typescript/bin/tsc'), '-p', `${name}.json`], {
+    execFileSync(node, [join(workspaceRoot, 'node_modules/typescript/bin/tsc'), '-p', `${name}.json`], {
       cwd: consumerRoot,
       stdio: 'inherit',
     });
   }
 
-  dependencies.lucide = `file:${pack(resolve(packageRoot, 'node_modules/lucide'))}`;
+  dependencies.lucide = `file:${pack(installedDependencyRoot(packageRoot, 'lucide'))}`;
   install(dependencies);
   for (const format of ['esm', 'cjs']) {
-    execFileSync(process.execPath, ['verify.mjs', 'with', format], { cwd: consumerRoot, stdio: 'inherit' });
+    execFileSync(node, ['verify.mjs', 'with', format], { cwd: consumerRoot, stdio: 'inherit' });
   }
 
   process.stdout.write('Packed core and structural adapters install/run without Lucide; explicit full-set registration runs with the installed optional peer. Exports and type mappings exist; production core retains defaults.\n');

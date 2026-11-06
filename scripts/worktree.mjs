@@ -13,7 +13,7 @@
 //
 // The dependency graph is computed from packages/*/package.json at run time
 //, not from .agents/reference/packages.md's human-readable table. That table is
-// generated from the same manifests (kept current via `pnpm check:ai-data`),
+// generated from the same manifests (kept current via `bun run check:ai-data`),
 // but reading package.json directly here avoids a dependency on that
 // generated-file step ever staying in sync.
 //
@@ -30,9 +30,9 @@
 // exclusion; there is no way to enforce that from here, only to document it.
 //
 // Usage:
-//   node scripts/worktree.mjs add <pkg> [--branch=<name>] [--force]
-//   node scripts/worktree.mjs list
-//   node scripts/worktree.mjs remove <pkg>
+//   bun scripts/worktree.mjs add <pkg> [--branch=<name>] [--force]
+//   bun scripts/worktree.mjs list
+//   bun scripts/worktree.mjs remove <pkg>
 
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -71,7 +71,7 @@ export const formatDep = ({ name, optional }) => (optional ? `${name} (optional)
 
 // ---------------------------------------------------------------------------
 // Commands: `run` is injectable so tests can assert on invocations without
-// spawning real git/rush processes.
+// spawning real git/bun processes.
 // ---------------------------------------------------------------------------
 
 export function defaultRun(cmd, args, cwd) {
@@ -112,7 +112,7 @@ export function cmdAdd(pkgName, { branch, force = false, root = ROOT, run = defa
 
   if (existsSync(dir)) {
     throw new Error(
-      `${dir} already exists: remove it first (\`pnpm worktree:remove ${pkgName}\`) or pick a different package`,
+      `${dir} already exists: remove it first (\`bun run worktree:remove ${pkgName}\`) or pick a different package`,
     );
   }
 
@@ -130,7 +130,11 @@ export function cmdAdd(pkgName, { branch, force = false, root = ROOT, run = defa
     throw new Error(`git worktree add failed: ${err.message}`, { cause: err });
   }
 
-  run('rush', ['install', '--to', pkgName], dir);
+  // Installs the whole workspace inside the worktree: Bun's workspace install is
+  // root-level, and `worktree:add` only allows independent packages anyway, so the
+  // extra packages cost one cached install and buy a working checkout for every
+  // root script (lint, test, biome) without a per-package install mode.
+  run('bun', ['install'], dir);
 
   console.log(`\nWorktree ready: ${dir} (branch ${branchName})`);
   console.log(`  cd ${dir}`);
@@ -158,7 +162,7 @@ function main(argv) {
 
   switch (command) {
     case 'add': {
-      if (!pkgName) throw new Error('Usage: node scripts/worktree.mjs add <pkg> [--branch=<name>] [--force]');
+      if (!pkgName) throw new Error('Usage: bun scripts/worktree.mjs add <pkg> [--branch=<name>] [--force]');
       const result = cmdAdd(pkgName, { branch: flags.branch, force: Boolean(flags.force) });
       if (!result.created) process.exitCode = 1;
       return;
@@ -166,10 +170,10 @@ function main(argv) {
     case 'list':
       return cmdList();
     case 'remove':
-      if (!pkgName) throw new Error('Usage: node scripts/worktree.mjs remove <pkg>');
+      if (!pkgName) throw new Error('Usage: bun scripts/worktree.mjs remove <pkg>');
       return cmdRemove(pkgName);
     default:
-      throw new Error(`Unknown command "${command ?? ''}". Usage: node scripts/worktree.mjs <add|list|remove> [pkg]`);
+      throw new Error(`Unknown command "${command ?? ''}". Usage: bun scripts/worktree.mjs <add|list|remove> [pkg]`);
   }
 }
 

@@ -1,4 +1,4 @@
-// .ts extension required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
+// Explicit .ts import extensions are the repo convention for these scripts (run directly under bun, never compiled by tsc).
 /**
  * Extracts exported declaration text from a package's src/index.ts (and everything it
  * re-exports via `export * from './x'`, followed recursively: most vielzeug packages are

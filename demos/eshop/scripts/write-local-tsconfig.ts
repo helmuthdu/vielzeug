@@ -1,4 +1,4 @@
-#!/usr/bin/env node --experimental-strip-types
+#!/usr/bin/env bun
 // Generates tsconfig.local-dev.json: the same '@vielzeug/*' -> local-source mapping
 // vite.config.ts applies for bundling (see collectLocalPackageMap() in ./local-packages.ts),
 // but as tsc `paths`, since tsc has its own module resolution and never sees Vite's aliases.
@@ -7,7 +7,7 @@
 // instead. That mismatch is exactly what broke this demo after an unpublished ore API change:
 // Vite happily bundled the new API, but `tsc` still failed against the old published types.
 //
-// Only ever run explicitly via `pnpm build:local`: never wired into the default `build` script,
+// Only ever run explicitly via `bun run build:local`: never wired into the default `build` script,
 // which must keep type-checking against the real, portable, publishable dependency set.
 import { globSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';

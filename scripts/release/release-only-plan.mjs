@@ -1,6 +1,6 @@
 /**
  * Plan for `release.yml`: every non-private @vielzeug/* package whose current
- * package.json version is already on npm (published some other way: typically `pnpm
+ * package.json version is already on npm (published some other way: typically `bun run
  * release:publish-local`, see that script's header comment) but doesn't have a git tag yet.
  *
  * Mirrors `release-plan.mjs`'s "filter before building the matrix" shape so the Actions UI

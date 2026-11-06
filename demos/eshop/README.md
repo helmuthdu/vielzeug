@@ -16,13 +16,13 @@ Sport, the performance line; "Volt" = the EV line) are invented for this demo. P
 ## Running it
 
 ```bash
-pnpm install
-pnpm dev            # workspace package builds
-pnpm dev:local       # VIELZEUG_LOCAL_DEV=1: resolves @vielzeug/* directly to sibling packages/ source
-pnpm build && pnpm preview
-pnpm build:local     # type-check and bundle against sibling package source
-pnpm test
-pnpm test:e2e        # desktop and mobile storefront regression tests
+bun install
+bun run dev            # workspace package builds
+bun run dev:local       # VIELZEUG_LOCAL_DEV=1: resolves @vielzeug/* directly to sibling packages/ source
+bun run build && bun run preview
+bun run build:local     # type-check and bundle against sibling package source
+bun run test
+bun run test:e2e        # desktop and mobile storefront regression tests
 ```
 
 ## Design direction

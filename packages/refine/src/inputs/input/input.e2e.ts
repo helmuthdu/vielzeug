@@ -3,7 +3,7 @@
  * jsdom can't compute: plus CSS layout regressions jsdom can't catch either (no real box model,
  * `@layer` blocks silently dropped). Complements `input.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
+ * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

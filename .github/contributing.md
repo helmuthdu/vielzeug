@@ -12,15 +12,14 @@ Thanks for your interest in contributing! This guide covers the mechanics of get
 
 ## Setup
 
-**Prerequisites:** Node 22+ (`.nvmrc`), pnpm 10+ (`npm install -g pnpm`).
+**Prerequisites:** Node 22+ (`.nvmrc`, the runtime for Vitest/Vite/npm), Bun (`brew install oven-sh/bun/bun` or `curl -fsSL https://bun.sh/install | bash`).
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/vielzeug.git
 cd vielzeug
-pnpm setup   # rush install: installs all package dependencies
-pnpm install # root workspace: vitest, Biome, VitePress (Rush covers packages/* only)
-pnpm build   # rush build: build every package
-pnpm test    # verify the setup works
+bun install      # one workspace install: packages/*, demos/*, and repo tooling
+bun run build    # build every package
+bun run test     # verify the setup works
 ```
 
 ## Making a Change
@@ -34,13 +33,13 @@ pnpm test    # verify the setup works
    git checkout -b fix/<package>-short-description
    ```
 
-3. **Edit code** in `packages/<name>/`. Run `pnpm --filter @vielzeug/<name> fix` (or `pnpm fix` at the root) instead of hand-formatting or hand-sorting imports: Biome owns those safe fixes. Add or update tests in `packages/<name>/src/__tests__/`.
+3. **Edit code** in `packages/<name>/`. Run `bun run --filter @vielzeug/<name> fix` (or `bun run fix` at the root) instead of hand-formatting or hand-sorting imports: Biome owns those safe fixes. Add or update tests in `packages/<name>/src/__tests__/`.
 
-4. **Add a change file.** Every PR that touches a package's published output needs one: CI (`rush change --verify`) fails without it:
+4. **Add a change file.** Every PR that touches a package's published output needs one: CI (`bun run check:change-files`) fails without it:
 
    ```bash
-   node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"
-   # e.g.: node scripts/rush-change.mjs vault minor "feat: add TTL support for records"
+   bun scripts/change.mjs <name> <patch|minor|major> "<message>"
+   # e.g.: bun scripts/change.mjs vault minor "feat: add TTL support for records"
    ```
 
    Use `patch` for fixes, `minor` for new features, `major` for breaking changes. Skip this step for docs-only or CI-only changes.
@@ -49,10 +48,10 @@ pnpm test    # verify the setup works
 
    ```bash
    cd packages/<name>
-   pnpm test && pnpm lint && pnpm build
+   bun run test && bun run lint && bun run build
    ```
 
-   (Root-level `pnpm test` / `pnpm lint` / `pnpm build` also work but run the whole monorepo.)
+   (Root-level `bun run test` / `bun run lint` / `bun run build` also work but run the whole monorepo.)
 
 ## Commit & Pull Request
 

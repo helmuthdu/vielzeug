@@ -13,7 +13,7 @@ You need inspect MCP tools and verify local snapshot server.
 
 ```sh
 cd packages/codex
-pnpm build
+bun run build
 npx @modelcontextprotocol/inspector node dist/cli.js
 ```
 

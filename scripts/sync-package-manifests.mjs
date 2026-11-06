@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { isMain } from './lib/cli.mjs';
+import { isMain, parseArgs } from './lib/cli.mjs';
 import { normalizePackageManifest, syncPackageLicenseFiles } from './lib/package-manifest.mjs';
 
 const root = new URL('..', import.meta.url).pathname;
@@ -48,7 +48,8 @@ export function syncPackageManifests({ check = false, packagesDir = packages, ro
 }
 
 if (isMain(import.meta.url)) {
-  const check = process.argv.includes('--check');
+  const { flags } = parseArgs(process.argv.slice(2));
+  const check = Boolean(flags.check);
 
   try {
     syncPackageManifests({ check });

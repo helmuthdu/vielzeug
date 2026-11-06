@@ -19,8 +19,6 @@ afterEach(() => {
  */
 function makeRepo(edges) {
   root = mkdtempSync(path.join(tmpdir(), 'dangling-pins-test-'));
-  const projects = Object.keys(edges).map((slug) => ({ packageName: `@vielzeug/${slug}`, projectFolder: `packages/${slug}` }));
-  writeFileSync(path.join(root, 'rush.json'), JSON.stringify({ projects }));
 
   for (const [slug, deps] of Object.entries(edges)) {
     const dir = path.join(root, 'packages', slug);

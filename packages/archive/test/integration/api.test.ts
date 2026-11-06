@@ -1,8 +1,9 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { createWriteStream, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { request as httpRequest } from 'node:http';
+import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { SignJWT } from 'jose';
 import { afterAll, beforeAll, describe, expect, it, type MockInstance, vi } from 'vitest';
 import { type RecipePayload, recipeCollection } from './fixture-collection';
@@ -24,7 +25,13 @@ import { type IssuerHandle, startIssuer } from './issuer';
  */
 const PKG = resolve(__dirname, '../..');
 const RUNTIME = resolve(PKG, 'node_modules/.cache/archive-integration/test-runtime');
-const WRANGLER = resolve(PKG, 'node_modules/wrangler/bin/wrangler.js');
+// Layout-independent: resolve the installed wrangler entry (its bin is not an
+// exports subpath) and walk up to the package's bin script.
+const WRANGLER = join(
+  dirname(dirname(createRequire(resolve(PKG, 'package.json')).resolve('wrangler'))),
+  'bin',
+  'wrangler.js',
+);
 
 let ISSUER_PORT = 0;
 let ISSUER_URL = '';

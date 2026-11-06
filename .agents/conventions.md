@@ -158,7 +158,7 @@ packages/<name>/src/
 
 ## New packages
 
-Create a package with `pnpm new:package <name> "<description>"` (`scripts/new-package.mjs`). It writes the standard config files, the manifest (shared `devDependencies` come from `coins`), README, source and test stubs, the four `docs/<name>/` pages and one recipe, registers the project in `rush.json`, and refreshes generated data. Do not hand-create the scaffold; if the standard shape changes, change the script.
+Create a package with `bun run new:package <name> "<description>"` (`scripts/new-package.mjs`). It writes the standard config files, the manifest (shared `devDependencies` come from `coins`), README, source and test stubs, the four `docs/<name>/` pages and one recipe, and refreshes generated data. The new directory joins the workspace through the root `workspaces` glob: there is no project registry to register in. Do not hand-create the scaffold; if the standard shape changes, change the script.
 
 Do not hand-edit docs alias maps or generated package lists; `scripts/vielzeug-packages.ts` derives them from valid package directories.
 

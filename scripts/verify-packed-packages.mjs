@@ -17,21 +17,25 @@ import {
   targetPaths,
 } from './lib/packed-package-model.mjs';
 import { packPublishedPackage } from './release/pack-published.mjs';
+import { listWorkspacePackages } from './release/workspace.mjs';
 
 const execute = promisify(execFile);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const requireFromRoot = createRequire(join(root, 'package.json'));
 const jsdom = requireFromRoot.resolve('jsdom');
 const typeScript = join(root, 'node_modules', 'typescript', 'bin', 'tsc');
+// The consumer fixtures and tsc must run under Node: the runtime real `npm install`
+// consumers use and the one this gate exists to verify against. Under `bun run
+// verify:packed`, process.execPath is the bun binary, so pin to node explicitly
+// rather than following the parent's interpreter.
+const node = 'node';
 
 function readPackage(folder) {
   return JSON.parse(readFileSync(join(folder, 'package.json'), 'utf8'));
 }
 
 function projectMap() {
-  const rush = JSON.parse(readFileSync(join(root, 'rush.json'), 'utf8'));
-
-  return new Map(rush.projects.map(({ packageName, projectFolder }) => [packageName, resolve(root, projectFolder)]));
+  return new Map(listWorkspacePackages(root).map(({ name, folder }) => [name, resolve(root, folder)]));
 }
 
 async function verifyManifest(manifest, installedRoot) {
@@ -69,8 +73,8 @@ async function verifyRuntime(manifest, fixture) {
   await writeFile(join(fixture, 'dom.cjs'), harness);
   if (esm.length > 0) await writeFile(join(fixture, 'esm.mjs'), `await Promise.all(${JSON.stringify(esm)}.map((specifier) => import(specifier)));\n`);
   if (cjs.length > 0) await writeFile(join(fixture, 'cjs.cjs'), `for (const specifier of ${JSON.stringify(cjs)}) require(specifier);\n`);
-  if (esm.length > 0) await execute(process.execPath, ['--require', './dom.cjs', 'esm.mjs'], { cwd: fixture });
-  if (cjs.length > 0) await execute(process.execPath, ['--require', './dom.cjs', 'cjs.cjs'], { cwd: fixture });
+  if (esm.length > 0) await execute(node, ['--require', './dom.cjs', 'esm.mjs'], { cwd: fixture });
+  if (cjs.length > 0) await execute(node, ['--require', './dom.cjs', 'cjs.cjs'], { cwd: fixture });
 }
 
 async function verifyTypes(manifest, fixture) {
@@ -93,7 +97,7 @@ async function verifyTypes(manifest, fixture) {
         files: [`${name}.ts`],
       }),
     );
-    await execute(process.execPath, [typeScript, '--project', `${name}.json`], { cwd: fixture });
+    await execute(node, [typeScript, '--project', `${name}.json`], { cwd: fixture });
   }
 }
 

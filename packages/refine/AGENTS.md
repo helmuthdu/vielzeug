@@ -8,7 +8,7 @@ Accessible, themeable web components built on `ore`. Largest package; one custom
 - **Ore IIFE boundary**: Refine imports all Ore runtime APIs from `@vielzeug/ore`, which the bundle config externalizes as the single `'Ore'` global. Do not reintroduce Ore runtime sub-path imports: an unexternalized sub-path can inline a second runtime whose lifecycle hooks are disconnected from `window.Ore`.
 - **Family adapters are pure named-map converters.** `./icons/heroicons`, `./icons/tabler`, and `./icons/mdi` accept caller-supplied individual Iconify-format data, not framework components. They share the private `_iconify-map.ts` helper and the generic converter's validation; do not bundle data packs, add provider dependencies, or auto-register. Caller keys stay unchanged. Collections and aliases remain the `iconifyIcons` contract.
 - **Per-component sub-path exports are generated, not hand-edited.** The `exports` map in `package.json` is driven by `packages/refine/scripts/refine-manifest.mjs`:
-  - `pnpm --filter @vielzeug/refine run sync:exports` regenerates the export map after adding/renaming/moving a component.
+  - `bun run --filter @vielzeug/refine sync:exports` regenerates the export map after adding/renaming/moving a component.
   - `check:manifest` runs in `build` and fails if exports are out of sync: run `sync:exports` to fix.
 - **A component that renders another component must TAG re-export it, never bare-import it.** The per-entry library build (Rolldown, `preserveModules`, 72+ entries) silently drops side-effect-only imports _between entry modules_, so `import '../icon/icon';` ships a sub-path that never registers its child. Write `export { ICON_TAG } from '../icon/icon';` instead: bindings survive cross-entry chunking, so importing the parent registers the child. Same-directory absorbed modules (`carousel-slide`, `datagrid-column`) are _not_ entries and bare-import fine. `check:cross-entry` runs in `build` and fails on both regressions: a bare entry import in `src/`, or a re-export whose link did not survive into `dist/`.
 - Build also emits a Custom Elements Manifest (`dist/custom-elements.json`) via `analyze`, and copies `src/styles/*.css` to `dist/styles`. CSS ships through the `./styles*` exports.
@@ -21,23 +21,23 @@ Accessible, themeable web components built on `ore`. Largest package; one custom
 
 Two test layers cover different concerns.
 
-### Layer 1: jsdom (vitest, `pnpm test`)
+### Layer 1: jsdom (vitest, `bun run test`)
 
 - Each component test calls the global `axeCheck(element)` helper (`vitest.setup.ts`) and asserts **zero violations**. It runs `wcag2a/2aa/best-practice` but **disables layout/style-dependent rules** (`color-contrast`, `target-size`, `scrollable-region-focusable`, …) that jsdom cannot compute: do **not** re-enable them in jsdom tests.
 - Assert roles, names, and ARIA state with `@vielzeug/assay` and keyboard/focus behaviour through the component's visible DOM contract.
 - Why jsdom can't do more: no CSS box model, `getComputedStyle` is stubbed, `@layer` blocks are silently dropped.
 
-### Layer 2: real browser (Playwright, `pnpm test:e2e`)
+### Layer 2: real browser (Playwright, `bun run test:e2e`)
 
-**Co-located next to the component**, same convention as jsdom `*.test.ts` files: `src/<category>/<component>/<component>.e2e.ts`. No dev server needed: loads the built IIFE stack via `page.setContent()`. Requires a prior `pnpm run build:e2e` (refine's own IIFE bundle + `dist/styles`; ~1s, no type/manifest/packed gates). Use the full `pnpm build` when the run validates the shipped artifact itself (types, CEM, per-entry dist) or when dependency packages changed.
+**Co-located next to the component**, same convention as jsdom `*.test.ts` files: `src/<category>/<component>/<component>.e2e.ts`. No dev server needed: loads the built IIFE stack via `page.setContent()`. Requires a prior `bun run build:e2e` (refine's own IIFE bundle + `dist/styles`; ~1s, no type/manifest/packed gates). Use the full `bun run build` when the run validates the shipped artifact itself (types, CEM, per-entry dist) or when dependency packages changed.
 
 Follow root Build Scheduling: iterate with focused jsdom tests and the source-backed docs preview, then build Refine once after the implementation changes and batch the affected e2e files against that output. Do not build once per component or test file. E2E-test-only edits can reuse that build; changes to bundled source/styles or consumed dependency artifacts require a fresh build before the next e2e run. If an earlier dist-backed check is necessary, explain why before building; never substitute a stale-dist test pass for validation of source edits.
 
 ```bash
 cd packages/refine
-pnpm test:e2e                                      # run all e2e tests
-pnpm test:e2e src/content/list/list.e2e.ts          # one component's e2e file
-pnpm test:e2e -g "Accessibility"                    # every a11y describe block, any component
+bun run test:e2e                                      # run all e2e tests
+bun run test:e2e src/content/list/list.e2e.ts          # one component's e2e file
+bun run test:e2e -g "Accessibility"                    # every a11y describe block, any component
 ```
 
 Each `*.e2e.ts` file groups its tests into `describe('Accessibility', ...)` / `describe('Interaction', ...)` / `describe('Layout', ...)` / `describe('Selection', ...)` etc. as needed: not every component needs every category, and multi-part components (`ore-list` + `ore-list-item`) share one file per the parent folder (`list.e2e.ts` covers both).
@@ -114,7 +114,7 @@ Create it under the right category folder, then run `sync:exports` so its sub-pa
 
 ## Verification
 
-- **Unit/component tests** (jsdom): `pnpm vitest run packages/refine/src/` or `pnpm --filter @vielzeug/refine test`. Tests are **co-located** next to components (`src/<category>/<component>/<component>.test.ts`) plus shared suites under `src/core/__tests__/` and `src/inputs/__tests__/`. The `.../src/__tests__/` path used by other packages misses most refine tests.
-- **E2E tests** (Playwright/Chromium): `pnpm --filter @vielzeug/refine test:e2e`. Requires a built dist (`pnpm --filter @vielzeug/refine build` first). Co-located next to components as `src/<category>/<component>/<component>.e2e.ts`; shared harness lives in `src/testing/fixtures.ts`.
-- Lint: `pnpm --filter @vielzeug/refine lint` (`biome ci src`). This checks TypeScript and CSS in Refine source.
-- Build (includes `sync:exports` + `check:manifest` + manifest analyze): `pnpm --filter @vielzeug/refine build`
+- **Unit/component tests** (jsdom): `bun x vitest run packages/refine/src/` or `bun run --filter @vielzeug/refine test`. Tests are **co-located** next to components (`src/<category>/<component>/<component>.test.ts`) plus shared suites under `src/core/__tests__/` and `src/inputs/__tests__/`. The `.../src/__tests__/` path used by other packages misses most refine tests.
+- **E2E tests** (Playwright/Chromium): `bun run --filter @vielzeug/refine test:e2e`. Requires a built dist (`bun run --filter @vielzeug/refine build` first). Co-located next to components as `src/<category>/<component>/<component>.e2e.ts`; shared harness lives in `src/testing/fixtures.ts`.
+- Lint: `bun run --filter @vielzeug/refine lint` (`biome ci src`). This checks TypeScript and CSS in Refine source.
+- Build (includes `sync:exports` + `check:manifest` + manifest analyze): `bun run --filter @vielzeug/refine build`

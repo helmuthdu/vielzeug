@@ -2,11 +2,11 @@
 
 Shared structure for `packages/<name>/README.md`. A README is a package's npm landing page: short, scannable, and uniform across the monorepo. Depth lives in `docs/<name>/`, not in the README.
 
-`pnpm validate:readme` enforces the structural rules below; it does not judge prose or code accuracy.
+`bun run validate:readme` enforces the structural rules below; it does not judge prose or code accuracy.
 
 ## Global rules
 
-- One sentence describing what the package does, equal to `package.json#description`: `pnpm validate:readme` enforces the match.
+- One sentence describing what the package does, equal to `package.json#description`: `bun run validate:readme` enforces the match.
 - Address the reader as "you". Active voice. No marketing language.
 - Code first, prose second. The Quick Start snippet must be copy-paste runnable with all imports.
 - No npm badges, no logos, no collapsible `<details>` blocks. The README is already short: folding content behind a toggle adds friction without saving space.
@@ -37,6 +37,6 @@ Everything else is identical across all packages.
 
 ## Generated content
 
-codex's tool tables are generated into `docs/codex/tools.md` by `packages/codex/scripts/generate-tool-docs.ts` (run `pnpm --filter @vielzeug/codex gen:tool-docs` after a build), never hand-edited. The README links to that page from its Documentation section. No other package has generated README content.
+codex's tool tables are generated into `docs/codex/tools.md` by `packages/codex/scripts/generate-tool-docs.ts` (run `bun run --filter @vielzeug/codex gen:tool-docs` after a build), never hand-edited. The README links to that page from its Documentation section. No other package has generated README content.
 
-`pnpm validate:readme -- --package=<name>` checks the structure above; run it before declaring a README pass done.
+`bun run validate:readme -- --package=<name>` checks the structure above; run it before declaring a README pass done.

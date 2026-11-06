@@ -406,7 +406,7 @@ export function verifyComponentExports() {
 }
 
 function printUsageAndExit() {
-  processRef?.stderr.write('Usage: node ./scripts/refine-manifest.mjs <check-exports|sync-exports|check-cross-entry>\n');
+  processRef?.stderr.write('Usage: bun ./scripts/refine-manifest.mjs <check-exports|sync-exports|check-cross-entry>\n');
 
   if (processRef) {
     processRef.exitCode = 1;

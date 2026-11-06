@@ -5,7 +5,7 @@ description: Canonical structure, language, and formatting rules for all Vielzeu
 
 # Vielzeug Documentation Template
 
-How every `docs/<name>/` page set is structured and why. The structural contract below is included verbatim from `.agents/reference/docs-template.md`, the same file maintainers and AI agents follow, so there is one source for these rules. `pnpm validate:docs -- --package=<name>` enforces the objective parts.
+How every `docs/<name>/` page set is structured and why. The structural contract below is included verbatim from `.agents/reference/docs-template.md`, the same file maintainers and AI agents follow, so there is one source for these rules. `bun run validate:docs -- --package=<name>` enforces the objective parts.
 
 ## Documentation Philosophy
 

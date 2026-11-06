@@ -35,12 +35,12 @@ jobs:
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: Build all packages
-        run: node common/scripts/install-run-rush.js build --verbose
+        run: bun run build
         env:
           NODE_ENV: production
 
       - name: Build documentation and demos
-        run: pnpm run site:build
+        run: bun run site:build
         env:
           NODE_ENV: production
 

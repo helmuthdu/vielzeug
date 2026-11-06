@@ -4,17 +4,17 @@ pre-commit:
     check:
       glob: "*.{html,js,ts,cjs,mjs,cts,mts,jsx,tsx,json,jsonc,css}"
       stage_fixed: true
-      run: pnpm biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      run: bun x biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
     test:related:
       glob: "**/*.{ts,tsx,js,jsx}"
       exclude: '\.(spec|test)\.(ts|tsx|js|jsx)$'
-      run: pnpm vitest related {staged_files} --passWithNoTests --run
+      run: bun x vitest related {staged_files} --passWithNoTests --run
     test:unit:
       glob: "**/*.{spec,test}.{ts,tsx,js,jsx}"
-      run: pnpm vitest {staged_files} --passWithNoTests --run
+      run: bun x vitest {staged_files} --passWithNoTests --run
     check:ai-data:
       glob: ".agents/**"
-      run: node scripts/sync-ai-data.mjs --check
+      run: bun scripts/sync-ai-data.mjs --check
     change:codex:
       glob: "docs/**"
-      run: node scripts/auto-change-codex.mjs && git add common/changes/@vielzeug/codex
+      run: bun scripts/auto-change-codex.mjs && git add changes/@vielzeug/codex

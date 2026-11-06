@@ -7,7 +7,7 @@
  * `publish-missing.mjs`), not a second implementation.
  *
  * Usage:
- *   node scripts/release/local-publish.mjs [--dry-run] [--skip-build] [--yes] [--otp=<code>]
+ *   bun scripts/release/local-publish.mjs [--dry-run] [--skip-build] [--yes] [--otp=<code>]
  *
  * ## Read this before running it
  *
@@ -59,7 +59,7 @@ export function checkNpmAuth({ run = defaultRun } = {}) {
 }
 
 export function buildAllPackages({ run = defaultRun } = {}) {
-  run('node', ['common/scripts/install-run-rush.js', 'build', '--verbose'], { inherit: true });
+  run('bun', ['run', 'build'], { inherit: true });
 }
 
 export function confirm(question, { readline = createInterface } = {}) {
@@ -90,7 +90,7 @@ export async function runLocalPublish({
   }
 
   if (!skipBuild) {
-    console.log('📦 Building all packages (rush build)...');
+    console.log('📦 Building all packages (bun run build)...');
     build();
   }
 

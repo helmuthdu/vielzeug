@@ -17,7 +17,7 @@ describe('CLI', () => {
     try {
       if (mode === 'symlink') symlinkSync(source, entry);
 
-      const result = spawnSync(process.execPath, ['--import', 'jiti/register', entry, '--version'], {
+      const result = spawnSync('bun', [entry, '--version'], {
         cwd: fileURLToPath(new URL('../../../../', import.meta.url)),
         encoding: 'utf8',
         timeout: 10_000,

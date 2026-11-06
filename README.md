@@ -900,9 +900,8 @@ form.submit(async (values) => {
 
 ### Prerequisites
 
-- Node.js >= 22.0.0 (see `.nvmrc`)
-- pnpm >= 10.0.0
-- Rush (`npm install -g @microsoft/rush`)
+- Node.js >= 22.0.0 (see `.nvmrc`): the runtime for the test and docs tooling
+- Bun (see `packageManager` in `package.json`): the package manager and script runner
 
 ### Setup
 
@@ -911,20 +910,17 @@ form.submit(async (values) => {
 git clone https://github.com/helmuthdu/vielzeug.git
 cd vielzeug
 
-# Install package dependencies (via Rush)
-pnpm setup
-
-# Install root workspace tooling (vitest, Biome, VitePress): Rush covers packages/* only
-pnpm install
+# Install everything (packages, demos, repo tooling): one workspace install
+bun install
 
 # Build all packages
-pnpm build
+bun run build
 
 # Run all tests
-pnpm test
+bun run test
 
 # Start documentation site
-pnpm docs:dev
+bun run docs:dev
 ```
 
 ### Project Structure
@@ -968,19 +964,20 @@ vielzeug/
 │   ├── ward/          # RBAC & permission management
 │   ├── wayfinder/     # Client-side routing
 ├── docs/              # VitePress documentation
-└── common/            # Shared Rush configuration
+├── demos/             # Integration demos (private, never published)
+└── changes/           # Pending change files (consumed by the release train)
 ```
 
 ### Scripts
 
 ```bash
-pnpm setup          # Rush install: install all dependencies
-pnpm build          # Rush build: build all packages
-pnpm test           # Run all tests (vitest)
-pnpm lint           # Check code with Biome
-pnpm fix            # Apply Biome safe fixes
-pnpm docs:dev       # Start docs dev server (VitePress)
-pnpm docs:build     # Build documentation
+bun install           # Install the whole workspace
+bun run build          # Build all packages (topological, parallel)
+bun run test           # Run all tests (vitest)
+bun run lint           # Check code with Biome
+bun run fix            # Apply Biome safe fixes
+bun run docs:dev       # Start docs dev server (VitePress)
+bun run docs:build     # Build documentation
 ```
 
 ---
@@ -1058,8 +1055,8 @@ We welcome contributions! Here's how you can help:
 
 Please ensure:
 
-- All tests pass (`pnpm test`)
-- Code follows the style guide (`pnpm lint`)
+- All tests pass (`bun run test`)
+- Code follows the style guide (`bun run lint`)
 - Documentation is updated if needed
 
 ---

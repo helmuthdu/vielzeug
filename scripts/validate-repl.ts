@@ -3,15 +3,15 @@
  * writing it as a runnable temp file, and executing via vitest.
  *
  * Usage:
- *   pnpm validate:repl
- *   pnpm validate:repl -- --package=ripple
+ *   bun run validate:repl
+ *   bun run validate:repl -- --package=ripple
  *
  * Resolves the `vitest` binary through real Node module resolution instead of assuming
- * `node_modules/.bin/vitest` exists at a fixed path (that assumption breaks under some pnpm
+ * `node_modules/.bin/vitest` exists at a fixed path (that assumption breaks under some
  * hoisting/linker configurations): see `resolveVitestBin()` below for exactly how and why.
  *
  * Runs `vitest` against `vitest.repl.config.ts` as its own subprocess rather than as a 4th
- * entry in the root `vitest.config.ts` `projects` array: that array runs on every `pnpm test`,
+ * entry in the root `vitest.config.ts` `projects` array: that array runs on every `bun run test`,
  * and this config's `include` is only meaningful once `REPL_TMP_DIR` points at real generated
  * files: folding it in would add a real (if small) per-run cost to every test run in the repo
  * for a check that's already its own separate CI/local step.
@@ -24,6 +24,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { isMain, parseArgs } from './lib/cli.mjs';
+import { resolvePackageFilter } from './lib/validator.ts';
 
 const require = createRequire(import.meta.url);
 
@@ -40,24 +41,14 @@ export interface ExampleModule {
 export type ExampleRecord = Record<string, ExampleModule>;
 
 async function loadExamples(pkg: string, examplesDir = EXAMPLES_DIR): Promise<ExampleRecord> {
-  const { createJiti } = await import('jiti');
-  const jiti = createJiti(import.meta.url);
-  const indexPath = join(examplesDir, pkg, 'index.ts');
-  const mod = (await jiti.import(indexPath)) as Record<string, unknown>;
+  // Bun executes the .ts example modules natively; no transpiler loader is needed.
+  const mod = (await import(join(examplesDir, pkg, 'index.ts'))) as Record<string, unknown>;
   const exportKey = Object.keys(mod).find((k) => k !== 'default') ?? 'default';
   return (mod[exportKey] ?? mod['default'] ?? {}) as ExampleRecord;
 }
 
 export function sanitize(key: string): string {
   return key.replace(/[^a-zA-Z0-9_-]/g, '_');
-}
-
-export function resolvePackageFilter(packageFlag: unknown): string | null {
-  if (packageFlag === undefined) return null;
-
-  if (typeof packageFlag !== 'string') throw new Error('Use --package=<name>.');
-
-  return packageFlag;
 }
 
 /** Builds this example's snippet + vitest test file contents. Pure: no filesystem access :
@@ -96,9 +87,9 @@ export function discoverPackages(examplesDir: string, filterPackage: string | nu
 }
 
 /** Resolves the real `vitest` binary path via Node's own module resolution (see header comment
- * for why not a hardcoded `node_modules/.bin/vitest` path). Uses `require.resolve` rather than
- * `import.meta.resolve`: the latter isn't reliably supported by `jiti` (this repo's `.ts`
- * script loader), which this file itself runs under (`pnpm validate:repl`). */
+ * for why not a hardcoded `node_modules/.bin/vitest` path). Uses `require.resolve` rather
+ * than `import.meta.resolve`: the latter's return shape differs between Node and Bun, and
+ * this file runs under both (`bun validate:repl` today, plain tooling elsewhere). */
 export function resolveVitestBin(): string {
   const packageJsonPath = require.resolve('vitest/package.json');
   const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { bin?: Record<string, string> | string };

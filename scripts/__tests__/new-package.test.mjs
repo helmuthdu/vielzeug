@@ -17,22 +17,6 @@ function fixtureRoot() {
   mkdirSync(path.join(root, 'docs'), { recursive: true });
   writeFileSync(path.join(root, 'LICENSE'), 'MIT License\n');
   writeFileSync(path.join(template, 'package.json'), readFileSync(path.join(REPO, 'packages/coins/package.json')));
-  writeFileSync(
-    path.join(root, 'rush.json'),
-    `${JSON.stringify(
-      {
-        projects: [
-          {
-            packageName: '@vielzeug/coins',
-            projectFolder: 'packages/coins',
-            shouldPublish: true,
-          },
-        ],
-      },
-      null,
-      2,
-    )}\n`,
-  );
   return root;
 }
 
@@ -59,14 +43,9 @@ describe('planPackage()', () => {
     expect(() => planPackage('coins', 'x', { root })).toThrow(/packages\/coins already exists/);
     mkdirSync(path.join(root, 'docs/ok'));
     expect(() => planPackage('ok', 'x', { root })).toThrow(/docs\/ok already exists/);
-    const rushPath = path.join(root, 'rush.json');
-    const rush = JSON.parse(readFileSync(rushPath, 'utf8'));
-    rush.projects.push({ packageName: '@vielzeug/taken', projectFolder: 'packages/taken' });
-    writeFileSync(rushPath, JSON.stringify(rush));
-    expect(() => planPackage('taken', 'x', { root })).toThrow(/already registered in rush\.json/);
   });
 
-  it('generates package-specific config files and registers the project in rush.json', () => {
+  it('generates package-specific config files', () => {
     root = fixtureRoot();
     const files = planPackage('widget-kit', 'Widget utilities', { root });
 
@@ -84,15 +63,7 @@ describe('planPackage()', () => {
     expect(manifest.repository.directory).toBe('packages/widget-kit');
     expect(files['packages/widget-kit/LICENSE']).toBe('MIT License\n');
     expect(manifest.devDependencies).toEqual(JSON.parse(readFileSync(path.join(REPO, 'packages/coins/package.json'), 'utf8')).devDependencies);
-
-    const rush = JSON.parse(files['rush.json']);
-    expect(rush.projects).toHaveLength(2);
-    expect(rush.projects[0]).toEqual(JSON.parse(readFileSync(path.join(root, 'rush.json'), 'utf8')).projects[0]);
-    expect(rush.projects.at(-1)).toEqual({
-      packageName: '@vielzeug/widget-kit',
-      projectFolder: 'packages/widget-kit',
-      shouldPublish: true,
-    });
+    expect(files['rush.json']).toBeUndefined(); // the root workspaces glob is the registry: nothing to register
   });
 
   it('produces docs and a README that pass the structural validators', () => {
@@ -114,7 +85,7 @@ describe('planPackage()', () => {
   });
 
   it('prints follow-up steps naming the package', () => {
-    expect(nextSteps('widget-kit')).toMatch(/pnpm install && rush update/);
-    expect(nextSteps('widget-kit')).toMatch(/rush-change\.mjs widget-kit minor/);
+    expect(nextSteps('widget-kit')).toMatch(/bun install/);
+    expect(nextSteps('widget-kit')).toMatch(/change\.mjs widget-kit minor/);
   });
 });

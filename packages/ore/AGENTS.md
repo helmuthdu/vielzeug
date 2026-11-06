@@ -28,7 +28,7 @@ Functional web-component authoring primitives built on `ripple`; the foundation 
 
 ## Verification
 
-- Tests: `pnpm vitest run packages/ore/src/__tests__/`
-- Lint: `pnpm --filter @vielzeug/ore lint`
-- Build: `pnpm --filter @vielzeug/ore build`
-- Downstream: `pnpm vitest run packages/refine/src/` after API changes.
+- Tests: `bun x vitest run packages/ore/src/__tests__/`
+- Lint: `bun run --filter @vielzeug/ore lint`
+- Build: `bun run --filter @vielzeug/ore build`
+- Downstream: `bun x vitest run packages/refine/src/` after API changes.

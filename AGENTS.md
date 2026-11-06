@@ -83,41 +83,42 @@ This section is the single owner of validation commands and workflow facts; each
 - VitePress local development aliases workspace packages to source, so package edits do not require a rebuild for `docs:dev` preview. Keep required production builds (including Codex before the docs build) for the final gate; preview is not a substitute for production-output verification.
 
 ```bash
-pnpm setup && pnpm install                          # fresh checkout: Rush deps, then root workspace deps
-pnpm vitest run packages/<name>/src/__tests__/      # standard test path
-pnpm --filter @vielzeug/<name> lint
-pnpm --filter @vielzeug/<name> build
-pnpm validate:docs -- --package=<name>
-pnpm validate:readme -- --package=<name>
-pnpm validate:repl -- --package=<name>
-pnpm validate:sidebar -- --package=<name>   # sidebar links vs. pages on disk
-pnpm --filter @vielzeug/codex build && pnpm docs:build   # docs changes (Codex bundles docs first)
-pnpm check:ai-data                                  # packages table and .agents/ cross-references
+bun install                                          # fresh checkout: one workspace install (packages/*, demos/*, tooling)
+bun x vitest run packages/<name>/src/__tests__/      # standard test path
+bun run --filter @vielzeug/<name> lint
+bun run --filter @vielzeug/<name> build
+bun run validate:docs -- --package=<name>
+bun run validate:readme -- --package=<name>
+bun run validate:repl -- --package=<name>
+bun run validate:sidebar -- --package=<name>   # sidebar links vs. pages on disk
+bun run --filter @vielzeug/codex build && bun run docs:build   # docs changes (Codex bundles docs first)
+bun run check:ai-data                                  # packages table and .agents/ cross-references
+bun run check:change-files                             # pending change files under changes/ (CI PR gate)
 ```
 
-Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm fix` for Biome formatting and import organization instead of hand-formatting. Run `pnpm run` with no arguments for the full script list; package-specific test behavior belongs in each package's `test` script.
+Repository-wide: `bun run build`, `bun run test`, `bun run lint`, `bun run fix`. Run `bun run fix` for Biome formatting and import organization instead of hand-formatting. Run `bun run` with no arguments for the full script list; package-specific test behavior belongs in each package's `test` script.
 
 ## Toolchain and workflow facts
 
-- Node 22 (`.nvmrc` for CI, `.tool-versions` for asdf: keep both on the same major), pnpm (`package.json#packageManager`, one root workspace for `packages/*` and `demos/*`), Rush (`rush.json`, `common/`; workspace install/build and change-file verification: version application is CalVer lockstep trains via `scripts/release/`, see `RELEASE.md`; it uses its own pinned pnpm), Vitest, Biome, VitePress.
+- Bun (`package.json#packageManager`, `bunfig.toml`, `bun.lock`): the package manager and script runner; the root `workspaces` glob over `packages/*` and `demos/*` is the only project registry. Node 22 (`.nvmrc` for CI, `.tool-versions` for asdf: keep both on the same major) stays the runtime for Vitest/jsdom, Vite/VitePress, and npm Trusted Publishing. Version application is CalVer lockstep trains via `scripts/release/`, see `RELEASE.md`. Vitest, Biome, VitePress.
 - Versioning: CalVer lockstep trains: `YY.MM.N`, the same number for every package. See `RELEASE.md`.
-- Worktrees: `pnpm worktree:add <pkg>` only for packages with no `@vielzeug/*` dependency edge in either direction; the script checks live manifests.
-- Change files: `node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"`. Never `rush change --bulk`. The type picks the changelog section only; it never affects the version.
+- Worktrees: `bun run worktree:add <pkg>` only for packages with no `@vielzeug/*` dependency edge in either direction; the script checks live manifests.
+- Change files: `bun scripts/change.mjs <name> <patch|minor|major> "<message>"` writes one file under `changes/@vielzeug/<name>/`; `bun run check:change-files` validates the tree. One package per call: never scan the working tree for pending change files. The type picks the changelog section only: it never affects the version.
 - Conventional commits: `feat(courier): add retry logic`. A breaking change rides the next train like any other: describe it in the changelog entry and the package's `docs/<name>/migration.md`.
-- AI metadata: edit `.agents/` sources directly, run `pnpm gen:ai-data` when the package table must change, then `pnpm check:ai-data`. Generated blocks are outputs, not editing surfaces.
+- AI metadata: edit `.agents/` sources directly, run `bun run gen:ai-data` when the package table must change, then `bun run check:ai-data`. Generated blocks are outputs, not editing surfaces.
 
 ## Repository layout
 
-| Path                   | Purpose                                                     |
-| ---------------------- | ----------------------------------------------------------- |
-| `RELEASE.md`           | CalVer train versioning and release policy                  |
-| `packages/<name>/`     | Independent published packages                              |
-| `docs/<name>/`         | Package documentation and recipes (VitePress)               |
-| `demos/`               | Integration demos                                           |
-| `scripts/`             | Workspace, generation, validation, and release tooling      |
-| `.agents/`             | Agent contract: conventions, task skills, shared references |
-| `common/`, `rush.json` | Rush workspace configuration                                |
-| `.github/workflows/`   | CI and publishing workflows                                 |
+| Path                 | Purpose                                                     |
+| -------------------- | ----------------------------------------------------------- |
+| `RELEASE.md`         | CalVer train versioning and release policy                  |
+| `packages/<name>/`   | Independent published packages                              |
+| `docs/<name>/`       | Package documentation and recipes (VitePress)               |
+| `demos/`             | Integration demos                                           |
+| `scripts/`           | Workspace, generation, validation, and release tooling      |
+| `.agents/`           | Agent contract: conventions, task skills, shared references |
+| `changes/`           | Pending change files (consumed by the release train)        |
+| `.github/workflows/` | CI and publishing workflows                                 |
 
 ### `.agents/` contents
 
@@ -125,14 +126,14 @@ Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm f
 - `skills/<name>/SKILL.md`: task skills (`build`, `review`, `document`, `release`); `skills/vielzeug` is a symlink to `packages/codex/skills/vielzeug`, the consumer skill codex ships (`codex skills install`): edit it there. For demo code changes that consume `@vielzeug/*`, load it alongside `build` as described in Start work.
 - `reference/packages.md`: generated package table; `docs-template.md`, `readme-template.md`, `security-checklist.md`: hand-curated, shared by skills.
 
-Every `.agents/...` path mentioned anywhere in the repo must resolve; `pnpm check:ai-data` fails on a dangling reference.
+Every `.agents/...` path mentioned anywhere in the repo must resolve; `bun run check:ai-data` fails on a dangling reference.
 
 ## Subtree AGENTS.md index
 
 Subtrees carry their own `AGENTS.md` only when they have rules not covered here or in `.agents/conventions.md`; most packages intentionally have none.
 
 - `packages/AGENTS.md`: source work for all `@vielzeug/*` libraries; indexes packages with extra local rules.
-- `demos/AGENTS.md`: integration demos: not Rush projects, local source loop, and the demo-gap-is-a-package-gap rule.
+- `demos/AGENTS.md`: integration demos: private and never published, local source loop, and the demo-gap-is-a-package-gap rule.
 - `docs/AGENTS.md`: VitePress documentation site and REPL.
 - `scripts/AGENTS.md`: repo tooling and the shared `scripts/lib/` primitives.
 - `.github/AGENTS.md`: CI/CD workflows and the release automation they call.

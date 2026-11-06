@@ -485,4 +485,4 @@ The color section of `theme.css` (contrast scale, the 7 semantic families, halo 
 Two rules keep this maintainable and stay out of your way as a consumer:
 
 - **Tokens are delivery-mechanism-agnostic.** The `.dark` class toggle (see [Dark Mode](#dark-mode)) is Refine's own contract, not tied to VitePress, a router, or any specific app shell: theme tokens never assume a particular framework is present.
-- **The generated block is verified, not trusted.** `pnpm --filter @vielzeug/refine run check:theme` fails the build if `theme.css`'s generated block and `theme-tokens.mjs` drift apart, the same guarantee `check:manifest` gives the package's export map.
+- **The generated block is verified, not trusted.** `bun run --filter @vielzeug/refine check:theme` fails the build if `theme.css`'s generated block and `theme-tokens.mjs` drift apart, the same guarantee `check:manifest` gives the package's export map.

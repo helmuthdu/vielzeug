@@ -6,11 +6,11 @@
   "type": "module",
   "scripts": {
     "build": "tsc && vite build",
-    "build:local": "node --experimental-strip-types scripts/write-local-tsconfig.ts && tsc -p tsconfig.local-dev.json && VIELZEUG_LOCAL_DEV=1 vite build",
+    "build:local": "bun scripts/write-local-tsconfig.ts && tsc -p tsconfig.local-dev.json && VIELZEUG_LOCAL_DEV=1 vite build",
     "dev": "vite",
     "dev:local": "VIELZEUG_LOCAL_DEV=1 vite",
     "preview": "vite preview",
-    "test": "pnpm --dir ../.. vitest run --config demos/voyage/vitest.config.ts"
+    "test": "vitest run"
   },
   "dependencies": {
     "@vielzeug/beacon": "workspace:*",
@@ -21,7 +21,7 @@
     "@vielzeug/ripple": "workspace:*",
     "@vielzeug/tempo": "workspace:*",
     "@vielzeug/wayfinder": "workspace:*",
-    "lucide": "^1.69.0"
+    "lucide": "^1.70.0"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

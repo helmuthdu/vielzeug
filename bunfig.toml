@@ -1,0 +1,43 @@
+# Bun is this repo's package manager and script runner; Node 22 (see .nvmrc) stays the
+# runtime for the toolchain (Vitest, Vite, VitePress, npm OIDC publishing).
+#
+# `hoisted` is deliberate: Bun's default for new workspaces is `isolated`, but Vite's
+# config loader resolves plugins from the root node_modules and needs hoisted transitive
+# dependencies (what pnpm's public hoisting provided). Isolated installs fail Vitest
+# startup with MODULE_NOT_FOUND.
+#
+# minimumReleaseAge mirrors pnpm's supply-chain gate (pnpm's default is 1440 minutes =
+# 1 day; Bun's unit is seconds). The excludes are the repo's vetted fresh-release list,
+# ported from pnpm-workspace.yaml.
+[install]
+linker = "hoisted"
+minimumReleaseAge = 86400
+minimumReleaseAgeExcludes = [
+  "@modelcontextprotocol/core@2.1.0",
+  "@modelcontextprotocol/server@2.1.0",
+  "prettier@3.9.9",
+  "@cloudflare/workerd-darwin-64@1.20261019.1",
+  "@cloudflare/workerd-darwin-arm64@1.20261019.1",
+  "@cloudflare/workerd-linux-64@1.20261019.1",
+  "@cloudflare/workerd-linux-arm64@1.20261019.1",
+  "@cloudflare/workerd-windows-64@1.20261019.1",
+  "browserslist@4.29.4",
+  "miniflare@5.20261019.0-beta || 5.20261104.0-beta",
+  "workerd@1.20261019.1",
+  "wrangler@4.151.2 || 4.158.0",
+  "@playwright/test@1.65.0",
+  "@vue/compiler-core@3.5.45",
+  "@vue/compiler-dom@3.5.45",
+  "@vue/compiler-sfc@3.5.45",
+  "@vue/compiler-ssr@3.5.45",
+  "@vue/reactivity@3.5.45",
+  "@vue/runtime-core@3.5.45",
+  "@vue/runtime-dom@3.5.45",
+  "@vue/server-renderer@3.5.45",
+  "@vue/shared@3.5.45",
+  "jsdom@31.0.0",
+  "lucide@1.70.0",
+  "playwright-core@1.65.0",
+  "playwright@1.65.0",
+  "vue@3.5.45",
+]

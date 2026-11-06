@@ -3,7 +3,7 @@
  * keyboard interaction that jsdom can't evaluate (no CSS box model, no real focus movement).
  * Complements `tabs.test.ts`/`tab-item.test.ts`/`tab-panel.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
+ * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
 import type { Page } from '@playwright/test';
 import { axeCheck, expect, test } from '../../testing/fixtures';

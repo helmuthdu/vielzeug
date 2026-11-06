@@ -1,15 +1,14 @@
-#!/usr/bin/env node
-// .ts extension required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
+#!/usr/bin/env bun
+// Explicit .ts import extensions are the repo convention for these scripts (run directly under bun, never compiled by tsc).
 /**
  * Regenerates the tool tables in docs/codex/tools.md from the real tool registries instead of a
  * hand-maintained table: the two used to drift (a removed tool stayed listed, a renamed one
  * kept its old name) with nothing catching it.
  *
- * Run explicitly (`pnpm gen:tool-docs`) after a build, not as part of `build` or `prepare:data`: `src/tools/*.ts`
+ * Run explicitly (`bun run gen:tool-docs`) after a build, not as part of `build` or `prepare:data`: `src/tools/*.ts`
  * import their siblings with `.js` specifiers (required for the real NodeNext build), and
- * `node --experimental-strip-types`: unlike a bundler or `tsc` itself: does not rewrite those
- * back to `.ts` at run time, so this has to import the compiled `dist/` output, which only
- * exists after a build.
+ * resolving those against `src/` would read the wrong files, so this imports the compiled
+ * `dist/` output instead, which only exists after a build.
  *
  * Tool tables live in docs/codex/tools.md (not README.md) so the README stays uniform with the
  * rest of the monorepo's standard README shape.
@@ -29,7 +28,7 @@ const refineToolsEntry = resolve(__dirname, '../dist/tools/refine.js');
 
 for (const entry of [packageToolsEntry, refineToolsEntry]) {
   if (!existsSync(entry)) {
-    throw new Error(`generate-tool-docs: ${entry} not found. Run \`pnpm build\` first: this reads compiled output.`);
+    throw new Error(`generate-tool-docs: ${entry} not found. Run \`bun run build\` first: this reads compiled output.`);
   }
 }
 

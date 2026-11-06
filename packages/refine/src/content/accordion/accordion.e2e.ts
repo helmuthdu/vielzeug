@@ -4,7 +4,7 @@
  * real browser alongside the rest of the disclosure family's e2e suite. Complements
  * `accordion.test.ts`/`accordion-item.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
+ * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

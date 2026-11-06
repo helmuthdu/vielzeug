@@ -21,7 +21,7 @@ describe('run()', () => {
 });
 
 describe('npmEnvironment()', () => {
-  it('removes pnpm-injected npm configuration variables but preserves user npm settings', () => {
+  it('removes package-manager-injected npm configuration variables but preserves user npm settings', () => {
     expect(
       npmEnvironment({
         NPM_CONFIG_NPM_GLOBALCONFIG: '/private/config',
@@ -86,9 +86,10 @@ describe('parseArgs()', () => {
   });
 
   it('drops a literal "--" separator instead of parsing it as a flag named ""', () => {
-    // Real shape of `pnpm run <script> -- --package=ripple`: pnpm forwards the `--` itself
-    // into the script's argv, it does not strip it (verified empirically, see cli.mjs's
-    // parseArgs() header comment).
+    // A `--` reaching parseArgs directly is the defensive path: Bun strips the separator
+    // before a script sees one (both `bun run` and a direct `bun scripts/foo.mjs -- --x`,
+    // verified empirically, see cli.mjs's parseArgs() header comment). parseArgs must still
+    // drop it rather than parse a flag named "".
     expect(parseArgs(['--', '--package=ripple'])).toEqual({
       flags: { package: 'ripple' },
       positionals: [],

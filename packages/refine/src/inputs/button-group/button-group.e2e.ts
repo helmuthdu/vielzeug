@@ -3,7 +3,7 @@
  * and roving-tabindex behavior jsdom can't evaluate (no real focus traversal),
  * plus axe on the `radiogroup`/`radio` shape. Complements `button-group.test.ts`.
  *
- * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
+ * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

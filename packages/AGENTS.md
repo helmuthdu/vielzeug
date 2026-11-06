@@ -4,13 +4,13 @@ Every `packages/<name>/` is an independent, publishable `@vielzeug/*` library. `
 
 ## Standard shape
 
-`src/index.ts` (root public surface; approved subpaths are declared in the manifest), `src/__tests__/` (Vitest), `vite.config.ts` + `vite.bundle.config.ts` (ESM + CJS + IIFE), `tsconfig.json` / `tsconfig.declarations.json` (strict), `README.md`. Create new packages with `pnpm new:package`.
+`src/index.ts` (root public surface; approved subpaths are declared in the manifest), `src/__tests__/` (Vitest), `vite.config.ts` + `vite.bundle.config.ts` (ESM + CJS + IIFE), `tsconfig.json` / `tsconfig.declarations.json` (strict), `README.md`. Create new packages with `bun run new:package`.
 
 ## Verification
 
-- Tests: `pnpm vitest run packages/<name>/src/__tests__/`
-- Lint: `pnpm --filter @vielzeug/<name> lint`
-- Build: `pnpm --filter @vielzeug/<name> build`
+- Tests: `bun x vitest run packages/<name>/src/__tests__/`
+- Lint: `bun run --filter @vielzeug/<name> lint`
+- Build: `bun run --filter @vielzeug/<name> build`
 
 ## Packages with local rules
 

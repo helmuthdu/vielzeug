@@ -3,7 +3,7 @@
  * target-size, which jsdom can't evaluate) and real click/keyboard interaction. Complements
  * `stepper.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
+ * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

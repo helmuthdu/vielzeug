@@ -31,16 +31,16 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types && pnpm --silent run test:types && pnpm --silent run verify:exports",
+    "build": "vite build && bun run --silent build:bundle && bun run --silent build:types && bun run --silent test:types && bun run --silent verify:exports",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "biome check --write src",
     "lint": "biome ci src",
-    "prepublishOnly": "pnpm --silent run build",
+    "prepublishOnly": "bun run --silent build",
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:types": "tsc -p tsconfig.type-tests.json",
-    "verify:exports": "node verify-exports.mjs"
+    "verify:exports": "bun verify-exports.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",

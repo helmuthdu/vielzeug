@@ -1,6 +1,6 @@
 ---
 name: release
-description: 'Prepare delivery: Rush change files, approved commits or pull requests, packed-package checks, and release diagnostics. Use when asked to commit, open a PR, write a change file, bump versions, publish, or diagnose a release or publish failure.'
+description: 'Prepare delivery: change files, approved commits or pull requests, packed-package checks, and release diagnostics. Use when asked to commit, open a PR, write a change file, bump versions, publish, or diagnose a release or publish failure.'
 ---
 
 # Release
@@ -22,9 +22,9 @@ Follow the root `AGENTS.md` Safety policy for delivery approvals. Before deliver
 
 1. Confirm modified package scope, public/release impact, review status, and validation status.
 2. Review status, the complete relevant diff, and commit history before drafting delivery content; do not substitute this for PR-mode quality review.
-3. For version-relevant package changes, create one scoped Rush change file per package: `node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"`. Never `rush change --bulk`.
+3. For version-relevant package changes, create one scoped change file per package: `bun scripts/change.mjs <name> <patch|minor|major> "<message>"`. One package per call: never scan the working tree for pending change files.
 4. Verify generated artifacts, package metadata, change files, and release metadata are current.
-5. For publish- or release-shaped verification, run `pnpm verify:packed -- --package=@vielzeug/<name>` for each affected publishable package.
+5. For publish- or release-shaped verification, run `bun run verify:packed -- --package=@vielzeug/<name>` for each affected publishable package.
 6. For a pull request, read `.github/pull_request_template.md` first and draft the body from it: preserve its headings, comments, and checklist, and fill placeholders with accurate content instead of substituting a generic body.
 7. Perform the approved delivery action only after explicit confirmation, then report the resulting commit, pull request, tag, or diagnostic outcome.
 
@@ -38,9 +38,9 @@ Follow the root `AGENTS.md` Safety policy for delivery approvals. Before deliver
 
 | Surface             | Run                                                          |
 | ------------------- | ------------------------------------------------------------ |
-| Change files        | `node common/scripts/install-run-rush.js change --verify`    |
-| Publishable package | `pnpm verify:packed -- --package=@vielzeug/<name>`           |
-| Release tooling     | `pnpm vitest run scripts/release/` and `pnpm ci:local` for `ci.yml` (see `.github/AGENTS.md`) |
+| Change files        | `bun run check:change-files`    |
+| Publishable package | `bun run verify:packed -- --package=@vielzeug/<name>`           |
+| Release tooling     | `bun x vitest run scripts/release/` and `bun run ci:local` for `ci.yml` (see `.github/AGENTS.md`) |
 
 ## Report
 

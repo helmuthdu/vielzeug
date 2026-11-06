@@ -2,7 +2,7 @@
 /**
  * Apply pending change files as a CalVer lockstep release train.
  *
- * Every publishable package in rush.json rides every train: each manifest is stamped with
+ * Every publishable package under packages/ rides every train: each manifest is stamped with
  * the same train number (`YY.MM.N`: see train-version.mjs) and each CHANGELOG gets an entry
  * for it: real comments for packages with pending change files (their change files are
  * consumed), an alignment-only entry for every other package. One commit lands the whole
@@ -15,14 +15,15 @@
  * dependency-closure expansion plus a dangling-pin guard to stay installable: this design
  * removes the reason that machinery existed. `findDanglingPins` (dangling-pins.mjs) stays
  * as the guard for the paths that publish a subset: the `publish-missing` backfill behind
- * `pnpm release:publish-local`.
+ * `bun run release:publish-local`.
  */
 
-import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { run as defaultRun } from '../lib/cli.mjs';
+import { listChangeFiles } from '../lib/change-files.mjs';
 import { listPublishablePackages } from './publish-missing.mjs';
 import { nextTrainVersion } from './train-version.mjs';
 
@@ -35,39 +36,20 @@ const repoRoot = path.join(fileURLToPath(import.meta.url), '..', '..', '..');
  *  aggregate GitHub release notes. */
 export const ALIGNMENT_COMMENT = 'chore: align with CalVer lockstep trains: no code change this train';
 
-/** Change-file type → CHANGELOG section title, in render order. The titles match what
- *  Rush wrote for the pre-CalVer history, so one changelog reads as one format. */
+/** Change-file type → CHANGELOG section title, in render order. The titles match the
+ *  pre-CalVer changelog history, so one changelog reads as one format. */
 const SECTIONS = [
   ['major', 'Major changes'],
   ['minor', 'Minor changes'],
   ['patch', 'Patches'],
 ];
 
-/**
- * Relative paths (e.g. "@vielzeug/ore/agent_123.json") of every pending change file. Rush
- * groups these under a directory per full scoped package name, which: because the name
- * itself contains a "/": is really two nested directory levels (@vielzeug/ore), so this
- * walks recursively rather than assuming a fixed depth.
- */
-export function listChangeFiles(changesDir) {
-  if (!existsSync(changesDir)) return [];
-
-  const files = [];
-  const walk = (dir, relDir) => {
-    for (const entry of readdirSync(dir)) {
-      const absPath = path.join(dir, entry);
-      const relPath = relDir ? path.join(relDir, entry) : entry;
-      if (statSync(absPath).isDirectory()) walk(absPath, relPath);
-      else if (entry.endsWith('.json')) files.push(relPath);
-    }
-  };
-  walk(changesDir, '');
-  return files;
-}
+// listChangeFiles() comes from lib/change-files.mjs: the same walker validate-change-files.mjs
+// (the CI gate) uses, so the gate and the train can never disagree on what counts.
 
 /** Sorted, de-duplicated package names that have at least one pending change file. */
 export function listChangedPackageNames(root = repoRoot) {
-  const changesDir = path.join(root, 'common', 'changes');
+  const changesDir = path.join(root, 'changes');
   const names = listChangeFiles(changesDir).map((relFile) => path.dirname(relFile));
   return [...new Set(names)].sort();
 }
@@ -96,7 +78,7 @@ function collectComments(changeFiles, changesDir) {
   return comments;
 }
 
-/** The markdown block for one release, matching the changelog format Rush wrote. */
+/** The markdown block for one release, matching the changelog format of the pre-CalVer history. */
 function renderMarkdownEntry(version, date, comments) {
   const lines = [`## ${version}`, date, ''];
   for (const [type, title] of SECTIONS) {
@@ -164,11 +146,11 @@ function stampManifests(packages, train, root) {
  * the whole point of a dry run is that pending change files survive it.
  */
 export function applyTrain({ dryRun = false, now = new Date(), root = repoRoot, run = defaultRun } = {}) {
-  const changesDir = path.join(root, 'common', 'changes');
+  const changesDir = path.join(root, 'changes');
   const consumed = listChangeFiles(changesDir);
 
   if (consumed.length === 0) {
-    throw new Error('No pending change files. Write one with scripts/rush-change.mjs, commit, then re-trigger.');
+    throw new Error('No pending change files. Write one with scripts/change.mjs, commit, then re-trigger.');
   }
 
   const riders = [...new Set(consumed.map((relFile) => path.dirname(relFile)))].sort();
@@ -198,7 +180,7 @@ export function applyTrain({ dryRun = false, now = new Date(), root = repoRoot, 
     }
   }
 
-  run('git', ['add', ...touched, 'common/changes'], { cwd: root });
+  run('git', ['add', ...touched, 'changes'], { cwd: root });
   run('git', ['commit', '-m', `chore: apply release train ${train}`], { cwd: root, inherit: true });
 
   return { changedPackages, riders, train };

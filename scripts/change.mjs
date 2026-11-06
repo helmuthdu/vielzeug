@@ -1,21 +1,22 @@
 #!/usr/bin/env node
 /**
- * Write a Rush change file for a single package without touching any other package.
+ * Write a change file for a single package without touching any other package.
  *
  * Usage:
- *   node scripts/rush-change.mjs <pkg-name> <patch|minor|major> "<message>"
+ *   bun scripts/change.mjs <pkg-name> <patch|minor|major> "<message>"
  *
  * Example:
- *   node scripts/rush-change.mjs orbit patch "fix: stop redundant DOM reads in hot path"
+ *   bun scripts/change.mjs orbit patch "fix: stop redundant DOM reads in hot path"
  *
  * The type only picks the CHANGELOG section the message renders under: versions are CalVer
  * lockstep trains (see RELEASE.md), so it never affects the version number.
  *
- * Why not `rush change --bulk`?
- * --bulk writes a change file for every package that has uncommitted changes in the working tree.
- * In a multi-agent worktree environment multiple agents may have unrelated staged changes at the
- * same time, so --bulk would clobber or mis-label sibling packages' pending change files.
- * This script is scoped to exactly one package.
+ * Why one package per call rather than scanning the working tree?
+ * A tree-wide scan writes a change file for every package with uncommitted changes. In a
+ * multi-agent worktree environment multiple agents may have unrelated staged changes at the
+ * same time, so a scan would clobber or mis-label sibling packages' pending change files.
+ * This script is scoped to exactly one package; `bun run check:change-files` validates what
+ * `changes/` holds.
  */
 
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -28,14 +29,14 @@ export const ROOT = path.resolve(fileURLToPath(import.meta.url), '../..');
 
 const VALID_TYPES = new Set(['major', 'minor', 'patch']);
 
-/** Writes `common/changes/@vielzeug/<name>/agent_<timestamp>.json` and returns its path. */
+/** Writes `changes/@vielzeug/<name>/agent_<timestamp>.json` and returns its path. */
 export function writeChangeFile(name, type, message, { now = Date.now, root = ROOT } = {}) {
   if (!VALID_TYPES.has(type)) {
     throw new Error(`Invalid bump type "${type}". Must be one of: major, minor, patch`);
   }
 
   const packageName = name.startsWith('@vielzeug/') ? name : `@vielzeug/${name}`;
-  const dir = path.join(root, 'common', 'changes', packageName);
+  const dir = path.join(root, 'changes', packageName);
   mkdirSync(dir, { recursive: true });
 
   const filename = `agent_${now()}.json`;
@@ -47,8 +48,8 @@ export function writeChangeFile(name, type, message, { now = Date.now, root = RO
 }
 
 function printUsage() {
-  console.error('Usage: node scripts/rush-change.mjs <pkg-name> <patch|minor|major> "<message>"');
-  console.error('Example: node scripts/rush-change.mjs orbit patch "fix: stop redundant DOM reads"');
+  console.error('Usage: bun scripts/change.mjs <pkg-name> <patch|minor|major> "<message>"');
+  console.error('Example: bun scripts/change.mjs orbit patch "fix: stop redundant DOM reads"');
 }
 
 if (isMain(import.meta.url)) {

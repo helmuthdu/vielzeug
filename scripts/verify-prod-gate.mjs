@@ -5,49 +5,64 @@
  * `prodGateDefine`) bakes it to the literal `true`, so a surviving reference means
  * the define was lost from some build path and dev warns are live in production.
  *
- * Run after a full build (`pnpm build`). Exits non-zero on any violation.
+ * Run after a full build (`bun run build`). Exits non-zero on any violation.
  */
 
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { isMain } from './lib/cli.mjs';
 
 const PACKAGES_DIR = new URL('../packages/', import.meta.url).pathname;
 
-const failures = [];
+/** Every "pkg: file still references __X_PROD__" failure across `packagesDir`: one per dist
+ *  artifact that still carries its package's own prod-gate global. Packages without a
+ *  src/_dev.ts (no gate to lose) or a dist/ (not built yet) are skipped. The whole scan lives
+ *  in this pure function so importing this script never touches the filesystem, like every
+ *  other script here (see scripts/AGENTS.md's "pure functions + guarded entry point" rule). */
+export function findProdGateViolations({ packagesDir = PACKAGES_DIR } = {}) {
+  const failures = [];
 
-for (const pkg of readdirSync(PACKAGES_DIR)) {
-  const devFile = join(PACKAGES_DIR, pkg, 'src/_dev.ts');
-  const distDir = join(PACKAGES_DIR, pkg, 'dist');
+  for (const pkg of readdirSync(packagesDir)) {
+    const devFile = join(packagesDir, pkg, 'src/_dev.ts');
+    const distDir = join(packagesDir, pkg, 'dist');
 
-  if (!existsSync(devFile) || !existsSync(distDir)) continue;
+    if (!existsSync(devFile) || !existsSync(distDir)) continue;
 
-  const gateMatch = readFileSync(devFile, 'utf8').match(/__(\w+)_PROD__/);
+    const gateMatch = readFileSync(devFile, 'utf8').match(/__(\w+)_PROD__/);
 
-  if (!gateMatch) continue;
+    if (!gateMatch) continue;
 
-  const gate = `__${gateMatch[1]}_PROD__`;
+    const gate = `__${gateMatch[1]}_PROD__`;
 
-  const scan = (dir) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
+    const scan = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
 
-      if (entry.isDirectory()) {
-        scan(full);
-      } else if (entry.name.endsWith('.js') || entry.name.endsWith('.cjs')) {
-        if (readFileSync(full, 'utf8').includes(gate)) failures.push(`${pkg}: ${full} still references ${gate}`);
+        if (entry.isDirectory()) {
+          scan(full);
+        } else if (entry.name.endsWith('.js') || entry.name.endsWith('.cjs')) {
+          if (readFileSync(full, 'utf8').includes(gate)) failures.push(`${pkg}: ${full} still references ${gate}`);
+        }
       }
-    }
-  };
+    };
 
-  scan(distDir);
+    scan(distDir);
+  }
+
+  return failures;
 }
 
-if (failures.length > 0) {
-  console.error('Prod-gate violation: raw __*_PROD__ references survived into dist:');
+if (isMain(import.meta.url)) {
+  const failures = findProdGateViolations();
 
-  for (const failure of failures) console.error(`  - ${failure}`);
+  if (failures.length > 0) {
+    console.error('Prod-gate violation: raw __*_PROD__ references survived into dist:');
 
-  process.exitCode = 1;
-} else {
-  console.log('OK: no raw __*_PROD__ references in any package dist.');
+    for (const failure of failures) console.error(`  - ${failure}`);
+
+    process.exitCode = 1;
+  } else {
+    console.log('OK: no raw __*_PROD__ references in any package dist.');
+  }
 }

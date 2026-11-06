@@ -37,6 +37,10 @@ function refresh(): void {
 for (const root of generatorWatchRoots(repoRoot)) {
   watch(root, { recursive: true }, (_event, file) => {
     if (!file || !/\.(?:json|md|ts)$/.test(file)) return;
+    // The snapshot dir lives inside packages/, so its own writes would re-trigger this watcher
+    // forever (each refresh rewrites manifest.json/catalog.json, which match the filter).
+    // Skip anything under it: it is this watcher's output, never an input.
+    if (resolve(root, file).startsWith(`${snapshotDir}${process.platform === 'win32' ? '\\' : '/'}`)) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(refresh, 200);
   });

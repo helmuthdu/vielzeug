@@ -30,7 +30,7 @@ export function isMain(moduleUrl) {
  * `execFileSync`). Two other IO postures cover every real need across these scripts:
  *   - `inherit: true`: share this process's actual stdio. Required for anything interactive
  *     (an npm 2FA prompt, a browser-trust flow) or where the user should see output live
- *     (git/gh/rush commands): at the cost of not being able to inspect the output afterwards.
+ *     (git/gh/bun commands): at the cost of not being able to inspect the output afterwards.
  *   - `quiet: true`: discard stdio entirely (`stdio: 'ignore'`). For a probe whose exit
  *     code is the only thing that matters (e.g. "does this git tag exist") where even the
  *     command's own error output would be noise on a expected-to-fail check.
@@ -70,13 +70,14 @@ export function run(cmd, args, { cwd, env, inherit = false, quiet = false } = {}
  * real flag in this repo's scripts is either boolean or short enough that `=` isn't a burden.
  * One unambiguous rule beats a heuristic that's right most of the time.
  *
- * A literal `--` token is dropped, not parsed as a flag named `""`. `pnpm run <script> -- --x`
- * forwards that `--` into the script's own argv verbatim (confirmed empirically: Node only
- * strips a `--` it sees as its *own* first flag-parsing token, not one appearing later in
- * argv): every documented `pnpm ... -- --flag` example in this repo depends on that `--`
- * being silently ignored here rather than becoming a stray flag key. One consequence: no
- * script here can take a positional argument whose value is literally the string `--`: true
- * of everything currently passed through this function, and worth knowing before it isn't.
+ * A literal `--` token is dropped, not parsed as a flag named `""`. Every documented
+ * `bun run <script> -- --flag` example in this repo depends on it: Bun strips the separator
+ * itself, both for `bun run` and for a direct `bun scripts/foo.mjs -- --x` (confirmed
+ * empirically, in every argv position), so this skip is defensive: it keeps parseArgs correct
+ * if a `--` ever reaches it anyway (a script run under a different interpreter, say). One
+ * consequence: no script here can take a positional argument whose value is literally the
+ * string `--`: true of everything currently passed through this function, and worth knowing
+ * before it isn't.
  */
 export function parseArgs(argv) {
   const positionals = [];

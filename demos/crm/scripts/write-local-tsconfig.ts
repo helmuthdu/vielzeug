@@ -1,4 +1,4 @@
-#!/usr/bin/env node --experimental-strip-types
+#!/usr/bin/env bun
 import { globSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { collectLocalPackageMap } from './local-packages.ts';

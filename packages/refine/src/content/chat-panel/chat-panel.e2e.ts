@@ -1,10 +1,10 @@
 /**
  * Real-browser coverage for `ore-chat-panel`. jsdom has no layout engine and
  * silently drops `@layer` rules, so the fixed-window box model, colour contrast,
- * and native focus/Escape behaviour asserted here are invisible to `pnpm test`.
+ * and native focus/Escape behaviour asserted here are invisible to `bun run test`.
  * Complements `chat-panel.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm --filter @vielzeug/refine test:e2e (requires built dist).
+ * Run with: bun run --filter @vielzeug/refine test:e2e (requires built dist).
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

@@ -29,7 +29,7 @@ function unscope(name) {
  * One entry per `packages/<slug>/package.json` that actually exists and parses, sorted
  * alphabetically by slug. A directory with no `package.json` (a half-scaffolded package) or
  * with unparseable JSON is skipped, not thrown on: this function is on the critical startup
- * path of `docs/.vitepress/config.ts` (every `pnpm docs:dev` / `docs:build`, via
+ * path of `docs/.vitepress/config.ts` (every `bun run docs:dev` / `docs:build`, via
  * vielzeug-packages.ts's alias builder) as well as `sync-ai-data.mjs` and `worktree.mjs`'s
  * full-repo scans. In a repo where multiple agents edit different packages concurrently, one
  * contributor's mid-edit syntax error in an unrelated `package.json` must not be able to take

@@ -184,7 +184,7 @@ describe('readDistFile()', () => {
   it('throws a clear "run the build" error when dist/ is missing', () => {
     root = mkdtempSync(path.join(tmpdir(), 'repl-registry-test-'));
     mkdirSync(path.join(root, 'ore'), { recursive: true });
-    expect(() => readDistFile('ore', 'index.d.ts', root)).toThrow(/Run "pnpm --filter @vielzeug\/ore build" first/);
+    expect(() => readDistFile('ore', 'index.d.ts', root)).toThrow(/Run "bun run --filter @vielzeug\/ore build" first/);
   });
 
   it('returns the file content when present', () => {

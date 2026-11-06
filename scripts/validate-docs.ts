@@ -2,8 +2,8 @@
  * Validates package-documentation structure.
  *
  * Usage:
- *   pnpm validate:docs
- *   pnpm validate:docs -- --package=ripple
+ *   bun run validate:docs
+ *   bun run validate:docs -- --package=ripple
  */
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -11,7 +11,8 @@ import { dirname, extname, join, normalize, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url';
 
 import { type MarkdownDocument, parseMarkdownDocument } from './lib/markdown.ts';
-import { isMain, parseArgs } from './lib/cli.mjs';
+import { isMain } from './lib/cli.mjs';
+import { type Diagnostic, runValidator, type ValidationResult } from './lib/validator.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const ROOT = resolve(__dirname, '..');
@@ -112,15 +113,6 @@ export const DOCS_CONTRACTS = {
   },
 } satisfies Record<DocsContractName, DocsContract>;
 
-export interface Diagnostic {
-  file: string;
-  hint?: string;
-  line?: number;
-  message: string;
-  package: string;
-  rule: string;
-}
-
 export interface PackageDocs {
   docsDir: string;
   files: ReadonlyMap<string, MarkdownDocument>;
@@ -132,11 +124,6 @@ export interface DocsWorkspace {
   knownFiles: ReadonlySet<string>;
   packageDocs: ReadonlyMap<string, PackageDocs>;
   sourceDirectories: ReadonlyMap<string, string>;
-}
-
-export interface ValidationResult {
-  checkedPackages: readonly string[];
-  diagnostics: readonly Diagnostic[];
 }
 
 export interface LoadDocsWorkspaceOptions {
@@ -387,30 +374,10 @@ export function validateDocsWorkspace(workspace: DocsWorkspace, filterPackage: s
   return { checkedPackages, diagnostics };
 }
 
-function main(): void {
-  const { flags } = parseArgs(process.argv.slice(2));
-  const filterPackage = typeof flags.package === 'string' ? flags.package : null;
-  const result = validateDocsWorkspace(loadDocsWorkspace(), filterPackage);
-
-  if (result.diagnostics.length === 0) {
-    console.log(`Validated documentation structure for ${result.checkedPackages.length} package${result.checkedPackages.length === 1 ? '' : 's'}.`);
-    return;
-  }
-
-  for (const item of result.diagnostics) {
-    const location = item.line ? `:${item.line}` : '';
-    console.error(`[${item.rule}] ${relative(ROOT, item.file)}${location}: ${item.message}`);
-    if (item.hint) console.error(`  hint: ${item.hint}`);
-  }
-  console.error(`${result.diagnostics.length} documentation validation failure${result.diagnostics.length === 1 ? '' : 's'}.`);
-  process.exitCode = 1;
-}
-
 if (isMain(import.meta.url)) {
-  try {
-    main();
-  } catch (err) {
-    console.error(err);
-    process.exitCode = 1;
-  }
+  void runValidator({
+    label: 'documentation structure',
+    root: ROOT,
+    validate: (filterPackage) => validateDocsWorkspace(loadDocsWorkspace(), filterPackage),
+  });
 }

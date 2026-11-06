@@ -27,8 +27,6 @@ function makePackage(root, slug, pkgJson) {
 
 function makeRepo(packages) {
   root = mkdtempSync(path.join(tmpdir(), 'publish-missing-test-'));
-  const projects = packages.map(({ slug }) => ({ packageName: `pkg-${slug}`, projectFolder: `packages/${slug}` }));
-  writeFileSync(path.join(root, 'rush.json'), JSON.stringify({ projects }));
   for (const pkg of packages) makePackage(root, pkg.slug, pkg.json);
   return root;
 }

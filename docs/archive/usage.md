@@ -509,9 +509,9 @@ export default worker;
 The package proves itself against real workerd + local D1:
 
 ```sh
-pnpm vitest run packages/archive/src/__tests__/          # fast unit suite
-pnpm --filter @vielzeug/archive test:integration         # real workerd + local D1 + issuer coverage
-pnpm --filter @vielzeug/archive test:types               # strict types over src and the integration suite
+bun x vitest run packages/archive/src/__tests__/          # fast unit suite
+bun run --filter @vielzeug/archive test:integration         # real workerd + local D1 + issuer coverage
+bun run --filter @vielzeug/archive test:types               # strict types over src and the integration suite
 ```
 
 Prove your own collection the way the reference deployment does: a slim deployment

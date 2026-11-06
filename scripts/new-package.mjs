@@ -3,13 +3,15 @@
  * Scaffold a new `@vielzeug/<name>` package in the standard shape.
  *
  * Usage:
- *   pnpm new:package <name> "<one-sentence description>"
+ *   bun run new:package <name> "<one-sentence description>"
  *
  * Creates `packages/<name>/` (manifest, README, config files, source and test stubs), the
  * four `docs/<name>/` pages plus one recipe and an empty `migration.md` that
- * `pnpm validate:docs` requires for every package directory, registers the project in
- * `rush.json`, and refreshes `.agents/reference/packages.md`. Everything the standard package
- * shape needs lives here: if the shape changes, change this script, not a checklist.
+ * `bun run validate:docs` requires for every package directory, and refreshes
+ * `.agents/reference/packages.md`. The new directory is picked up by the root `workspaces`
+ * glob on the next `bun install`: there is no project registry to register in. Everything
+ * the standard package shape needs lives here: if the shape changes, change this script,
+ * not a checklist.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -95,12 +97,12 @@ function manifest(name, description, templateManifest) {
     sideEffects: false,
     publishConfig: templateManifest.publishConfig,
     scripts: {
-      build: 'vite build && pnpm --silent run build:bundle && pnpm --silent run build:types',
+      build: 'vite build && bun run --silent build:bundle && bun run --silent build:types',
       'build:bundle': 'vite build --config vite.bundle.config.ts',
       'build:types': 'tsc -p tsconfig.declarations.json',
       fix: 'biome check --write src',
       lint: 'biome ci src',
-      prepublishOnly: 'pnpm --silent run build',
+      prepublishOnly: 'bun run --silent build',
       test: 'vitest',
     },
     devDependencies: templateManifest.devDependencies,
@@ -299,8 +301,8 @@ one section per break, with the old call and its replacement.
   };
 }
 
-/** Everything the scaffold writes, as `{ relPath: content }`, plus the patched `rush.json`.
- * Pure: reads only the template manifest and `rush.json` under `root`. */
+/** Everything the scaffold writes, as `{ relPath: content }`.
+ * Pure: reads only the template manifest (and root LICENSE) under `root`. */
 export function planPackage(name, description, { root = ROOT } = {}) {
   if (!NAME_PATTERN.test(name)) throw new Error(`Package name must match ${NAME_PATTERN}: "${name}"`);
   if (typeof description !== 'string' || description.trim() === '' || /[\r\n]/.test(description)) {
@@ -309,18 +311,7 @@ export function planPackage(name, description, { root = ROOT } = {}) {
   if (existsSync(path.join(root, 'packages', name))) throw new Error(`packages/${name} already exists`);
   if (existsSync(path.join(root, 'docs', name))) throw new Error(`docs/${name} already exists`);
 
-  const rushPath = path.join(root, 'rush.json');
-  const rush = JSON.parse(readFileSync(rushPath, 'utf8'));
   const packageName = `@vielzeug/${name}`;
-  if (rush.projects.some((p) => p.packageName === packageName)) {
-    throw new Error(`${packageName} is already registered in rush.json`);
-  }
-  rush.projects.push({
-    packageName,
-    projectFolder: `packages/${name}`,
-    shouldPublish: true,
-  });
-
   const templateManifest = JSON.parse(readFileSync(path.join(root, 'packages', TEMPLATE, 'package.json'), 'utf8'));
 
   const files = {
@@ -328,7 +319,6 @@ export function planPackage(name, description, { root = ROOT } = {}) {
     [`packages/${name}/README.md`]: readme(name, description),
     [`packages/${name}/src/index.ts`]: `// Public root surface of ${packageName}. Every public export goes through this file.\nexport {};\n`,
     [`packages/${name}/src/__tests__/${name}.test.ts`]: `describe('${packageName}', () => {\n  it.todo('names the first observable behavior of the public API');\n});\n`,
-    'rush.json': `${JSON.stringify(rush, null, 2)}\n`,
   };
   // npm ships a package-root LICENSE in every tarball (even under `files: ["dist"]`), so
   // license scanners find the full MIT text per package. Real copy: `npm pack` drops symlinks.
@@ -359,11 +349,11 @@ export function writePlan(files, { root = ROOT } = {}) {
 export function nextSteps(name) {
   return `
 Created @vielzeug/${name}. Next:
-  1. pnpm install && rush update                       # refresh both lockfiles (root workspace + Rush)
+  1. bun install                                       # link the new package into the workspace
   2. Implement src/index.ts and its tests; fill every TODO in docs/${name}/ and README.md
   3. Add a sidebar entry for /${name}/ in docs/.vitepress/config.ts
-  4. pnpm --filter @vielzeug/${name} build && pnpm validate:docs -- --package=${name} && pnpm validate:readme -- --package=${name}
-  5. node scripts/rush-change.mjs ${name} minor "feat(${name}): initial release"
+  4. bun run --filter @vielzeug/${name} build && bun run validate:docs -- --package=${name} && bun run validate:readme -- --package=${name}
+  5. bun scripts/change.mjs ${name} minor "feat(${name}): initial release"
 `;
 }
 
@@ -371,9 +361,9 @@ if (isMain(import.meta.url)) {
   const { positionals } = parseArgs(process.argv.slice(2));
   const [name, description] = positionals;
   try {
-    if (!name || !description) throw new Error('Usage: pnpm new:package <name> "<description>"');
+    if (!name || !description) throw new Error('Usage: bun run new:package <name> "<description>"');
     writePlan(planPackage(name, description));
-    run('node', ['scripts/sync-ai-data.mjs'], { cwd: ROOT, inherit: true });
+    run('bun', ['scripts/sync-ai-data.mjs'], { cwd: ROOT, inherit: true });
     console.log(nextSteps(name));
   } catch (err) {
     console.error(err instanceof Error ? err.message : err);

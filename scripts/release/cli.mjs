@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Single entrypoint for every release/publish operation CI runs. Workflow YAML only ever
- * calls `node scripts/release/cli.mjs <subcommand> ...`: the actual logic (and all of its
+ * calls `bun scripts/release/cli.mjs <subcommand> ...`: the actual logic (and all of its
  * tests) lives in the sibling modules this file imports. One CLI surface instead of N flat
  * scripts is what makes "how do I run a release step locally" a one-command answer instead of
  * "which of these eight files do I need."
@@ -23,11 +23,11 @@
  *                                            with a dangling dependency pin
  *   publish <pkg> <version> <folder> [--otp=<code>] [--interactive]   publish + tag one package
  *   publish-missing [--otp=<code>] [--interactive]                    backfill any @vielzeug/* version missing from npm
- *                                            (CI no longer runs this: `pnpm release:publish-local`
+ *                                            (CI no longer runs this: `bun run release:publish-local`
  *                                            is the recovery path for a partially published train)
  *   tag <pkg> <version>                     git tag only: no `npm publish`, no GitHub release
  *                                            (the version must already exist on npm, e.g.
- *                                            published via `pnpm release:publish-local`)
+ *                                            published via `bun run release:publish-local`)
  *   train-release [version]                 the train's single aggregate GitHub release: tag
  *                                            the train number and create one release listing
  *                                            the packages that changed (git-tag.mjs; defaults
@@ -68,7 +68,7 @@ async function main(argv) {
     case 'changed-packages': {
       const packages = listChangedPackageNames();
       if (packages.length === 0) {
-        throw new Error('No pending change files found. Write one with scripts/rush-change.mjs, commit, then re-trigger.');
+        throw new Error('No pending change files found. Write one with scripts/change.mjs, commit, then re-trigger.');
       }
       console.log(packages.join(' '));
       return;
@@ -115,7 +115,7 @@ async function main(argv) {
       if (!(await versionExists(pkg, version))) {
         throw new Error(
           `${pkg}@${version} not found on npm: this command only tags a version already published ` +
-            `(e.g. via 'pnpm release:publish-local'). Publish it first, then re-run.`,
+            `(e.g. via 'bun run release:publish-local'). Publish it first, then re-run.`,
         );
       }
       tagPackage({ dryRun, package: pkg, version });

@@ -2,7 +2,7 @@
  * Real-browser accessibility check for `ore-checkbox`: a real axe scan against the rendered
  * shadow DOM. Complements `checkbox.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
+ * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

@@ -2,7 +2,7 @@
  * Real-browser tests for `ore-rank-list`/`ore-rank-item`: full axe scans (color-contrast
  * re-enabled, unlike jsdom) and CSS-box bar geometry the jsdom suite cannot evaluate.
  *
- * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
+ * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

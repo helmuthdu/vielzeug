@@ -45,18 +45,18 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "pnpm --silent run prepare:data && rm -rf dist && tsc && pnpm --silent run verify:exports",
-    "dev": "node --experimental-strip-types ./scripts/dev.ts",
+    "build": "bun run --silent prepare:data && rm -rf dist && tsc && bun run --silent verify:exports",
+    "dev": "bun ./scripts/dev.ts",
     "fix": "biome check --write src",
-    "gen:tool-docs": "node --experimental-strip-types ./scripts/generate-tool-docs.ts",
+    "gen:tool-docs": "bun ./scripts/generate-tool-docs.ts",
     "lint": "biome ci src",
-    "prepare:data": "node --experimental-strip-types ./scripts/generate-bundled-data.ts",
-    "prepublishOnly": "pnpm --silent run build",
-    "start": "node dist/cli.js",
-    "test": "pnpm --silent run test:unit && pnpm --silent run test:integration",
-    "test:integration": "pnpm --silent run prepare:data && vitest run --project integration",
+    "prepare:data": "bun ./scripts/generate-bundled-data.ts",
+    "prepublishOnly": "bun run --silent build",
+    "start": "bun dist/cli.js",
+    "test": "bun run --silent test:unit && bun run --silent test:integration",
+    "test:integration": "bun run --silent prepare:data && vitest run --project integration",
     "test:unit": "vitest run --project unit",
-    "verify:exports": "node verify-exports.mjs"
+    "verify:exports": "bun verify-exports.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.4.0"

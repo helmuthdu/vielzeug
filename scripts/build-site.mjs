@@ -5,10 +5,10 @@ import { isMain, run } from './lib/cli.mjs';
 export const SITE_DEMOS = ['voyage', 'eshop', 'crm'];
 
 export function buildSite({ environment = process.env, root = path.resolve(fileURLToPath(new URL('..', import.meta.url))), runCommand = run } = {}) {
-  runCommand('pnpm', ['docs:build'], { cwd: root, inherit: true });
+  runCommand('bun', ['run', 'docs:build'], { cwd: root, inherit: true });
 
   for (const demo of SITE_DEMOS) {
-    runCommand('pnpm', ['--dir', `demos/${demo}`, 'build'], {
+    runCommand('bun', ['run', '--cwd', `demos/${demo}`, 'build'], {
       cwd: root,
       env: {
         ...environment,

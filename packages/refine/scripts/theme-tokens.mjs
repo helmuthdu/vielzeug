@@ -63,9 +63,9 @@
 // is exactly what happened to info/success/warning's dark ink at L12-15%,
 // and to warning's L74-84% base, before this comment was written).
 //
-// Run `pnpm run sync:theme` after editing this file to regenerate the block
+// Run `bun run sync:theme` after editing this file to regenerate the block
 // inside `src/styles/theme.css` between the GENERATED_BEGIN/END markers.
-// `pnpm run check:theme` (wired into `build`) fails if the two have drifted,
+// `bun run check:theme` (wired into `build`) fails if the two have drifted,
 // so the generated block is never hand-edited directly: same contract as
 // `sync:exports` / `check:manifest` for the export map.
 
@@ -80,12 +80,12 @@ const processRef = globalThis.process;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const THEME_CSS_PATH = join(__dirname, '../src/styles/theme.css');
 
-// Biome is a devDependency of this package so Rush makes it available to this
-// build-time generator without relying on a root workspace installation.
+// Biome is a devDependency of this package so the workspace install makes it
+// available to this build-time generator without relying on a root installation.
 const require = createRequire(join(__dirname, '../package.json'));
 const biomeBin = require.resolve('@biomejs/biome/bin/biome');
 
-const GENERATED_BEGIN = '  /* ── theme-tokens:generated:begin: run `pnpm run sync:theme`, do not hand-edit ── */';
+const GENERATED_BEGIN = '  /* ── theme-tokens:generated:begin: run `bun run sync:theme`, do not hand-edit ── */';
 const GENERATED_END = '  /* ── theme-tokens:generated:end ── */';
 
 // Shared shape every family's shade ramp derives from its `base` color.
@@ -406,7 +406,7 @@ async function main(command) {
 
   if (command === 'check') {
     if (normalizedGeneratedBlock(source) !== normalizedGeneratedBlock(nextSource)) {
-      console.error('theme.css is out of sync with theme-tokens.mjs: run `pnpm run sync:theme`.');
+      console.error('theme.css is out of sync with theme-tokens.mjs: run `bun run sync:theme`.');
       processRef.exit(1);
     }
 

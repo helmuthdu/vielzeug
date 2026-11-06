@@ -28,7 +28,7 @@ points, and `packages/<name>/AGENTS.md` before assuming the Library default.
 
 ## Structural validator contracts
 
-`pnpm validate:docs` applies explicit structural contracts from `DOCS_CONTRACT_OVERRIDES` in `scripts/validate-docs.ts`:
+`bun run validate:docs` applies explicit structural contracts from `DOCS_CONTRACT_OVERRIDES` in `scripts/validate-docs.ts`:
 
 - **`arsenal`: catalog:** nested category indexes and helper pages are navigation, not individual how-to recipes. Contract validates root pages and catalog entry structure without requiring every leaf to use recipe headings or appear directly in top-level index.
 - **`refine`: component library:** component pages, framework guides, and stylesheet/component sub-paths replace `examples.md`. Contract requires `index.md`, `usage.md`, and `api.md`, but does not require function-library usage/API headings.
@@ -111,7 +111,7 @@ Required structure: `## <Recipe Name>` then, in order, `### Problem` (1–3 sent
 
 ## Verification checklist
 
-`pnpm validate:docs -- --package=<name>` checks objective page shape, frontmatter keys, recipe/index parity, and relative links: run it and fix what it reports. It cannot judge the items below; check them from source before declaring a docs pass done:
+`bun run validate:docs -- --package=<name>` checks objective page shape, frontmatter keys, recipe/index parity, and relative links: run it and fix what it reports. It cannot judge the items below; check them from source before declaring a docs pass done:
 
 - [ ] Every signature in `api.md` matches `src/index.ts` exactly
 - [ ] All code blocks use the current API; no references to removed APIs

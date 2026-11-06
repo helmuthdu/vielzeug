@@ -4,24 +4,24 @@
  *
  * Every `@vielzeug/*` package that depends on another one (`refine` -> `ore`/`ripple`/...,
  * `scroll` -> `ripple`, `orbit`, `prism`, ...) declares that edge as `workspace:*` per
- * `packages/AGENTS.md`'s convention. `workspace:*` is pnpm's local-dependency protocol: it only
- * resolves inside this monorepo's own pnpm workspace, and `pnpm publish`/`pnpm pack` rewrite it
- * to a real version automatically. This repo's publish pipeline calls `npm pack`/`npm publish`
+ * `packages/AGENTS.md`'s convention. `workspace:*` is the Bun/pnpm workspace protocol: it only
+ * resolves inside this monorepo's own workspace, and Bun's own `bun publish` rewrites it to a
+ * real version automatically. This repo's publish pipeline calls `npm pack`/`npm publish`
  * directly instead (see `npm-publish.mjs`'s header for why: npm's Trusted Publishing/OIDC has no
- * pnpm equivalent), and plain `npm` has no idea what `workspace:` means: it packs the literal
+ * Bun equivalent), and plain `npm` has no idea what `workspace:` means: it packs the literal
  * string `"workspace:*"` straight into the published tarball's package.json. Every consumer
  * installing that published package outside this monorepo then fails immediately with e.g.
  * `Workspace not found (@vielzeug/ripple@workspace:*)`. This module is the fix, called from
  * `npm-publish.mjs` just before `npm pack`.
  *
- * Mirrors pnpm's own publish-time conversion rule: `workspace:*` -> the dependency's exact
+ * Mirrors Bun's own publish-time conversion rule: `workspace:*` -> the dependency's exact
  * current version; `workspace:^` / `workspace:~` -> that symbol prepended to the exact current
  * version; any other `workspace:<range>` (e.g. `workspace:^1.2.0`) already spells out a real
  * range, so just drop the `workspace:` prefix.
  */
 
 import { normalizePackageManifest } from '../lib/package-manifest.mjs';
-import { findProject as defaultFindProject } from './rush-project.mjs';
+import { findProject as defaultFindProject } from './workspace.mjs';
 
 const DEPENDENCY_FIELDS = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
 

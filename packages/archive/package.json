@@ -52,11 +52,11 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vite build && pnpm --silent run build:types",
+    "build": "vite build && bun run --silent build:types",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "biome check --write src test",
     "lint": "biome ci src test",
-    "prepublishOnly": "pnpm --silent run build",
+    "prepublishOnly": "bun run --silent build",
     "test": "vitest",
     "test:integration": "vitest run --config vitest.config.integration.ts",
     "test:types": "tsc -p tsconfig.json --noEmit"
