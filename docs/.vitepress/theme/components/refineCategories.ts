@@ -38,6 +38,7 @@ export const REFINE_CATEGORIES: RefineCategory[] = [
       'accordion',
       'avatar',
       'card',
+      'card-picker',
       'carousel',
       'chat-message',
       'chat-panel',

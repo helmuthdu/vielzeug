@@ -29,6 +29,8 @@ import '@vielzeug/refine/input';
 import '@vielzeug/refine/avatar';
 import '@vielzeug/refine/avatar-group';
 import '@vielzeug/refine/carousel';
+import '@vielzeug/refine/card-picker';
+import '@vielzeug/refine/skeleton';
 import '@vielzeug/refine/datagrid';
 import '@vielzeug/refine/marquee';
 import '@vielzeug/refine/time-picker';
@@ -55,6 +57,14 @@ import '@vielzeug/refine/time-picker';
   <ore-carousel-slide>Slide 1</ore-carousel-slide>
   <ore-carousel-slide>Slide 2</ore-carousel-slide>
 </ore-carousel>
+
+<ore-card-picker label="Choose action cards">
+  <ore-card-picker-item value="swift-strike" label="Swift Strike">
+    <ore-skeleton slot="media" striped width="100%" height="18rem" style="border-radius: 0; display: block;"></ore-skeleton>
+    <span slot="header">Swift Strike</span>
+    <p>Deal damage, then move one space.</p>
+  </ore-card-picker-item>
+</ore-card-picker>
 ```
 
 ## Features

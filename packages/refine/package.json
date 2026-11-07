@@ -181,6 +181,16 @@
       "require": "./dist/card.cjs",
       "types": "./dist/content/card/card.d.ts"
     },
+    "./card-picker": {
+      "import": "./dist/card-picker.js",
+      "require": "./dist/card-picker.cjs",
+      "types": "./dist/content/card-picker/card-picker.d.ts"
+    },
+    "./card-picker-item": {
+      "import": "./dist/card-picker-item.js",
+      "require": "./dist/card-picker-item.cjs",
+      "types": "./dist/content/card-picker/card-picker-item.d.ts"
+    },
     "./carousel": {
       "import": "./dist/carousel.js",
       "require": "./dist/carousel.cjs",

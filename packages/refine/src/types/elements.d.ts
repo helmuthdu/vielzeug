@@ -17,6 +17,8 @@ import type { OreAccordionItemEvents, OreAccordionItemProps } from '../content/a
 import type { OreAvatarProps } from '../content/avatar/avatar';
 import type { OreAvatarGroupProps } from '../content/avatar/avatar-group';
 import type { OreCardEvents, OreCardProps } from '../content/card/card';
+import type { OreCardPickerEvents, OreCardPickerProps } from '../content/card-picker/card-picker';
+import type { OreCardPickerItemProps } from '../content/card-picker/card-picker-item';
 import type { OreCarouselEvents, OreCarouselProps } from '../content/carousel/carousel';
 import type { OreChatMessageEvents, OreChatMessageProps } from '../content/chat-message/chat-message';
 import type { ChatPanelElement, OreChatPanelEvents } from '../content/chat-panel/chat-panel';
@@ -137,6 +139,8 @@ export interface RefineElementMap {
   'ore-button-group': HTMLElement & OreButtonGroupProps & AddEventListeners<OreButtonGroupEvents>;
   'ore-calendar': HTMLElement & OreCalendarProps & AddEventListeners<OreCalendarEvents>;
   'ore-card': HTMLElement & OreCardProps & AddEventListeners<OreCardEvents>;
+  'ore-card-picker': HTMLElement & OreCardPickerProps & AddEventListeners<OreCardPickerEvents>;
+  'ore-card-picker-item': HTMLElement & OreCardPickerItemProps;
   'ore-carousel': HTMLElement & OreCarouselProps & AddEventListeners<OreCarouselEvents>;
   'ore-carousel-slide': HTMLElement;
   'ore-chat-message': HTMLElement & OreChatMessageProps & AddEventListeners<OreChatMessageEvents>;

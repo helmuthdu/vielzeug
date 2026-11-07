@@ -1,0 +1,99 @@
+@layer refine.base {
+  :host {
+    --_transition-duration: var(--card-picker-transition-duration, var(--duration-300));
+    display: block;
+    min-width: 0;
+  }
+
+  .picker {
+    display: grid;
+    gap: var(--card-picker-gap, var(--size-3));
+    min-width: 0;
+  }
+
+  .stage {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    min-height: var(--card-picker-min-height, var(--size-80));
+    padding-inline: var(--size-2);
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+
+  :host([data-empty]) .stage {
+    min-height: 0;
+  }
+
+  ::slotted(ore-card-picker-item) {
+    visibility: hidden;
+    grid-area: 1 / 1;
+    width: 84%;
+    min-width: 0;
+    margin-inline: auto;
+    opacity: 0;
+    transition: var(
+      --_motion-transition,
+      transform var(--_transition-duration) var(--ease-move),
+      opacity var(--_transition-duration) var(--ease-move)
+    );
+  }
+
+  ::slotted(ore-card-picker-item[data-active]) {
+    position: relative;
+    z-index: 2;
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  ::slotted(ore-card-picker-item[data-previous]),
+  ::slotted(ore-card-picker-item[data-next]) {
+    position: absolute;
+    inset-block: 0;
+    z-index: 1;
+    visibility: visible;
+    width: 84%;
+    pointer-events: none;
+    opacity: 0.48;
+    transform: scale(0.92);
+  }
+
+  ::slotted(ore-card-picker-item[data-previous]) {
+    inset-inline-start: -76%;
+  }
+
+  ::slotted(ore-card-picker-item[data-next]) {
+    inset-inline-start: 92%;
+  }
+
+  ::slotted(ore-card-picker-item[data-hidden]) {
+    visibility: hidden;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: var(--size-11) minmax(0, 1fr) var(--size-11);
+    gap: var(--size-2);
+    align-items: center;
+    min-width: 0;
+  }
+
+  .nav-button {
+    width: var(--size-11);
+    height: var(--size-11);
+  }
+
+  .status {
+    min-width: 0;
+    font-size: var(--text-sm);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-600);
+    text-align: center;
+    text-wrap: pretty;
+  }
+
+  :host([disabled]) {
+    opacity: 0.65;
+  }
+}

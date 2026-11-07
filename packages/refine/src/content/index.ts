@@ -13,6 +13,15 @@ export type { OreAvatarGroupProps } from './avatar/avatar-group';
 export { AVATAR_GROUP_TAG } from './avatar/avatar-group';
 export type { OreCardEvents, OreCardProps } from './card/card';
 export { CARD_TAG } from './card/card';
+export type {
+  CardPickerBrowseChangeDetail,
+  CardPickerChangeDetail,
+  OreCardPickerEvents,
+  OreCardPickerProps,
+} from './card-picker/card-picker';
+export { CARD_PICKER_TAG } from './card-picker/card-picker';
+export type { OreCardPickerItemProps } from './card-picker/card-picker-item';
+export { CARD_PICKER_ITEM_TAG } from './card-picker/card-picker-item';
 export type { CarouselOrientation, CarouselVariant, OreCarouselEvents, OreCarouselProps } from './carousel/carousel';
 export { CAROUSEL_SLIDE_TAG, CAROUSEL_TAG } from './carousel/carousel';
 export type {
