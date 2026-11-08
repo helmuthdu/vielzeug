@@ -46,14 +46,15 @@ Use `open` as the controlled state and update it from `open-change`; use `defaul
 
 ```html
 <ore-button id="open-sm">sm</ore-button>
-<ore-button id="open-md">md</ore-button>
+<ore-button id="open-md">default</ore-button>
 <ore-button id="open-lg">lg</ore-button>
 <ore-button id="open-full">full</ore-button>
+<ore-button id="open-content">content</ore-button>
 
 <ore-drawer id="drawer-sm" size="sm" label="Small drawer" dismissible>
   <p>Compact drawer: ideal for quick-action panels.</p>
 </ore-drawer>
-<ore-drawer id="drawer-md" size="md" label="Medium drawer" dismissible>
+<ore-drawer id="drawer-md" label="Medium drawer" dismissible>
   <p>The default size. Suitable for most use cases.</p>
 </ore-drawer>
 <ore-drawer id="drawer-lg" size="lg" label="Large drawer" dismissible>
@@ -62,9 +63,12 @@ Use `open` as the controlled state and update it from `open-change`; use `defaul
 <ore-drawer id="drawer-full" size="full" label="Full drawer" dismissible>
   <p>Takes up the full width or height of the viewport.</p>
 </ore-drawer>
+<ore-drawer id="drawer-content" size="content" placement="bottom" title="Reading sheet" dismissible>
+  <p>A short passage determines the sheet height.</p>
+</ore-drawer>
 
 <script>
-  ['sm', 'md', 'lg', 'full'].forEach(function (s) {
+  ['sm', 'md', 'lg', 'full', 'content'].forEach(function (s) {
     document.getElementById('open-' + s).addEventListener('click', function () {
       document.getElementById('drawer-' + s).setAttribute('open', '');
     });
@@ -73,6 +77,8 @@ Use `open` as the controlled state and update it from `open-change`; use `defaul
 ```
 
 </ComponentPreview>
+
+Use `size="content"` with `placement="bottom"` or `placement="top"` for a content-sized sheet. Short content fits naturally. The panel stops at the viewport height minus `var(--size-12)`, then scrolls its body while the header and footer remain visible. Leave detents unset for a two-state reading sheet.
 
 ## With Header and Footer Slots
 
@@ -247,7 +253,7 @@ Use `backdrop` to match dialog behavior:
 | `open`                  | `boolean`                                | N/A         | Controlled visibility                                                                                          |
 | `default-open`          | `boolean`                                | `false`     | Initial visibility when `open` is not provided                                                                 |
 | `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`   | Edge the drawer slides in from                                                                                 |
-| `size`                  | `'sm' \| 'md' \| 'lg' \| 'full'`         | `'md'`      | Panel width (or height for top/bottom placements)                                                              |
+| `size`                  | `'sm' \| 'lg' \| 'full' \| 'content'`    | unset       | Size preset; `content` fits top/bottom sheets to content with bounded body scrolling                           |
 | `detents`               | `string`                                 | N/A         | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only |
 | `label`                 | `string`                                 | N/A         | Accessible title shown in the header bar                                                                       |
 | `drag-handle-placement` | `'outside' \| 'inset'`                   | `'outside'` | Position of the swipe drag handle                                                                              |

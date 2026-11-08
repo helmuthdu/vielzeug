@@ -26,7 +26,7 @@ import styles from './drawer.css?inline';
 export { ICON_TAG } from '../../content/icon/icon';
 
 type DrawerPlacement = 'left' | 'right' | 'top' | 'bottom';
-const DRAWER_SIZES = ['sm', 'lg', 'full'] as const;
+const DRAWER_SIZES = ['sm', 'lg', 'full', 'content'] as const;
 type DrawerSize = (typeof DRAWER_SIZES)[number];
 const DRAWER_BACKDROPS = ['opaque', 'blur', 'transparent'] as const;
 type DrawerBackdrop = (typeof DRAWER_BACKDROPS)[number];
@@ -121,7 +121,7 @@ export type OreDrawerProps = {
    * Set to false to manage focus manually.
    */
   'return-focus'?: boolean;
-  /** Drawer width/height preset */
+  /** Drawer size preset. `content` fits top/bottom sheets to their content. */
   size?: DrawerSize;
   /**
    * Visible title text rendered inside the header.
@@ -138,7 +138,7 @@ export type OreDrawerProps = {
  * @attr {boolean} open - Controlled open state
  * @attr {boolean} default-open - Initial uncontrolled open state
  * @attr {string} placement - 'left' | 'right' (default) | 'top' | 'bottom'
- * @attr {string} size - 'sm' | 'lg' | 'full'
+ * @attr {string} size - 'sm' | 'lg' | 'full' | 'content'
  * @attr {string} detents - Comma-separated drag snap points as fractions of panel size ('0.5,0.75'); bottom/top placement only
  * @attr {string} title - Visible header title text
  * @attr {string} label - Invisible aria-label (for drawers without a visible title)

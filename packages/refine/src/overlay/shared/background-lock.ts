@@ -24,12 +24,16 @@ export function createBackgroundLock(): BackgroundLock {
     lock(host: Element): void {
       if (lockCount === 0) {
         let ancestor: Element = host;
+        const body = host.ownerDocument.body;
 
-        while (ancestor.parentElement && ancestor.parentElement !== document.body) {
-          ancestor = ancestor.parentElement;
+        while (ancestor !== body) {
+          const root = ancestor.getRootNode();
+          const parent = ancestor.parentElement ?? (root instanceof ShadowRoot ? root.host : null);
+          if (!parent || parent === body) break;
+          ancestor = parent;
         }
 
-        lockedEls = Array.from(document.body.children).filter((el) => el !== ancestor && !el.hasAttribute('inert'));
+        lockedEls = Array.from(body.children).filter((el) => el !== ancestor && !el.hasAttribute('inert'));
 
         for (const el of lockedEls) el.setAttribute('inert', '');
       }

@@ -1,6 +1,21 @@
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Interaction', () => {
+  test('content-sized sheets fit short content and scroll long content', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await refinePage.mountComponent(
+      '<ore-drawer default-open placement="bottom" size="content" title="Reading"><p>Short content.</p><ore-button slot="footer">Done</ore-button></ore-drawer>',
+    );
+    const panel = page.locator('ore-drawer [part="panel"]');
+    await expect(panel).toBeVisible();
+    expect((await panel.boundingBox())!.height).toBeLessThan(300);
+    await page.locator('ore-drawer > p').evaluate((el) => (el.textContent = 'Long rules. '.repeat(600)));
+    await expect.poll(async () => (await panel.boundingBox())!.height).toBeLessThanOrEqual(796);
+    const body = page.locator('ore-drawer .body');
+    expect(await body.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    await expect(page.getByRole('button', { name: 'Done' })).toBeInViewport();
+  });
+
   test('opens inside an allow-scripts-only iframe', async ({ page, refinePage }) => {
     await refinePage.mountComponent('<iframe sandbox="allow-scripts" title="Preview"></iframe>');
 

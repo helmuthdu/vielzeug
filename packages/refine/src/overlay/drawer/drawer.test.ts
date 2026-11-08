@@ -113,6 +113,12 @@ describe('ore-drawer', () => {
   // ─── Props ───────────────────────────────────────────────────────────────────
 
   describe('Props', () => {
+    it('accepts content-sized sheets', async () => {
+      fixture = await mount('ore-drawer', { attrs: { placement: 'bottom', size: 'content' } });
+
+      expect(fixture.element.getAttribute('size')).toBe('content');
+    });
+
     it('dialog is hidden when open is false', async () => {
       fixture = await mount('ore-drawer');
 

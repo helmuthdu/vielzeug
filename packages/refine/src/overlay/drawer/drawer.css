@@ -187,6 +187,23 @@
   }
 
   /* Header / Body / Footer */
+  :host([size='content'][placement='bottom']) .panel,
+  :host([size='content'][placement='top']) .panel {
+    height: auto;
+    max-height: calc(100dvh - var(--size-12));
+    margin-block: 0;
+  }
+
+  :host([size='content'][placement='bottom']) .panel {
+    padding-block-end: var(--safe-area-inset-block-end);
+    border-start-start-radius: var(--rounded-lg);
+    border-start-end-radius: var(--rounded-lg);
+  }
+
+  :host([size='content'][placement='top']) .panel {
+    padding-block-start: var(--safe-area-inset-block-start);
+  }
+
   .header {
     display: flex;
     flex-shrink: 0;
@@ -208,8 +225,10 @@
 
   .body {
     flex: 1;
+    min-height: 0;
     padding: var(--size-4);
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .footer {
