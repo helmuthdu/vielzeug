@@ -4,6 +4,20 @@
       "comments": {
         "patch": [
           {
+            "author": "agent@vielzeug",
+            "comment": "Track reactive node-slot bindings through their source so nested template bindings dispose exactly when the slot's nodes are replaced",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          }
+        ]
+      },
+      "date": "Sun, 08 Nov 2026 08:30:51 GMT",
+      "tag": "@vielzeug/ore_v26.11.7",
+      "version": "26.11.7"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
             "author": "release-train",
             "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "ca642adf6a1c29b5f66204fbe72c718f49bd2bad"

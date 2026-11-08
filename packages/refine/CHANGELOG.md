@@ -1,7 +1,24 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Fri, 06 Nov 2026 13:25:51 GMT and should not be manually modified.
+This log was last generated on Sun, 08 Nov 2026 08:30:51 GMT and should not be manually modified.
 
+## 26.11.7
+Sun, 08 Nov 2026 08:30:51 GMT
+
+### Minor changes
+
+- Add accessible multi-select card picker
+- Add ore-media-navigation shared media navigation component
+- Add controlled ore-media-navigation shared by the carousel and card picker, with bounded indicator windows for large collections and full-range keyboard navigation. Add adaptive card layouts, configurable controls, content-sized drawers, and spring swiping; preserve mobile peeks and fix nested overlays/flex sizing. Carousel indicators now use button/aria-current semantics. Remove obsolete card-picker-item entry and inline disclosure contracts; see migration guidance.
+
+### Patches
+
+- Speed up media-navigation indicator hand-off to uniform 100ms phases in both directions
+- Ease media-navigation indicator size and fill between slots so the previous indicator's progress drains and the current one's fills up on navigation.
+- Render media navigation indicators through keyed list reconciliation and drive loop wrapping reactively; rename the carousel's internal navigation host class.
+- Give media-navigation window shifts visible feedback: entering indicators animate in and edge dots ease their scale.
+- Keep the horizontal alert action beside the body at phone widths instead of stacking a second row
+- Stage backward media-navigation moves with keyframes so the indicator choreography matches in both directions at any collection size
 ## 26.11.6
 
 Fri, 06 Nov 2026 13:25:51 GMT

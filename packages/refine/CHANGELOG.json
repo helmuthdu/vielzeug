@@ -2,6 +2,62 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add accessible multi-select card picker",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add ore-media-navigation shared media navigation component",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add controlled ore-media-navigation shared by the carousel and card picker, with bounded indicator windows for large collections and full-range keyboard navigation. Add adaptive card layouts, configurable controls, content-sized drawers, and spring swiping; preserve mobile peeks and fix nested overlays/flex sizing. Carousel indicators now use button/aria-current semantics. Remove obsolete card-picker-item entry and inline disclosure contracts; see migration guidance.",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Speed up media-navigation indicator hand-off to uniform 100ms phases in both directions",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Ease media-navigation indicator size and fill between slots so the previous indicator's progress drains and the current one's fills up on navigation.",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Render media navigation indicators through keyed list reconciliation and drive loop wrapping reactively; rename the carousel's internal navigation host class.",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Give media-navigation window shifts visible feedback: entering indicators animate in and edge dots ease their scale.",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Keep the horizontal alert action beside the body at phone widths instead of stacking a second row",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Stage backward media-navigation moves with keyframes so the indicator choreography matches in both directions at any collection size",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          }
+        ]
+      },
+      "date": "Sun, 08 Nov 2026 08:30:51 GMT",
+      "tag": "@vielzeug/refine_v26.11.7",
+      "version": "26.11.7"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

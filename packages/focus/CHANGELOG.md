@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/focus
 
-This log was last generated on Fri, 06 Nov 2026 13:25:51 GMT and should not be manually modified.
+This log was last generated on Sun, 08 Nov 2026 08:30:51 GMT and should not be manually modified.
 
+## 26.11.7
+Sun, 08 Nov 2026 08:30:51 GMT
+
+### Minor changes
+
+- Allow a getter for createListNavigation loop so wrap semantics stay live without recreating the navigation model.
 ## 26.11.6
 
 Fri, 06 Nov 2026 13:25:51 GMT

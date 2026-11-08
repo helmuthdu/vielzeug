@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Allow a getter for createListNavigation loop so wrap semantics stay live without recreating the navigation model.",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          }
+        ]
+      },
+      "date": "Sun, 08 Nov 2026 08:30:51 GMT",
+      "tag": "@vielzeug/focus_v26.11.7",
+      "version": "26.11.7"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

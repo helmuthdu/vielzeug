@@ -6,6 +6,25 @@
           {
             "author": "agent@vielzeug",
             "comment": "chore(codex): refresh bundled docs data",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Refresh Refine documentation and component metadata for shared media navigation, adaptive card layouts, larger preview dialogs, spring swiping, and content-sized drawers.",
+            "commit": "47b67af74e1c0fb42b09e7488ced9f5ec64ce984"
+          }
+        ]
+      },
+      "date": "Sun, 08 Nov 2026 08:30:51 GMT",
+      "tag": "@vielzeug/codex_v26.11.7",
+      "version": "26.11.7"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "chore(codex): refresh bundled docs data",
             "commit": "ca642adf6a1c29b5f66204fbe72c718f49bd2bad"
           }
         ]

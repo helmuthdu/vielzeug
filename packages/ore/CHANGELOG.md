@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Fri, 06 Nov 2026 13:25:51 GMT and should not be manually modified.
+This log was last generated on Sun, 08 Nov 2026 08:30:51 GMT and should not be manually modified.
 
+## 26.11.7
+Sun, 08 Nov 2026 08:30:51 GMT
+
+### Patches
+
+- Track reactive node-slot bindings through their source so nested template bindings dispose exactly when the slot's nodes are replaced
 ## 26.11.6
 
 Fri, 06 Nov 2026 13:25:51 GMT
