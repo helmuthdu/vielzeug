@@ -14,7 +14,7 @@ const syncFromHash = (scroll = false) => {
   if (!demo) return;
 
   selectedId.value = demo.id;
-  if (scroll) void nextTick(() => document.getElementById('demos')?.scrollIntoView());
+  if (scroll) void nextTick().then(() => document.getElementById('demos')?.scrollIntoView());
 };
 
 const selectDemo = (id: ShowcaseDemoId, scroll = false) => {
@@ -22,7 +22,7 @@ const selectDemo = (id: ShowcaseDemoId, scroll = false) => {
   const url = new URL(window.location.href);
   url.hash = id;
   window.history.pushState(null, '', url);
-  if (scroll) void nextTick(() => document.getElementById('demos')?.scrollIntoView());
+  if (scroll) void nextTick().then(() => document.getElementById('demos')?.scrollIntoView());
 };
 
 const handleDemoChange = (event: Event) => {

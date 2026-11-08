@@ -22,6 +22,7 @@ const {
   isCopied,
   isMaximized,
   isRtl,
+  // biome-ignore lint/correctness/noUnusedVariables: bound through the template `ref` attribute
   sandboxContainerRef,
   setViewportSize,
   toggleDirection,
