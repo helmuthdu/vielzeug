@@ -8,13 +8,11 @@ const cards = `
       <img slot="media" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 3'%3E%3Crect width='4' height='3' fill='%23ddd'/%3E%3C/svg%3E">
       <span slot="header">Alpha</span>
       <p>Alpha card details.</p>
-      <div slot="details"><p>Full Alpha rules and clarifications.</p><a href="#reference">Rule reference</a></div>
     </ore-card-picker-item>
     <ore-card-picker-item value="beta" label="Beta">
       <img slot="media" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 3'%3E%3Crect width='4' height='3' fill='%23bbb'/%3E%3C/svg%3E">
       <span slot="header">Beta</span>
       <p>Beta card details.</p>
-      <div slot="details"><p>Full Beta rules.</p></div>
     </ore-card-picker-item>
     <ore-card-picker-item value="gamma" label="Gamma">
       <img slot="media" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 3'%3E%3Crect width='4' height='3' fill='%23999'/%3E%3C/svg%3E">
@@ -394,101 +392,8 @@ test.describe('Swipe motion', () => {
   });
 });
 
-test.describe('Mobile reading', () => {
-  test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
-
-  test('fits short details, focuses their title, and returns focus on dismissal', async ({
-    page,
-    refinePage,
-  }, testInfo) => {
-    await refinePage.mountComponent(cards);
-    const trigger = page.getByRole('button', { exact: true, name: 'Details' });
-    await trigger.click();
-    const dialog = page.getByRole('dialog', { name: 'Alpha' });
-    const sheet = page.locator('ore-card-picker-item[data-active] ore-drawer');
-    await expect(dialog).toBeVisible();
-    await expect(sheet.getByRole('heading', { name: 'Alpha' })).toBeFocused();
-    await dialog.locator('[part="panel"]').evaluate(async (panel) => {
-      await Promise.all(panel.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
-    });
-    await page.screenshot({ path: testInfo.outputPath('mobile-reading.png') });
-    const bounds = await dialog.locator('[part="panel"]').boundingBox();
-    expect(bounds!.height).toBeLessThan(300);
-    await page.keyboard.press('Tab');
-    await expect(dialog.getByRole('button', { exact: true, name: 'Close' })).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(page.getByRole('link', { name: 'Rule reference' })).toBeFocused();
-    expect((await axeCheck(page)).violations).toEqual([]);
-    await page.keyboard.press('Escape');
-    await expect(dialog).not.toBeVisible();
-    await expect(trigger).toBeFocused();
-    await expect(page.locator('ore-card-picker')).toHaveAttribute('values', 'alpha');
-  });
-
-  test('reads long content in portrait and landscape without hiding selection', async ({ page, refinePage }) => {
-    const paragraphs = Array.from(
-      { length: 24 },
-      (_, index) => `<p>Rule ${index + 1}: Resolve the attack before moving, then apply its printed conditions.</p>`,
-    ).join('');
-    for (const viewport of [
-      { height: 740, width: 320 },
-      { height: 375, width: 667 },
-    ]) {
-      await page.setViewportSize(viewport);
-      await refinePage.mountComponent(cards.replace('Full Alpha rules and clarifications.', paragraphs));
-      await page.getByRole('button', { exact: true, name: 'Details' }).click();
-      const dialog = page.getByRole('dialog', { name: 'Alpha' });
-      const sheet = page.locator('ore-card-picker-item[data-active] ore-drawer');
-      await expect(dialog).toBeVisible();
-      const panel = await dialog.locator('[part="panel"]').boundingBox();
-      expect(Math.round(panel!.height)).toBeLessThanOrEqual(viewport.height - 48);
-      expect(panel!.width).toBeLessThanOrEqual(viewport.width);
-      const body = dialog.locator('.body');
-      const geometry = await body.evaluate((el) => ({ height: el.clientHeight, scroll: el.scrollHeight }));
-      expect(geometry.scroll).toBeGreaterThan(geometry.height);
-      await body.evaluate((el) => (el.scrollTop = el.scrollHeight));
-      await expect(page.getByRole('link', { name: 'Rule reference' })).toBeInViewport();
-      await expect(sheet.getByRole('checkbox', { name: 'Selected Alpha' })).toBeInViewport();
-      await sheet.getByRole('checkbox', { name: 'Selected Alpha' }).click();
-      await expect(page.locator('ore-card-picker')).toHaveAttribute('values', '');
-      await dialog.getByRole('button', { exact: true, name: 'Close' }).click();
-      await expect(dialog).not.toBeVisible();
-    }
-  });
-});
-
 test.describe('Desktop reading', () => {
   test.use({ hasTouch: false, isMobile: false, viewport: { height: 900, width: 1280 } });
-
-  test('opens a readable adjacent pane with a forward keyboard path', async ({ page, refinePage }, testInfo) => {
-    await refinePage.mountComponent(cards);
-    await page.locator('.frame').evaluate((el) => (el.style.maxWidth = 'none'));
-    await expect(page.locator('ore-card-picker-item[data-active] [part="details-trigger"]')).not.toHaveAttribute(
-      'aria-haspopup',
-      'dialog',
-    );
-    const trigger = page.getByRole('button', { exact: true, name: 'Details' });
-    await trigger.click();
-    const pane = page.getByRole('region', { exact: true, name: 'Alpha' });
-    await expect(pane).toBeVisible();
-    await expect(pane).toBeFocused();
-    await page.screenshot({ path: testInfo.outputPath('desktop-reading.png') });
-    await expect(page.getByRole('dialog')).not.toBeVisible();
-    const paneBox = await pane.boundingBox();
-    const cardBox = await page.locator('ore-card-picker-item[data-active] ore-card').boundingBox();
-    expect(paneBox!.width).toBeGreaterThan(320);
-    expect(paneBox!.x).toBeGreaterThanOrEqual(cardBox!.x + cardBox!.width);
-    await page.keyboard.press('Tab');
-    await expect(pane.getByRole('button', { name: 'Close details' })).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(pane.locator('.reading-content')).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(page.getByRole('link', { name: 'Rule reference' })).toBeFocused();
-    expect((await axeCheck(page)).violations).toEqual([]);
-    await page.keyboard.press('Escape');
-    await expect(pane).not.toBeVisible();
-    await expect(trigger).toBeFocused();
-  });
 
   test('keeps selected-list presentation outside current-card controls', async ({ page, refinePage }) => {
     await refinePage.mountComponent(cards);
@@ -499,31 +404,6 @@ test.describe('Desktop reading', () => {
     await page.getByRole('button', { name: 'Previous card' }).click();
     await expect(page.locator('ore-card-picker-item[data-active]')).toHaveAttribute('value', 'alpha');
     await expect(page.locator('ore-card-picker')).toHaveAttribute('values', 'alpha,beta');
-  });
-
-  test('preserves long details and form state across responsive reading surfaces', async ({ page, refinePage }) => {
-    const name = 'UninterruptedCounterattackWithAnUnusuallyLongCardName';
-    await refinePage.mountComponent(
-      `<ore-card-picker label="Long cards"><ore-card-picker-item value="long" label="${name}"><p>Short decision summary.</p><div slot="details"><label>Notes <input value="Original note"></label><p>${'Long rules. '.repeat(400)}</p></div></ore-card-picker-item></ore-card-picker>`,
-    );
-    await page.locator('.frame').evaluate((el) => {
-      el.style.maxWidth = 'none';
-      el.style.fontSize = '200%';
-    });
-    await expect(page.getByRole('button', { exact: true, name: 'Details' })).not.toHaveAttribute(
-      'aria-haspopup',
-      'dialog',
-    );
-    await page.getByRole('button', { exact: true, name: 'Details' }).click();
-    await page.getByRole('textbox', { name: 'Notes' }).fill('Keep this note');
-    await page.setViewportSize({ height: 844, width: 390 });
-    await expect(page.getByRole('dialog', { name })).toBeVisible();
-    await expect(page.getByRole('textbox', { name: 'Notes' })).toHaveValue('Keep this note');
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.setViewportSize({ height: 900, width: 1280 });
-    await expect(page.getByRole('dialog')).not.toBeVisible();
-    await expect(page.getByRole('region', { exact: true, name })).toBeVisible();
-    await expect(page.getByRole('textbox', { name: 'Notes' })).toHaveValue('Keep this note');
   });
 });
 
@@ -548,15 +428,6 @@ test.describe('Touch navigation', () => {
     await expect(page.locator('ore-card-picker-item[data-active]')).toHaveAttribute('value', 'beta');
 
     await page.getByRole('checkbox', { name: 'Select Beta' }).click();
-    await expect(page.locator('ore-card-picker')).toHaveAttribute('values', 'alpha,beta');
-
-    await page.getByRole('button', { exact: true, name: 'Details' }).click();
-    await expect(page.getByRole('dialog', { name: 'Beta' })).toBeVisible();
-    await page.locator('ore-card-picker-item[data-active] ore-drawer [part="panel"]').evaluate(async (el) => {
-      await Promise.all(el.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
-    });
-    await swipe(page, 0, 120, 'ore-drawer [part="drag-handle"]:visible');
-    await expect(page.getByRole('dialog', { name: 'Beta' })).not.toBeVisible();
     await expect(page.locator('ore-card-picker')).toHaveAttribute('values', 'alpha,beta');
   });
 });

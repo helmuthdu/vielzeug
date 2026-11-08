@@ -8,17 +8,6 @@ describe('ore-card-picker', () => {
       ?.shadowRoot?.querySelector<HTMLElement>(selector) ?? null;
 
   beforeAll(async () => {
-    if (!HTMLDialogElement.prototype.showModal) {
-      HTMLDialogElement.prototype.showModal = function () {
-        this.setAttribute('open', '');
-      };
-    }
-    if (!HTMLDialogElement.prototype.close) {
-      HTMLDialogElement.prototype.close = function () {
-        this.removeAttribute('open');
-        this.dispatchEvent(new Event('close'));
-      };
-    }
     await import('./card-picker');
   });
 
@@ -192,53 +181,6 @@ describe('ore-card-picker', () => {
       value: 'beta',
       values: ['alpha', 'beta'],
     });
-  });
-
-  it('expands optional details without changing selection', async () => {
-    fixture = await mount('ore-card-picker', {
-      attrs: { label: 'Choose cards', values: 'alpha' },
-      html: '<ore-card-picker-item value="alpha" label="Alpha"><p>Short summary.</p><div slot="details">Full rule details.</div></ore-card-picker-item>',
-    });
-
-    const item = fixture.element.querySelector('ore-card-picker-item')!;
-    const toggle = item.shadowRoot?.querySelector<HTMLElement>('[part="details-trigger"]');
-    const checkbox = item.shadowRoot?.querySelector('ore-checkbox');
-    const sheet = item.shadowRoot?.querySelector<HTMLElement>('ore-drawer');
-
-    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
-    expect(sheet?.getAttribute('open')).toBe('false');
-    expect(toggle?.textContent).toContain('Details');
-
-    toggle?.click();
-    await fixture.flush();
-
-    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
-    expect(sheet?.getAttribute('open')).toBe('true');
-    expect(
-      sheet
-        ?.querySelector<HTMLSlotElement>('slot[name="details"]')
-        ?.assignedNodes()
-        .map((node) => node.textContent)
-        .join(''),
-    ).toContain('Full rule details.');
-    expect(toggle?.textContent).toContain('Details');
-    expect(checkbox?.hasAttribute('checked')).toBe(true);
-    expect(item.hasAttribute('selected')).toBe(true);
-    toggle?.click();
-    await fixture.flush();
-    expect(sheet?.shadowRoot?.querySelector('dialog')?.open).toBe(false);
-  });
-
-  it('does not render a details control when the details slot is empty', async () => {
-    fixture = await mount('ore-card-picker', {
-      html: '<ore-card-picker-item value="alpha" label="Alpha">Short summary.</ore-card-picker-item>',
-    });
-
-    expect(
-      fixture.element
-        .querySelector('ore-card-picker-item')
-        ?.shadowRoot?.querySelector('[part="details-trigger"][hidden]'),
-    ).not.toBeNull();
   });
 
   it('syncs an external active index and selected values', async () => {

@@ -68,7 +68,7 @@ export type OreCardPickerProps = {
 };
 
 const INTERACTIVE_SELECTOR =
-  'a[href], button, input, select, textarea, [role="button"], [role="checkbox"], [part="details"], ore-drawer, [contenteditable=""], [contenteditable="true"], ore-button, ore-checkbox';
+  'a[href], button, input, select, textarea, [role="button"], [role="checkbox"], [contenteditable=""], [contenteditable="true"], ore-button, ore-checkbox';
 
 const itemLabel = (item: HTMLElement): string =>
   item.getAttribute('label')?.trim() || item.getAttribute('value')?.trim() || 'Card';

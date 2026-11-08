@@ -59,11 +59,10 @@ import '@vielzeug/refine/time-picker';
 </ore-carousel>
 
 <ore-card-picker label="Choose action cards">
-  <ore-card-picker-item value="swift-strike" label="Swift Strike" details-label="Rules">
+  <ore-card-picker-item value="swift-strike" label="Swift Strike">
     <ore-skeleton slot="media" striped width="100%" height="var(--size-40)" radius="0" style="display: block;"></ore-skeleton>
     <span slot="header">Swift Strike</span>
     <p>Deal damage, then move one space.</p>
-    <p slot="details">Resolve the attack, then apply its printed condition.</p>
   </ore-card-picker-item>
 </ore-card-picker>
 ```

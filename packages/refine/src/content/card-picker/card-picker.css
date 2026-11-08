@@ -94,12 +94,6 @@
     transition: none;
   }
 
-  @container card-picker (min-width: 48rem) {
-    ::slotted(ore-card-picker-item[data-active][data-details-open]) {
-      width: 100%;
-    }
-  }
-
   .navigation {
     position: static;
     box-sizing: border-box;

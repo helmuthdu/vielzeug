@@ -35,7 +35,7 @@ describe('HTMLElementTagNameMap: form-associated element type coverage', () => {
     expectTypeOf<RefineElementMap['ore-card-picker']['values']>().toEqualTypeOf<string | undefined>();
     expectTypeOf<RefineElementMap['ore-card-picker']['active-index']>().toEqualTypeOf<number | undefined>();
     expectTypeOf<RefineElementMap['ore-card-picker-item']['value']>().toEqualTypeOf<string | undefined>();
-    expectTypeOf<RefineElementMap['ore-card-picker-item']['details-label']>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<RefineElementMap['ore-card-picker-item']['label']>().toEqualTypeOf<string | undefined>();
     expectTypeOf<RefineElementMap['ore-card-picker']['orientation']>().toEqualTypeOf<
       'horizontal' | 'vertical' | 'auto' | undefined
     >();

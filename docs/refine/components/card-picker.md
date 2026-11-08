@@ -4,13 +4,13 @@ Browse image-led cards and select any number of them. The active card is separat
 
 ## Basic Usage
 
-Import `@vielzeug/refine/card-picker` to register the picker and its required child controls, including the reading drawer. Register `@vielzeug/refine/skeleton` separately for this example. Give each item a stable `value` and accessible `label`. Put a short identity in `header`, artwork in `media`, a concise summary in the default slot, and optional long-form rules in `details`.
+Import `@vielzeug/refine/card-picker` to register the picker and its required child controls. Register `@vielzeug/refine/skeleton` separately for this example. Give each item a stable `value` and accessible `label`. Put a short identity in `header`, artwork in `media`, and a concise summary in the default slot.
 
 <ComponentPreview>
 
 ```html
 <ore-card-picker label="Choose action cards" values="ember-strike">
-  <ore-card-picker-item value="ember-strike" label="Ember Strike" details-label="Rules">
+  <ore-card-picker-item value="ember-strike" label="Ember Strike">
     <ore-skeleton
       slot="media"
       striped
@@ -20,20 +20,6 @@ Import `@vielzeug/refine/card-picker` to register the picker and its required ch
       style="display: block;"></ore-skeleton>
     <span slot="header">Ember Strike</span>
     <p>Deal damage, then move one space.</p>
-    <div slot="details">
-      <h3>Full rules</h3>
-      <p>Resolve the attack before moving. Apply any printed conditions after damage.</p>
-      <h3>Timing</h3>
-      <p>
-        Choose a target within reach. Resolve its reaction before calculating damage. Movement happens only after the
-        attack has finished.
-      </p>
-      <h3>Conditions</h3>
-      <p>
-        Apply each printed condition once. If a condition is already present, use the duration stated on the card rather
-        than adding another copy.
-      </p>
-    </div>
   </ore-card-picker-item>
   <ore-card-picker-item value="guarding-step" label="Guarding Step">
     <ore-skeleton
@@ -152,13 +138,9 @@ Register `@vielzeug/refine/dialog` and put the picker inside your existing zoom 
 
 Replace the media placeholder with the application's card or equipment scan. The `media` slot accepts an `img` without changing the rest of the picker API.
 
-## Reading Details
+## Long-Form Content
 
-The secondary **Details** action appears only when you provide a `details` slot. Use `details-label` to name the content, for example `Rules` or `Specifications`. Artwork comes first, followed by the title and decision summary together in the card body. Selection and Details remain below the body text.
-
-Below 48rem of picker width, details open in a modal bottom sheet. Short content determines its height; longer content scrolls beneath a fixed title and above a fixed selection footer. The sheet uses the drawer's real drag handle, close button, backdrop dismissal, and focus return. The grip belongs to the open sheet, not the card action.
-
-At 48rem or wider, details open in an adjacent, non-modal reading pane. Its close action and keyboard path follow the title. The breakpoint follows the picker container, so a narrow sidebar still uses the sheet on a desktop viewport. Resizing moves the same details nodes between surfaces, preserving their content and form values. Browsing another card closes the previous reading surface.
+The picker renders cards, browsing, and selection only; it has no built-in details surface. When a card needs full rules or specifications, render them outside the picker: react to `browse-change` in your own panel, or compose `ore-drawer` or `ore-dialog` around your markup for a modal reading surface. Keep each card's default slot to the summary that supports the selection decision.
 
 ## Selection State
 
@@ -180,10 +162,8 @@ The picker focuses on the current card. Present a selected-card list or count in
 ## Keyboard and Touch
 
 - Focus the picker and use Left/Right Arrow, Home, and End to browse.
-- Use Tab to reach current-card selection, the Details action, and navigation.
+- Use Tab to reach current-card selection, item actions, and navigation.
 - Focus an indicator and use Left/Right Arrow, Home, or End to browse directly. Only the active indicator is in the sequential Tab order.
-- Opening the sheet focuses its title and traps focus inside it. Escape, its close button, backdrop tap, or a downward handle drag dismiss it and return focus to the opener.
-- Opening the desktop pane focuses its reading region. Tab proceeds to Close details, the scrollable content, and its interactive descendants. Escape closes the pane and returns focus to Details.
 - Swipe horizontally to browse on touch screens. Cards follow your drag, then spring into place using the release velocity. Dragging beyond the first or last card meets resistance and springs back. Vertical movement remains page scrolling.
 - Selection is always an explicit checkbox action. A swipe never selects or removes a card.
 - Reduced-motion preferences keep direct drag feedback but settle released cards immediately instead of springing.
@@ -195,10 +175,9 @@ The picker focuses on the current card. Present a selected-card list or count in
 | `media`   | Card artwork or other visual content                     |
 | `header`  | Card title or short identity                             |
 | default   | Concise summary that remains visible                     |
-| `details` | Longer information shown in the adaptive reading surface |
 | `actions` | Consumer-owned secondary actions                         |
 
-Each `ore-card-picker-item` requires a stable `value`. `label` names the card for assistive technology and defaults to `value`. Selection controls have visible `Select`/`Selected` labels and card-specific accessible names. Item `disabled` disables selection; reading and browsing remain available.
+Each `ore-card-picker-item` requires a stable `value`. `label` names the card for assistive technology and defaults to `value`. Selection controls have visible `Select`/`Selected` labels and card-specific accessible names. Item `disabled` disables selection; browsing remains available.
 
 ## API
 
@@ -233,6 +212,5 @@ Parts: `stage`, `navigation`, `navigation-bar`, `indicators`, `indicator`, `cont
 | `value`         | `string`  | none      | Stable selection value                              |
 | `label`         | `string`  | `value`   | Accessible card name                                |
 | `disabled`      | `boolean` | `false`   | Prevents selection while leaving the card browsable |
-| `details-label` | `string`  | `Details` | Accessible reading action text                      |
 
-The picker reflects selection on each item with a read-only `selected` attribute. Parts: `card`, `media`, `content`, `selection`, `details-trigger`, `details`, `details-sheet`, and `actions`.
+The picker reflects selection on each item with a read-only `selected` attribute. Parts: `card`, `media`, `content`, `selection`, and `actions`.

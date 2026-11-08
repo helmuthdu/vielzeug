@@ -21,9 +21,9 @@ carousel.shadowRoot.querySelector('ore-media-navigation');
 
 For styling, `ore-carousel::part(indicators)` still targets the forwarded navigation surface. `ore-card-picker::part(navigation-bar)` targets its shared bar.
 
-## Card picker reading surfaces replace inline disclosure
+## Card picker registers one entry and drops reading surfaces
 
-Import `@vielzeug/refine/card-picker` to register both picker tags and their child controls. The standalone `@vielzeug/refine/card-picker-item` entry is removed. Keep long information in the existing `details` slot; it now opens in a content-sized mobile sheet or an adjacent desktop reading pane.
+Import `@vielzeug/refine/card-picker` to register both picker tags and their child controls. The standalone `@vielzeug/refine/card-picker-item` entry is removed.
 
 ```ts
 // Before
@@ -33,19 +33,7 @@ import '@vielzeug/refine/card-picker-item';
 import '@vielzeug/refine/card-picker';
 ```
 
-```html
-<!-- Before: unnamed disclosure action -->
-<ore-card-picker-item value="attack" label="Attack">
-  <p slot="details">Attack rules.</p>
-</ore-card-picker-item>
-
-<!-- After: name the reading action for your content -->
-<ore-card-picker-item value="attack" label="Attack" details-label="Rules">
-  <p slot="details">Attack rules.</p>
-</ore-card-picker-item>
-```
-
-The `details-toggle` part becomes `details-trigger`. The `--card-picker-details-max-height` custom property is removed; use the `details-sheet` part to style the mobile drawer and the `details` part for the desktop pane. `--card-picker-min-height` now defaults to `0` rather than reserving blank stage space. Selection and browse event contracts are unchanged.
+The item's reading surfaces are gone: the `details` slot, the `details-label` attribute, and the `details-toggle`, `details-trigger`, `details`, and `details-sheet` parts are removed, along with `--card-picker-details-max-height`. The picker renders cards, browsing, and selection only. Present long-form content outside the picker: react to `browse-change` in your own panel, or compose `ore-drawer` or `ore-dialog` around your markup for a modal reading surface. `--card-picker-min-height` now defaults to `0` rather than reserving blank stage space. Selection and browse event contracts are unchanged.
 
 ## Sidebar drawer backdrop no longer dims by default
 

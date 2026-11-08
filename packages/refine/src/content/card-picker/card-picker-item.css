@@ -1,22 +1,15 @@
 @layer refine.base {
   :host {
-    --_reading-inline: 0;
+    --_layout-wide: 0;
     display: block;
     min-width: 0;
   }
 
-  .layout {
-    display: grid;
-    gap: var(--size-6);
+  .card {
     width: 100%;
     min-width: 0;
     max-width: var(--size-xl);
     margin-inline: auto;
-  }
-  .card {
-    width: 100%;
-    min-width: 0;
-    height: 100%;
   }
   .identity {
     padding: var(--size-4);
@@ -40,7 +33,7 @@
     object-fit: contain;
   }
 
-  :host([data-orientation='horizontal']) .layout {
+  :host([data-orientation='horizontal']) .card {
     max-width: var(--size-5xl);
   }
   :host([data-orientation='horizontal']) .card::part(card) {
@@ -76,63 +69,13 @@
     padding: var(--size-4);
   }
 
-  .reading-pane {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    max-height: 80dvh;
-    color: var(--color-contrast-900);
-    background: var(--color-canvas);
-  }
-  .reading-header {
-    display: flex;
-    flex-shrink: 0;
-    gap: var(--size-3);
-    align-items: start;
-    justify-content: space-between;
-    padding-block-end: var(--size-4);
-    border-bottom: var(--border) solid var(--color-divider);
-  }
-  .reading-header h2 {
-    margin: 0;
-    font-size: var(--text-lg);
-    font-weight: var(--font-semibold);
-    overflow-wrap: anywhere;
-  }
-  .reading-content {
-    flex: 1;
-    min-height: 0;
-    padding-block: var(--size-4);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    overflow-wrap: anywhere;
-  }
-  .reading-footer {
-    padding-block-start: var(--size-4);
-    border-top: var(--border) solid var(--color-divider);
-  }
-  .sheet-title {
-    overflow-wrap: anywhere;
-    white-space: normal;
-  }
-  .reading-sheet::part(body) {
-    overflow-wrap: anywhere;
-  }
-  .reading-pane:focus-visible {
-    outline: var(--border-2) solid var(--color-primary);
-    outline-offset: var(--size-1);
-  }
   [hidden] {
     display: none;
   }
 
   @container card-picker (min-width: 48rem) {
     :host {
-      --_reading-inline: 1;
-    }
-    :host([data-details-open]) .layout {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      max-width: none;
+      --_layout-wide: 1;
     }
   }
 
