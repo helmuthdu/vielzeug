@@ -127,7 +127,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
         false,
       );
 
-      setAttributes(bgCircle, { cx, cy, r: inner > 0 ? inner : 0 });
+      setAttributes(bgCircle, { cx, cy, r: Math.max(inner, 0) });
       bgCircle.setAttribute('style', 'fill:var(--prism-bg,#fff)');
 
       while (pieGroup.children.length > currentArcs.length) pieGroup.removeChild(pieGroup.lastChild!);
