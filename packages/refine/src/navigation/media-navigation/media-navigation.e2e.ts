@@ -84,7 +84,10 @@ test.describe('Interaction', () => {
     expect(choreography.currentFill).toBeLessThan(1);
     const settled = await navigation.evaluate(async (el) => {
       await Promise.allSettled(
-        el.shadowRoot!.getAnimations({ subtree: true }).map((animation) => (animation.play(), animation.finished)),
+        el.shadowRoot!.getAnimations({ subtree: true }).map((animation) => {
+          animation.play();
+          return animation.finished;
+        }),
       );
       const dot = (index: string) =>
         el.shadowRoot!.querySelector<HTMLElement>(`.indicator[data-index="${index}"]`)!.getBoundingClientRect().width;

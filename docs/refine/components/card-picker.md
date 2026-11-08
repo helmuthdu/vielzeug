@@ -170,12 +170,12 @@ The picker focuses on the current card. Present a selected-card list or count in
 
 ## Item Slots
 
-| Slot      | Purpose                                                  |
-| --------- | -------------------------------------------------------- |
-| `media`   | Card artwork or other visual content                     |
-| `header`  | Card title or short identity                             |
-| default   | Concise summary that remains visible                     |
-| `actions` | Consumer-owned secondary actions                         |
+| Slot      | Purpose                              |
+| --------- | ------------------------------------ |
+| `media`   | Card artwork or other visual content |
+| `header`  | Card title or short identity         |
+| default   | Concise summary that remains visible |
+| `actions` | Consumer-owned secondary actions     |
 
 Each `ore-card-picker-item` requires a stable `value`. `label` names the card for assistive technology and defaults to `value`. Selection controls have visible `Select`/`Selected` labels and card-specific accessible names. Item `disabled` disables selection; browsing remains available.
 
@@ -207,10 +207,10 @@ Parts: `stage`, `navigation`, `navigation-bar`, `indicators`, `indicator`, `cont
 
 ### `ore-card-picker-item`
 
-| Attribute       | Type      | Default   | Description                                         |
-| --------------- | --------- | --------- | --------------------------------------------------- |
-| `value`         | `string`  | none      | Stable selection value                              |
-| `label`         | `string`  | `value`   | Accessible card name                                |
-| `disabled`      | `boolean` | `false`   | Prevents selection while leaving the card browsable |
+| Attribute  | Type      | Default | Description                                         |
+| ---------- | --------- | ------- | --------------------------------------------------- |
+| `value`    | `string`  | none    | Stable selection value                              |
+| `label`    | `string`  | `value` | Accessible card name                                |
+| `disabled` | `boolean` | `false` | Prevents selection while leaving the card browsable |
 
 The picker reflects selection on each item with a read-only `selected` attribute. Parts: `card`, `media`, `content`, `selection`, and `actions`.
