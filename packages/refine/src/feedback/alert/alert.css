@@ -222,26 +222,9 @@
     grid-column: 4;
   }
 
-  /* Phones: the horizontal action stacks below a wrapped message: a right-column action
-     crowds multi-line text at narrow widths (Material flips at the same breakpoint). */
-  @media (width <= 480px) {
-    :host([horizontal]) .alert {
-      grid-template-columns: auto 1fr auto;
-    }
-
-    :host([horizontal]) .actions:not([hidden]) {
-      flex-wrap: wrap;
-      grid-row: 2;
-      grid-column: 1 / -1;
-      margin-inline-start: 0;
-      margin-top: var(--size-2);
-    }
-
-    :host([horizontal]) .close {
-      grid-row: 1;
-      grid-column: 3;
-    }
-  }
+  /* Phones keep the horizontal contract: the trailing action stays in its column beside
+     the body. Snackbars and tallies ride on phone-width toasts every session, and a
+     forced second row read as a broken layout; the 1fr body column wraps its own text. */
 
   /* ── Close button ──────────────────────────────── */
 
