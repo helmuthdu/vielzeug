@@ -239,7 +239,7 @@ test.describe('Interaction', () => {
     await expect(backdrop).toBeHidden();
     await expect(closeBtn).toBeHidden();
 
-    await sidebar.evaluate((el) => (el as { openDrawer(): void }).openDrawer());
+    await sidebar.evaluate((el) => (el as HTMLElement & { openDrawer(): void }).openDrawer());
     await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
 
     const veil = await compositeOverWhite(page, '#sidebar [part="drawer-backdrop"]');
@@ -253,7 +253,7 @@ test.describe('Interaction', () => {
     await closeBtn.click();
     await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
 
-    await sidebar.evaluate((el) => (el as { openDrawer(): void }).openDrawer());
+    await sidebar.evaluate((el) => (el as HTMLElement & { openDrawer(): void }).openDrawer());
     await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
     await backdrop.click({ position: { x: 300, y: 20 } });
     await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
@@ -267,7 +267,7 @@ test.describe('Interaction', () => {
 
     const sidebar = page.locator('#sidebar');
 
-    await sidebar.evaluate((el) => (el as { openDrawer(): void }).openDrawer());
+    await sidebar.evaluate((el) => (el as HTMLElement & { openDrawer(): void }).openDrawer());
     await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
 
     const veil = await compositeOverWhite(page, '#sidebar [part="drawer-backdrop"]');

@@ -187,7 +187,7 @@ describe('ore-chat-panel', () => {
       expect(fixture.query('.tools ore-button[variant="text"]')).toBeNull();
 
       await fixture.act(() => {
-        fixture.element.messages = [greeting, { sender: 'user', text: 'Hi' }];
+        (fixture.element as ChatPanelElement).messages = [greeting, { sender: 'user', text: 'Hi' }];
       });
 
       const startOver = fixture.query('.tools ore-button[variant="text"]')!;

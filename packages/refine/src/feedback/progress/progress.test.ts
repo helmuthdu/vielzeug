@@ -272,7 +272,7 @@ describe('ore-progress', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-progress', { attrs: { label: 'Loading', value: '50' } });
 

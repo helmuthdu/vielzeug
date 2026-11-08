@@ -79,7 +79,7 @@ describe('ore-spotlight', () => {
       });
 
       await fixture.act(() => {
-        (fixture.element as { rect: unknown }).rect = { height: 20, width: 30, x: 5, y: 6 };
+        (fixture.element as HTMLElement & { rect: unknown }).rect = { height: 20, width: 30, x: 5, y: 6 };
       });
 
       const style = fixture.query('.overlay')?.getAttribute('style') ?? '';

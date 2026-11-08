@@ -46,7 +46,7 @@ async function geometry(page: Page, id: string): Promise<DockGeometry> {
 
       return {
         bottom: box?.bottom ?? 0,
-        hidden: (el as HTMLElement | null)?.hidden ?? true,
+        hidden: Boolean((el as HTMLElement | null)?.hidden ?? true),
         left: box?.left ?? 0,
         right: box?.right ?? 0,
         top: box?.top ?? 0,
@@ -335,7 +335,7 @@ test.describe('Layout', () => {
     const tool = await page.locator('#dock').evaluate((dock) => {
       const button = dock.querySelector('ore-button');
       const style = button?.shadowRoot?.querySelector('[part="button"]')
-        ? getComputedStyle(button.shadowRoot.querySelector('[part="button"]'))
+        ? getComputedStyle(button.shadowRoot.querySelector('[part="button"]')!)
         : null;
 
       return {

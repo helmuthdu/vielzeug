@@ -839,7 +839,7 @@ describe('ore-datagrid', () => {
 
   // ── Edge cases ────────────────────────────────────────────────────────────────
 
-  describe('Edge cases', () => {
+  describe('Edge cases (rendering)', () => {
     it('renders empty state when rows is empty', async () => {
       fixture = await mount('ore-datagrid', {});
 
@@ -2036,7 +2036,7 @@ describe('ore-datagrid', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-datagrid', {
         attrs: { 'aria-label': 'Users table' },

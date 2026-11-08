@@ -132,7 +132,7 @@ test.describe('Focus', () => {
     await page.keyboard.press('Tab');
 
     const card = await page.evaluate(() => {
-      const host = document.querySelector('ore-cookie-banner') as HTMLElement & { show(): void };
+      const host = document.querySelector('ore-cookie-banner') as HTMLElement & { hide(): void; show(): void };
       // The banner is visible at mount; `show()` only moves focus when it
       // transitions from hidden, so cycle it the way an app would.
       host.hide();

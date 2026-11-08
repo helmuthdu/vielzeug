@@ -41,7 +41,7 @@ describe('ore-tour', () => {
       };
     }
 
-    (globalThis as typeof globalThis & { CSSTransition?: unknown }).CSSTransition ??= class {};
+    (globalThis as unknown as { CSSTransition?: unknown }).CSSTransition ??= class {};
 
     await import('./tour');
   });
@@ -300,7 +300,7 @@ describe('ore-tour', () => {
 
       fixture = await mountCard({ presentation: 'modal' }, { open: true });
 
-      const float = fixture.query<HTMLElement>('.float');
+      const float = fixture.query<HTMLElement>('.float')!;
       const events: string[] = [];
       const nativeFocus = float.focus.bind(float);
 

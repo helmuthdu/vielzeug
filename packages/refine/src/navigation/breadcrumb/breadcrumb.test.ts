@@ -108,7 +108,7 @@ describe('ore-breadcrumb-item accessibility', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-breadcrumb', {
         html: `<ore-breadcrumb-item href="/">Home</ore-breadcrumb-item>

@@ -23,7 +23,7 @@ describe('ore-dialog', () => {
       };
     }
 
-    (globalThis as typeof globalThis & { CSSTransition?: unknown }).CSSTransition ??= FakeCSSTransition;
+    (globalThis as unknown as { CSSTransition?: unknown }).CSSTransition ??= FakeCSSTransition;
 
     await import('./dialog');
   });
@@ -143,7 +143,7 @@ describe('ore-dialog', () => {
       let finishTransition: () => void = () => {};
       const pending = new FakeCSSTransition() as unknown as { finished: Promise<unknown> };
       pending.finished = new Promise((resolve) => {
-        finishTransition = resolve;
+        finishTransition = () => resolve(undefined);
       });
       panel.getAnimations = () => [pending as unknown as Animation];
 

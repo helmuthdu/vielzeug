@@ -1072,7 +1072,7 @@ describe('ore-combobox', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks when closed', async () => {
       fixture = await mount('ore-combobox', {
         attrs: { label: 'Country' },

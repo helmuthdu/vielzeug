@@ -598,7 +598,7 @@ describe('ore-time-picker', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks when closed', async () => {
       fixture = await mount('ore-time-picker', { attrs: { label: 'Pick a time' } });
 

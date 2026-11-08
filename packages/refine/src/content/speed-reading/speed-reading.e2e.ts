@@ -6,6 +6,11 @@ const viewport = `${reader} [part="viewport"]`;
 const focal = `${reader} [part="focal"]`;
 const word = `${reader} [part="word"]`;
 
+type ReaderElement = HTMLElement & {
+  labels: Record<string, string>;
+  play(): void;
+  seek(index: number): void;
+};
 test.describe('Touch help', () => {
   test.use({ hasTouch: true, viewport: { height: 900, width: 320 } });
 
@@ -156,7 +161,7 @@ test.describe('Layout', () => {
     await refinePage.mountComponent(
       '<ore-speed-reading dir="rtl" style="width:280px" text="One two three."></ore-speed-reading>',
     );
-    await page.locator(reader).evaluate((el) => {
+    await page.locator(reader).evaluate<void, void, ReaderElement>((el) => {
       el.labels = { play: 'Mit dem Lesen beginnen', restart: 'Von vorne beginnen' };
     });
     await expect(page.getByRole('slider', { name: 'Words per minute' })).toBeVisible();
@@ -201,7 +206,7 @@ test.describe('Layout', () => {
       );
       const box = (await page.locator(viewport).boundingBox())!;
       for (let index = 0; index < 5; index++) {
-        await page.locator(reader).evaluate((el, index) => el.seek(index), index);
+        await page.locator(reader).evaluate((el, index) => (el as ReaderElement).seek(index), index);
         await expect(page.locator(focal)).toHaveText(['a', 'o', 'e', 'r', 'é'][index]!);
         await expect
           .poll(async () => {
@@ -218,7 +223,7 @@ test.describe('Layout', () => {
     await refinePage.mountComponent(
       '<ore-speed-reading text="Hello extraordinary" style="--speed-reading-font-size:var(--text-4xl)"></ore-speed-reading>',
     );
-    await page.locator(reader).evaluate((el) => el.seek(1));
+    await page.locator(reader).evaluate((el) => (el as ReaderElement).seek(1));
     await expect(page.locator(word)).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
     await expect(page.getByRole('button', { exact: true, name: 'Next word' })).toBeVisible();
@@ -231,7 +236,7 @@ test.describe('Layout', () => {
     await refinePage.mountComponent(
       `<ore-speed-reading text="Hello ${long}" style="max-width:240px"></ore-speed-reading>`,
     );
-    await page.locator(reader).evaluate((el) => el.play());
+    await page.locator(reader).evaluate((el) => (el as ReaderElement).play());
     await expect(page.locator(reader)).toHaveAttribute('word-index', '1');
     await expect(page.locator(reader)).toHaveAttribute('state', 'paused');
     await expect(page.locator(`${reader} [part="full-text"]`)).toBeVisible();
@@ -337,7 +342,7 @@ test.describe('Interaction', () => {
     await refinePage.mountComponent('<ore-speed-reading text="a four hello extraordinary"></ore-speed-reading>');
     const sizes = [];
     for (let index = 0; index < 4; index++) {
-      await page.locator(reader).evaluate((el, index) => el.seek(index), index);
+      await page.locator(reader).evaluate((el, index) => (el as ReaderElement).seek(index), index);
       await expect(page.locator(word)).toBeVisible();
       sizes.push(await page.locator(word).evaluate((el) => getComputedStyle(el).fontSize));
     }
@@ -357,7 +362,7 @@ test.describe('Interaction', () => {
     await expect(finish).toBeVisible();
     await expect(page.locator(word)).toBeHidden();
     await finish.click();
-    await page.locator(reader).evaluate((el) => el.seek(0));
+    await page.locator(reader).evaluate((el) => (el as ReaderElement).seek(0));
     await expect(page.locator(reader)).toHaveAttribute('state', 'paused');
     await expect(finish).toBeVisible();
     await expect(page.locator(word)).toBeHidden();
@@ -366,7 +371,7 @@ test.describe('Interaction', () => {
   test('locates the current word and resumes from a keyboard-selected sentence', async ({ page, refinePage }) => {
     const text = Array.from({ length: 60 }, (_, index) => `Sentence ${index} has context.`).join('\n');
     await refinePage.mountComponent(`<ore-speed-reading text="${text}"></ore-speed-reading>`);
-    await page.locator(reader).evaluate((el) => el.seek(200));
+    await page.locator(reader).evaluate((el) => (el as ReaderElement).seek(200));
     await page.getByText('Read full text', { exact: true }).click();
     const mark = page.locator(`${reader} [part="full-text"] mark`);
     await expect(mark).toHaveText('Sentence');
@@ -426,7 +431,7 @@ test.describe('Interaction', () => {
     await page.addScriptTag({ content: script, type: 'module' });
     const passage = page.getByRole('textbox', { name: 'Your passage' });
     await expect(passage).not.toHaveValue('');
-    await page.locator(reader).evaluate((el) => el.seek(3));
+    await page.locator(reader).evaluate((el) => (el as ReaderElement).seek(3));
     await passage.fill('My own passage.');
     await expect(page.locator(reader)).toHaveAttribute('word-index', '3');
     await page.getByRole('button', { exact: true, name: 'Load text' }).click();
@@ -471,7 +476,7 @@ test.describe('Fullscreen', () => {
 
   test('preserves playback position across a fullscreen round trip', async ({ page, refinePage }) => {
     await refinePage.mountComponent('<ore-speed-reading text="One two three four five six"></ore-speed-reading>');
-    await page.locator(reader).evaluate((el) => el.seek(3));
+    await page.locator(reader).evaluate((el) => (el as ReaderElement).seek(3));
     await page.getByRole('button', { exact: true, name: 'Enter fullscreen' }).click();
     await expect(page.locator(reader)).toHaveAttribute('fullscreen', 'true');
     await expect(page.locator(reader)).toHaveAttribute('word-index', '3');

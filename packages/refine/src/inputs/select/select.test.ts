@@ -267,7 +267,7 @@ describe('ore-select', () => {
 
       expect(image?.getAttribute('src')).toBe('/fruits/apple.svg');
 
-      fixture.element.value = 'banana';
+      (fixture.element as HTMLElement & { value: string }).value = 'banana';
       await fixture.flush();
 
       const lucide = trigger?.querySelector('ore-icon.trigger-selected-icon');

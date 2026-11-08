@@ -100,7 +100,7 @@ test.describe('Interaction', () => {
     const progress: number[] = [];
     await page.exposeFunction('__onProgress', (sentence: number) => progress.push(sentence));
     await page.evaluate(() => {
-      document.querySelector('ore-speech-player')?.addEventListener('progress', (event) => {
+      document.querySelector('ore-speech-player')?.addEventListener('progress', (event: Event) => {
         const detail = (event as CustomEvent<{ sentence: number }>).detail;
         (window as { __onProgress?: (sentence: number) => void }).__onProgress?.(detail.sentence);
       });

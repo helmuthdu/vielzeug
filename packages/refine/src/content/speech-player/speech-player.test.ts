@@ -91,7 +91,7 @@ const isDisabled = (control: HTMLElement): boolean => control.getAttribute('aria
 
 /** The stop is hidden while idle: the hidden attribute is the contract, and the row
  *  grows rightward when reading reveals it, so no visible control shifts. */
-const isHidden = (control: HTMLElement): boolean => control.hidden;
+const isHidden = (control: HTMLElement): boolean => Boolean(control.hidden);
 
 const liveOf = (fixture: Fixture<SpeechPlayerElement>): HTMLElement =>
   fixture.element.shadowRoot?.querySelector<HTMLElement>('[role="status"]')!;
@@ -103,7 +103,7 @@ const listenedFixtures = new WeakSet<SpeechPlayerElement>();
 async function startReading(fixture: Fixture<SpeechPlayerElement>): Promise<void> {
   if (!listenedFixtures.has(fixture.element)) {
     listenedFixtures.add(fixture.element);
-    fixture.element.addEventListener('progress', (event) => {
+    fixture.element.addEventListener('progress', (event: Event) => {
       progressEvents.push((event as CustomEvent<{ sentence: number; total: number }>).detail);
     });
   }

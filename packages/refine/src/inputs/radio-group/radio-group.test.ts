@@ -236,7 +236,7 @@ describe('ore-radio-group', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-radio-group', {
         attrs: { label: 'Plan' },

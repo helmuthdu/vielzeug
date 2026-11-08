@@ -1,5 +1,7 @@
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
+type QueryBarElement = HTMLElement & { 'quick-filters': unknown; dir: string; state: unknown; vocabulary: unknown };
+
 /** Mounts a bar with the two-key test vocabulary. */
 async function mountBar(
   page: import('@playwright/test').Page,
@@ -54,7 +56,7 @@ test.describe('Touch targets', () => {
   }) => {
     await page.setViewportSize({ height: 812, width: 375 });
     await mountBar(page, refinePage);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el.style.width = '100%';
       el.setAttribute('clearable', '');
       el['quick-filters'] = [{ key: 'author', label: 'Assigned to Alice', value: 'alice' }];
@@ -86,7 +88,7 @@ test.describe('Touch targets', () => {
   test('hides quick filters on phones but shows them on tablets', async ({ page, refinePage }) => {
     await page.setViewportSize({ height: 812, width: 375 });
     await mountBar(page, refinePage);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el.style.width = '100%';
       el['quick-filters'] = [
         { key: 'author', label: 'Alice', value: 'alice' },
@@ -328,7 +330,7 @@ test.describe('Layout', () => {
   test('keeps quick-filter badges slim inside their taller hit area', async ({ page, refinePage }) => {
     await page.setViewportSize({ height: 800, width: 768 });
     await mountBar(page, refinePage);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el['quick-filters'] = [{ key: 'author', label: 'Mine', value: 'alice' }];
     });
     const sizes = await page.evaluate(() => {
@@ -374,7 +376,7 @@ test.describe('Multiple selection', () => {
   }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await mountBar(page, refinePage);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el.vocabulary = [
         {
           key: 'fruit',
@@ -444,7 +446,7 @@ test.describe('Multiple selection', () => {
     refinePage: { mountComponent(html: string): Promise<void> },
   ) {
     await mountBar(page, refinePage);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el.style.width = '100%';
       el.vocabulary = [
         {
@@ -660,7 +662,7 @@ test.describe('Filter drawer', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.setViewportSize({ height: 844, width: 390 });
     await mountBar(page, refinePage);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el.vocabulary = [{ key: 'author', label: 'Author', options: [{ label: 'Alice', value: 'alice' }] }];
     });
     await page.getByRole('button', { exact: true, name: 'Filters' }).click();
@@ -669,7 +671,7 @@ test.describe('Filter drawer', () => {
     expect(844 - short.y).toBeLessThan(500);
     await page.getByRole('button', { exact: true, name: 'Cancel' }).click();
     await expect(page.getByRole('dialog', { exact: true, name: 'Filters' })).toBeHidden();
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el.vocabulary = Array.from({ length: 4 }, (_, i) => ({
         key: `group${i}`,
         label: `Group ${i}`,
@@ -688,7 +690,7 @@ test.describe('Filter drawer', () => {
     refinePage,
   }) => {
     await mountBar(page, refinePage);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el['quick-filters'] = [
         { key: 'author', label: 'Mine', value: 'alice' },
         { key: 'label', label: 'Bugs', value: 'bug' },
@@ -716,7 +718,7 @@ test.describe('Filter drawer', () => {
     refinePage,
   }) => {
     await mountBar(page, refinePage);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el.vocabulary = [
         {
           key: 'owner',
@@ -757,7 +759,7 @@ test.describe('Filter drawer', () => {
         document.documentElement.style.fontSize = '200%';
       });
       await mountBar(page, refinePage);
-      await page.locator('ore-query-bar').evaluate((el) => {
+      await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
         el.style.width = '100%';
         el.dir = 'rtl';
         el['quick-filters'] = [{ key: 'author', label: 'Meine zugewiesenen Aufgaben', value: 'alice' }];
@@ -799,7 +801,7 @@ test.describe('Filter drawer', () => {
   test('passes full accessibility checks with quick filters and with the drawer open', async ({ page, refinePage }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await mountBar(page, refinePage);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el['quick-filters'] = [{ key: 'author', label: 'Mine', value: 'alice' }];
     });
     expect((await axeCheck(page)).violations).toEqual([]);
@@ -835,7 +837,7 @@ test.describe('Icon card gallery', () => {
   }) => {
     await mountBar(page, refinePage);
     await registerCardIcons(page);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el.vocabulary = [
         {
           key: 'element',
@@ -861,14 +863,14 @@ test.describe('Icon card gallery', () => {
     await choices.getByRole('checkbox', { name: 'Fire' }).click();
     await expect(choices.getByRole('checkbox', { name: 'Fire' })).toBeChecked();
     await page.getByRole('button', { exact: true, name: 'Apply filters' }).click();
-    const state = await page.locator('ore-query-bar').evaluate((el) => (el as { state: unknown }).state);
+    const state = await page.locator('ore-query-bar').evaluate<unknown, void, QueryBarElement>((el) => el.state);
     expect(state).toEqual({ text: '', tokens: [{ key: 'element', value: 'fire' }] });
   });
 
   test('keeps the Any row full-width above a single-select card gallery', async ({ page, refinePage }) => {
     await mountBar(page, refinePage);
     await registerCardIcons(page);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el.vocabulary = [
         {
           key: 'sort',
@@ -901,7 +903,7 @@ test.describe('Icon card gallery', () => {
   test('hides the tick on unchecked cards and reveals it as the checked badge', async ({ page, refinePage }) => {
     await mountBar(page, refinePage);
     await registerCardIcons(page);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el.vocabulary = [
         {
           key: 'element',
@@ -954,7 +956,7 @@ test.describe('Icon card gallery', () => {
   test('card gallery passes accessibility checks', async ({ page, refinePage }) => {
     await mountBar(page, refinePage);
     await registerCardIcons(page);
-    await page.locator('ore-query-bar').evaluate((el) => {
+    await page.locator('ore-query-bar').evaluate<void, void, QueryBarElement>((el) => {
       el.vocabulary = [
         {
           key: 'element',

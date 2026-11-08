@@ -375,7 +375,7 @@ describe('ore-speed-reading', () => {
     await mountReader({ text: '<img src=x onerror=alert(1)> text' });
     expect(query('full-text').querySelector('img')).toBeNull();
     expect(query('full-text').textContent).toContain('<img');
-    const other = await mount('ore-speed-reading', { attrs: { text: 'Independent reader' } });
+    const other = await mount<SpeedReadingElement>('ore-speed-reading', { attrs: { text: 'Independent reader' } });
     try {
       clock();
       fixture.element.play();
@@ -462,7 +462,7 @@ describe('ore-speed-reading', () => {
     expect(position()).toBe(2);
     expect(state()).toBe('paused');
     expect(query('full-text').querySelector('mark')?.textContent).toBe('Three');
-    await fixture.act(() => fixture.query('.context-controls ore-button')!.click());
+    await fixture.act(() => fixture.query<HTMLElement>('.context-controls ore-button')!.click());
     expect(state()).toBe('playing');
     expect(position()).toBe(2);
   });

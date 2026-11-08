@@ -39,7 +39,8 @@ describe('ore-pull-to-refresh', () => {
 
   const scroll = (): HTMLElement => fixture.query<HTMLElement>('.scroll')!;
   const content = (): HTMLElement => fixture.query<HTMLElement>('.content')!;
-  const phase = (): PullToRefreshPhase | null => fixture.element.getAttribute('data-phase');
+  const phase = (): PullToRefreshPhase | null =>
+    fixture.element.getAttribute('data-phase') as PullToRefreshPhase | null;
 
   const drag = (from: number, to: number, id = 1): void => {
     const target = scroll();

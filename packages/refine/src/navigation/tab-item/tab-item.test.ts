@@ -62,7 +62,7 @@ describe('ore-tab-item', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-tab-item', { attrs: { value: 'overview' }, html: 'Overview' });
 

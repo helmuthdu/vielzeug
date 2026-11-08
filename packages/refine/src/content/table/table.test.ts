@@ -437,7 +437,7 @@ describe('ore-table', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-table', {
         attrs: { caption: 'Users' },

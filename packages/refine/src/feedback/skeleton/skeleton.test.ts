@@ -163,7 +163,7 @@ describe('ore-skeleton', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-skeleton');
 

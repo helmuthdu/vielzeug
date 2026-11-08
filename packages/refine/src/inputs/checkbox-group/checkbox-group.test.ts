@@ -358,7 +358,7 @@ describe('ore-checkbox-group', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-checkbox-group', {
         attrs: { label: 'Preferences' },

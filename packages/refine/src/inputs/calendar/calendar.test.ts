@@ -878,7 +878,7 @@ describe('ore-calendar', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-calendar', { attrs: { value: '2024-03-15' } });
 

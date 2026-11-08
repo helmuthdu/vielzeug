@@ -458,7 +458,7 @@ describe('ore-toast', () => {
 
     await fixture.flush();
 
-    expect(fixture.query(`[data-toast-id="${id}"] .toast-progress`)?.hidden).toBe(true);
+    expect(fixture.query<HTMLElement>(`[data-toast-id="${id}"] .toast-progress`)?.hidden).toBe(true);
   });
 
   it('restores focus to the previously focused element when a focused toast is removed', async () => {
