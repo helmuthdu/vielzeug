@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add ore-media-navigation shared media navigation component",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Stage backward media-navigation moves with keyframes so the indicator choreography matches in both directions at any collection size",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

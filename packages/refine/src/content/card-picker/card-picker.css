@@ -2,20 +2,25 @@
   :host {
     --_transition-duration: var(--card-picker-transition-duration, var(--duration-300));
     display: block;
+    width: 100%;
     min-width: 0;
+    container-name: card-picker;
+    container-type: inline-size;
   }
 
   .picker {
+    position: relative;
     display: grid;
     gap: var(--card-picker-gap, var(--size-3));
     min-width: 0;
   }
 
   .stage {
+    --_drag-offset: 0px;
     position: relative;
     display: grid;
     min-width: 0;
-    min-height: var(--card-picker-min-height, var(--size-80));
+    min-height: var(--card-picker-min-height, 0);
     padding-inline: var(--size-2);
     overflow: hidden;
     touch-action: pan-y;
@@ -44,7 +49,7 @@
     z-index: 2;
     visibility: visible;
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translateX(var(--_drag-offset)) scale(1);
   }
 
   ::slotted(ore-card-picker-item[data-previous]),
@@ -56,7 +61,7 @@
     width: 84%;
     pointer-events: none;
     opacity: 0.48;
-    transform: scale(0.92);
+    transform: translateX(var(--_drag-offset)) scale(0.92);
   }
 
   ::slotted(ore-card-picker-item[data-previous]) {
@@ -71,17 +76,60 @@
     visibility: hidden;
   }
 
-  .controls {
-    display: grid;
-    grid-template-columns: var(--size-11) minmax(0, 1fr) var(--size-11);
-    gap: var(--size-2);
-    align-items: center;
-    min-width: 0;
+  /* `show-neighbors="false"` keeps the stage to the active card alone at rest. The previews keep
+     their geometry and only lose their opacity, and they come back for the length of a drag: a
+     swipe carries the arriving card in under the pointer, and a card that only appeared once the
+     finger lifted would look like it had teleported in from nowhere. */
+  :host([data-neighbors-hidden]) ::slotted(ore-card-picker-item[data-previous]),
+  :host([data-neighbors-hidden]) ::slotted(ore-card-picker-item[data-next]) {
+    opacity: 0;
   }
 
-  .nav-button {
-    width: var(--size-11);
-    height: var(--size-11);
+  :host([data-neighbors-hidden][data-dragging]) ::slotted(ore-card-picker-item[data-previous]),
+  :host([data-neighbors-hidden][data-dragging]) ::slotted(ore-card-picker-item[data-next]) {
+    opacity: 0.48;
+  }
+
+  :host([data-dragging]) ::slotted(ore-card-picker-item) {
+    transition: none;
+  }
+
+  @container card-picker (min-width: 48rem) {
+    ::slotted(ore-card-picker-item[data-active][data-details-open]) {
+      width: 100%;
+    }
+  }
+
+  .navigation {
+    position: static;
+    box-sizing: border-box;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+  :host([controls-placement='inset']) .navigation {
+    position: absolute;
+    /* Anchored to the active card's media wrapper (--_navigation-inset-*) when it has one, so the
+       bar sits on the artwork's bottom edge; cards without media fall back to the stage bottom. */
+    inset-block-end: calc(var(--size-4) + var(--_navigation-inset-y, 0px));
+    inset-inline-start: calc(50% + var(--_navigation-inset-x, 0px));
+    z-index: 3;
+    max-width: min(var(--_navigation-inset-width, 100%), calc(100% - var(--size-6)));
+    margin: 0;
+    transform: translateX(-50%);
+  }
+  [hidden] {
+    display: none;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    white-space: nowrap;
+    border: 0;
+    clip: rect(0, 0, 0, 0);
   }
 
   .status {
@@ -91,6 +139,7 @@
     color: var(--color-contrast-600);
     text-align: center;
     text-wrap: pretty;
+    overflow-wrap: anywhere;
   }
 
   :host([disabled]) {

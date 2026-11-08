@@ -1,17 +1,15 @@
 import { createPanGesture } from '@vielzeug/gesture';
-import { bind, define, getHost, html, onCleanup, onMounted, prop, useEmit } from '@vielzeug/ore';
+import { bind, define, getHost, html, onMounted, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { createElementSize } from '@vielzeug/sentinel';
-import { announce, createListControl, elementDirection, lifecycleSignal } from '../../core';
+import { announce, elementDirection } from '../../core';
 import { projectFling } from '../../shared/fling';
 import { THEME_COLORS, type ThemeColor } from '../../types';
 import { clearCoverflow, syncCoverflow } from './_coverflow';
 import componentStyles from './carousel.css?inline';
 import './carousel-slide';
 
-export { ICON_TAG } from '../../content/icon/icon';
-export { PROGRESS_TAG } from '../../feedback/progress/progress';
-export { BUTTON_TAG } from '../../inputs/button/button';
+export { MEDIA_NAVIGATION_TAG } from '../../navigation/media-navigation/media-navigation';
 export { CAROUSEL_SLIDE_TAG } from './carousel-slide';
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -45,6 +43,8 @@ export type OreCarouselProps = {
   'show-controls'?: boolean;
   /** Show dot/indicator navigation. Defaults to `true`. */
   'show-indicators'?: boolean;
+  /** Maximum visible navigation indicators. Defaults to seven. */
+  'max-indicators'?: number;
   /** Index of the currently active slide (zero-based). Defaults to `0`. */
   'slide-index'?: number;
   /**
@@ -76,6 +76,7 @@ export type OreCarouselProps = {
  * @attr {string}  variant           - 'default' | 'fade' | 'filmstrip' | 'gallery' | 'coverflow'
  * @attr {boolean} show-controls     - Show prev/next buttons (default true)
  * @attr {boolean} show-indicators   - Show indicator dots (default true)
+ * @attr {number} max-indicators    - Maximum visible indicators (default 7)
  * @attr {number}  slide-index       - Active slide index (zero-based, default 0)
  *
  * @fires change - Fires when the active slide changes. detail: { index: number }
@@ -173,6 +174,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     color: prop.oneOf(THEME_COLORS),
     label: prop.string('Carousel'),
     loop: prop.bool(true),
+    'max-indicators': prop.number(7),
     orientation: prop.oneOf(CAROUSEL_ORIENTATIONS, 'horizontal'),
     'show-controls': prop.bool(true),
     'show-indicators': prop.bool(true),
@@ -207,11 +209,6 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     const showIndicators = computed(() => props['show-indicators'].value !== false);
     const isCoverflow = computed(() => props.variant.value === 'coverflow');
     const isRtl = (): boolean => isCoverflow.value && isHorizontal.value && elementDirection(el) === 'rtl';
-
-    const canGoPrev = computed(() => slideCount.value > 1 && (looping.value || activeIndex.value > 0));
-    const canGoNext = computed(
-      () => slideCount.value > 1 && (looping.value || activeIndex.value < slideCount.value - 1),
-    );
 
     // ── Navigation ───────────────────────────────────────────────────────────
 
@@ -370,20 +367,6 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       }
     };
 
-    const indicatorNav = createListControl<number>({
-      direction: () => (isRtl() ? 'rtl' : 'ltr'),
-      getItems: () => Array.from({ length: slideCount.value }, (_, index) => index),
-      loop: true,
-      onNavigate: ({ index }) => {
-        goTo(index);
-        const dot = el.shadowRoot?.querySelector<HTMLElement>(`.indicator[data-index="${index}"]`);
-
-        dot?.focus();
-      },
-      orientation: () => (isHorizontal.value ? 'horizontal' : 'vertical'),
-      signal: lifecycleSignal(onCleanup),
-    });
-
     // ── Host bindings ────────────────────────────────────────────────────────
 
     bind({
@@ -508,7 +491,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
 
           return !path.some(
             (node) =>
-              node instanceof Element && node.getRootNode() === el.shadowRoot && node.matches('.controls, .indicators'),
+              node instanceof Element && node.getRootNode() === el.shadowRoot && node.matches('ore-media-navigation'),
           );
         },
       });
@@ -554,109 +537,24 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
 
     // ── Template ─────────────────────────────────────────────────────────────
 
-    const renderControls = () =>
-      showControls.value
-        ? html`
-            <div class="controls" part="controls">
-              <ore-button
-                class="nav-btn prev-btn"
-                part="prev-btn"
-                variant="ghost"
-                color=${() => props.color.value}
-                rounded="full"
-                icon-only
-                label="Previous slide"
-                disabled=${() => (!canGoPrev.value ? true : undefined)}
-                @click=${(e: Event) => {
-                  e.stopPropagation();
-                  prev();
-                }}>
-                <ore-icon
-                  name=${() => (isHorizontal.value ? (isRtl() ? 'chevron-right' : 'chevron-left') : 'chevron-up')}
-                  size="16"
-                  stroke-width="2"
-                  aria-hidden="true"></ore-icon>
-              </ore-button>
-              <ore-button
-                class="nav-btn next-btn"
-                part="next-btn"
-                variant="ghost"
-                color=${() => props.color.value}
-                rounded="full"
-                icon-only
-                label="Next slide"
-                disabled=${() => (!canGoNext.value ? true : undefined)}
-                @click=${(e: Event) => {
-                  e.stopPropagation();
-                  next();
-                }}>
-                <ore-icon
-                  name=${() => (isHorizontal.value ? (isRtl() ? 'chevron-left' : 'chevron-right') : 'chevron-down')}
-                  size="16"
-                  stroke-width="2"
-                  aria-hidden="true"></ore-icon>
-              </ore-button>
-            </div>
-          `
-        : html``;
-
     return html`
       <div class="track" part="track" aria-live=${() => (props.autoplay.value ? 'off' : 'polite')}>
         <span class="coverflow-measure" aria-hidden="true"></span>
         <slot></slot>
       </div>
 
-      ${() =>
-        showIndicators.value && slideCount.value > 1
-          ? html`
-              <div class="indicators" part="indicators">
-                <div class="indicator-list" role="tablist" aria-label="Slide indicators">
-                ${() =>
-                  Array.from(
-                    { length: slideCount.value },
-                    (_, i) => html`
-                      <button
-                        type="button"
-                        role="tab"
-                        data-index="${i}"
-                        class=${() => `indicator${i === activeIndex.value ? ' indicator-active' : ''}`}
-                        aria-selected=${() => String(i === activeIndex.value)}
-                        tabindex=${() => (i === activeIndex.value ? '0' : '-1')}
-                        aria-label="${`Go to slide ${i + 1}`}"
-                        @focus=${() => indicatorNav.set(i)}
-                        @click=${() => goTo(i)}
-                        @keydown=${(e: KeyboardEvent) => {
-                          const target = e.currentTarget;
-
-                          if (target instanceof HTMLElement) {
-                            const index = Number(target.dataset.index);
-
-                            if (Number.isInteger(index)) indicatorNav.set(index);
-                          }
-
-                          indicatorNav.handleKeydown(e);
-                        }}>
-                        <ore-progress
-                          aria-hidden="true"
-                          tabindex="-1"
-                          color=${() => props.color.value}
-                          type=${() => (isHorizontal.value ? 'linear' : 'vertical')}
-                          value=${() => (i === activeIndex.value ? 100 : 0)}
-                          style=${() => {
-                            const fillAnim = isHorizontal.value ? 'carousel-fill' : 'carousel-fill-v';
-
-                            return `--carousel-timeout:${props['autoplay-interval'].value ?? 5000};--carousel-animation-name:${i === activeIndex.value && props.autoplay.value ? fillAnim : 'none'}`;
-                          }}></ore-progress>
-                      </button>
-                    `,
-                  )}
-                </div>
-                ${renderControls}
-              </div>
-            `
-          : html`
-              ${renderControls}
-            `}
+      <ore-media-navigation class="${() => `navigation${showIndicators.value && slideCount.value > 1 ? '' : ' controls-only'}`}"
+        exportparts="bar:indicators,controls,indicator,previous:prev-btn,next:next-btn" label="Carousel navigation" indicator-label="Slide indicators"
+        previous-label="Previous slide" next-label="Next slide" count="${() => slideCount.value}" active-index="${() => activeIndex.value}"
+        labels="${() => JSON.stringify(Array.from({ length: slideCount.value }, (_, index) => `Go to slide ${index + 1}`))}"
+        color="${props.color}" orientation="${props.orientation}" loop="${() => String(looping.value)}"
+        show-controls="${() => String(showControls.value)}" show-indicators="${() => String(showIndicators.value)}"
+        max-indicators="${props['max-indicators']}"
+        progress-duration="${() => (props.autoplay.value ? (props['autoplay-interval'].value ?? 5000) : 0)}"
+        @navigate="${(event: CustomEvent<{ index: number }>) => {
+          event.stopPropagation();
+          goTo(event.detail.index);
+        }}"></ore-media-navigation>
     `;
   },
   styles: [componentStyles],

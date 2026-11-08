@@ -35,13 +35,9 @@ const removedMediaObserver = ore.mediaObserver;
 // @ts-expect-error Mutation observation now uses the native MutationObserver API.
 const removedMutationObserver = ore.mutationObserver;
 
-// @ts-expect-error model() was removed in favor of explicit value and event bindings.
-const removedModel = import('../directives/model');
-
 // @ts-expect-error form policy belongs to Forge; Ore no longer exposes a form context.
 const removedFormContext = import('../forms/context');
 
-void removedModel;
 void removedFormContext;
 void removedMediaObserver;
 void removedMutationObserver;

@@ -10,7 +10,7 @@ import { computed, isReactive, type Readable, type Signal } from '@vielzeug/ripp
 
 import { isModelSource, modelDefaultEvent, modelDefaultGet } from '../directives/model';
 import { invariant, ORE_ERRORS, OreApiError } from '../errors';
-import type { Binding, HtmlBindingValue } from './binding-types';
+import type { Binding } from './binding-types';
 import { applyBinding, createAttrBindingFromValue, resolveStaticText } from './bindings';
 import { followPath, getStaticTemplate, SlotKind } from './compiler';
 import {
@@ -26,10 +26,6 @@ import {
 // ─── Template instantiation ──────────────────────────────────────────────────
 
 const NODE_SLOT_NO_PARENT_MSG = 'html`...`: node-slot comment anchor has no parent node';
-
-/** Normalize a reactive node-slot value to the HtmlBinding signal's array shape. */
-const toHtmlValues = (raw: unknown): HtmlBindingValue[] =>
-  Array.isArray(raw) ? (raw as HtmlBindingValue[]) : [raw as HtmlBindingValue];
 
 /**
  * Static-embed an already-created HTMLResult at a node-slot anchor: move its
@@ -106,12 +102,9 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
         // Always use the html binding for reactive values: it handles both text
         // values and HTMLResult values, preventing silent "[object Object]"
         // corruption when a signal's runtime type changes from null/string to HTMLResult.
-        const sig =
-          typeof value === 'function'
-            ? computed(() => toHtmlValues((value as () => unknown)()))
-            : computed(() => toHtmlValues((value as Readable<unknown>).value));
-
-        bindings.push({ anchor, signal: sig, type: 'html' });
+        // The source is handed over raw, without a memo computed, so the render effect
+        // itself is the observer and the owner of anything the value builds (see HtmlBinding).
+        bindings.push({ anchor, source: value as (() => unknown) | Readable<unknown>, type: 'html' });
         continue;
       }
 

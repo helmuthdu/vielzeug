@@ -59,16 +59,18 @@ import '@vielzeug/refine/time-picker';
 </ore-carousel>
 
 <ore-card-picker label="Choose action cards">
-  <ore-card-picker-item value="swift-strike" label="Swift Strike">
-    <ore-skeleton slot="media" striped width="100%" height="18rem" style="border-radius: 0; display: block;"></ore-skeleton>
+  <ore-card-picker-item value="swift-strike" label="Swift Strike" details-label="Rules">
+    <ore-skeleton slot="media" striped width="100%" height="var(--size-40)" radius="0" style="display: block;"></ore-skeleton>
     <span slot="header">Swift Strike</span>
     <p>Deal damage, then move one space.</p>
+    <p slot="details">Resolve the attack, then apply its printed condition.</p>
   </ore-card-picker-item>
 </ore-card-picker>
 ```
 
 ## Features
 
+- `ore-media-navigation` provides controlled arrows and indicators shared by the carousel and card picker.
 - Form-associated controls integrate with native `FormData`, supported required validation, and form reset.
 - Enumerated component properties validate values against their documented options.
 - Import components and global styles through explicit package subpaths.

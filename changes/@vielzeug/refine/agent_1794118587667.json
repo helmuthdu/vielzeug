@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Give media-navigation window shifts visible feedback: entering indicators animate in and edge dots ease their scale.",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

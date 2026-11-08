@@ -255,7 +255,7 @@ type ListNavigationOptions<T> = {
   getItems: () => readonly T[];
   isItemDisabled?: (item: T, index: number) => boolean;
   keys?: Partial<Record<ListNavigationAction, readonly string[]>>; // shortcut patterns matched via @vielzeug/keymap
-  loop?: boolean;
+  loop?: MaybeGetter<boolean>;
   orientation?: MaybeGetter<'both' | 'horizontal' | 'vertical'>;
   typeahead?: ListNavigationTypeaheadOptions<T>;
 };

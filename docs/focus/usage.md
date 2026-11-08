@@ -55,13 +55,14 @@ nav.navigate('last')?.item.focus();
 
 ## Configure Orientation and Direction
 
-Direction, orientation, and disabled state may be live getters:
+Direction, orientation, disabled state, and loop control may be live getters:
 
 ```ts
 const nav = createListNavigation({
   direction: () => (document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr'),
   disabled: () => panel.hidden,
   getItems: () => items,
+  loop: () => wrapEnabled,
   orientation: () => 'horizontal',
 });
 ```

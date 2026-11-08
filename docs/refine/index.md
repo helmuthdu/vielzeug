@@ -53,6 +53,7 @@ exports:
     ore-list,
     ore-list-item,
     ore-marquee,
+    ore-media-navigation,
     ore-menu,
     ore-menu-item,
     ore-menu-separator,
@@ -240,7 +241,7 @@ Each entry below is a component with its own documentation page and registration
 
 **Layout:** `ore-box`, `ore-dock`, `ore-grid`, `ore-navbar`, `ore-separator`, `ore-sidebar`
 
-**Navigation:** `ore-breadcrumb`, `ore-navigation-menu`, `ore-pagination`, `ore-stepper`, `ore-tabs`
+**Navigation:** `ore-breadcrumb`, `ore-media-navigation`, `ore-navigation-menu`, `ore-pagination`, `ore-stepper`, `ore-tabs`
 
 **Overlay:** `ore-command-palette`, `ore-dialog`, `ore-drawer`, `ore-menu`, `ore-popover`, `ore-spotlight`, `ore-tooltip`, `ore-tour`
 

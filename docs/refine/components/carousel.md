@@ -149,6 +149,8 @@ Pass `color` to theme the prev/next navigation buttons with any design-system co
 
 `show-controls` and `show-indicators` are independent. Set either to `"false"` to hide it.
 
+For large collections, indicators use a moving window of at most seven dots around the active slide. Set `max-indicators` to a smaller positive limit if needed. Arrows, keyboard navigation, and autoplay still cover every slide.
+
 <ComponentPreview>
 
 ```html
@@ -465,6 +467,7 @@ Horizontal coverflow mirrors layout and Left/Right navigation for `dir="rtl"`. A
 | `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A            | Theme color for prev/next navigation buttons                                                |
 | `show-controls`     | `boolean`                                                                 | `true`         | Show prev/next navigation buttons                                                           |
 | `show-indicators`   | `boolean`                                                                 | `true`         | Show indicator dot navigation                                                               |
+| `max-indicators`    | `number`                                                                  | `7`            | Maximum visible indicators in the active-slide window                                       |
 
 **`ore-carousel` Events**
 

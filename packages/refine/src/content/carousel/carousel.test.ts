@@ -6,11 +6,16 @@ const getSlides = (f: Fixture<HTMLElement>): HTMLElement[] =>
 const activeSlide = (f: Fixture<HTMLElement>): HTMLElement | null =>
   f.element.querySelector<HTMLElement>('ore-carousel-slide[data-active]');
 
-const dots = (f: Fixture<HTMLElement>): HTMLElement[] => f.queryAll<HTMLElement>('.indicator');
+const navigationRoot = (f: Fixture<HTMLElement>): ShadowRoot | null =>
+  f.query('ore-media-navigation')?.shadowRoot ?? null;
+const dots = (f: Fixture<HTMLElement>): HTMLElement[] =>
+  Array.from(navigationRoot(f)?.querySelectorAll<HTMLElement>('.indicator') ?? []);
 
-const prevBtn = (f: Fixture<HTMLElement>): HTMLElement | null => f.query<HTMLElement>('.prev-btn');
+const prevBtn = (f: Fixture<HTMLElement>): HTMLElement | null =>
+  navigationRoot(f)?.querySelector<HTMLElement>('[part="previous"]') ?? null;
 
-const nextBtn = (f: Fixture<HTMLElement>): HTMLElement | null => f.query<HTMLElement>('.next-btn');
+const nextBtn = (f: Fixture<HTMLElement>): HTMLElement | null =>
+  navigationRoot(f)?.querySelector<HTMLElement>('[part="next"]') ?? null;
 
 const SLIDES_HTML = `
   <ore-carousel-slide>Slide 1</ore-carousel-slide>
@@ -35,6 +40,11 @@ describe('ore-carousel', () => {
   // ── Core Functionality ───────────────────────────────────────────────────────
 
   describe('Core functionality', () => {
+    it('forwards the indicator limit to shared navigation', async () => {
+      fixture = await mount('ore-carousel', { attrs: { 'max-indicators': 5 }, html: slides });
+      expect(fixture.query('ore-media-navigation')?.getAttribute('max-indicators')).toBe('5');
+    });
+
     it('renders with minimal props and activates first slide', async () => {
       fixture = await mount('ore-carousel', { html: slides });
       await fixture.flush();
@@ -50,8 +60,8 @@ describe('ore-carousel', () => {
       await fixture.flush();
 
       expect(fixture.query('.track')).toBeTruthy();
-      expect(fixture.query('.controls')).toBeTruthy();
-      expect(fixture.query('.indicators')).toBeTruthy();
+      expect(navigationRoot(fixture)?.querySelector('[part="controls"]')).toBeTruthy();
+      expect(navigationRoot(fixture)?.querySelector('[part="indicators"]')).toBeTruthy();
     });
 
     it('has autoplay disabled by default', async () => {
@@ -65,14 +75,14 @@ describe('ore-carousel', () => {
       fixture = await mount('ore-carousel', { attrs: { 'show-controls': 'false' }, html: slides });
       await fixture.flush();
 
-      expect(fixture.query('.controls')).toBeNull();
+      expect(navigationRoot(fixture)?.querySelector('[part="controls"]')?.hasAttribute('hidden')).toBe(true);
     });
 
     it('hides indicators when show-indicators is false', async () => {
       fixture = await mount('ore-carousel', { attrs: { 'show-indicators': 'false' }, html: slides });
       await fixture.flush();
 
-      expect(fixture.query('.indicators')).toBeNull();
+      expect(navigationRoot(fixture)?.querySelector('[part="indicators"]')?.hasAttribute('hidden')).toBe(true);
     });
 
     it('advances to next slide on next button click', async () => {
@@ -451,26 +461,26 @@ describe('ore-carousel', () => {
       expect(nextBtn(fixture)?.getAttribute('aria-label')).toBe('Next slide');
     });
 
-    it('sets role="tablist" and aria-label on the indicator list, excluding navigation controls', async () => {
+    it('labels the indicator group and keeps navigation controls outside it', async () => {
       fixture = await mount('ore-carousel', { html: slides });
       await fixture.flush();
 
-      const ind = fixture.query('.indicator-list');
+      const ind = navigationRoot(fixture)?.querySelector('.indicator-list');
 
-      expect(ind?.getAttribute('role')).toBe('tablist');
+      expect(ind?.getAttribute('role')).toBe('group');
       expect(ind?.getAttribute('aria-label')).toBe('Slide indicators');
       expect(ind?.querySelector('.controls')).toBeNull();
     });
 
-    it('sets role="tab" and aria-selected on indicator dots', async () => {
+    it('marks the current indicator with aria-current', async () => {
       fixture = await mount('ore-carousel', { html: slides });
       await fixture.flush();
 
       const d = dots(fixture);
 
-      expect(d[0]?.getAttribute('role')).toBe('tab');
-      expect(d[0]?.getAttribute('aria-selected')).toBe('true');
-      expect(d[1]?.getAttribute('aria-selected')).toBe('false');
+      expect(d[0]?.tagName).toBe('BUTTON');
+      expect(d[0]?.getAttribute('aria-current')).toBe('true');
+      expect(d[1]?.getAttribute('aria-current')).toBeNull();
     });
 
     it('indicator dots are real buttons with roving tabindex (only the active one is tabbable)', async () => {
@@ -507,7 +517,9 @@ describe('ore-carousel', () => {
       fixture = await mount('ore-carousel', { html: slides });
       await fixture.flush();
 
-      dots(fixture)[0]?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
+      dots(fixture)[0]?.dispatchEvent(
+        new KeyboardEvent('keydown', { bubbles: true, composed: true, key: 'ArrowRight' }),
+      );
       await fixture.flush();
 
       expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 2');
@@ -1052,7 +1064,7 @@ describe('ore-carousel', () => {
     });
   });
 
-  describe('Accessibility', () => {
+  describe('Accessibility (axe)', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-carousel', {
         attrs: { 'aria-label': 'Featured items' },

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Render media navigation indicators through keyed list reconciliation and drive loop wrapping reactively; rename the carousel's internal navigation host class.",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -1,6 +1,7 @@
 import { createPanGesture } from '@vielzeug/gesture';
+import { type SpringHandle, spring } from '@vielzeug/necromancer';
 import { bind, define, getHost, html, onCleanup, onMounted, prop, provide, useEmit } from '@vielzeug/ore';
-import { computed, signal, watch } from '@vielzeug/ripple';
+import { computed, signal, untrack, watch } from '@vielzeug/ripple';
 import {
   createChoiceField,
   createListControl,
@@ -8,16 +9,22 @@ import {
   getLightChildrenByTag,
   lifecycleSignal,
 } from '../../core';
+import { getMotionMode } from '../../motion';
 import { disablableBundle } from '../../shared';
 import { projectFling } from '../../shared/fling';
 import { CARD_PICKER_CTX } from './_card-picker-context';
 import componentStyles from './card-picker.css?inline';
-import { CARD_PICKER_ITEM_TAG } from './card-picker-item';
+import './card-picker-item';
 
-export { BUTTON_TAG } from '../../inputs/button/button';
-export { ICON_TAG } from '../icon/icon';
+export { MEDIA_NAVIGATION_TAG } from '../../navigation/media-navigation/media-navigation';
+export type { OreCardPickerItemProps } from './card-picker-item';
 // Re-exporting the child tag keeps it registered when this is the only imported entry.
 export { CARD_PICKER_ITEM_TAG } from './card-picker-item';
+
+const CARD_PICKER_ITEM_NAME = 'ore-card-picker-item' as const;
+export const CARD_PICKER_ORIENTATIONS = ['horizontal', 'vertical', 'auto'] as const;
+export type CardPickerOrientation = (typeof CARD_PICKER_ORIENTATIONS)[number];
+export type CardPickerControlPlacement = 'below' | 'inset';
 
 export type CardPickerChangeDetail = {
   labels: string[];
@@ -38,6 +45,18 @@ export type OreCardPickerEvents = {
 };
 
 export type OreCardPickerProps = {
+  /** Navigation placement. `inset` floats the bar over the bottom of the card. */
+  'controls-placement'?: CardPickerControlPlacement;
+  /** Show previous/next buttons. */
+  'show-controls'?: boolean;
+  /** Show direct card indicators. */
+  'show-indicators'?: boolean;
+  /** Show the edges of the neighbouring cards at the stage's sides. */
+  'show-neighbors'?: boolean;
+  /** Maximum visible navigation indicators. */
+  'max-indicators'?: number;
+  /** Image/content layout. `auto` uses horizontal layout in wide picker containers. */
+  orientation?: CardPickerOrientation;
   /** Active card index. Browsing does not change `values`. */
   'active-index'?: number;
   /** Accessible name for the card browsing region. */
@@ -49,7 +68,7 @@ export type OreCardPickerProps = {
 };
 
 const INTERACTIVE_SELECTOR =
-  'a[href], button, input, select, textarea, [role="button"], [role="checkbox"], [contenteditable=""], [contenteditable="true"], ore-button, ore-checkbox';
+  'a[href], button, input, select, textarea, [role="button"], [role="checkbox"], [part="details"], ore-drawer, [contenteditable=""], [contenteditable="true"], ore-button, ore-checkbox';
 
 const itemLabel = (item: HTMLElement): string =>
   item.getAttribute('label')?.trim() || item.getAttribute('value')?.trim() || 'Card';
@@ -64,6 +83,12 @@ const itemLabel = (item: HTMLElement): string =>
  * @attr {number} active-index - Active card index (zero-based)
  * @attr {boolean} disabled - Disable browsing and selection
  * @attr {string} label - Accessible name for the card browsing region
+ * @attr {string} orientation - Card layout: 'vertical' (default), 'horizontal', or 'auto'
+ * @attr {string} controls-placement - Navigation placement: 'below' (default) or 'inset'
+ * @attr {boolean} show-controls - Show previous/next buttons (default true)
+ * @attr {boolean} show-indicators - Show card indicators (default true)
+ * @attr {boolean} show-neighbors - Show the neighbouring cards' edges at the stage's sides (default true)
+ * @attr {number} max-indicators - Maximum visible navigation indicators (default 7)
  * @attr {string} values - Comma-separated selected item values
  *
  * @fires browse-change - Emitted when the active card changes. detail: { index: number; label: string | null; value: string | null }
@@ -72,11 +97,16 @@ const itemLabel = (item: HTMLElement): string =>
  * @slot - Place `ore-card-picker-item` elements here
  *
  * @cssprop --card-picker-gap - Space between the card stage and navigation controls
- * @cssprop --card-picker-min-height - Minimum card stage height (default `var(--size-80)`)
- * @cssprop --card-picker-transition-duration - Preview transition duration (default `var(--duration-300)`; reduced to `0ms` for reduced motion)
+ * @cssprop --card-picker-min-height - Optional minimum card stage height (default `0`)
+ * @cssprop --card-picker-transition-duration - Non-drag preview transition duration (default `var(--duration-300)`; reduced to `0ms` for reduced motion)
  *
  * @part stage - Card browsing stage
- * @part controls - Previous/next controls and current position
+ * @part controls - Previous/next button group
+ * @cssprop --card-picker-media-max-height - Maximum artwork height (default 32dvh vertically, 70dvh horizontally)
+ * @part navigation - Navigation bar
+ * @part navigation-bar - Shared media navigation surface
+ * @part indicators - Direct card indicator buttons
+ * @part indicator - Individual indicator button
  * @part previous - Previous card button
  * @part next - Next card button
  *
@@ -96,7 +126,13 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
   props: {
     ...disablableBundle,
     'active-index': prop.number(0),
+    'controls-placement': prop.oneOf(['below', 'inset'] as const, 'below'),
     label: prop.string('Card picker'),
+    'max-indicators': prop.number(7),
+    orientation: prop.oneOf(CARD_PICKER_ORIENTATIONS, 'vertical'),
+    'show-controls': prop.bool(true),
+    'show-indicators': prop.bool(true),
+    'show-neighbors': prop.bool(true),
     values: { ...prop.string(), reflect: false },
   },
 
@@ -105,6 +141,7 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
     const emit = useEmit<OreCardPickerEvents>();
     const activeIndex = signal(Math.max(0, props['active-index'].value ?? 0));
     const itemCount = signal(0);
+    const itemsVersion = signal(0);
     const selected = createChoiceField({
       multiple: signal(true),
       prefix: 'card-picker',
@@ -112,7 +149,7 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
       value: props.values,
     });
 
-    const getItems = (): HTMLElement[] => getLightChildrenByTag(el, CARD_PICKER_ITEM_TAG);
+    const getItems = (): HTMLElement[] => getLightChildrenByTag(el, CARD_PICKER_ITEM_NAME);
     const getValue = (item: HTMLElement | undefined): string | null => item?.getAttribute('value') ?? null;
     const getActiveLabel = (): string | null => {
       const items = getItems();
@@ -123,7 +160,6 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
 
     const syncItems = (): void => {
       const items = getItems();
-      const selectedValues = new Set(selected.selectedValues.value);
       itemCount.value = items.length;
 
       const nextIndex = items.length ? Math.min(activeIndex.value, items.length - 1) : 0;
@@ -134,11 +170,6 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
         const active = index === activeIndex.value;
         const previous = index === activeIndex.value - 1;
         const next = index === activeIndex.value + 1;
-        const value = item.getAttribute('value') ?? '';
-
-        item.toggleAttribute('picker-managed', true);
-        item.toggleAttribute('picker-disabled', Boolean(props.disabled.value));
-        item.toggleAttribute('selected', selectedValues.has(value));
         item.toggleAttribute('data-active', active);
         item.toggleAttribute('data-previous', previous);
         item.toggleAttribute('data-next', next);
@@ -149,13 +180,77 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
       });
 
       el.toggleAttribute('data-empty', items.length === 0);
+      itemsVersion.value++;
     };
 
-    watch(
-      computed(() => `${Boolean(props.disabled.value)}:${selected.selectedValues.value.join('\u0000')}`),
-      syncItems,
-      { immediate: true },
-    );
+    /**
+     * Inset navigation floats over the active card's artwork rather than the whole stage: a
+     * horizontal card puts its facts beside the image, so the stage's bottom edge sits well below
+     * the media. The bar is anchored to the media wrapper's bottom-centre instead, re-derived
+     * whenever the card, either box, or the placement changes. The swipe re-measures every frame,
+     * which keeps the bar glued to the artwork as the card slides. Cards without media keep the
+     * plain stage-bottom placement.
+     */
+    const syncNavigationAnchor = (): void => {
+      untrack(() => {
+        const bar = el.shadowRoot?.querySelector<HTMLElement>('[part="navigation"]');
+        // The bar is absolutely positioned against the picker box, so the offsets are measured
+        // against that same box rather than the stage.
+        const host = el.shadowRoot?.querySelector<HTMLElement>('.picker');
+
+        if (!bar) return;
+
+        const media = getItems()[activeIndex.value]?.shadowRoot?.querySelector<HTMLElement>('[part="media"]');
+        const mediaBox =
+          host && props['controls-placement'].value === 'inset' && media && !media.hidden
+            ? media.getBoundingClientRect()
+            : null;
+
+        if (!mediaBox || mediaBox.height === 0 || !host) {
+          bar.style.removeProperty('--_navigation-inset-x');
+          bar.style.removeProperty('--_navigation-inset-y');
+          bar.style.removeProperty('--_navigation-inset-width');
+
+          return;
+        }
+
+        const hostBox = host.getBoundingClientRect();
+        bar.style.setProperty(
+          '--_navigation-inset-x',
+          `${mediaBox.left + mediaBox.width / 2 - (hostBox.left + hostBox.width / 2)}px`,
+        );
+        bar.style.setProperty('--_navigation-inset-y', `${hostBox.bottom - mediaBox.bottom}px`);
+        bar.style.setProperty('--_navigation-inset-width', `${Math.round(mediaBox.width)}px`);
+      });
+    };
+
+    let mediaObserver: ResizeObserver | undefined;
+    let mediaObserverItem: HTMLElement | undefined;
+    /** Follow the active card's media wrapper: the observed element changes with every browse. */
+    const watchNavigationAnchor = (): void => {
+      const item = getItems()[activeIndex.value];
+
+      if (mediaObserverItem === item) return;
+
+      mediaObserver?.disconnect();
+      mediaObserverItem = item;
+
+      if (!item || typeof ResizeObserver !== 'function') return;
+
+      mediaObserver = new ResizeObserver(syncNavigationAnchor);
+
+      const media = item.shadowRoot?.querySelector<HTMLElement>('[part="media"]');
+
+      if (media) mediaObserver.observe(media);
+      mediaObserver.observe(item);
+    };
+
+    onCleanup(() => mediaObserver?.disconnect());
+
+    watch(props['controls-placement'], () => {
+      watchNavigationAnchor();
+      syncNavigationAnchor();
+    });
 
     const setActiveIndex = (index: number, notify: boolean): void => {
       const count = getItems().length;
@@ -165,6 +260,8 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
 
       activeIndex.value = next;
       syncItems();
+      watchNavigationAnchor();
+      syncNavigationAnchor();
 
       if (!notify) return;
 
@@ -192,19 +289,6 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
       emit('change', { labels, originalEvent, value, values });
     };
 
-    const handleSelectionRequest = (event: Event): void => {
-      const item = event
-        .composedPath()
-        .find((node): node is HTMLElement => node instanceof HTMLElement && node.localName === CARD_PICKER_ITEM_TAG);
-      const value = item?.getAttribute('value');
-
-      if (!item || !value) return;
-
-      event.stopPropagation();
-      const detail = (event as CustomEvent<{ originalEvent?: Event }>).detail;
-      toggleValue(value, detail?.originalEvent ?? event);
-    };
-
     const navigation = createListControl<HTMLElement>({
       direction: () => elementDirection(el),
       getItems,
@@ -220,7 +304,12 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
     });
 
     provide(CARD_PICKER_CTX, {
+      activeValue: computed(() => {
+        void itemsVersion.value;
+        return getValue(getItems()[activeIndex.value]);
+      }),
       disabled: computed(() => Boolean(props.disabled.value)),
+      orientation: computed(() => props.orientation.value ?? 'vertical'),
       selectedValues: selected.selectedValues,
       toggle: toggleValue,
     });
@@ -240,6 +329,15 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
       setActiveIndex(activeIndex.value + offset, true);
       navigation.set(activeIndex.value);
     };
+    const goTo = (index: number): void => {
+      if (props.disabled.value) return;
+      setActiveIndex(index, true);
+      navigation.set(activeIndex.value);
+    };
+    const indicatorLabels = computed(() => {
+      void itemsVersion.value;
+      return getItems().map((item, index) => `Go to card ${index + 1}: ${itemLabel(item)}`);
+    });
 
     const handleKeydown = (event: KeyboardEvent): void => {
       if (props.disabled.value || event.defaultPrevented) return;
@@ -259,12 +357,17 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
         'aria-disabled': () => (props.disabled.value ? 'true' : null),
         'aria-label': props.label,
         'aria-roledescription': () => 'card picker',
+        'data-navigation-hidden': () =>
+          itemCount.value === 0 || (!props['show-controls'].value && !props['show-indicators'].value) ? '' : null,
+        // A false boolean prop removes its own attribute, so the previews' state needs a marker of
+        // its own rather than a `:not([show-neighbors])` selector that would also match before the
+        // element upgrades and the default reflects.
+        'data-neighbors-hidden': () => (props['show-neighbors'].value ? null : ''),
         role: () => 'region',
         tabindex: () => (props.disabled.value ? '-1' : '0'),
         values: selected.formValue,
       },
       on: {
-        'card-picker-toggle': handleSelectionRequest,
         keydown: handleKeydown,
       },
     });
@@ -276,6 +379,38 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
       if (!stage || !slot) return;
 
       let suppressClick = false;
+      let springHandle: SpringHandle | undefined;
+      let dragOffset = 0;
+      let dragOrigin = 0;
+      // Every drag frame re-measures the inset anchor, so the navigation bar slides with the card
+      // it belongs to rather than sitting still while the artwork moves.
+      const applyDrag = (offset: number): void => {
+        dragOffset = offset;
+        stage.style.setProperty('--_drag-offset', `${offset}px`);
+        // The inset bar belongs to the card's artwork, so it rides the swipe with it and settles
+        // at the new card's media once the spring comes to rest.
+        syncNavigationAnchor();
+      };
+      const resetDrag = (): void => {
+        dragOffset = 0;
+        stage.style.removeProperty('--_drag-offset');
+        el.removeAttribute('data-dragging');
+      };
+      const settleDrag = (velocity: number): void => {
+        springHandle?.dispose();
+        const handle = spring(dragOffset, 0, applyDrag, {
+          damping: 20,
+          motion: getMotionMode(),
+          stiffness: 210,
+          velocity,
+        });
+        springHandle = handle;
+        void handle.result.then((outcome) => {
+          if (outcome.status !== 'finished' || springHandle !== handle) return;
+          springHandle = undefined;
+          resetDrag();
+        });
+      };
       const resetClick = (): void => {
         suppressClick = false;
       };
@@ -286,41 +421,108 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
         event.preventDefault();
         event.stopImmediatePropagation();
       };
+      // Native image dragging (starting on a card's artwork) would hijack the swipe, so a drag
+      // begun inside an item is always the picker's own gesture instead.
+      const handleDragStart = (event: DragEvent): void => {
+        const items = getItems();
+        if (event.composedPath().some((node) => node instanceof HTMLElement && items.includes(node))) {
+          event.preventDefault();
+        }
+      };
       const pan = createPanGesture(stage, {
         axis: 'x',
         disabled: () => Boolean(props.disabled.value) || getItems().length < 2,
         onEnd: ({ distance, reason, velocity }) => {
-          if (reason !== 'release') return;
-
-          const projected = projectFling(distance, velocity);
-          if (Math.abs(projected) < 48) return;
-
-          const isRtl = elementDirection(el) === 'rtl';
-          move(projected * (isRtl ? -1 : 1) < 0 ? 1 : -1);
+          if (reason === 'release') {
+            const projected = projectFling(distance, velocity);
+            if (Math.abs(projected) >= 48) {
+              const isRtl = elementDirection(el) === 'rtl';
+              const offset = projected * (isRtl ? -1 : 1) < 0 ? 1 : -1;
+              const arriving = getItems()[activeIndex.value + offset];
+              if (arriving) {
+                const before = arriving.getBoundingClientRect().x;
+                move(offset);
+                const after = arriving.getBoundingClientRect().x;
+                applyDrag(dragOffset + before - after);
+              }
+            }
+          } else suppressClick = false;
+          settleDrag(reason === 'release' ? velocity : 0);
+        },
+        onMove: ({ distance }) => {
+          const logicalDistance = distance * (elementDirection(el) === 'rtl' ? -1 : 1);
+          const atBoundary = logicalDistance > 0 ? !canGoPrevious.value : !canGoNext.value;
+          applyDrag(dragOrigin + (atBoundary ? distance * 0.3 : distance));
         },
         onStart: () => {
+          springHandle?.dispose();
+          springHandle = undefined;
+          dragOrigin = dragOffset;
+          el.setAttribute('data-dragging', '');
           suppressClick = true;
         },
         shouldStart: (event) =>
           !event.composedPath().some((node) => node instanceof Element && node.matches(INTERACTIVE_SELECTOR)),
       });
       const refreshItems = (): void => {
+        springHandle?.dispose();
+        springHandle = undefined;
+        resetDrag();
         const count = getItems().length;
         setActiveIndex(Math.min(activeIndex.value, Math.max(0, count - 1)), false);
         syncItems();
+        watchNavigationAnchor();
+        syncNavigationAnchor();
         navigation.set(activeIndex.value);
       };
 
       slot.addEventListener('slotchange', refreshItems);
       stage.addEventListener('pointerdown', resetClick, true);
       stage.addEventListener('click', preventSwipeClick, true);
+      el.addEventListener('dragstart', handleDragStart);
       refreshItems();
 
       return () => {
         pan.dispose();
+        springHandle?.dispose();
+        springHandle = undefined;
+        resetDrag();
         slot.removeEventListener('slotchange', refreshItems);
         stage.removeEventListener('pointerdown', resetClick, true);
         stage.removeEventListener('click', preventSwipeClick, true);
+        el.removeEventListener('dragstart', handleDragStart);
+      };
+    });
+
+    onMounted(() => {
+      watchNavigationAnchor();
+      syncNavigationAnchor();
+
+      // Clicking an indicator or arrow pages the card with a CSS transition, so the synchronous
+      // measure in setActiveIndex catches the card mid-slide. The slide's transitionend bubbles
+      // from the item to the host, which is the moment the resting geometry is finally correct.
+      const handleSettled = (): void => syncNavigationAnchor();
+      el.addEventListener('transitionend', handleSettled);
+
+      if (typeof ResizeObserver !== 'function') {
+        return () => el.removeEventListener('transitionend', handleSettled);
+      }
+
+      const host = el.shadowRoot?.querySelector<HTMLElement>('.picker');
+
+      if (!host) {
+        return () => el.removeEventListener('transitionend', handleSettled);
+      }
+
+      // The anchor is a pair of offsets against the picker box, so any resize of it or the host
+      // (panel animations, viewport changes, fonts settling) has to re-derive them.
+      const hostObserver = new ResizeObserver(syncNavigationAnchor);
+      hostObserver.observe(host);
+      hostObserver.observe(el);
+
+      return () => {
+        hostObserver.disconnect();
+        el.removeEventListener('transitionend', handleSettled);
       };
     });
 
@@ -329,31 +531,17 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
         <div class="stage" part="stage">
           <slot></slot>
         </div>
-        <div class="controls" part="controls">
-          <ore-button
-            class="nav-button"
-            part="previous"
-            icon-only
-            rounded="full"
-            variant="ghost"
-            ?disabled="${() => !canGoPrevious.value}"
-            label="${() => 'Previous card'}"
-            @click="${() => move(-1)}">
-            <ore-icon name="chevron-left" aria-hidden="true"></ore-icon>
-          </ore-button>
-          <span class="status" aria-live="polite" aria-atomic="true">${status}</span>
-          <ore-button
-            class="nav-button"
-            part="next"
-            icon-only
-            rounded="full"
-            variant="ghost"
-            ?disabled="${() => !canGoNext.value}"
-            label="${() => 'Next card'}"
-            @click="${() => move(1)}">
-            <ore-icon name="chevron-right" aria-hidden="true"></ore-icon>
-          </ore-button>
-        </div>
+        <ore-media-navigation class="navigation" part="navigation" exportparts="bar:navigation-bar,controls,indicators,indicator,previous,next"
+          label="Card navigation" indicator-label="Card indicators" previous-label="Previous card" next-label="Next card"
+          count="${() => itemCount.value}" active-index="${() => activeIndex.value}" labels="${() => JSON.stringify(indicatorLabels.value)}"
+          disabled="${() => String(Boolean(props.disabled.value))}"
+          show-controls="${() => String(Boolean(props['show-controls'].value))}" show-indicators="${() => String(Boolean(props['show-indicators'].value))}"
+          max-indicators="${props['max-indicators']}"
+          @navigate="${(event: CustomEvent<{ index: number }>) => {
+            event.stopPropagation();
+            goTo(event.detail.index);
+          }}"></ore-media-navigation>
+        <span class="sr-only" aria-live="polite" aria-atomic="true">${status}</span>
       </div>
     `;
   },

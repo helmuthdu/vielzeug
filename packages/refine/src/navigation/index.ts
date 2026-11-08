@@ -8,6 +8,13 @@
 export type { OreBreadcrumbItemProps, OreBreadcrumbProps } from './breadcrumb/breadcrumb';
 export { BREADCRUMB_ITEM_TAG, BREADCRUMB_TAG } from './breadcrumb/breadcrumb';
 export type {
+  MediaNavigationNavigateDetail,
+  MediaNavigationOrientation,
+  OreMediaNavigationEvents,
+  OreMediaNavigationProps,
+} from './media-navigation/media-navigation';
+export { MEDIA_NAVIGATION_TAG } from './media-navigation/media-navigation';
+export type {
   OreNavigationMenuEvents,
   OreNavigationMenuItemProps,
   OreNavigationMenuProps,

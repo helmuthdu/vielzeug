@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Speed up media-navigation indicator hand-off to uniform 100ms phases in both directions",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

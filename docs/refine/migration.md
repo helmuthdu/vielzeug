@@ -5,6 +5,48 @@ description: Migrate the async state container to ore-state, command palette cat
 
 # Migration
 
+## Carousel and picker navigation use a shared component
+
+`ore-carousel` and `ore-card-picker` now render `ore-media-navigation` internally. Their navigation properties and domain events remain unchanged: carousel browsing emits `change`; picker browsing emits `browse-change` and never changes selection.
+
+Carousel indicators are now native buttons in a labelled group, using `aria-current` instead of tab roles and `aria-selected`. Keyboard navigation and the active-indicator appearance remain available. Target styling parts rather than querying a parent's private shadow DOM.
+
+```js
+// Before: controls were inside the carousel's shadow root.
+carousel.shadowRoot.querySelector('.indicators');
+
+// After: the shared component owns navigation internals.
+carousel.shadowRoot.querySelector('ore-media-navigation');
+```
+
+For styling, `ore-carousel::part(indicators)` still targets the forwarded navigation surface. `ore-card-picker::part(navigation-bar)` targets its shared bar.
+
+## Card picker reading surfaces replace inline disclosure
+
+Import `@vielzeug/refine/card-picker` to register both picker tags and their child controls. The standalone `@vielzeug/refine/card-picker-item` entry is removed. Keep long information in the existing `details` slot; it now opens in a content-sized mobile sheet or an adjacent desktop reading pane.
+
+```ts
+// Before
+import '@vielzeug/refine/card-picker-item';
+
+// After
+import '@vielzeug/refine/card-picker';
+```
+
+```html
+<!-- Before: unnamed disclosure action -->
+<ore-card-picker-item value="attack" label="Attack">
+  <p slot="details">Attack rules.</p>
+</ore-card-picker-item>
+
+<!-- After: name the reading action for your content -->
+<ore-card-picker-item value="attack" label="Attack" details-label="Rules">
+  <p slot="details">Attack rules.</p>
+</ore-card-picker-item>
+```
+
+The `details-toggle` part becomes `details-trigger`. The `--card-picker-details-max-height` custom property is removed; use the `details-sheet` part to style the mobile drawer and the `details` part for the desktop pane. `--card-picker-min-height` now defaults to `0` rather than reserving blank stage space. Selection and browse event contracts are unchanged.
+
 ## Sidebar drawer backdrop no longer dims by default
 
 `ore-sidebar`'s overlay drawer keeps its backdrop as the tap-outside dismiss target, but the backdrop is now

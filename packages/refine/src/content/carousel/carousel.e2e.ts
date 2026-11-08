@@ -144,11 +144,11 @@ test.describe('Touch navigation', () => {
           const host = (await page.locator('ore-carousel').boundingBox())!;
 
           if (navigation === 'hidden') {
-            await expect(page.locator('.indicators, .controls')).toHaveCount(0);
+            await expect(page.locator('ore-carousel ore-media-navigation')).not.toBeVisible();
             expect(host.height - track.height).toBeLessThan(20);
             expect(host.width - track.width).toBeLessThan(20);
           } else {
-            const nav = (await page.locator(navigation === 'controls' ? '.controls' : '.indicators').boundingBox())!;
+            const nav = (await page.locator('ore-carousel ore-media-navigation').boundingBox())!;
 
             if (orientation === 'horizontal') {
               expect(nav.y).toBeGreaterThanOrEqual(track.y + track.height);
@@ -203,13 +203,13 @@ test.describe('Touch navigation', () => {
         el.setAttribute('show-controls', 'false');
         el.setAttribute('show-indicators', 'false');
       });
-      await expect(page.locator('.indicators, .controls')).toHaveCount(0);
+      await expect(page.locator('ore-carousel ore-media-navigation')).not.toBeVisible();
       await expect.poll(async () => (await track.boundingBox())!.height).toBeGreaterThan(original.height);
       await carousel.evaluate((el) => {
         el.setAttribute('show-controls', 'true');
         el.setAttribute('show-indicators', 'true');
       });
-      await expect(page.locator('.indicators .controls')).toBeVisible();
+      await expect(page.locator('ore-carousel ore-media-navigation [part="controls"]')).toBeVisible();
       await expect.poll(async () => (await track.boundingBox())!.height).toBeCloseTo(original.height);
     });
 
@@ -236,8 +236,8 @@ test.describe('Touch navigation', () => {
         expect(Math.abs(label.x + label.width / 2 - (cover.x + cover.width / 2))).toBeLessThan(1);
         expect(Math.abs(label.y + label.height / 2 - (cover.y + cover.height / 2))).toBeLessThan(1);
         if (index === 0) {
-          await expect(page.locator('.indicators .indicator-list')).toBeVisible();
-          await expect(page.locator('.indicators .controls')).toBeVisible();
+          await expect(page.locator('ore-carousel ore-media-navigation [part="indicators"]')).toBeVisible();
+          await expect(page.locator('ore-carousel ore-media-navigation [part="controls"]')).toBeVisible();
           await expect(page.getByRole('button', { name: 'Next slide' })).toBeVisible();
         }
       }

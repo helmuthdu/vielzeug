@@ -36,6 +36,17 @@ describe('createListNavigation', () => {
     expect(bounded.navigate('next')).toBeNull();
   });
 
+  it('re-resolves loop on every move when loop is a getter', () => {
+    let looping = false;
+    const nav = createNavigation([{}, {}], { loop: () => looping });
+
+    nav.set(1);
+    expect(nav.navigate('next')).toBeNull();
+
+    looping = true;
+    expect(nav.navigate('next')?.index).toBe(0);
+  });
+
   it('returns the selected item and the operation snapshot from navigate', () => {
     const first = { label: 'first' };
     const second = { label: 'second' };

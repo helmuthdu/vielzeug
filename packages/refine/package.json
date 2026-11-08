@@ -186,11 +186,6 @@
       "require": "./dist/card-picker.cjs",
       "types": "./dist/content/card-picker/card-picker.d.ts"
     },
-    "./card-picker-item": {
-      "import": "./dist/card-picker-item.js",
-      "require": "./dist/card-picker-item.cjs",
-      "types": "./dist/content/card-picker/card-picker-item.d.ts"
-    },
     "./carousel": {
       "import": "./dist/carousel.js",
       "require": "./dist/carousel.cjs",
@@ -325,6 +320,11 @@
       "import": "./dist/marquee.js",
       "require": "./dist/marquee.cjs",
       "types": "./dist/content/marquee/marquee.d.ts"
+    },
+    "./media-navigation": {
+      "import": "./dist/media-navigation.js",
+      "require": "./dist/media-navigation.cjs",
+      "types": "./dist/navigation/media-navigation/media-navigation.d.ts"
     },
     "./menu": {
       "import": "./dist/menu.js",
@@ -619,6 +619,9 @@
       "card": [
         "dist/content/card/card.d.ts"
       ],
+      "card-picker": [
+        "dist/content/card-picker/card-picker.d.ts"
+      ],
       "carousel": [
         "dist/content/carousel/carousel.d.ts"
       ],
@@ -699,6 +702,9 @@
       ],
       "marquee": [
         "dist/content/marquee/marquee.d.ts"
+      ],
+      "media-navigation": [
+        "dist/navigation/media-navigation/media-navigation.d.ts"
       ],
       "menu": [
         "dist/overlay/menu/menu.d.ts"

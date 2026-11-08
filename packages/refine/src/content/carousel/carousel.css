@@ -2,8 +2,6 @@
   :host {
     --_bg: var(--carousel-bg, var(--color-canvas));
     --_radius: var(--carousel-radius, var(--rounded-xl));
-    --_dot-bg: var(--carousel-dot-bg, var(--color-contrast-300));
-    --_dot-active-bg: var(--carousel-dot-active-bg, var(--color-contrast-700));
 
     /* Token-driven so Motion Mode governs slide motion: --duration-350 zeroes
        under the OS preference and data-motion='reduced' (instant slide) and
@@ -56,8 +54,7 @@
     pointer-events: none;
   }
 
-  :host([variant='coverflow']) .controls,
-  :host([variant='coverflow']) .indicators {
+  :host([variant='coverflow']) .navigation {
     z-index: 1;
   }
 
@@ -65,28 +62,14 @@
 
   /* Controls live inside the bottom nav bar, right-aligned via margin-inline-start: auto. */
 
-  .controls {
-    display: flex;
-    gap: var(--size-0-5);
-    align-items: center;
-    margin-inline-start: auto;
-    pointer-events: none;
-  }
-
   /* Controls rendered standalone (no indicators bar): needs own positioning + backdrop. */
-  :host > .controls {
+  :host > .navigation.controls-only {
     position: absolute;
     inset-block-end: var(--size-3);
+    inset-inline-start: auto;
     inset-inline-end: var(--size-3);
-    padding: var(--size-1-5) var(--size-2);
     margin-inline-start: 0;
-    background: color-mix(in oklch, var(--color-canvas) 55%, transparent);
-    border-radius: var(--rounded-full);
-    backdrop-filter: blur(6px);
-  }
-
-  .nav-btn {
-    pointer-events: auto;
+    transform: none;
   }
 
   /* ── Variant-specific track styles ────────────────────────────────────── */
@@ -131,38 +114,19 @@
     touch-action: pan-x pinch-zoom;
   }
 
-  :host([orientation='vertical']) .indicators {
+  :host([orientation='vertical']) .navigation {
     inset-block: 50% auto;
     inset-inline: var(--size-3) auto;
-    flex-direction: column;
-    width: auto;
-    height: max-content;
-    padding-block: var(--size-6) var(--size-2);
-    padding-inline: var(--size-1-5);
-    border-radius: var(--rounded-full);
     transform: translateX(0) translateY(-50%);
   }
 
-  :host([orientation='vertical']) .controls {
-    flex-direction: column;
-    margin-block-start: auto;
-    margin-inline-start: 0;
-  }
-
-  :host([orientation='vertical']) > .controls {
+  :host([orientation='vertical']) > .navigation.controls-only {
+    inset-block-start: auto;
     inset-block-end: var(--size-3);
+    inset-inline-start: auto;
     inset-inline-end: var(--size-3);
     margin-block-start: 0;
-  }
-
-  :host([orientation='vertical']) .indicator:not(.indicator-active) {
-    width: var(--size-2);
-    height: var(--size-2);
-  }
-
-  :host([orientation='vertical']) .indicator-active {
-    width: var(--size-1-5);
-    height: var(--size-8);
+    transform: none;
   }
 
   /* animation properties are inherited from .indicator-active ore-progress::part(fill) below */
@@ -172,84 +136,15 @@
   /* Floats above the bottom edge, shrinks to content width, centered.
      A frosted backdrop keeps it legible over any image. */
 
-  .indicators {
+  .navigation {
+    --media-navigation-dot-bg: var(--carousel-dot-bg, var(--color-contrast-300));
     position: absolute;
     inset-block-end: var(--size-3);
     inset-inline: 50%;
-    display: flex;
-    flex-direction: row;
-    gap: var(--size-1-5);
-    align-items: center;
-    width: max-content;
-    padding: var(--size-1-5) var(--size-2) var(--size-1-5) var(--size-6);
-    pointer-events: none;
-    background: color-mix(in oklch, var(--color-canvas) 55%, transparent);
-    border-radius: var(--rounded-full);
-    backdrop-filter: blur(6px);
     transform: translateX(-50%);
   }
 
-  .indicator {
-    display: block;
-    flex-shrink: 0;
-    padding: 0;
-    pointer-events: auto;
-    cursor: pointer;
-    background: none;
-    border: none;
-    transition: opacity var(--transition-fast);
-  }
-
-  .indicator-list {
-    display: flex;
-    flex-direction: inherit;
-    gap: inherit;
-    align-items: center;
-  }
-
-  .indicator > ore-progress {
-    display: block;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-  }
-
-  /* Inactive indicator: small circle */
-  .indicator:not(.indicator-active) {
-    width: var(--size-2);
-    height: var(--size-2);
-    overflow: hidden;
-    border-radius: var(--rounded-full);
-  }
-
-  /* Active indicator: wider pill (progress bar) */
-  .indicator-active {
-    --progress-track-bg: color-mix(in oklch, var(--_dot-bg) 60%, transparent);
-    width: var(--size-8);
-  }
-
-  .indicator:focus-visible {
-    outline: var(--border) solid currentcolor;
-    outline-offset: 2px;
-  }
-
-  .indicator:hover {
-    opacity: 0.8;
-  }
-
-  .indicator ore-progress::part(fill) {
-    transition: width var(--transition-normal);
-  }
-
-  .indicator-active ore-progress::part(fill) {
-    animation-name: var(--carousel-animation-name, none);
-    animation-duration: calc(var(--carousel-timeout, 4000) * 1ms);
-    animation-timing-function: var(--ease-linear);
-    animation-fill-mode: forwards;
-  }
-
-  :host([variant='coverflow']) .indicators,
-  :host([variant='coverflow']) > .controls {
+  :host([variant='coverflow']) .navigation {
     position: static;
     grid-area: 2 / 1;
     justify-self: center;
@@ -266,39 +161,8 @@
     grid-area: 1 / 2;
   }
 
-  :host([variant='coverflow'][orientation='vertical']) .indicators,
-  :host([variant='coverflow'][orientation='vertical']) > .controls {
+  :host([variant='coverflow'][orientation='vertical']) .navigation {
     grid-area: 1 / 1;
     align-self: center;
-  }
-}
-
-/* The control/indicator scrims sit over arbitrary slide content: with
-   transparency reduced they become opaque so the controls stay legible. */
-@media (prefers-reduced-transparency: reduce) {
-  :host > .controls,
-  .indicators {
-    background: var(--color-canvas);
-    backdrop-filter: none;
-  }
-}
-
-@keyframes carousel-fill {
-  from {
-    width: 0%;
-  }
-
-  to {
-    width: 100%;
-  }
-}
-
-@keyframes carousel-fill-v {
-  from {
-    height: 0%;
-  }
-
-  to {
-    height: 100%;
   }
 }

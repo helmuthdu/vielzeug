@@ -16,12 +16,13 @@ export { CARD_TAG } from './card/card';
 export type {
   CardPickerBrowseChangeDetail,
   CardPickerChangeDetail,
+  CardPickerControlPlacement,
+  CardPickerOrientation,
   OreCardPickerEvents,
+  OreCardPickerItemProps,
   OreCardPickerProps,
 } from './card-picker/card-picker';
-export { CARD_PICKER_TAG } from './card-picker/card-picker';
-export type { OreCardPickerItemProps } from './card-picker/card-picker-item';
-export { CARD_PICKER_ITEM_TAG } from './card-picker/card-picker-item';
+export { CARD_PICKER_ITEM_TAG, CARD_PICKER_ORIENTATIONS, CARD_PICKER_TAG } from './card-picker/card-picker';
 export type { CarouselOrientation, CarouselVariant, OreCarouselEvents, OreCarouselProps } from './carousel/carousel';
 export { CAROUSEL_SLIDE_TAG, CAROUSEL_TAG } from './carousel/carousel';
 export type {

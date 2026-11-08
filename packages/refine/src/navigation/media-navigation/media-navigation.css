@@ -1,0 +1,263 @@
+@layer refine.base {
+  :host {
+    --_dot-bg: var(--media-navigation-dot-bg, var(--color-contrast-300));
+    display: block;
+    width: max-content;
+    max-width: 100%;
+  }
+  :host([hidden]),
+  .media-navigation [hidden] {
+    display: none;
+  }
+  .media-navigation {
+    --_media-progress-duration: 0ms;
+    --_media-progress-animation: none;
+    display: flex;
+    flex-direction: row;
+    gap: var(--size-1-5);
+    align-items: center;
+    width: max-content;
+    padding: var(--size-1-5) var(--size-2) var(--size-1-5) var(--size-6);
+    pointer-events: none;
+    background: var(--media-navigation-bg, color-mix(in oklch, var(--color-canvas) 55%, transparent));
+    border-radius: var(--rounded-full);
+    backdrop-filter: blur(calc(var(--size-1) + var(--size-0-5)));
+  }
+  .media-navigation.controls-only {
+    padding: var(--size-1-5) var(--size-2);
+  }
+  .controls {
+    display: flex;
+    gap: var(--size-0-5);
+    align-items: center;
+    margin-inline-start: auto;
+    pointer-events: none;
+  }
+  .nav-btn {
+    pointer-events: auto;
+  }
+  .indicator-list {
+    display: flex;
+    flex-direction: inherit;
+    gap: inherit;
+    align-items: center;
+  }
+  .indicator {
+    display: block;
+    flex-shrink: 0;
+    padding: 0;
+    pointer-events: auto;
+    cursor: pointer;
+    background: none;
+    border: none;
+    transition:
+      opacity var(--transition-fast),
+      transform var(--transition-fast);
+    /* Keyed list reuse: only indicators sliding into the window remount, so this entrance makes
+       a window shift visible even though the active dot keeps its centered position. Consumers
+       measuring the bar right after mount must wait for these animations to settle. Slot 2 is
+       the backward staging (`--_mn-stage`): a custom-property swap starts it on class add and
+       resolves it back to `none` on class remove, cancelling the finished animation without
+       touching slot 1 - a literal animation-name swap here would re-trigger the entrance and
+       make dots blink when the staging classes clear. */
+    animation:
+      var(--_motion-animation, media-navigation-indicator-in var(--duration-150) var(--ease-out)),
+      var(--_mn-stage, none);
+  }
+  .indicator > ore-progress {
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .indicator:not(.indicator-active) {
+    width: var(--size-2);
+    height: var(--size-2);
+    overflow: hidden;
+    border-radius: var(--rounded-full);
+    /* Progress leaves before the shape changes: the pill holds full width while its fill
+       drains, then collapses once the drain finished. */
+    transition:
+      opacity var(--transition-fast),
+      transform var(--transition-fast),
+      width var(--duration-100) var(--ease-in-out) var(--duration-100),
+      height var(--duration-100) var(--ease-in-out) var(--duration-100);
+  }
+  .indicator-active {
+    --progress-track-bg: color-mix(in oklch, var(--_dot-bg) 60%, transparent);
+    width: var(--size-8);
+    /* The new slot widens first; its fill rises only after the expansion (see the fill delay). */
+    transition:
+      opacity var(--transition-fast),
+      transform var(--transition-fast),
+      width var(--duration-100) var(--ease-in-out),
+      height var(--duration-100) var(--ease-in-out);
+  }
+  /* LTR growth always moves the right edge rightward. On backward moves the leading layout
+     motion must be the old pill collapsing leftward, so the new slot grows only once that
+     has (nearly) finished, and its fill rises after the growth. Animations (not transitions)
+     stage the growth: when a large-collection window slides, the new slot is a freshly
+     mounted element, and transitions never run on a first render. */
+  .media-navigation.indicator-moving-back .indicator-active {
+    --_mn-stage: var(
+      --_motion-animation,
+      media-navigation-indicator-back var(--duration-100) var(--ease-in-out) var(--duration-200) backwards
+    );
+  }
+  .media-navigation.indicator-moving-back .indicator-active ore-progress::part(fill) {
+    transform-origin: left center;
+    animation-name: var(--_media-progress-animation), var(--_motion-animation, media-navigation-fill-back);
+    animation-duration: var(--_media-progress-duration), var(--duration-100);
+    animation-timing-function: var(--ease-linear), var(--ease-out);
+    animation-delay: 0s, var(--duration-300);
+    animation-fill-mode: forwards, backwards;
+  }
+  /* The leaving pill mirrors the base choreography (fill drains, pill holds, then collapses
+     leftward) as keyframes so it survives the backward window slide remounting its node. */
+  .media-navigation.indicator-moving-back .indicator-leaving:not(.indicator-active) {
+    --_mn-stage: var(
+      --_motion-animation,
+      media-navigation-indicator-leaving var(--duration-100) var(--ease-in-out) var(--duration-100) backwards
+    );
+  }
+  .media-navigation.indicator-moving-back .indicator-leaving:not(.indicator-active) ore-progress::part(fill) {
+    animation: var(--_motion-animation, media-navigation-fill-out var(--duration-100) var(--ease-out));
+  }
+  .indicator:focus-visible {
+    outline: var(--border) solid currentcolor;
+    outline-offset: var(--size-0-5);
+  }
+  .indicator:hover:not(:disabled) {
+    opacity: 0.8;
+  }
+  .indicator:disabled {
+    opacity: 0.5;
+  }
+  .indicator[data-edge]:not(.indicator-active) {
+    opacity: 0.5;
+    transform: scale(0.75);
+  }
+  .indicator ore-progress::part(fill) {
+    transition:
+      width var(--duration-100) var(--ease-out),
+      height var(--duration-100) var(--ease-out);
+  }
+  .media-navigation {
+    box-sizing: border-box;
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+  .indicator-list {
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
+  }
+  :host([orientation='vertical']) .media-navigation {
+    flex-direction: column;
+    padding: var(--size-6) var(--size-1-5) var(--size-2);
+  }
+  :host([orientation='vertical']) .media-navigation.controls-only {
+    padding: var(--size-1-5) var(--size-2);
+  }
+  :host([orientation='vertical']) .controls {
+    flex-direction: column;
+    margin-block-start: auto;
+    margin-inline-start: 0;
+  }
+  :host([orientation='vertical']) .indicator-active {
+    width: var(--size-1-5);
+    height: var(--size-8);
+  }
+  :host([orientation='vertical']) .media-navigation.indicator-moving-back .indicator-active {
+    --_mn-stage: var(
+      --_motion-animation,
+      media-navigation-indicator-back-v var(--duration-100) var(--ease-in-out) var(--duration-200) backwards
+    );
+  }
+  :host([orientation='vertical']) .media-navigation.indicator-moving-back .indicator-active ore-progress::part(fill) {
+    transform-origin: center bottom;
+  }
+  :host([orientation='vertical']) .media-navigation.indicator-moving-back .indicator-leaving:not(.indicator-active) {
+    --_mn-stage: var(
+      --_motion-animation,
+      media-navigation-indicator-leaving-v var(--duration-100) var(--ease-in-out) var(--duration-100) backwards
+    );
+  }
+  :host([orientation='vertical'])
+    .media-navigation.indicator-moving-back
+    .indicator-leaving:not(.indicator-active)
+    ore-progress::part(fill) {
+    animation: var(--_motion-animation, media-navigation-fill-out-v var(--duration-100) var(--ease-out));
+  }
+  .indicator-active ore-progress::part(fill) {
+    /* Rise after the pill finished widening, so the fill visibly increases on the new slot. */
+    transition-delay: var(--duration-100);
+    animation-name: var(--_media-progress-animation);
+    animation-duration: var(--_media-progress-duration);
+    animation-timing-function: var(--ease-linear);
+    animation-fill-mode: forwards;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .media-navigation {
+    background: var(--color-canvas);
+    backdrop-filter: none;
+  }
+}
+@keyframes media-navigation-indicator-in {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+@keyframes media-navigation-indicator-back {
+  from {
+    width: var(--size-2);
+  }
+}
+@keyframes media-navigation-indicator-back-v {
+  from {
+    height: var(--size-2);
+  }
+}
+@keyframes media-navigation-fill-back {
+  from {
+    transform: scale(0);
+  }
+}
+@keyframes media-navigation-indicator-leaving {
+  from {
+    width: var(--size-8);
+  }
+}
+@keyframes media-navigation-indicator-leaving-v {
+  from {
+    height: var(--size-8);
+  }
+}
+@keyframes media-navigation-fill-out {
+  from {
+    width: 100%;
+  }
+}
+@keyframes media-navigation-fill-out-v {
+  from {
+    height: 100%;
+  }
+}
+@keyframes media-navigation-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+@keyframes media-navigation-fill-v {
+  from {
+    height: 0%;
+  }
+  to {
+    height: 100%;
+  }
+}

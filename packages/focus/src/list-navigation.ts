@@ -31,7 +31,7 @@ export type ListNavigationOptions<T> = {
   getItems: () => readonly T[];
   isItemDisabled?: (item: T, index: number) => boolean;
   keys?: Partial<Record<ListNavigationAction, readonly string[]>>;
-  loop?: boolean;
+  loop?: MaybeGetter<boolean>;
   orientation?: MaybeGetter<'both' | 'horizontal' | 'vertical'>;
   typeahead?: ListNavigationTypeaheadOptions<T>;
 };
@@ -170,7 +170,7 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
 
     if (nextIndex >= 0) return commitIndex(items, nextIndex, action, event);
 
-    if (options.loop) {
+    if (resolve(options.loop, false)) {
       const wrapStart = direction === 'forward' ? 0 : items.length - 1;
       const wrapped = findEnabledIndex(items, wrapStart, direction);
 

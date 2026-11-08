@@ -6,7 +6,7 @@
 import { fireClick } from '@vielzeug/assay';
 import { computed, signal } from '@vielzeug/ripple';
 
-import { html } from '../index';
+import { define, html, prop } from '../index';
 import { mount } from '../testing';
 import { register } from './test-utils';
 
@@ -202,6 +202,68 @@ describe('Template: HTML System', () => {
 
       expect(alpha).toBe(1);
       expect(beta).toBe(1);
+    });
+
+    it('keeps nested list bindings reactive when a prop write leaves the list unchanged', async () => {
+      // A parent writes a child's prop through a function attribute binding, so the
+      // write happens inside that binding's effect. The child renders a windowed list
+      // whose per-node class reads the prop directly: when the prop changes without
+      // changing the window, the child's list effect does not re-run, and the nested
+      // per-node computeds must still be owned by that effect - not by whichever
+      // effect's write happened to refresh the list source eagerly. Otherwise the next
+      // write disposes them and the rendered classes freeze on a stale value.
+      define('ore-windowed-list-child', {
+        props: { active: prop.number(0), count: prop.number(0) },
+        setup: (props) => {
+          const start = computed(() =>
+            Math.max(0, Math.min(Number(props.active.value) - 1, Math.max(0, Number(props.count.value) - 3))),
+          );
+          const window = computed(() => [0, 1, 2].map((offset) => start.value + offset));
+
+          return html`
+            <ul>
+              ${() =>
+                window.value.map(
+                  (value) => html`
+                    <li class="${() => (value === props.active.value ? 'on' : 'off')}">${value}</li>
+                  `,
+                )}
+            </ul>
+          `;
+        },
+      });
+
+      const active = signal(0);
+      const { element, flush } = await mount(
+        () => html`
+          <ore-windowed-list-child active=${() => active.value} count=${5}></ore-windowed-list-child>
+        `,
+      );
+
+      const classes = () =>
+        [
+          ...(element.shadowRoot?.querySelector('ore-windowed-list-child')?.shadowRoot?.querySelectorAll('li') ?? []),
+        ].map((item) => item.className);
+
+      expect(classes()).toEqual(['on', 'off', 'off']);
+
+      // Window slides: [0,1,2] -> [1,2,3] -> [2,3,4].
+      active.value = 2;
+      await flush();
+      expect(classes()).toEqual(['off', 'on', 'off']);
+
+      active.value = 3;
+      await flush();
+      expect(classes()).toEqual(['off', 'on', 'off']);
+
+      // Window pinned at [2,3,4]: the list source is unchanged, so only the prop moves.
+      active.value = 4;
+      await flush();
+      expect(classes()).toEqual(['off', 'off', 'on']);
+
+      active.value = 3;
+      await flush();
+      expect(classes()).toEqual(['off', 'on', 'off']);
     });
   });
 

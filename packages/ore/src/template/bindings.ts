@@ -288,13 +288,20 @@ const insertHtmlValues = (
   return nodes;
 };
 
+/** Normalize a reactive node-slot value to the render effect's array shape. */
+const toHtmlValues = (raw: unknown): HtmlBindingValue[] =>
+  Array.isArray(raw) ? (raw as HtmlBindingValue[]) : [raw as HtmlBindingValue];
+
 export const applyHtmlBinding = (binding: HtmlBinding, registerCleanup: RegisterCleanup): void => {
-  const { anchor, signal } = binding;
+  const { anchor, source } = binding;
 
   const slot = createReplaceableSlot();
 
+  // The source is read here, not through a memo computed, so this effect is the
+  // observer of its dependencies and the owner of every computed the value builds:
+  // nested bindings are disposed exactly when this slot's nodes are replaced.
   const stop = rawEffect(() => {
-    const raw = signal.value;
+    const raw = toHtmlValues(typeof source === 'function' ? source() : source.value);
 
     slot.clear();
 

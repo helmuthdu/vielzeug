@@ -106,7 +106,7 @@ export const REFINE_CATEGORIES: RefineCategory[] = [
     name: 'Layout',
   },
   {
-    components: ['breadcrumb', 'navigation-menu', 'pagination', 'stepper', 'tabs'],
+    components: ['breadcrumb', 'media-navigation', 'navigation-menu', 'pagination', 'stepper', 'tabs'],
     name: 'Navigation',
   },
   {

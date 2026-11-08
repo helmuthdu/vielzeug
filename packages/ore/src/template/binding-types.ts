@@ -73,7 +73,16 @@ export type HtmlBindingValue = HTMLResult | string | number | boolean | null | u
 
 export type HtmlBinding = {
   anchor: Comment;
-  signal: Readable<HtmlBindingValue[]>;
+  /**
+   * The raw reactive source, read inside the render effect rather than through a
+   * memo computed: a reactive value is usually a function that builds nested
+   * `html` results, and building them allocates their per-node binding computeds.
+   * Ripple attaches a computed to the scope active when it is created, so a memo
+   * computed would let any effect that happens to trigger its eager refresh become
+   * the owner - and dispose those bindings on its next run while this slot still
+   * shows the nodes they drive.
+   */
+  source: (() => unknown) | Readable<unknown>;
   type: 'html';
 };
 

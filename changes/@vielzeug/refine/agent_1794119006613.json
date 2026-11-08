@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Ease media-navigation indicator size and fill between slots so the previous indicator's progress drains and the current one's fills up on navigation.",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

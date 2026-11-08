@@ -35,6 +35,17 @@ describe('HTMLElementTagNameMap: form-associated element type coverage', () => {
     expectTypeOf<RefineElementMap['ore-card-picker']['values']>().toEqualTypeOf<string | undefined>();
     expectTypeOf<RefineElementMap['ore-card-picker']['active-index']>().toEqualTypeOf<number | undefined>();
     expectTypeOf<RefineElementMap['ore-card-picker-item']['value']>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<RefineElementMap['ore-card-picker-item']['details-label']>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<RefineElementMap['ore-card-picker']['orientation']>().toEqualTypeOf<
+      'horizontal' | 'vertical' | 'auto' | undefined
+    >();
+    expectTypeOf<RefineElementMap['ore-card-picker']['show-controls']>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<RefineElementMap['ore-card-picker']['show-indicators']>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<RefineElementMap['ore-media-navigation']['active-index']>().toEqualTypeOf<number | undefined>();
+    expectTypeOf<RefineElementMap['ore-media-navigation']['labels']>().toEqualTypeOf<readonly string[] | undefined>();
+    expectTypeOf<RefineElementMap['ore-media-navigation']['max-indicators']>().toEqualTypeOf<number | undefined>();
+    expectTypeOf<RefineElementMap['ore-card-picker']['max-indicators']>().toEqualTypeOf<number | undefined>();
+    expectTypeOf<RefineElementMap['ore-carousel']['max-indicators']>().toEqualTypeOf<number | undefined>();
     expectTypeOf<RefineElementMap['ore-keyboard-key']['size']>().toEqualTypeOf<'lg' | 'sm' | undefined>();
     expectTypeOf<RefineElementMap['ore-keyboard-shortcut']['pressed']>().toEqualTypeOf<boolean | undefined>();
     expectTypeOf<RefineElementMap['ore-list']['selectable']>().toEqualTypeOf<boolean | undefined>();
