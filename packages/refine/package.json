@@ -841,6 +841,7 @@
     "./dist/*.js",
     "./dist/*.cjs",
     "./dist/core/*",
+    "./dist/content/**",
     "./dist/icons/**",
     "./dist/styles/**",
     "./src/icons/defaults.ts",
