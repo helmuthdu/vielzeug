@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/flux
 
-This log was last generated on Sun, 08 Nov 2026 08:30:51 GMT and should not be manually modified.
+This log was last generated on Mon, 09 Nov 2026 05:44:57 GMT and should not be manually modified.
 
+## 26.11.8
+Mon, 09 Nov 2026 05:44:57 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.7
 Sun, 08 Nov 2026 08:30:51 GMT
 

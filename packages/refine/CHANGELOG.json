@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Fix sideEffects manifest generation for nested Refine component modules so component registration survives production bundling.",
+            "commit": "a38abb81ff2b0c0ee8d8f11d307fe4dbf7d8f440"
+          }
+        ]
+      },
+      "date": "Mon, 09 Nov 2026 05:44:57 GMT",
+      "tag": "@vielzeug/refine_v26.11.8",
+      "version": "26.11.8"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",
