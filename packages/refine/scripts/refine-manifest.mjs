@@ -23,6 +23,7 @@ const REFINE_SIDE_EFFECTS = [
   './dist/*.js',
   './dist/*.cjs',
   './dist/core/*',
+  './dist/content/**',
   './dist/icons/**',
   './dist/styles/**',
   './src/icons/defaults.ts',
@@ -337,7 +338,8 @@ export function syncComponentExports() {
   packageJson.exports = createRefineExports(packageJson.exports ?? {});
 
   // Keep the icon registry's nested module and its source entry marked as side-effectful:
-  // otherwise consumer production bundlers can drop registerIcons() from component imports.
+  // otherwise consumer production bundlers can drop registerIcons() from component imports. The same goes
+  // for nested component modules (e.g. ore-card-picker-item) that only register their element on import.
   packageJson.sideEffects = [...REFINE_SIDE_EFFECTS];
 
   const nextContent = `${JSON.stringify(packageJson, null, 2)}\n`;
