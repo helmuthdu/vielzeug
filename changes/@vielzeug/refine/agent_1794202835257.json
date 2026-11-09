@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix sideEffects manifest generation for nested Refine component modules so component registration survives production bundling.",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}
