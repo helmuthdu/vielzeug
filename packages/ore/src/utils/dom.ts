@@ -130,10 +130,44 @@ const normalizeUrlForSchemeCheck = (value: string): string => value.replace(URL_
 
 const isDangerousUrl = (value: string): boolean => DANGEROUS_SCHEME_RE.test(normalizeUrlForSchemeCheck(value));
 
-export const setAttr = (el: Element, name: string, val: unknown): void => {
-  const lowerName = name.toLowerCase();
+/**
+ * The name-only classification `setAttr` branches on. Attribute names repeat
+ * constantly on hot update paths (a template binds `class`/`href`/... once and
+ * writes them on every signal change), so the regex/toLowerCase/set-lookup
+ * pass runs once per name and every write just reads the cached plan.
+ */
+type AttrWritePlan = {
+  event: boolean;
+  srcdoc: boolean;
+  url: boolean;
+};
 
-  if (/^on[a-z]/i.test(name)) {
+const attrWritePlans = new Map<string, AttrWritePlan>();
+const ATTR_WRITE_PLAN_LIMIT = 512;
+
+const getAttrWritePlan = (name: string): AttrWritePlan => {
+  const cached = attrWritePlans.get(name);
+
+  if (cached) return cached;
+
+  const lowerName = name.toLowerCase();
+  const plan: AttrWritePlan = {
+    event: /^on[a-z]/i.test(name),
+    srcdoc: lowerName === 'srcdoc',
+    url: URL_ATTRS.has(lowerName),
+  };
+
+  if (attrWritePlans.size >= ATTR_WRITE_PLAN_LIMIT) attrWritePlans.clear();
+
+  attrWritePlans.set(name, plan);
+
+  return plan;
+};
+
+export const setAttr = (el: Element, name: string, val: unknown): void => {
+  const plan = getAttrWritePlan(name);
+
+  if (plan.event) {
     warn(
       `Blocked setAttribute("${name}", ...): inline event handler attributes are not supported. Use @${name.slice(2)} binding syntax instead.`,
     );
@@ -142,7 +176,7 @@ export const setAttr = (el: Element, name: string, val: unknown): void => {
     return;
   }
 
-  if (lowerName === 'srcdoc') {
+  if (plan.srcdoc) {
     warn(
       `Blocked setAttribute("srcdoc", ...): "srcdoc" holds raw HTML, not a URL, and is not supported via attribute binding. Sanitize untrusted content, then use unsafeHtml() if HTML injection is required.`,
     );
@@ -159,7 +193,7 @@ export const setAttr = (el: Element, name: string, val: unknown): void => {
 
   const strVal = val === true ? 'true' : String(val);
 
-  if (URL_ATTRS.has(lowerName) && isDangerousUrl(strVal)) {
+  if (plan.url && isDangerousUrl(strVal)) {
     warn(
       `Blocked dangerous URL scheme in attribute "${name}". Only safe URLs are permitted in URL-accepting attributes.`,
     );

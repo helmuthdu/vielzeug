@@ -518,6 +518,7 @@ describe('ore-message-composer', () => {
       await fixture.flush();
 
       fixture.dispose();
+      await fixture.flush(); // unmount cleanup lands one microtask after disconnect
 
       expect(calls.at(-1)).toBeNull();
     });

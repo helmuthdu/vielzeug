@@ -1,9 +1,9 @@
 import { waitForEvent } from '@vielzeug/assay';
 import { signal } from '@vielzeug/ripple';
 
-import { define, html, prop, useEmit, useSlots, when } from '../index';
+import { define, html, prop, useEmit, useSlots, watchEffect, when } from '../index';
 import { onMounted } from '../runtime';
-import { mount } from '../testing';
+import { flush, mount } from '../testing';
 import { expectType, uniqueTag } from './test-utils';
 
 describe('component slots and emit', () => {
@@ -83,15 +83,15 @@ describe('component slots and emit', () => {
     expect(fromMounted).toBe(fromSetup);
   });
 
-  it('useSlots() rebuilds a live registry after disconnect + reconnect', async () => {
-    let assigned = false;
+  it('useSlots() stays live across a move and rebuilds after teardown + reconnect', async () => {
+    let presence: boolean | undefined;
 
     const { element, flush } = await mount(
       (_props) => {
         const slots = useSlots();
 
-        onMounted(() => {
-          assigned = slots.has().value;
+        watchEffect(() => {
+          presence = slots.has().value;
         });
 
         return html`
@@ -102,18 +102,36 @@ describe('component slots and emit', () => {
     );
 
     await flush();
-    expect(assigned).toBe(true);
+    expect(presence).toBe(true);
 
-    // Simulate disconnect + reconnect of the same element instance: setup() re-runs, and
-    // useSlots() must return a freshly-observing registry, not a torn-down cached one.
+    // A same-turn move keeps the registry: slot signals must keep reacting.
     const parent = element.parentNode;
 
     element.remove();
     parent?.appendChild(element);
-
-    assigned = false;
     await flush();
-    expect(assigned).toBe(true);
+
+    element.textContent = '';
+    await flush();
+    expect(presence).toBe(false);
+
+    element.appendChild(document.createElement('span'));
+    await flush();
+    expect(presence).toBe(true);
+
+    // Reconnect after the deferred teardown re-runs setup(), and useSlots()
+    // must return a freshly-observing registry, not a torn-down cached one.
+    element.remove();
+    await flush();
+    document.body.appendChild(element);
+
+    element.textContent = '';
+    await flush();
+    expect(presence).toBe(false);
+
+    element.appendChild(document.createElement('span'));
+    await flush();
+    expect(presence).toBe(true);
   });
 
   it('supports typed setup emit usage', async () => {
@@ -353,5 +371,87 @@ describe('slots: stale slot cleanup (C1)', () => {
     showSlot.value = true;
     await flush();
     expect(hasDefault.value).toBe(true);
+  });
+});
+
+describe('useSlots() dynamic slots', () => {
+  it('unbinds a slot removed inside a wrapper and clears its signal', async () => {
+    let presence: boolean | undefined;
+    const showSlot = signal(true);
+
+    await mount(
+      (_props) => {
+        const slots = useSlots();
+
+        watchEffect(() => {
+          presence = slots.has().value;
+        });
+
+        return html`
+        <div class="shell">
+          ${when(
+            () => showSlot.value,
+            () => html`
+              <section><slot></slot></section>
+            `,
+          )}
+        </div>
+      `;
+      },
+      { html: '<span>Slotted</span>' },
+    );
+
+    await flush();
+    expect(presence).toBe(true);
+
+    showSlot.value = false;
+    await flush();
+
+    expect(presence).toBe(false);
+  });
+
+  it('does not rescan when mutations involve no slots', async () => {
+    let presence: boolean | undefined;
+
+    const { shadow } = await mount(
+      (_props) => {
+        const slots = useSlots();
+
+        watchEffect(() => {
+          presence = slots.has().value;
+        });
+
+        return html`
+          <slot></slot>
+          <div class="busy"></div>
+        `;
+      },
+      { html: '<span>Body</span>' },
+    );
+
+    await flush();
+    expect(presence).toBe(true);
+
+    const busy = shadow?.querySelector('.busy') as HTMLElement;
+    let rescanCount = 0;
+    const originalQuerySelectorAll = shadow?.querySelectorAll.bind(shadow) as (s: string) => NodeListOf<Element>;
+
+    // Spy on the observer's full-root rescan: only slot mutations may reach it.
+    (shadow as ShadowRoot & { querySelectorAll: typeof originalQuerySelectorAll }).querySelectorAll = ((
+      selector: string,
+    ) => {
+      if (selector === 'slot') rescanCount++;
+
+      return originalQuerySelectorAll(selector);
+    }) as never;
+
+    for (let i = 0; i < 20; i++) {
+      busy.appendChild(document.createElement('p'));
+    }
+
+    await flush();
+
+    expect(rescanCount).toBe(0);
+    expect(presence).toBe(true);
   });
 });

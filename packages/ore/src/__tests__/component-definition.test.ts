@@ -140,7 +140,7 @@ describe('component definition and rendering', () => {
       expect(fixture.query('.count')?.textContent).toBe('2:2');
     });
 
-    it('disposes partial setup state when setup throws before a later retry', () => {
+    it('disposes partial setup state when setup throws before a later retry', async () => {
       const cleanup = vi.fn();
       const tag = uniqueTag('setup-retry');
       let shouldThrow = true;
@@ -171,6 +171,9 @@ describe('component definition and rendering', () => {
       expect(element.shadowRoot?.textContent).toContain('Recovered');
 
       element.disconnectedCallback();
+      // Teardown is deferred one microtask so a same-turn move is not a
+      // lifecycle boundary: it runs here.
+      await Promise.resolve();
       expect(cleanup).toHaveBeenCalledTimes(2);
     });
   });

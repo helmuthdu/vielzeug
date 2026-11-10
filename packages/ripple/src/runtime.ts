@@ -30,10 +30,11 @@ type ListenerSink = Dependent & {
   readonly listener: () => void;
 };
 
-/** A dependency-collecting observer (computed or effect). Plain listener sinks need less. */
+/** A dependency-collecting observer (computed or effect). Plain listener sinks need less.
+ *  `dependencies` is reassigned (not rebuilt) when a run commits its collected set. */
 type ObserverNode = Dependent & {
   collecting?: Set<Dependency>;
-  readonly dependencies: Set<Dependency>;
+  dependencies: Set<Dependency>;
 };
 
 type Owned = {
@@ -111,7 +112,7 @@ class SignalNode<T> extends ReactiveNode<T> implements Signal<T> {
 }
 
 class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
-  readonly dependencies = new Set<Dependency>();
+  dependencies = new Set<Dependency>();
   private computing = false;
   private disposed = false;
   private dirty = true;
@@ -207,9 +208,11 @@ class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
 }
 
 class ScopeNode implements Scope, Owned {
-  readonly disposalController = new AbortController();
   readonly owned = new Set<Owned>();
   readonly name: string | undefined;
+  // Created lazily: scopes without a `disposalSignal` reader (the common case
+  // for per-run effect scopes) never pay for an AbortController.
+  private controller: AbortController | undefined;
   private isDisposed = false;
   private owner: ScopeNode | undefined;
   private readonly runtime: ReactiveRuntime;
@@ -224,7 +227,7 @@ class ScopeNode implements Scope, Owned {
   }
 
   get disposalSignal(): AbortSignal {
-    return this.disposalController.signal;
+    return (this.controller ??= new AbortController()).signal;
   }
 
   own(value: Owned): void {
@@ -254,7 +257,7 @@ class ScopeNode implements Scope, Owned {
     this.owner = undefined;
     for (const owned of [...this.owned].reverse()) owned.dispose();
     this.owned.clear();
-    this.disposalController.abort();
+    this.controller?.abort();
   }
 
   [Symbol.dispose](): void {
@@ -263,8 +266,8 @@ class ScopeNode implements Scope, Owned {
 }
 
 class EffectNode implements ObserverNode, EffectHandle {
-  readonly dependencies = new Set<Dependency>();
-  readonly disposalController = new AbortController();
+  dependencies = new Set<Dependency>();
+  private controller: AbortController | undefined;
   private cleanup: Cleanup | undefined;
   private isDisposed = false;
   private ownershipScope: ScopeNode | undefined;
@@ -284,7 +287,7 @@ class EffectNode implements ObserverNode, EffectHandle {
   }
 
   get disposalSignal(): AbortSignal {
-    return this.disposalController.signal;
+    return (this.controller ??= new AbortController()).signal;
   }
 
   setOwner(owner: ScopeNode | undefined): void {
@@ -304,20 +307,23 @@ class EffectNode implements ObserverNode, EffectHandle {
     this.runScope = undefined;
     this.runCleanup();
 
-    const owner = new ScopeNode(this.runtime);
+    // The per-run ownership scope is materialized on demand: most bindings'
+    // effects own nothing (they read a signal and write the DOM), so the
+    // overwhelming majority of runs should not allocate a ScopeNode at all.
+    const holder: { scope?: ScopeNode } = {};
 
     try {
-      const cleanup = this.runtime.withEffectScope(owner, () => this.runtime.collectEffect(this, this.callback));
+      const cleanup = this.runtime.withPendingOwner(holder, () => this.runtime.collectEffect(this, this.callback));
 
-      this.runScope = owner;
+      this.runScope = holder.scope;
       this.cleanup = typeof cleanup === 'function' ? cleanup : undefined;
       if (this.isDisposed) {
-        this.runScope.dispose();
+        this.runScope?.dispose();
         this.runScope = undefined;
         this.runCleanup();
       }
     } catch (error) {
-      owner.dispose();
+      holder.scope?.dispose();
       this.runtime.report(error, { kind: 'effect', name: this.options?.name });
     }
   }
@@ -332,7 +338,7 @@ class EffectNode implements ObserverNode, EffectHandle {
     this.runScope = undefined;
     this.runtime.clearDependencies(this);
     this.runCleanup();
-    this.disposalController.abort();
+    this.controller?.abort();
   }
 
   [Symbol.dispose](): void {
@@ -362,6 +368,8 @@ export class ReactiveRuntime {
   private activeEffectScope: ScopeNode | undefined;
   private activeObserver: ObserverNode | undefined;
   private activeScope: ScopeNode;
+  /** Set while an effect runs: the per-run scope is only allocated if the run owns something. */
+  private pendingOwner: { scope?: ScopeNode } | undefined;
   private isDisposed = false;
   private flushDepth = 0;
   private flushing = false;
@@ -401,7 +409,7 @@ export class ReactiveRuntime {
 
     const node = new ComputedNode(this, derive, options);
 
-    (this.activeEffectScope ?? this.activeScope).own(node);
+    this.captureOwner().own(node);
 
     return node;
   };
@@ -411,11 +419,20 @@ export class ReactiveRuntime {
 
     const node = new EffectNode(this, callback, options);
 
-    (this.activeEffectScope ?? this.activeScope).own(node);
+    this.captureOwner().own(node);
     node.run();
 
     return node;
   };
+
+  /** The owner a newly created node belongs to, materializing a lazy effect-run scope if needed. */
+  private captureOwner(): ScopeNode {
+    const pending = this.pendingOwner;
+
+    if (pending) return (pending.scope ??= new ScopeNode(this));
+
+    return this.activeEffectScope ?? this.activeScope;
+  }
 
   readonly createScope = (name?: string): Scope => {
     this.assertActive();
@@ -480,15 +497,18 @@ export class ReactiveRuntime {
     return this.collectWith(observer, fn, true);
   }
 
-  withEffectScope<T>(scope: ScopeNode, fn: () => T): T {
-    const previous = this.activeEffectScope;
+  withPendingOwner<T>(holder: { scope?: ScopeNode }, fn: () => T): T {
+    const previousPending = this.pendingOwner;
+    const previousEffectScope = this.activeEffectScope;
 
-    this.activeEffectScope = scope;
+    this.pendingOwner = holder;
+    this.activeEffectScope = undefined;
 
     try {
       return fn();
     } finally {
-      this.activeEffectScope = previous;
+      this.pendingOwner = previousPending;
+      this.activeEffectScope = previousEffectScope;
     }
   }
 
@@ -506,15 +526,18 @@ export class ReactiveRuntime {
 
   withScope<T>(scope: ScopeNode, fn: () => T): T {
     const previousEffectScope = this.activeEffectScope;
+    const previousPending = this.pendingOwner;
     const previousScope = this.activeScope;
 
     this.activeEffectScope = undefined;
+    this.pendingOwner = undefined;
     this.activeScope = scope;
 
     try {
       return fn();
     } finally {
       this.activeEffectScope = previousEffectScope;
+      this.pendingOwner = previousPending;
       this.activeScope = previousScope;
     }
   }
@@ -576,16 +599,19 @@ export class ReactiveRuntime {
   }
 
   private commitDependencies(observer: ObserverNode, next: Set<Dependency>): void {
-    for (const dependency of observer.dependencies) {
+    const previous = observer.dependencies;
+
+    for (const dependency of previous) {
       if (!next.has(dependency)) dependency.dependents.delete(observer);
     }
 
     for (const dependency of next) {
-      if (!observer.dependencies.has(dependency)) dependency.dependents.add(observer);
+      if (!previous.has(dependency)) dependency.dependents.add(observer);
     }
 
-    observer.dependencies.clear();
-    for (const dependency of next) observer.dependencies.add(dependency);
+    // The collected `next` set becomes the stored set: no second allocation
+    // and no copy loop per run.
+    observer.dependencies = next;
   }
 
   private flush(): void {

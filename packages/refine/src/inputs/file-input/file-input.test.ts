@@ -230,6 +230,7 @@ describe('ore-file-input', () => {
       await fixture.flush();
 
       fixture.dispose();
+      await fixture.flush(); // disconnect cleanup lands one microtask later
 
       expect(revokeSpy).toHaveBeenCalled();
       revokeSpy.mockRestore();

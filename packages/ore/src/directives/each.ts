@@ -19,6 +19,16 @@ import { type MaybeReactive, removeNodes, runAll } from '../utils/dom';
 type MaybeReactiveArray<T> = MaybeReactive<T[]>;
 type ItemKey = number | string;
 
+/**
+ * A rendered list item. `nodes` is the item's contiguous sibling range,
+ * bracketed by `each/item-start` and `each/item` sentinel comments: the
+ * sentinels wrap the template's own nodes, and every reactive directive inside
+ * the item (`when()`, nested `each()`, html bindings) inserts and re-inserts
+ * its content as siblings relative to nodes between the sentinels — before or
+ * after its own anchor, but never past a sentinel. Relocating the item
+ * therefore means moving the whole bracketed range, node by node: never a
+ * bare subset.
+ */
 type ItemEntry<T> = {
   cleanups: (() => void)[];
   data: Signal<T>;
@@ -29,12 +39,17 @@ type ItemEntry<T> = {
 
 // ─── Item lifecycle ───────────────────────────────────────────────────────────
 
+/**
+ * Mounts the item into `staging` (a detached fragment), bracketing its node
+ * range with the start and end sentinels. Synchronous directive content mounts
+ * between the sentinels (the end sentinel only exists once the whole template
+ * is mounted), so the range is complete the moment this returns.
+ */
 const createItem = <T>(
   item: T,
   index: number,
   render: (item: Readable<T>, index: Readable<number>) => HTMLResult,
-  parent: ParentNode,
-  insertBefore: Node,
+  staging: DocumentFragment,
 ): ItemEntry<T> => {
   const dataSignal: Signal<T> = signal(item);
   const indexSignal: Signal<number> = signal(index);
@@ -42,11 +57,20 @@ const createItem = <T>(
   const cleanups: (() => void)[] = [];
   let nodes: Node[] = [];
 
+  const rangeStart = document.createComment('each/item-start');
+
+  staging.appendChild(rangeStart);
+
   scope.run(() => {
     const result = render(dataSignal, indexSignal);
 
-    nodes = result.mount(parent, insertBefore, (fn) => cleanups.push(fn));
+    nodes = result.mount(staging, null, (fn) => cleanups.push(fn));
   });
+
+  const rangeEnd = document.createComment('each/item');
+
+  staging.appendChild(rangeEnd);
+  nodes = [rangeStart, ...nodes, rangeEnd];
 
   return { cleanups, data: dataSignal, index: indexSignal, nodes, scope };
 };
@@ -58,6 +82,32 @@ const removeItem = <T>(entry: ItemEntry<T>): void => {
 };
 
 // ─── Reconciler ───────────────────────────────────────────────────────────────
+
+/**
+ * True when reused entries appear in the next list in the same relative order
+ * they hold in the DOM (`itemsOrdered`). Prepends, appends, interleaved
+ * inserts, and content replacement all satisfy this; only genuine reorders
+ * (or removes that flip survivor order) do not.
+ */
+const reusedEntriesInOrder = <T>(nextOrdered: ItemEntry<T>[], itemsOrdered: ItemEntry<T>[]): boolean => {
+  const previousPosition = new Map<ItemEntry<T>, number>();
+
+  for (let i = 0; i < itemsOrdered.length; i++) previousPosition.set(itemsOrdered[i], i);
+
+  let lastPosition = -1;
+
+  for (const entry of nextOrdered) {
+    const position = previousPosition.get(entry);
+
+    if (position === undefined) continue;
+
+    if (position < lastPosition) return false;
+
+    lastPosition = position;
+  }
+
+  return true;
+};
 
 /**
  * Reconciles the live item map against the next array. The pass is transactional:
@@ -75,15 +125,23 @@ const reconcileItems = <T>(
   parent: ParentNode,
   endMarker: Node,
   createdThisPass: ItemEntry<T>[],
+  itemsOrdered: ItemEntry<T>[],
 ): ItemEntry<T>[] => {
   // Phase 1: create every missing entry. This is the only step that can throw
   // (user render code), and it records what it created so a failure is undoable.
+  // New entries mount into a detached staging fragment, not the live parent: an
+  // entry not already at its final position would otherwise connect at the end,
+  // then disconnect again when the ordering pass relocates it (double
+  // setup/teardown of any custom elements it contains). Staged nodes connect
+  // exactly once, when the ordering pass moves them into place.
+  const staging = document.createDocumentFragment();
+
   for (let i = 0; i < next.length; i++) {
     const key = nextKeys[i];
 
     if (itemsMap.has(key)) continue;
 
-    const entry = untrack(() => createItem(next[i], i, render, parent, endMarker));
+    const entry = untrack(() => createItem(next[i], i, render, staging));
 
     createdThisPass.push(entry);
     itemsMap.set(key, entry);
@@ -104,24 +162,42 @@ const reconcileItems = <T>(
     }
   });
 
-  // DOM ordering: right-to-left pass: move any item not already adjacent to cursor.
-  // An item is in place when its last node directly precedes the cursor; items may
-  // span several nodes (whitespace text around an element), so compare the last one.
-  // Moving an already-placed item would disconnect and reconnect its custom elements.
-  // O(n) DOM operations in the worst case; optimal for the typical small list sizes
-  // encountered in UI components (tabs, options, menu items).
+  // DOM ordering: one right-to-left pass with a cursor. An entry is in place
+  // when its range sentinel directly precedes the cursor. Moving an entry
+  // disconnects and reconnects its custom elements, so moves are kept minimal:
+  // when reused entries kept their relative order (the common case: prepend,
+  // append, interleaved inserts, content replacement), reused ranges are never
+  // moved at all and only entries created this pass are relocated next to their
+  // nearest reused neighbour. Genuine reorders fall back to moving any range the
+  // cursor cannot reach. A move relocates the whole contiguous range up to and
+  // including the sentinel so content inserted by directives inside the item
+  // travels with it.
+  const reusedInOrder = reusedEntriesInOrder(nextOrdered, itemsOrdered);
+  const created = new Set<ItemEntry<T>>(createdThisPass);
+
   let cursor: Node = endMarker;
 
   for (let j = nextOrdered.length - 1; j >= 0; j--) {
     const entry = nextOrdered[j];
     const firstNode = entry.nodes[0];
-    const lastNode = entry.nodes[entry.nodes.length - 1];
+    const rangeEnd = entry.nodes[entry.nodes.length - 1];
 
-    if (firstNode && lastNode !== cursor.previousSibling) {
-      for (const node of entry.nodes) parent.insertBefore(node, cursor);
+    // Staged nodes never satisfy the adjacency test (they live in the fragment),
+    // so created entries are always moved to their final position.
+    if ((!reusedInOrder || created.has(entry)) && rangeEnd !== cursor.previousSibling) {
+      let node: Node | null = firstNode;
+
+      while (node) {
+        const next: Node | null = node === rangeEnd ? null : node.nextSibling;
+
+        parent.insertBefore(node, cursor);
+
+        if (node === rangeEnd) break;
+        node = next;
+      }
     }
 
-    cursor = firstNode ?? cursor;
+    cursor = firstNode;
   }
 
   // Phase 3: commit: destroy stale entries only now that the pass has succeeded.
@@ -187,6 +263,11 @@ const reportEachError = (error: unknown, anchor: Comment): void => {
  *
  * Each item is rendered by the provided render function.
  * Items are reused by key when the list changes; only stale items are destroyed.
+ * Reused items keep their DOM nodes: when the surviving items stay in the same
+ * relative order (prepend, append, interleaved inserts, content replacement),
+ * no reused node is ever moved, so their CSS transitions, animations, and any
+ * nested component state survive the update untouched. Only genuine reorders
+ * move nodes.
  *
  * The render function receives a `Readable<T>` signal and a `Readable<number>` index
  * signal. Use `item.value` to read the current item inside reactive expressions:
@@ -227,13 +308,18 @@ export function each<T>(
       : list;
 
   return createDirectiveResult((anchor, registerCleanup) => {
-    const parent = anchor.parentNode;
+    const initialParent = anchor.parentNode;
 
-    invariant(parent, 'each() anchor comment has no parent node');
+    invariant(initialParent, 'each() anchor comment has no parent node');
 
     const endMarker = document.createComment('each/end');
 
-    parent.insertBefore(endMarker, anchor.nextSibling);
+    initialParent.insertBefore(endMarker, anchor.nextSibling);
+
+    // The parent is resolved live, never captured: a nested each()'s anchor and
+    // endMarker sit inside an outer each() item's range and move with it, so
+    // every insertion must target wherever the endMarker currently lives.
+    const container = (): ParentNode | null => endMarker.parentNode;
 
     let itemsMap = new Map<ItemKey, ItemEntry<T>>();
     let itemsOrdered: ItemEntry<T>[] = [];
@@ -242,6 +328,10 @@ export function each<T>(
 
     const mountFallback = (): void => {
       if (!fallback) return;
+
+      const parent = container();
+
+      if (!parent) return;
 
       const result = fallback();
 
@@ -281,11 +371,15 @@ export function each<T>(
 
       clearFallback();
 
+      const parent = container();
+
+      if (!parent) return;
+
       const createdThisPass: ItemEntry<T>[] = [];
 
       try {
         itemsOrdered = untrack(() =>
-          reconcileItems(itemsMap, nextList, nextKeys, render, parent, endMarker, createdThisPass),
+          reconcileItems(itemsMap, nextList, nextKeys, render, parent, endMarker, createdThisPass, itemsOrdered),
         );
       } catch (error) {
         // Undo this pass instead of tearing the list down: entries created before the

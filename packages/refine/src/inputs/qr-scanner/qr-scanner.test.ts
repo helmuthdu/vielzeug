@@ -249,6 +249,7 @@ describe('ore-qr-scanner', () => {
 
       fixture.dispose();
       fixture = undefined;
+      await mounted.fixture.flush(); // disconnect cleanup lands one microtask later
 
       expect(mounted.scanner.dispose).toHaveBeenCalled();
     });

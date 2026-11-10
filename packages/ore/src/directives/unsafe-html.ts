@@ -31,19 +31,26 @@ export function unsafeHtml(value: (() => string) | string | Signal<string> | Rea
   const src: Readable<string> | null = isFn ? computed(value as () => string) : isReactive(value) ? value : null;
 
   return createDirectiveResult((anchor, registerCleanup) => {
-    const parent = anchor.parentNode;
+    const initialParent = anchor.parentNode;
 
-    invariant(parent, 'unsafeHtml() anchor comment has no parent node');
+    invariant(initialParent, 'unsafeHtml() anchor comment has no parent node');
 
     const endMarker = document.createComment('unsafe-html/end');
 
-    parent.insertBefore(endMarker, anchor.nextSibling);
+    initialParent.insertBefore(endMarker, anchor.nextSibling);
 
     if (src) {
       const slot = createReplaceableSlot();
 
       const stop = rawEffect(() => {
         slot.clear();
+
+        // Resolved live: an unsafeHtml() inside an each() item moves with the
+        // item's range; the mount-time parent would be stale after a reorder.
+        const parent = endMarker.parentNode;
+
+        if (!parent) return;
+
         slot.setNodes(parseHtml(src.value, parent, endMarker));
       });
 
@@ -53,7 +60,7 @@ export function unsafeHtml(value: (() => string) | string | Signal<string> | Rea
         endMarker.remove();
       });
     } else {
-      parseHtml(value as string, parent, endMarker);
+      parseHtml(value as string, initialParent, endMarker);
 
       registerCleanup(() => endMarker.remove());
     }

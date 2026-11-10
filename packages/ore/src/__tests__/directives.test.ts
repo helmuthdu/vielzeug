@@ -428,6 +428,151 @@ describe('Directive: each()', () => {
     expect(queryAll('.item').map((node) => node.textContent)).toEqual(['B', 'A']);
   });
 
+  it('never moves reused nodes when a list prepends, appends, or inserts in place', async () => {
+    const items = signal([{ id: 2, value: 'B' }]);
+
+    register(
+      'test-keyed-move-free',
+      () => html`
+        <div class="list">
+          ${each(
+            items,
+            (item) => item.id,
+            (item) => html`
+              <span class="item">${item.value.value}</span>
+            `,
+          )}
+        </div>
+      `,
+    );
+
+    const { flush, queryAll, shadow } = await mount('test-keyed-move-free');
+    const list = shadow?.querySelector('.list') as HTMLElement;
+
+    // Any node move is recorded as a removal + insertion of the same node;
+    // reused items must never appear in `removedNodes` for order-preserving updates.
+    const removed: Node[] = [];
+    const observer = new MutationObserver((records) => {
+      for (const record of records) removed.push(...record.removedNodes);
+    });
+
+    observer.observe(list, { childList: true });
+
+    const reused = queryAll('.item')[0];
+
+    // Prepend + append + interleaved insert in one update: survivors keep order.
+    items.value = [
+      { id: 1, value: 'A' },
+      { id: 2, value: 'B' },
+      { id: 3, value: 'C' },
+    ];
+    await flush();
+
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['A', 'B', 'C']);
+    expect(queryAll('.item')[1]).toBe(reused);
+    expect(removed).not.toContain(reused);
+
+    // Content replacement (all new keys) must still render in order.
+    items.value = [
+      { id: 4, value: 'D' },
+      { id: 5, value: 'E' },
+    ];
+    await flush();
+
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['D', 'E']);
+
+    observer.disconnect();
+  });
+
+  it('carries directive-rendered content along when items reorder', async () => {
+    const items = signal([
+      { id: 1, label: 'A' },
+      { id: 2, label: 'B' },
+    ]);
+
+    register(
+      'test-keyed-reorder-content',
+      () => html`
+        <div>
+          ${each(
+            items,
+            (item) => item.id,
+            (item) =>
+              // Static when(): content mounts around the directive anchor,
+              // outside the template's own node list: it must still travel
+              // inside the item's bracketed range when the item moves.
+              html`
+                ${when(
+                  true,
+                  () => html`
+                    <p class="entry">${() => item.value.label}</p>
+                  `,
+                )}
+              `,
+          )}
+        </div>
+      `,
+    );
+
+    const { flush, queryAll } = await mount('test-keyed-reorder-content');
+
+    expect(queryAll('.entry').map((node) => node.textContent)).toEqual(['A', 'B']);
+
+    items.value = [
+      { id: 2, label: 'B' },
+      { id: 1, label: 'A' },
+    ];
+    await flush();
+
+    const entries = queryAll('.entry');
+
+    expect(entries.map((node) => node.textContent)).toEqual(['B', 'A']);
+    expect(entries).toHaveLength(2); // nothing stranded at the old positions
+  });
+
+  it('keeps reused component instances alive across prepend updates', async () => {
+    const setupRuns: number[] = [];
+    const items = signal([{ id: 1 }]);
+
+    register('test-keyed-child-count', (_props) => {
+      setupRuns.push(setupRuns.length);
+
+      return html`
+        <span class="count">${setupRuns.length}</span>
+      `;
+    });
+
+    register(
+      'test-keyed-child-holder',
+      () => html`
+        <div>
+          ${each(
+            items,
+            (item) => item.id,
+            () => html`<test-keyed-child-count></test-keyed-child-count>`,
+          )}
+        </div>
+      `,
+    );
+
+    const { flush, queryAll } = await mount('test-keyed-child-holder');
+
+    expect(queryAll('test-keyed-child-count')).toHaveLength(1);
+
+    items.value = [{ id: 0 }, { id: 1 }];
+    await flush();
+
+    expect(queryAll('test-keyed-child-count')).toHaveLength(2);
+    // The surviving item was never moved, so only the new child ran setup.
+    expect(setupRuns).toHaveLength(2);
+
+    items.value = [{ id: 0 }, { id: 1 }, { id: 2 }];
+    await flush();
+
+    expect(queryAll('test-keyed-child-count')).toHaveLength(3);
+    expect(setupRuns).toHaveLength(3);
+  });
+
   it('should replace item nodes when keyed item HTML changes and run ref cleanups', async () => {
     const cleanupSpy = vi.fn();
     const items = signal([{ id: 1, mode: 'button' as 'button' | 'link' }]);
@@ -1048,6 +1193,7 @@ describe('Directive: when()', () => {
     expect(query('.on')).not.toBeNull();
 
     dispose();
+    await flush(); // cleanup runs one microtask after disconnect; then the DOM is frozen
 
     const root = element.shadowRoot ?? element;
     const snapshotAfterDestroy = root.innerHTML;

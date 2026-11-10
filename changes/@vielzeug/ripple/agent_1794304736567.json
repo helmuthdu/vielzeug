@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "lazy effect-run ownership scopes, lazy disposal AbortControllers, and dependency-set reuse cut allocations on reactive hot paths",
+      "packageName": "@vielzeug/ripple",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

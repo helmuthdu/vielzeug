@@ -323,6 +323,7 @@ describe('ore-number-input', () => {
       await new Promise<void>((r) => setTimeout(r, 10));
 
       fixture.dispose();
+      await fixture.flush(); // unmount cleanup lands one microtask after disconnect
 
       expect(calls.at(-1)).toBeNull();
     });

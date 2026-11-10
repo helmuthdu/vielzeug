@@ -6,6 +6,7 @@ import { signal } from '@vielzeug/ripple';
 
 import {
   createContext,
+  getHost,
   html,
   inject,
   onCleanup,
@@ -60,6 +61,7 @@ describe('runtime lifecycle: onMounted', () => {
 
     expect(spy).not.toHaveBeenCalled();
     dispose();
+    await Promise.resolve(); // teardown lands one microtask after disconnect
     expect(spy).toHaveBeenCalledTimes(1);
   });
 });
@@ -81,6 +83,7 @@ describe('runtime lifecycle: execution order', () => {
     });
 
     dispose();
+    await Promise.resolve();
     expect(order).toEqual(['setup', 'mount', 'unmount']);
   });
 });
@@ -98,6 +101,7 @@ describe('runtime lifecycle: onCleanup', () => {
 
     expect(spy).not.toHaveBeenCalled();
     dispose();
+    await Promise.resolve();
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
@@ -114,6 +118,7 @@ describe('runtime lifecycle: onCleanup', () => {
     });
 
     dispose();
+    await Promise.resolve();
     expect(cleaned).toBe(true);
   });
 
@@ -129,6 +134,7 @@ describe('runtime lifecycle: onCleanup', () => {
     });
 
     dispose();
+    await Promise.resolve();
     expect(calls).toEqual([2, 1]);
   });
 });
@@ -201,6 +207,7 @@ describe('onEvent()', () => {
     expect(clickCount).toBe(1);
 
     dispose();
+    await Promise.resolve();
 
     btn.dispatchEvent(new Event('click'));
     expect(clickCount).toBe(1);
@@ -357,7 +364,8 @@ describe('imperative cleanup pattern', () => {
 
     dispose();
 
-    // Unmount disposes the latest cleanup.
+    // Unmount disposes the latest cleanup (one microtask after disconnect).
+    await Promise.resolve();
     expect(disposed).toBe(11);
   });
 });
@@ -469,6 +477,7 @@ describe('lifecycle hook aliases (R9)', () => {
 
     expect(spy).not.toHaveBeenCalled();
     dispose();
+    await Promise.resolve();
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
@@ -521,5 +530,79 @@ describe('testing/flush(): deterministic pending-work draining', () => {
     await flush();
 
     expect(ranDepth).toBe(DEPTH + 1);
+  });
+});
+
+describe('same-turn node moves are not lifecycle boundaries', () => {
+  it('keeps scope, state, and mounted DOM across a reparent', async () => {
+    let setups = 0;
+    const cleanups = vi.fn();
+
+    const { element, query } = await mount((_props) => {
+      setups++;
+
+      const local = signal(0);
+
+      onEvent(getHost(), 'bump', () => local.value++);
+      onCleanup(cleanups);
+
+      return html`
+        <span class="v">${() => String(local.value)}</span>
+      `;
+    });
+
+    const span = query('.v');
+
+    expect(span).toBeDefined();
+    element.dispatchEvent(new CustomEvent('bump'));
+    expect(span?.textContent).toBe('1');
+
+    const target = document.createElement('div');
+
+    document.body.appendChild(target);
+    target.appendChild(element); // reparent: disconnect + reconnect in one turn
+    await flush();
+
+    expect(setups).toBe(1); // no re-setup
+    expect(cleanups).not.toHaveBeenCalled(); // no disposal
+    expect(query('.v')).toBe(span); // template was not re-cloned
+    expect(span?.textContent).toBe('1'); // scope state survived the move
+
+    element.remove();
+    await flush();
+
+    expect(cleanups).toHaveBeenCalledTimes(1); // a real removal does dispose
+  });
+
+  it('preserves state across repeated rapid moves', async () => {
+    let setups = 0;
+
+    const { element, query } = await mount((_props) => {
+      setups++;
+
+      const local = signal(0);
+
+      onEvent(getHost(), 'bump', () => local.value++);
+
+      return html`
+        <span class="v">${() => String(local.value)}</span>
+      `;
+    });
+
+    element.dispatchEvent(new CustomEvent('bump'));
+
+    const holderA = document.createElement('div');
+    const holderB = document.createElement('div');
+
+    document.body.append(holderA, holderB);
+
+    for (let i = 0; i < 3; i++) {
+      (i % 2 === 0 ? holderB : holderA).appendChild(element);
+    }
+
+    await flush();
+
+    expect(setups).toBe(1);
+    expect(query('.v')?.textContent).toBe('1');
   });
 });

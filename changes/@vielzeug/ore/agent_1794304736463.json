@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "same-turn node moves preserve component state (deferred disconnect teardown), each() reconciles with minimal node moves and detached single-connect item creation, slot observers skip non-slot mutations, attribute writes use cached per-name plans",
+      "packageName": "@vielzeug/ore",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

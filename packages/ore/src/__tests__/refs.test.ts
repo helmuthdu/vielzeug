@@ -74,6 +74,7 @@ describe('ref()', () => {
     );
 
     fixture.dispose();
+    await Promise.resolve(); // unmount cleanup lands one microtask after disconnect
 
     expect(calls).toHaveLength(2);
     expect(calls[1]).toBeNull();

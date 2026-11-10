@@ -62,12 +62,14 @@ const isPromiseLike = (value: unknown): value is PromiseLike<unknown> =>
  *
  * ```
  * UNINITIALIZED ──_runSetup()──► SETUP_DONE
- * SETUP_DONE ──disconnectedCallback()──► UNMOUNTED ──(reset)──► UNINITIALIZED
+ * SETUP_DONE ──disconnectedCallback()──► UNMOUNTED ──(teardown microtask)──► UNINITIALIZED
+ * UNMOUNTED ──connectedCallback() before the teardown runs──► SETUP_DONE (same-turn move)
  * ```
  *
- * `generation` increments on every disconnect. Scheduled mount callbacks capture
- * it so callbacks belonging to a disconnected instance cannot run after a
- * reconnect (see `_isStale`).
+ * `generation` increments on every completed teardown. Scheduled mount callbacks
+ * capture it so callbacks belonging to a torn-down connection cannot run after a
+ * later connection (see `_isStale`; its `isConnected` check covers the window
+ * while a teardown is still pending).
  *
  * Why this lives on the class instead of a standalone pure reducer: every
  * transition here is triggered by running actual user code (`def.setup()`,
@@ -85,6 +87,9 @@ export class BaseElement extends HTMLElement {
   static observedAttributes: string[] = [];
 
   private _component: ComponentState;
+  /** Cancellation token for the teardown microtask; `null` when none is pending. */
+  private _pendingTeardown: object | null = null;
+  private _stylesApplied = false;
 
   constructor() {
     super();
@@ -100,6 +105,23 @@ export class BaseElement extends HTMLElement {
 
   connectedCallback(): void {
     untrack(() => {
+      // Move detection: `disconnectedCallback()` deferred its teardown to the
+      // next microtask and nothing ran it yet, so this connect is the second
+      // half of a same-turn node move (reparent, `insertBefore` reordering).
+      // The scope, mounted template, and every piece of component state are
+      // still intact, and the shadow root kept its style sheets and DOM while
+      // detached: re-running setup or re-mounting the template would destroy
+      // and rebuild all of it. Skip straight back to the mounted phase.
+      if (this._pendingTeardown !== null) {
+        this._pendingTeardown = null;
+        this._component.phase = ComponentPhase.SETUP_DONE;
+        // Mount callbacks scheduled before the move were skipped as stale while
+        // detached (the microtask checks `isConnected`); run them now.
+        this._scheduleMountCallbacks();
+
+        return;
+      }
+
       if (this._component.phase === ComponentPhase.UNINITIALIZED) this._runSetup();
 
       this._init();
@@ -124,10 +146,28 @@ export class BaseElement extends HTMLElement {
       propMeta.signal.value = parsed as never;
   }
 
+  /**
+   * Teardown is deferred one microtask so a same-turn node *move* is not a
+   * lifecycle boundary: `connectedCallback()` cancels the pending teardown and
+   * the component keeps its scope, state, and mounted template (see
+   * `connectedCallback`). A real disconnect disposes everything one microtask
+   * later; a reconnection after that point is a full remount, exactly as a
+   * late re-add always has been.
+   */
   disconnectedCallback(): void {
-    this._component.generation++;
     this._component.phase = ComponentPhase.UNMOUNTED;
-    this._resetSetupState();
+
+    const token = {};
+
+    this._pendingTeardown = token;
+
+    queueMicrotask(() => {
+      if (this._pendingTeardown !== token) return;
+
+      this._pendingTeardown = null;
+      this._component.generation++;
+      this._resetSetupState();
+    });
   }
 
   /** Dispose one connection's resources before its state can be rebuilt. */
@@ -231,10 +271,15 @@ export class BaseElement extends HTMLElement {
   }
 
   private _applyStyles(): void {
+    // `adoptedStyleSheets` lives on the shadow root, which outlives every
+    // disconnect/reconnect: assign once per instance, never re-assign churn.
+    if (this._stylesApplied) return;
+
     const def = (this.constructor as typeof BaseElement)._definition;
 
     if (this.shadowRoot && def?.styles?.length) {
       this.shadowRoot.adoptedStyleSheets = def.styles.map(loadStylesheet);
+      this._stylesApplied = true;
     }
   }
 

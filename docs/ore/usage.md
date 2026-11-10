@@ -205,6 +205,12 @@ Each reactive reconciliation is transactional. Ore creates missing entries befor
 entries; if a render callback throws, entries created during that pass are rolled back and the last successful list
 remains on screen. Ore reports the failure through `ore:error` with phase `each-reconcile`.
 
+Reused items keep their DOM nodes in place: when the surviving items stay in the same relative order (prepend, append,
+interleaved inserts, or replacing list contents), `each()` never moves a reused node, so CSS transitions, animations,
+focus, and nested component state survive the update untouched. Only genuine reorders move nodes, and a moved item
+travels with everything its inner directives rendered. New items are built detached and inserted exactly once at their
+final position, so each item's custom elements connect a single time per render.
+
 ## model: two-way form bindings
 
 Use `model(signal)` for a controlled input: it writes the signal to the control's `value`/`checked` property and

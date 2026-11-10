@@ -45,13 +45,13 @@ export function when(
     const ownedComputed = typeof condition === 'function' ? computed(condition as () => boolean) : null;
     const conditionSignal = ownedComputed ?? (condition as Readable<boolean>);
 
-    const parent = anchor.parentNode;
+    const initialParent = anchor.parentNode;
 
-    invariant(parent, NO_PARENT_MSG);
+    invariant(initialParent, NO_PARENT_MSG);
 
     const endMarker = document.createComment('when/end');
 
-    parent.insertBefore(endMarker, anchor.nextSibling);
+    initialParent.insertBefore(endMarker, anchor.nextSibling);
 
     const slot = createReplaceableSlot();
 
@@ -63,6 +63,13 @@ export function when(
       const branch = next ? truthy() : falsy ? falsy() : null;
 
       if (!branch || !isHtmlResult(branch)) return;
+
+      // Resolved live: when a `when()` sits inside an each() item, a list
+      // reorder moves the whole range (endMarker included) before this effect
+      // next runs; the captured mount-time parent would be stale.
+      const parent = endMarker.parentNode;
+
+      if (!parent) return;
 
       slot.setNodes(untrack(() => branch.mount(parent, endMarker, slot.registerCleanup)));
     });

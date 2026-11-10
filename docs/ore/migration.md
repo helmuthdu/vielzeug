@@ -157,4 +157,24 @@ Use the underlying operation directly:
 
 `each()` now keeps numeric and string keys distinct. A duplicate-key update reports `ore:error` and leaves the last valid DOM in place instead of clearing the list.
 
+## Disconnect teardown runs one microtask later
+
+Cleanup no longer runs synchronously inside `disconnectedCallback()`. Ore schedules it for the next microtask and cancels it when the same element reconnects before then: a same-turn node _move_ (reparenting, an `insertBefore` relocation) now preserves the component's scope, state, style sheets, and mounted DOM. `setup()`, `onMounted()`, and `onCleanup()` do not run for a move.
+
+```ts
+// Same-turn move: no dispose, no re-setup: the same signals and DOM nodes survive.
+target.appendChild(el);
+
+el.remove();
+await Promise.resolve(); // disconnect cleanup lands here now
+```
+
+Tests that asserted synchronous teardown after `remove()`/`dispose()` need one microtask (or `await flush()` from `@vielzeug/ore/testing`). A reconnection that happens after teardown is a full remount, exactly as before.
+
+## each() no longer moves reused nodes
+
+When surviving items keep their relative order (prepend, append, interleaved inserts, content replacement), `each()` relocates only the new items; reused nodes are never removed and re-inserted. New items are also built detached and inserted once, instead of connecting at the end of the list and connecting again at their final position.
+
+Code or tests that relied on reused items being re-inserted (mutation counters, disconnect/reconnect counts, or animations restarted by re-insertion) will see fewer mutations. Components inside list items now keep their state across list updates that do not reorder them.
+
 Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for the current contracts.

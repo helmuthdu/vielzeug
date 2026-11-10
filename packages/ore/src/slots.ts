@@ -123,6 +123,27 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
     }
   };
 
+  const isOrContainsSlot = (node: Node): boolean =>
+    node instanceof HTMLSlotElement ||
+    (node.nodeType === Node.ELEMENT_NODE && (node as Element).querySelector('slot') !== null);
+
+  // Detached subtrees still support `querySelector`, so a slot removed inside
+  // a moved/removed wrapper is unbound from the whole removed subtree, not
+  // just its top node: the old direct-children-only check leaked bound slots.
+  const unbindSlotsIn = (node: Node): void => {
+    if (node instanceof HTMLSlotElement) {
+      unbindSlot(node);
+
+      return;
+    }
+
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      (node as Element).querySelectorAll('slot').forEach((inner) => {
+        unbindSlot(inner);
+      });
+    }
+  };
+
   // Watch for dynamically-inserted <slot> elements (e.g. inside when(), each()).
   let observer: MutationObserver | null = null;
 
@@ -138,11 +159,31 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
 
     if (!observer && host.shadowRoot) {
       observer = new MutationObserver((mutations) => {
+        // List UIs mutate shadow DOM constantly; only mutations that actually
+        // add or remove a slot (directly or inside a moved subtree) can change
+        // slot bindings. Nothing slot-related: skip the full
+        // `querySelectorAll('slot')` rescan and `assignedElements()` recompute.
+        let slotsTouched = false;
+
         for (const mutation of mutations) {
           for (const node of mutation.removedNodes) {
-            if (node instanceof HTMLSlotElement) unbindSlot(node);
+            if (!isOrContainsSlot(node)) continue;
+
+            slotsTouched = true;
+            unbindSlotsIn(node);
+          }
+
+          if (slotsTouched) continue;
+
+          for (const node of mutation.addedNodes) {
+            if (isOrContainsSlot(node)) {
+              slotsTouched = true;
+              break;
+            }
           }
         }
+
+        if (!slotsTouched) return;
 
         bindAllSlots();
 

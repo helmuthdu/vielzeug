@@ -120,3 +120,15 @@ define('toggle-host', {
 - Use `onElement()` for per-element teardown tied to a specific ref.
 - Return a cleanup function from `onMounted()` when cleanup belongs to mount-time initialization.
 - Use `onEvent()` for event listeners that should auto-cleanup on disconnect.
+
+## Moves Are Not Remounts
+
+Teardown runs one microtask after `disconnectedCallback()`, and Ore cancels it when the same element reconnects before
+then. A same-turn reparent (`target.appendChild(el)`, an `insertBefore` shuffle) therefore keeps the component's scope
+alive: signals, effects, listeners, `adoptedStyleSheets`, the mounted template, and `onMounted()` state all survive the
+move untouched, and `setup()` does not re-run.
+
+- Do not treat `connectedCallback`-time work as a per-move reset hook; use props or signals to react to new context.
+- Do not write tests that expect `onCleanup` synchronously after `remove()`; await a microtask or `flush()` first.
+- A reconnection after the microtask (a genuinely later re-add) is a full remount: fresh `setup()`, fresh mount
+  callbacks, and the previous connection already disposed.

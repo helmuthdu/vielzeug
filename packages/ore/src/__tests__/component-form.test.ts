@@ -159,7 +159,7 @@ describe('useField()', () => {
     ).rejects.toThrow(/useField\(\) was already called/);
   });
 
-  it('reuses form internals after reconnecting the same host element', async () => {
+  it('survives a same-turn move and reuses form internals on a late reconnect', async () => {
     let setupCount = 0;
     const fixture = await mount(
       () => {
@@ -174,7 +174,19 @@ describe('useField()', () => {
     );
     const attachInternals = vi.spyOn(fixture.element, 'attachInternals');
 
+    // A same-turn move is not a lifecycle boundary: the scope (and the field
+    // handle it owns) survives untouched: no re-setup at all.
     fixture.element.remove();
+    document.body.appendChild(fixture.element);
+    await fixture.flush();
+
+    expect(setupCount).toBe(1);
+    expect(attachInternals).not.toHaveBeenCalled();
+
+    // A reconnect after the deferred teardown re-runs setup and still reuses
+    // the element's existing FormInternals.
+    fixture.element.remove();
+    await fixture.flush();
     document.body.appendChild(fixture.element);
     await fixture.flush();
 

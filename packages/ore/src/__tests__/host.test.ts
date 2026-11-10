@@ -94,6 +94,8 @@ describe('core/host.ts', () => {
       expect(clickCount).toBe(1);
 
       dispose();
+      // Bindings stop after the deferred teardown microtask, not synchronously.
+      await flush();
 
       element.dispatchEvent(new MouseEvent('click'));
       expect(clickCount).toBe(1);

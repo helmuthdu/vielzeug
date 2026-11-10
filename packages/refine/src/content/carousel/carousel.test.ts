@@ -942,6 +942,7 @@ describe('ore-carousel', () => {
         fixture.element.setAttribute('variant', 'coverflow');
         await fixture.flush();
         fixture.dispose();
+        await fixture.flush(); // teardown lands one microtask after disconnect
         expect(disconnect).toHaveBeenCalledTimes(6);
       } finally {
         disconnect.mockRestore();
