@@ -223,6 +223,12 @@
     white-space: nowrap;
   }
 
+  /* A header holding only the close button is chrome over content, not a
+     title bar: it carries no divider. */
+  .header:not(:has(.header-title:not([hidden]))) {
+    border-bottom: none;
+  }
+
   .body {
     flex: 1;
     min-height: 0;

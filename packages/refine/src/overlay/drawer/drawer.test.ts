@@ -377,6 +377,95 @@ describe('ore-drawer', () => {
 
   // ─── Events ──────────────────────────────────────────────────────────────────
 
+  // ─── Content-driven close ──────────────────────────────────────────────────
+
+  describe('Content-driven close', () => {
+    // jsdom runs no transitions: end the exit animation the way the browser would.
+    const settleExit = () => {
+      fixture.query('.panel')?.dispatchEvent(new Event('transitionend', { bubbles: true }));
+    };
+
+    it('closes when a slotted element marked data-drawer-close is clicked', async () => {
+      fixture = await mount('ore-drawer', {
+        attrs: { 'default-open': '' },
+        html: '<button data-drawer-close>Done</button>',
+      });
+
+      fixture.element.querySelector<HTMLElement>('[data-drawer-close]')?.click();
+      settleExit();
+      await fixture.flush();
+
+      expect(fixture.query('dialog')?.hasAttribute('open')).toBe(false);
+    });
+
+    it('reports the trigger reason through open-change', async () => {
+      fixture = await mount('ore-drawer', {
+        attrs: { 'default-open': '' },
+        html: '<button data-drawer-close>Done</button>',
+      });
+
+      const details: unknown[] = [];
+
+      fixture.element.addEventListener('open-change', (e) => details.push((e as CustomEvent).detail));
+      fixture.element.querySelector<HTMLElement>('[data-drawer-close]')?.click();
+      settleExit();
+      await fixture.flush();
+
+      expect(details).toContainEqual({ open: false, reason: 'trigger' });
+    });
+
+    it('closes from a descendant of the marked element', async () => {
+      fixture = await mount('ore-drawer', {
+        attrs: { 'default-open': '' },
+        html: '<button data-drawer-close><span>Done</span></button>',
+      });
+
+      fixture.element.querySelector('span')?.click();
+      settleExit();
+      await fixture.flush();
+
+      expect(fixture.query('dialog')?.hasAttribute('open')).toBe(false);
+    });
+
+    it('leaves elements without the attribute alone', async () => {
+      fixture = await mount('ore-drawer', {
+        attrs: { 'default-open': '' },
+        html: '<button>Plain</button>',
+      });
+
+      fixture.element.querySelector('button')?.click();
+      await fixture.flush();
+
+      expect(fixture.query('dialog')?.hasAttribute('open')).toBe(true);
+    });
+
+    it('honors a canceled close-request from content', async () => {
+      fixture = await mount('ore-drawer', {
+        attrs: { 'default-open': '' },
+        html: '<button data-drawer-close>Leave</button>',
+      });
+
+      fixture.element.addEventListener('close-request', (e) => e.preventDefault());
+      fixture.element.querySelector<HTMLElement>('[data-drawer-close]')?.click();
+      await fixture.flush();
+
+      expect(fixture.query('dialog')?.hasAttribute('open')).toBe(true);
+    });
+
+    it('closes from content while persistent is set (persistent guards the backdrop only)', async () => {
+      fixture = await mount('ore-drawer', {
+        attrs: { 'default-open': '', persistent: '' },
+        html: '<button data-drawer-close>Done</button>',
+      });
+
+      fixture.element.querySelector<HTMLElement>('[data-drawer-close]')?.click();
+      settleExit();
+      await fixture.flush();
+
+      expect(fixture.query('dialog')?.hasAttribute('open')).toBe(false);
+    });
+  });
+
   describe('Events', () => {
     it('fires open-change when the drawer opens', async () => {
       fixture = await mount('ore-drawer');

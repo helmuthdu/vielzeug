@@ -16,6 +16,31 @@ test.describe('Interaction', () => {
     await expect(page.getByRole('button', { name: 'Done' })).toBeInViewport();
   });
 
+  test('content marked data-drawer-close closes the drawer', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-drawer default-open label="Task drawer" title="Tasks"><p>Pick a task to continue.</p><ore-button data-drawer-close>Close task</ore-button></ore-drawer>',
+    );
+
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    await page.getByRole('button', { name: 'Close task' }).click();
+    await expect(page.locator('ore-drawer dialog')).toBeHidden();
+  });
+
+  test('a close-only header carries no divider; a titled header keeps one', async ({ page, refinePage }) => {
+    // A title-less header means neither `title` nor `label` (`label` is also
+    // the visible header title), leaving only the close button.
+    await refinePage.mountComponent('<ore-drawer default-open><p>Bare content.</p></ore-drawer>');
+
+    const header = page.locator('ore-drawer [part="header"]');
+
+    await expect(header).toBeVisible();
+    expect(await header.evaluate((el) => getComputedStyle(el).borderBottomWidth)).toBe('0px');
+
+    await refinePage.mountComponent('<ore-drawer default-open title="Inbox"><p>Mail.</p></ore-drawer>');
+
+    expect(await header.evaluate((el) => getComputedStyle(el).borderBottomWidth)).not.toBe('0px');
+  });
+
   test('opens inside an allow-scripts-only iframe', async ({ page, refinePage }) => {
     await refinePage.mountComponent('<iframe sandbox="allow-scripts" title="Preview"></iframe>');
 

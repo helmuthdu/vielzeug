@@ -153,6 +153,9 @@ export type OreDrawerProps = {
  * @slot - Main body content
  * @slot footer - Drawer footer content
  *
+ * Content marked with `data-drawer-close` closes the drawer when clicked,
+ * through the same cancelable `close-request` path as the close button.
+ *
  * @cssprop --drawer-backdrop-bg - Backdrop veil color (default: var(--overlay-veil))
  * @cssprop --drawer-bg - Panel background color
  * @cssprop --drawer-size - Panel width (horizontal) or height (vertical)
@@ -562,6 +565,21 @@ define<OreDrawerProps>(DRAWER_TAG, {
       mount();
 
       onEvent(dialog, 'click', handleBackdropClick);
+
+      // Content-owned dismissal: any element inside the drawer — a nav row, a
+      // save button, a menu item — closes it declaratively with
+      // `data-drawer-close`. Clicks on slotted content bubble through the slot
+      // to the host, so one delegated listener covers every CTA without
+      // per-button wiring (and `close-request` stays cancelable, as always).
+      const handleContentClose = (e: MouseEvent): void => {
+        if (isSwipeClosing.value || !dialogRef.value?.open) return;
+
+        const target = e.target;
+
+        if (target instanceof Element && target.closest('[data-drawer-close]')) requestClose('trigger');
+      };
+
+      onEvent(el, 'click', handleContentClose);
 
       // Drag-to-close handlers: scoped to the handle element only so interactions
       // with panel content don't accidentally start a drag.
