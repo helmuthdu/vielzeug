@@ -290,3 +290,90 @@ test.describe('Contextmenu trigger', () => {
     expect(open).toBe(false);
   });
 });
+
+test.describe('Height fit', () => {
+  const items = Array.from({ length: 12 }, (_, i) => `<ore-menu-item value="i${i}">Item ${i + 1}</ore-menu-item>`).join(
+    '\n',
+  );
+
+  test('shows every item when the opened side has more room than the old viewport cap', async ({
+    page,
+    refinePage,
+  }) => {
+    await page.setViewportSize({ height: 500, width: 640 });
+    await refinePage.mountComponent(`
+      <ore-menu default-open>
+        <ore-button slot="trigger">Menu</ore-button>
+        ${items}
+      </ore-menu>
+    `);
+
+    const panel = page.locator('ore-menu .menu-panel');
+
+    await expect(panel).toBeVisible();
+
+    const metrics = await panel.evaluate((el) => ({ client: el.clientHeight, scroll: el.scrollHeight }));
+
+    // ~404px of content: larger than the legacy min(70vh, 32rem) cap (350px here), smaller
+    // than the ~418px actually available below the trigger: it must not scroll.
+    expect(metrics.scroll).toBeGreaterThan(350);
+    expect(metrics.scroll).toBeLessThanOrEqual(metrics.client + 1);
+  });
+
+  test('honors an authored max-height cap', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 500, width: 640 });
+    await refinePage.mountComponent(`
+      <ore-menu default-open style="--menu-panel-max-height: 6rem">
+        <ore-button slot="trigger">Menu</ore-button>
+        ${items}
+      </ore-menu>
+    `);
+
+    const panel = page.locator('ore-menu .menu-panel');
+
+    await expect(panel).toBeVisible();
+
+    const metrics = await panel.evaluate((el) => ({ client: el.clientHeight, scroll: el.scrollHeight }));
+
+    expect(metrics.client).toBeLessThanOrEqual(96 + 2);
+    expect(metrics.scroll).toBeGreaterThan(metrics.client);
+  });
+});
+
+test.describe('Keyboard shortcut end slot', () => {
+  test('renders one keycap per pressed key with menu-tight spacing', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-menu default-open>
+        <ore-button slot="trigger">Menu</ore-button>
+        <ore-menu-item value="sign-out">
+          Sign out
+          <ore-keyboard-shortcut slot="end">
+            <ore-keyboard-key>⇧</ore-keyboard-key>
+            <ore-keyboard-key>⌘</ore-keyboard-key>
+            <ore-keyboard-key>Q</ore-keyboard-key>
+          </ore-keyboard-shortcut>
+        </ore-menu-item>
+      </ore-menu>
+    `);
+
+    await expect(page.locator('.menu-panel')).toBeVisible();
+    await expect(page.locator('ore-keyboard-shortcut kbd.key')).toHaveCount(3);
+
+    const { gap, probe } = await page.evaluate(() => {
+      const inner = document.querySelector('ore-keyboard-shortcut')!.shadowRoot!.querySelector('.shortcut')!;
+      const ruler = document.createElement('div');
+
+      ruler.style.columnGap = 'var(--size-0-5)';
+      document.body.append(ruler);
+
+      const result = { gap: getComputedStyle(inner).columnGap, probe: getComputedStyle(ruler).columnGap };
+
+      ruler.remove();
+
+      return result;
+    });
+
+    // The menu tightens the shortcut group to the tightest spacing token.
+    expect(gap).toBe(probe);
+  });
+});

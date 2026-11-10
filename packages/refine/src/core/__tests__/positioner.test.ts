@@ -482,4 +482,84 @@ describe('containing-block self-correction', () => {
     reference.remove();
     floating.remove();
   });
+
+  describe('fitAvailableHeight', () => {
+    const mountPair = () => {
+      const ref = document.createElement('button');
+      const floating = document.createElement('div');
+
+      document.body.append(ref, floating);
+
+      return { floating, ref };
+    };
+
+    const rectOf = (floating: HTMLElement, height: number) => {
+      const left = Number.parseFloat(floating.style.left) || 0;
+      const top = Number.parseFloat(floating.style.top) || 0;
+
+      return {
+        bottom: top + height,
+        height,
+        left,
+        right: left + 50,
+        toJSON: () => ({}),
+        top,
+        width: 50,
+        x: left,
+        y: top,
+      } as DOMRect;
+    };
+
+    it('caps a panel with room to spare at its own content height, never below it', () => {
+      const { floating, ref } = mountPair();
+
+      mockRect(ref, { height: 20, left: 10, right: 110, width: 100, x: 10, y: 50 });
+
+      vi.spyOn(floating, 'getBoundingClientRect').mockImplementation(() => rectOf(floating, 300));
+
+      const positioner = createDropdownPositioner({
+        boundary: { height: 800, width: 800, x: 0, y: 0 },
+        fitAvailableHeight: true,
+        getFloating: () => floating,
+        getReference: () => ref,
+      });
+
+      positioner.update();
+
+      // Room below (800 - 70 - 6) far exceeds the 300px content: the cap lands on content,
+      // so the panel shows everything with nothing to scroll.
+      expect(floating.style.maxHeight).toBe('300px');
+
+      ref.remove();
+      floating.remove();
+    });
+
+    it('shrinks a panel to the room on the opened side when content exceeds it', () => {
+      const { floating, ref } = mountPair();
+
+      mockRect(ref, { height: 20, left: 10, right: 110, width: 100, x: 10, y: 50 });
+
+      vi.spyOn(floating, 'getBoundingClientRect').mockImplementation(() => {
+        const raw = floating.style.maxHeight;
+        const applied = raw === '' || raw === 'none' ? 900 : Math.min(900, Number.parseFloat(raw));
+
+        return rectOf(floating, applied);
+      });
+
+      const positioner = createDropdownPositioner({
+        boundary: { height: 400, width: 800, x: 0, y: 0 },
+        fitAvailableHeight: true,
+        getFloating: () => floating,
+        getReference: () => ref,
+      });
+
+      positioner.update();
+
+      // 400 - 70 - offset 0 - padding 6 = 324: everything the side can show, no more.
+      expect(floating.style.maxHeight).toBe('324px');
+
+      ref.remove();
+      floating.remove();
+    });
+  });
 });

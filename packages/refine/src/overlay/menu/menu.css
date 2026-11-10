@@ -21,7 +21,9 @@
     z-index: calc(var(--z-popover) + 1);
     box-sizing: border-box;
     min-width: var(--menu-panel-min-width, 10rem);
-    max-height: var(--menu-panel-max-height, min(70vh, 32rem));
+    /* Unset: the positioner caps the panel to its content or the room on the opened side,
+       whichever is smaller, so it scrolls only when it must. Set the token to own the height. */
+    max-height: var(--menu-panel-max-height, none);
     padding: var(--menu-panel-padding, var(--_panel-padding, var(--size-1)));
     margin: 0;
     overflow-y: auto;

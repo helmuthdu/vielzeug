@@ -173,6 +173,26 @@
 
   /* ── Submenu trigger affordance ─────────────────────────────────────────── */
 
+  /* Own [hidden] escape: the display rule below beats the UA default, same
+     contract as every other ?hidden-bound element. */
+  .end-slot[hidden] {
+    display: none;
+  }
+
+  .end-slot {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    color: var(--color-contrast-400);
+  }
+
+  /* Keycap hints sit tight inside menu rows: the shortcut group and its keys
+     read these before any author override on the shortcut itself. */
+  .end-slot slot[name='end']::slotted(ore-keyboard-shortcut) {
+    --keyboard-shortcut-gap: var(--size-0-5);
+    --keyboard-shortcut-padding: var(--size-1);
+  }
+
   .submenu-arrow {
     flex: none;
     color: var(--color-contrast-400);

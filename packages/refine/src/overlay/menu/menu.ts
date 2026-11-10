@@ -36,6 +36,7 @@ import { colorThemeMixin, forcedColorsMixin, overlayMotionMixin, sizeVariantMixi
 import type { ComponentSize } from '../../types';
 import componentStyles from './menu.css?inline';
 import menuItemStyles from './menu-item.css?inline';
+import menuLabelStyles from './menu-label.css?inline';
 import menuSeparatorStyles from './menu-separator.css?inline';
 
 // The submenu trigger renders `<ore-icon>` for its chevron, so menu owns the icon registration the
@@ -166,6 +167,39 @@ define(SEPARATOR_TAG, {
   styles: [menuSeparatorStyles],
 });
 
+// ── Menu Label ──────────────────────────────────────────────────────────────
+
+/**
+ * Non-interactive caption that names a group of items inside `<ore-menu>`.
+ *
+ * It is not focusable and never enters keyboard navigation (which only walks
+ * `ore-menu-item` elements); `role="presentation"` keeps it out of the menu's
+ * accessibility structure while the caption stays visible.
+ *
+ * @element ore-menu-label
+ *
+ * @example
+ * ```html
+ * <ore-menu-label>Switch account</ore-menu-label>
+ * <ore-menu-item type="radio" value="ada" checked>Ada</ore-menu-item>
+ * ```
+ */
+export const MENU_LABEL_TAG = 'ore-menu-label' as const;
+define(MENU_LABEL_TAG, {
+  setup() {
+    const el = getHost();
+
+    onMounted(() => {
+      el.setAttribute('role', 'presentation');
+    });
+
+    return html`
+      <span class="label" part="label"><slot></slot></span>
+    `;
+  },
+  styles: [menuLabelStyles],
+});
+
 // ── Menu Component ─────────────────────────────────────────────────────────────
 
 const isCheckableItemType = (value: string | null): value is OreMenuItemType =>
@@ -188,6 +222,7 @@ type ItemNavigation = {
  * @element ore-menu
  * @element ore-menu-item - Clickable menu option (place in default slot)
  * @element ore-menu-separator - Visual divider between menu groups
+ * @element ore-menu-label - Non-interactive caption naming a group of items
  *
  * @attr {boolean} disabled - Disables opening and keyboard interaction
  * @attr {boolean} open - Controlled open state
@@ -202,7 +237,7 @@ type ItemNavigation = {
  * @fires select - Fired when an item is selected. detail: { value: string, checked?: boolean }
  *
  * @slot trigger - Trigger element that toggles menu visibility
- * @slot - Menu content (`<ore-menu-item>` and `<ore-menu-separator>`)
+ * @slot - Menu content (`<ore-menu-item>`, `<ore-menu-separator>`, `<ore-menu-label>`)
  *
  * @part panel - Floating menu panel container
  *
@@ -211,7 +246,7 @@ type ItemNavigation = {
  * @cssprop --menu-panel-shadow - Box shadow of the floating panel
  * @cssprop --menu-panel-blur - Backdrop blur amount for the floating panel
  * @cssprop --menu-panel-min-width - Minimum width of the floating panel
- * @cssprop --menu-panel-max-height - Maximum height of the floating panel before it scrolls
+ * @cssprop --menu-panel-max-height - Panel height cap; unset, the panel shows everything the opened side has room for and scrolls only beyond that
  * @cssprop --menu-panel-radius - Border radius of the floating panel
  * @cssprop --menu-panel-width - Panel width in `grid` layout. Defaults to a phone-safe cap
  * @cssprop --menu-panel-gap - Gap between grid cards
@@ -334,6 +369,7 @@ define<OreMenuProps>(MENU_TAG, {
     const isOpenSignal = signal(false);
     let stopPositioning: (() => void) | null = null;
     const positioner = createDropdownPositioner({
+      fitAvailableHeight: true,
       getFloating: () => panelEl,
       getOffsetPx: () => 4,
       getPlacement: () => (props.placement.value ?? 'bottom-start') as Placement,
@@ -734,6 +770,7 @@ define<OreMenuProps>(MENU_TAG, {
  * @attr {string} value - Value emitted by parent menu on selection
  *
  * @slot - Item label/content
+ * @slot end - Optional trailing content (shortcut hints, indicators)
  * @slot icon - Optional leading icon content
  * @slot submenu - Nested menu items that turn this item into a submenu trigger
  *
@@ -746,6 +783,7 @@ define<OreMenuProps>(MENU_TAG, {
  *
  * @part item - Root item container element.
  * @part item-label - Label text container.
+ * @part end-slot - Trailing content slot container.
  * @part icon-slot - Leading icon slot container.
  * @part submenu - Floating submenu panel (present only meaningful when the `submenu` slot is filled).
  *
@@ -781,6 +819,8 @@ define<OreMenuItemProps>(MENU_ITEM_TAG, {
     // context and the item marks its own row: the same channel ore-button-group uses for
     // color/size/variant. Standalone items inject `undefined` and stay a list row.
     const menuCtx = inject(MENU_CTX);
+    const slots = useSlots();
+    const hasEnd = () => slots.has('end').value;
     const isGrid = () => menuCtx?.layout.value === 'grid';
     const isCheckable = () => props.type.value === 'checkbox' || props.type.value === 'radio';
     const isChecked = () => isCheckable() && props.checked.value;
@@ -1078,6 +1118,7 @@ define<OreMenuItemProps>(MENU_ITEM_TAG, {
         ${when(isCheckable, () => html`<span class="item-check" aria-hidden="true"></span>`)}
         <span class="icon-slot" part="icon-slot"><slot name="icon"></slot></span>
         <span class="item-label" part="item-label" ref=${labelRef}><slot></slot></span>
+        <span class="end-slot" part="end-slot" ?hidden=${() => !hasEnd()}><slot name="end"></slot></span>
         ${when(
           hasSubmenu,
           () => html`<ore-icon class="submenu-arrow" name="chevron-right" size="1em" aria-hidden="true"></ore-icon>`,

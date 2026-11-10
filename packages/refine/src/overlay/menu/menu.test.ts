@@ -1092,4 +1092,44 @@ describe('ore-menu', () => {
       expect(results.violations).toHaveLength(0);
     });
   });
+
+  describe('Group captions and end slots', () => {
+    it('renders a presentational caption that stays out of keyboard navigation', async () => {
+      fixture = await mount('ore-menu', {
+        html: `<button slot="trigger">Open</button>
+               <ore-menu-label>Switch account</ore-menu-label>
+               <ore-menu-item value="ada">Ada</ore-menu-item>`,
+      });
+      await fixture.flush();
+
+      const label = fixture.element.querySelector('ore-menu-label')!;
+
+      expect(label.getAttribute('role')).toBe('presentation');
+      expect(label.textContent).toContain('Switch account');
+      expect(label.shadowRoot!.querySelector('.label slot')).not.toBeNull();
+
+      // Keyboard navigation enumerates only ore-menu-item elements.
+      const navTargets = fixture.element.querySelectorAll('ore-menu-item');
+
+      expect(navTargets).toHaveLength(1);
+    });
+
+    it('renders trailing content in an end slot and omits the wrapper when empty', async () => {
+      fixture = await mount('ore-menu', {
+        html: `<button slot="trigger">Open</button>
+               <ore-menu-item value="profile">Profile<kbd slot="end">⌘P</kbd></ore-menu-item>
+               <ore-menu-item value="docs">Docs</ore-menu-item>`,
+      });
+      await fixture.flush();
+
+      const [withEnd, withoutEnd] = Array.from(fixture.element.querySelectorAll('ore-menu-item'));
+
+      const endSlot = withEnd.shadowRoot!.querySelector('.end-slot');
+
+      expect(endSlot).not.toBeNull();
+      expect(endSlot!.querySelector('slot')).not.toBeNull();
+      expect(withEnd.querySelector('[slot="end"]')?.textContent).toBe('⌘P');
+      expect(withoutEnd.shadowRoot!.querySelector('.end-slot')!.hasAttribute('hidden')).toBe(true);
+    });
+  });
 });

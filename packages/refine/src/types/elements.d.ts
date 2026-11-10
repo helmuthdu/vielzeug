@@ -187,6 +187,7 @@ export interface RefineElementMap {
   'ore-media-navigation': HTMLElement & OreMediaNavigationProps & AddEventListeners<OreMediaNavigationEvents>;
   'ore-menu': HTMLElement & OreMenuProps & AddEventListeners<OreMenuEvents>;
   'ore-menu-item': HTMLElement & OreMenuItemProps;
+  'ore-menu-label': HTMLElement;
   'ore-menu-separator': HTMLElement;
   'ore-message-composer': HTMLElement &
     OreMessageComposerProps &

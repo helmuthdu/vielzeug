@@ -60,6 +60,14 @@ export type DropdownPositionerOptions = {
    */
   matchWidth?: boolean;
   /**
+   * Whether to cap the floating element's height to what the chosen side can actually show:
+   * the panel grows to its content (or the smaller of its CSS `max-height` and the room on the
+   * resolved side) and only scrolls when the content does not fit. A flip therefore gets the
+   * height flip needs to compare, and a panel with room to spare never shows a scrollbar for a
+   * cap it did not need. Default: false.
+   */
+  fitAvailableHeight?: boolean;
+  /**
    * Returns the offset in pixels between reference and floating element, read on every update so a
    * reactive offset prop is honored. Default: 0.
    */
@@ -107,6 +115,7 @@ export function createDropdownPositioner({
   getOffsetPx = () => 0,
   getPlacement,
   getReference,
+  fitAvailableHeight = false,
   matchWidth = true,
   onPlacementChange,
   padding = 6,
@@ -164,20 +173,67 @@ export function createDropdownPositioner({
       }
     }
 
-    const result = computePosition(ref, floating, {
-      boundary: resolvedBoundary,
-      middleware: [
-        ...(() => {
-          const offsetPx = getOffsetPx();
+    const offsetPx = getOffsetPx();
 
-          return offsetPx ? [offset(offsetPx)] : [];
-        })(),
-        flip({ padding }),
-        shift({ mainAxis: shiftMainAxis, padding }),
-        ...(matchWidth ? [size({ padding })] : []),
-      ],
+    const middleware = [
+      ...(offsetPx ? [offset(offsetPx)] : []),
+      flip({ padding }),
+      shift({ mainAxis: shiftMainAxis, padding }),
+      ...(matchWidth ? [size({ padding })] : []),
+    ];
+
+    // Height fit: the panel shows everything the resolved side has room for. The desired
+    // height (content, or the CSS max-height the consumer authored) is what flip must
+    // compare against each side, so the first pass caps only at that desire; once the
+    // side is known, the panel shrinks to that side's room, and a panel that shrank or
+    // moved needs one more positioning pass because `top` depends on the height.
+    const fitHeight = (desiredOnly: boolean, side: string): number => {
+      // Clear the inline write from a previous update first: its computed value must come
+      // from the consumer's CSS (token or none), never from the panel's own last cap, or a
+      // shrink could never grow back when space returned.
+      floating.style.maxHeight = 'none';
+
+      const natural = floating.getBoundingClientRect().height;
+
+      floating.style.maxHeight = '';
+
+      if (natural === 0) return 0;
+
+      const cssMax = Number.parseFloat(getComputedStyle(floating).maxHeight);
+      const desired = Number.isFinite(cssMax) && cssMax > 0 ? Math.min(natural, cssMax) : natural;
+
+      if (desiredOnly) return desired;
+
+      // Rect (floating-ui's virtual-element shape) only guarantees x/y/width/height.
+      const refRect = ref.getBoundingClientRect();
+      const refTop = refRect.y;
+      const refBottom = refRect.y + refRect.height;
+      const room = side.startsWith('top')
+        ? refTop - resolvedBoundary.y - offsetPx - padding
+        : resolvedBoundary.y + resolvedBoundary.height - refBottom - offsetPx - padding;
+
+      return Math.max(0, Math.min(desired, room));
+    };
+
+    let result = computePosition(ref, floating, {
+      boundary: resolvedBoundary,
+      middleware,
       placement,
     });
+
+    if (fitAvailableHeight) {
+      const desired = fitHeight(true, result.placement);
+
+      if (desired > 0) {
+        const capped = fitHeight(false, result.placement);
+
+        floating.style.maxHeight = `${capped}px`;
+
+        if (capped < desired) {
+          result = computePosition(ref, floating, { boundary: resolvedBoundary, middleware, placement });
+        }
+      }
+    }
 
     floating.style.left = `${result.x}px`;
     floating.style.top = `${result.y}px`;

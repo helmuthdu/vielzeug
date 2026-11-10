@@ -1,0 +1,23 @@
+@layer refine.base {
+  :host {
+    display: block;
+    padding: var(--size-1-5) var(--size-3);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-normal);
+    color: var(--color-contrast-500);
+    user-select: none;
+  }
+
+  /* Caption rows hug the group below them; the first one hugs the panel edge. */
+  :host(:not(:first-child)) {
+    margin-block-start: var(--size-1);
+  }
+
+  .label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

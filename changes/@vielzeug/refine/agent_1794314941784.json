@@ -1,0 +1,12 @@
+{
+  "changes": [
+    {
+      "comment": "ore-menu gains an ore-menu-label group caption and an end slot on ore-menu-item; docs add a user selector (account switcher) recipe",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "comment": "menu: add ore-menu-label element and end slot on ore-menu-item (user-selector pattern); compact ore-keyboard-shortcut spacing in the end slot; fit menu panels to the space on the opened side instead of a fixed 70vh max-height (--menu-panel-max-height now an opt-in cap).",
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}
