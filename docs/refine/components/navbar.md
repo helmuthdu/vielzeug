@@ -202,7 +202,7 @@ The `end` region still collapses in the wrapped layout: `persistent` exists prec
 Recommended app-shell pattern:
 
 - Desktop: keep `ore-sidebar` visible and use the navbar for top-level context/actions.
-- Mobile: switch sidebar to bottom-nav mode and toggle its drawer from the navbar control, with `menu-icon="panel-left-open"` so it reads as the same control as the desktop collapse toggle.
+- Mobile: switch sidebar to bottom-nav mode and toggle its drawer from the navbar control, with `menu-icon="panel-left-open"` and `menu-close-icon="panel-left-close"` so it reads as the same control as the desktop collapse toggle.
 - Use `mobile-sidebar` on `ore-navbar` and `bottom-nav-at="(max-width: ... )"` on `ore-sidebar`.
 
 <ComponentPreview>
@@ -361,6 +361,7 @@ Recommended app-shell pattern:
       container-breakpoints
       mobile-sidebar="#app-shell-sidebar"
       menu-icon="panel-left-open"
+      menu-close-icon="panel-left-close"
       label="Workspace navigation">
       <span slot="logo" style="font-weight: var(--font-semibold);">Workspace</span>
       <ore-navbar-item slot="start" href="#" active>Dashboard</ore-navbar-item>
