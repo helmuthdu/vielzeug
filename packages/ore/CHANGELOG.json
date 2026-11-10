@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "same-turn node moves preserve component state (deferred disconnect teardown), each() reconciles with minimal node moves and detached single-connect item creation, slot observers skip non-slot mutations, attribute writes use cached per-name plans",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          }
+        ]
+      },
+      "date": "Tue, 10 Nov 2026 21:47:05 GMT",
+      "tag": "@vielzeug/ore_v26.11.9",
+      "version": "26.11.9"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

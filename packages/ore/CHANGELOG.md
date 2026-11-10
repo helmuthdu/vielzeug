@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Mon, 09 Nov 2026 05:44:57 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Nov 2026 21:47:05 GMT and should not be manually modified.
 
+## 26.11.9
+
+Tue, 10 Nov 2026 21:47:05 GMT
+
+### Minor changes
+
+- same-turn node moves preserve component state (deferred disconnect teardown), each() reconciles with minimal node moves and detached single-connect item creation, slot observers skip non-slot mutations, attribute writes use cached per-name plans
 ## 26.11.8
 Mon, 09 Nov 2026 05:44:57 GMT
 

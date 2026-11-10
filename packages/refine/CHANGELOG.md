@@ -1,7 +1,40 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Mon, 09 Nov 2026 05:44:57 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Nov 2026 21:47:05 GMT and should not be manually modified.
 
+## 26.11.9
+
+Tue, 10 Nov 2026 21:47:05 GMT
+
+### Minor changes
+
+- ore-menu gains an ore-menu-label group caption and an end slot on ore-menu-item; docs add a user selector (account switcher) recipe
+- calendar follows locale week start with week-starts-on override, gains labels, a conditional Today button, decade paging in year view, and multi-day event spans via endDate
+- `ore-qr-code` gains `dot-style`, `gradient-from`/`gradient-to`, `image`/`image-size`, and `loading` attributes plus `toSvg()`/`toPng()` export methods.
+- restyle command-palette group headings as plain section labels and match the keyboard focus tint to the neutral theme
+- adopt the toast surface for the default alert: neutral card with color carried by the icon and accent
+- `ore-sidebar-group` auto-opens for active items and gains an `end` header slot; `ore-sidebar-item` reveals its label in a bubble on hover/focus when the sidebar is collapsed.
+- derive alert leading icon from color with icon override and none opt-out; add labels prop for dismiss strings; stack heading above body in horizontal alerts
+- unify ore-navbar/ore-sidebar/ore-tour responsive breakpoint and preview-mode internals, and the navbar drawer bridge
+- otp-input gains visible label/helper/error chrome with slots, localized digit/group labels, and paste-echo fix
+- ore-datagrid renders a localized error row with retry for failed source loads; ore-th and ore-td accept an align attribute; datagrid controls bar and footer render sm buttons at their preset height; ore-button text variant label meets AA contrast
+- ore-pagination gains a localized labels property; prev/next arrows are now shown by default
+- navbar: add active-url automatic active matching, subnav second-tier slot, centered layout, and automatic mobile wrap when there is no mobile-menu panel or mobile-sidebar drawer
+- rating redesigned as a slider control: single tab stop, half-star precision, gold default via --color-star, label/helper/error chrome, clearable + required; solid and sparkle burst removed
+- restyle the bordered field variants around the themed backdrop/border pairing with neutral ink text (input, textarea, message-composer, otp-input, file-input; inherited by select, combobox, query-bar, time-picker)
+- restyle the bordered alert with the theme backdrop/border pairing and neutral ink text
+- raise the frost family to 92% so overlay panels keep their surface colour over dark scrims
+- combobox gains a footer slot, labels overrides, and max-visible chip overflow; select gains a leading icon attribute and matching chip overflow
+- ore-stats decouples trend color from arrow direction with trend-tone, renders an auto trend arrow, and gains a footer slot
+- ore-drawer: content marked data-drawer-close closes the drawer, and a close-only header drops its divider; docs gain closing-from-content and drawer recipes
+
+### Patches
+
+- flip navbar toggle to menu-close-icon while an external mobile-sidebar drawer is open
+- `ore-sidebar` header row and bottom-tab icons now honor the `hidden` attribute, so an app-shell sidebar without header content or a toggle no longer renders a blank bordered bar; such headerless sidebars also keep the drawer headerless, matching the desktop and tablet layout.
+- keep the color picker's selection ring clear of the legend
+- document the step sizing custom properties and add a visible step-counter recipe
+- keyboard-key: render key caps in the sans stack with a square-ish min-width so modifier symbols match letter keys
 ## 26.11.8
 Mon, 09 Nov 2026 05:44:57 GMT
 

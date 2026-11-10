@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/sigil
 
-This log was last generated on Mon, 09 Nov 2026 05:44:57 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Nov 2026 21:47:05 GMT and should not be manually modified.
 
+## 26.11.9
+
+Tue, 10 Nov 2026 21:47:05 GMT
+
+### Minor changes
+
+- Add dot styles, gradient paint, and logo overlay options to `toSvg` (`dotStyle`, `gradient`, `image`).
 ## 26.11.8
 Mon, 09 Nov 2026 05:44:57 GMT
 

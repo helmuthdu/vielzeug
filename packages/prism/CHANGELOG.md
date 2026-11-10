@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/prism
 
-This log was last generated on Mon, 09 Nov 2026 05:44:57 GMT and should not be manually modified.
+This log was last generated on Tue, 10 Nov 2026 21:47:05 GMT and should not be manually modified.
 
+## 26.11.9
+
+Tue, 10 Nov 2026 21:47:05 GMT
+
+### Patches
+
+- fix(prism): keep chart tooltips inside the host's visible box
 ## 26.11.8
 Mon, 09 Nov 2026 05:44:57 GMT
 

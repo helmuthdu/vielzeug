@@ -2,6 +2,137 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "ore-menu gains an ore-menu-label group caption and an end slot on ore-menu-item; docs add a user selector (account switcher) recipe",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "calendar follows locale week start with week-starts-on override, gains labels, a conditional Today button, decade paging in year view, and multi-day event spans via endDate",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "`ore-qr-code` gains `dot-style`, `gradient-from`/`gradient-to`, `image`/`image-size`, and `loading` attributes plus `toSvg()`/`toPng()` export methods.",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "restyle command-palette group headings as plain section labels and match the keyboard focus tint to the neutral theme",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "adopt the toast surface for the default alert: neutral card with color carried by the icon and accent",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "`ore-sidebar-group` auto-opens for active items and gains an `end` header slot; `ore-sidebar-item` reveals its label in a bubble on hover/focus when the sidebar is collapsed.",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "derive alert leading icon from color with icon override and none opt-out; add labels prop for dismiss strings; stack heading above body in horizontal alerts",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "unify ore-navbar/ore-sidebar/ore-tour responsive breakpoint and preview-mode internals, and the navbar drawer bridge",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "otp-input gains visible label/helper/error chrome with slots, localized digit/group labels, and paste-echo fix",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "ore-datagrid renders a localized error row with retry for failed source loads; ore-th and ore-td accept an align attribute; datagrid controls bar and footer render sm buttons at their preset height; ore-button text variant label meets AA contrast",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "ore-pagination gains a localized labels property; prev/next arrows are now shown by default",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "navbar: add active-url automatic active matching, subnav second-tier slot, centered layout, and automatic mobile wrap when there is no mobile-menu panel or mobile-sidebar drawer",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "rating redesigned as a slider control: single tab stop, half-star precision, gold default via --color-star, label/helper/error chrome, clearable + required; solid and sparkle burst removed",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "restyle the bordered field variants around the themed backdrop/border pairing with neutral ink text (input, textarea, message-composer, otp-input, file-input; inherited by select, combobox, query-bar, time-picker)",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "restyle the bordered alert with the theme backdrop/border pairing and neutral ink text",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "raise the frost family to 92% so overlay panels keep their surface colour over dark scrims",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "combobox gains a footer slot, labels overrides, and max-visible chip overflow; select gains a leading icon attribute and matching chip overflow",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "ore-stats decouples trend color from arrow direction with trend-tone, renders an auto trend arrow, and gains a footer slot",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "ore-drawer: content marked data-drawer-close closes the drawer, and a close-only header drops its divider; docs gain closing-from-content and drawer recipes",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "flip navbar toggle to menu-close-icon while an external mobile-sidebar drawer is open",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "`ore-sidebar` header row and bottom-tab icons now honor the `hidden` attribute, so an app-shell sidebar without header content or a toggle no longer renders a blank bordered bar; such headerless sidebars also keep the drawer headerless, matching the desktop and tablet layout.",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "keep the color picker's selection ring clear of the legend",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "document the step sizing custom properties and add a visible step-counter recipe",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "keyboard-key: render key caps in the sans stack with a square-ish min-width so modifier symbols match letter keys",
+            "commit": "4255637e158aa32d0abf0d47d064ca6b05dd0fb9"
+          }
+        ]
+      },
+      "date": "Tue, 10 Nov 2026 21:47:05 GMT",
+      "tag": "@vielzeug/refine_v26.11.9",
+      "version": "26.11.9"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "agent@vielzeug",
