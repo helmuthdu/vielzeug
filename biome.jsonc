@@ -34,7 +34,10 @@
       "!**/worker-configuration.d.ts",
       // SVGs are exported artwork (Inkscape), not authored source: inline CSS uses
       // Inkscape-specific properties and font names that Biome flags.
-      "!**/*.svg"
+      "!**/*.svg",
+      // CHANGELOGs are release-train outputs (apply-train rewrites them every train); linting
+      // them makes the gate flaky against the generator's fixed template instead of source.
+      "!**/CHANGELOG.md"
     ]
   },
   "formatter": {

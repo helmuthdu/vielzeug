@@ -80,7 +80,8 @@ function collectComments(changeFiles, changesDir) {
 
 /** The markdown block for one release, matching the changelog format of the pre-CalVer history. */
 function renderMarkdownEntry(version, date, comments) {
-  const lines = [`## ${version}`, date, ''];
+  // Blank line after the heading keeps the output stable under `biome check` (markdown format).
+  const lines = [`## ${version}`, '', date, ''];
   for (const [type, title] of SECTIONS) {
     const entries = comments[type];
     if (!entries?.length) continue;

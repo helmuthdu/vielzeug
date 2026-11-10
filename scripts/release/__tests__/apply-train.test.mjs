@@ -105,6 +105,8 @@ describe('applyTrain()', () => {
     const oreLog = readFileSync(path.join(repo, 'packages', 'ore', 'CHANGELOG.md'), 'utf8');
     expect(oreLog.startsWith('# Change Log - @vielzeug/ore\n\nThis log was last generated on Thu, 01 Oct 2026 12:00:00 GMT')).toBe(true);
     expect(oreLog).toContain('## 26.10.0');
+    // Biome's markdown formatter requires a blank line after every heading.
+    expect(oreLog).toMatch(/^## 26\.10\.0\n\n/m);
     expect(oreLog).toContain('### Minor changes');
     expect(oreLog).toContain('- feat: ore rides trains');
     expect(oreLog).toContain('## 1.0.0'); // prior history survives below the new entry
