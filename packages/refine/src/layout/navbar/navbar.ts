@@ -12,8 +12,7 @@ import {
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { computed, fromSubscribable, type Readable, signal, untrack, watch } from '@vielzeug/ripple';
-import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
+import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 import {
   colorThemeMixin,
   elevationMixin,
@@ -30,10 +29,20 @@ import {
   type ThemeColor,
 } from '../../types';
 import { computeSafeRel } from '../../utils';
-import { findScrollContainer, listen, parseMaxWidthPx, readContainerWidth, resolveContainerElement } from '../shared';
+import {
+  createResizeTracker,
+  createResponsiveMode,
+  findScrollContainer,
+  listen,
+  type ResizeTracker,
+  type ResponsiveMode,
+} from '../shared';
 import navbarStyles from './navbar.css?inline';
 
 export { ICON_TAG } from '../../content/icon/icon';
+
+/** One animation frame beyond the CSS mode-transition duration. */
+const MODE_TRANSITION_MS = 220;
 
 const NAVBAR_VARIANTS = ['flat', 'solid', 'bordered', 'outline', 'frost'] as const;
 type NavbarVariant = (typeof NAVBAR_VARIANTS)[number];
@@ -52,9 +61,27 @@ const hasElementContent = (el: Element): boolean => {
 
 /** Context provided by `ore-navbar` to `ore-navbar-item` children. */
 export type NavbarContext = {
+  /** Current `active-url` of the navbar; items derive their own active state from it. */
+  activeUrl: Readable<string | undefined>;
   closeMobileMenu: () => void;
   isMobile: Readable<boolean>;
   mobileMenuOpen: Readable<boolean>;
+};
+
+/**
+ * Does `href` name the page at `activeUrl`? Exact match always wins; a non-root `href`
+ * also matches when `activeUrl` nests under it (`/docs` owns `/docs/intro`), so a section
+ * stays highlighted on its child routes. Root `/` and in-page `#anchors` match exactly
+ * only: prefix-matching either would highlight them on every page.
+ */
+export const matchesActiveUrl = (href: string | undefined, activeUrl: string | undefined): boolean => {
+  if (href == null || activeUrl == null) return false;
+
+  if (href === activeUrl) return true;
+
+  if (href === '/' || href.startsWith('#')) return false;
+
+  return activeUrl.startsWith(`${href}/`);
 };
 
 /** Injection key for navbar context. */
@@ -81,6 +108,14 @@ type MobileSidebarElement = HTMLElement & {
 
 /** Navbar component properties */
 export type OreNavbarProps = {
+  /**
+   * Current page URL. Items whose `href` matches it become active automatically:
+   * exact match, or nested paths keep the parent item highlighted (root `/` and
+   * `#anchors` match exactly only). An explicit `active` on an item always wins.
+   */
+  'active-url'?: string;
+  /** Center the default-slot content with equal space on both sides. */
+  centered?: boolean;
   /** CSS media query used for mobile layout switching */
   breakpoint?: string;
   /** Theme color */
@@ -115,7 +150,7 @@ export type OreNavbarProps = {
 export type OreNavbarItemProps = {
   /** Accessible name for icon-only items, forwarded to the internal button or anchor */
   ariaLabel?: string;
-  /** Whether this item represents the current page */
+  /** Whether this item represents the current page. Wins over the navbar's `active-url` match. */
   active?: boolean;
   /** Whether this item is disabled */
   disabled?: boolean;
@@ -141,6 +176,8 @@ export type OreNavbarItemProps = {
  * @element ore-navbar
  * @element ore-navbar-item - Navigation link or button placed in the default or mobile-menu slot
  *
+ * @attr {string} active-url - Current page URL; items matching it become active automatically
+ * @attr {boolean} centered - Center the default-slot content with equal space on both sides
  * @attr {string} label - Accessible nav landmark label
  * @attr {string} menu-icon - Icon shown while the mobile menu is closed
  * @attr {string} menu-close-icon - Icon shown while the mobile menu is open
@@ -161,6 +198,7 @@ export type OreNavbarItemProps = {
  * @slot - Center navigation content rendered between the start and end regions
  * @slot end - Content rendered in the right/end region
  * @slot persistent - Trailing content that stays in the bar through the mobile collapse (global actions and status icons)
+ * @slot subnav - Second-tier row rendered below the bar (section/section-tab navigation)
  * @slot mobile-menu - Controls and links rendered inside the mobile overflow panel
  *
  * @cssprop --navbar-height - Navbar bar height
@@ -184,6 +222,7 @@ export type OreNavbarItemProps = {
  * @part center - Center content region
  * @part end - Trailing action/content region
  * @part persistent - Trailing region that survives the mobile collapse
+ * @part subnav - Second-tier row container below the bar
  * @part mobile-toggle - Mobile menu toggle button
  * @part mobile-menu - Mobile overflow panel
  * @part item-icon - Leading icon inside navbar items
@@ -203,7 +242,9 @@ export type OreNavbarItemProps = {
 export const NAVBAR_TAG = 'ore-navbar' as const;
 define<OreNavbarProps>(NAVBAR_TAG, {
   props: {
+    'active-url': prop.string(),
     breakpoint: prop.string('(max-width: 768px)'),
+    centered: prop.bool(false),
     color: prop.oneOf(THEME_COLORS),
     'container-breakpoints': prop.bool(false),
     elevation: prop.oneOf(ELEVATION_LEVELS),
@@ -229,6 +270,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const hasCenter = slots.has();
     const hasEnd = slots.has('end');
     const hasPersistent = slots.has('persistent');
+    const hasSubnav = slots.has('subnav');
     const mobileMenuElements = slots.elements('mobile-menu');
     const hasMobileMenu = signal(false);
     const mobileSidebarTarget = signal<MobileSidebarElement | null>(null);
@@ -239,10 +281,16 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const isModeTransitioning = signal(false);
     const isScrolled = signal(false);
     const scrollBase = signal(0);
-    const mediaMatches = signal(false);
-    const sizeMatches = signal(false);
-    const maxWidthPx = signal<number | undefined>(parseMaxWidthPx(props.breakpoint.value));
-    const isPreviewMode = signal(false);
+
+    // Assigned right after `syncMobileMode` (below); declared early so it stays
+    // readable (never in TDZ) from the callbacks the helpers fire on construction.
+    let responsiveMode: ResponsiveMode | undefined;
+    let resizeTracker: ResizeTracker | undefined;
+
+    // The single open-state the mobile toggle reflects (its own panel, or an
+    // external drawer when one owns the collapse). Label, `aria-expanded`, and
+    // icon all read this one signal so they can never disagree.
+    const menuOpen = computed(() => (hasMobileMenu.value ? isMobileMenuOpen.value : isExternalMobileOpen.value));
 
     const getExternalSidebar = () => {
       const selector = String(props['mobile-sidebar'].value ?? '').trim();
@@ -259,6 +307,11 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     };
 
     provide(NAVBAR_CTX, {
+      activeUrl: computed(() => {
+        const url = String(props['active-url'].value ?? '').trim();
+
+        return url === '' ? undefined : url;
+      }) as Readable<string | undefined>,
       // Wrapped, not passed directly: `closeMobileMenu` (below) isn't defined yet at this point
       // in `setup()`; by the time `ore-navbar-item` actually calls this (a later click), it is.
       closeMobileMenu: () => closeMobileMenu(),
@@ -278,22 +331,41 @@ define<OreNavbarProps>(NAVBAR_TAG, {
       return undefined;
     };
 
+    /**
+     * Hand an open/close/toggle to the linked sidebar drawer. Returns whether a
+     * drawer actually owns the collapse (a target exists and the navbar has no
+     * panel of its own); otherwise the caller falls back to the panel state.
+     */
+    const driveDrawer = (action: 'open' | 'close' | 'toggle'): boolean => {
+      if (hasMobileMenu.value) return false;
+
+      const target = mobileSidebarTarget.value ?? getExternalSidebar();
+
+      if (!target) return false;
+
+      if (action === 'open') {
+        target.openDrawer?.();
+      } else if (action === 'close') {
+        target.closeDrawer?.();
+      } else if (typeof target.toggleDrawer === 'function') {
+        target.toggleDrawer();
+      } else if (typeof target.openDrawer === 'function' && typeof target.closeDrawer === 'function') {
+        // No dedicated toggle: derive open-ness the same way the state sync does
+        // (event-resolved signal first, attribute as the pre-event fallback).
+        if (isExternalMobileOpen.value || target.hasAttribute('data-drawer-open')) {
+          target.closeDrawer();
+        } else {
+          target.openDrawer();
+        }
+      }
+
+      return true;
+    };
+
     const setMobileMenu = (next: boolean) => {
       const open = Boolean(next);
 
-      if (!hasMobileMenu.value) {
-        const target = mobileSidebarTarget.value ?? getExternalSidebar();
-
-        if (target) {
-          if (open) {
-            target.openDrawer?.();
-          } else {
-            target.closeDrawer?.();
-          }
-
-          return;
-        }
-      }
+      if (driveDrawer(open ? 'open' : 'close')) return;
 
       if (open && !hasMobileMenu.value) return;
 
@@ -306,36 +378,33 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const closeMobileMenu = () => setMobileMenu(false);
     const openMobileMenu = () => setMobileMenu(true);
     const toggleMobileMenu = () => {
-      if (!hasMobileMenu.value) {
-        const target = mobileSidebarTarget.value ?? getExternalSidebar();
-
-        if (target) {
-          if (typeof target.toggleDrawer === 'function') {
-            target.toggleDrawer();
-          } else if (typeof target.openDrawer === 'function' && typeof target.closeDrawer === 'function') {
-            const isOpen = target.hasAttribute('data-drawer-open');
-
-            if (isOpen) target.closeDrawer();
-            else target.openDrawer();
-          }
-
-          return;
-        }
-      }
+      if (driveDrawer('toggle')) return;
 
       setMobileMenu(!isMobileMenuOpen.value);
     };
 
     const syncMobileMode = () => {
-      const next =
-        (mobileSidebarTarget.value && !hasMobileMenu.value ? isExternalMobileMode.value : false) ||
-        mediaMatches.value ||
-        (Boolean(props['container-breakpoints'].value) && sizeMatches.value);
+      // A linked drawer owns the collapse while the navbar has no panel of its own:
+      // the sidebar's bottom-nav state drives mobile mode (an open drawer forces it,
+      // see `syncTargetState`'s race guard). Otherwise the breakpoint decides.
+      const drawerDriven = mobileSidebarTarget.value != null && !hasMobileMenu.value && isExternalMobileMode.value;
+
+      const next = (responsiveMode?.matches.value ?? false) || drawerDriven;
 
       isMobile.value = next;
 
       if (!next) closeMobileMenu();
     };
+
+    responsiveMode = createResponsiveMode(el, props.breakpoint, props['container-breakpoints'], () => syncMobileMode());
+    resizeTracker = createResizeTracker(el, () => {
+      responsiveMode?.remeasure();
+      syncMobileMode();
+    });
+    onCleanup(() => {
+      responsiveMode?.dispose();
+      resizeTracker?.dispose();
+    });
 
     const readScrollOffset = (scrollContainer: HTMLElement | null): number => {
       if (scrollContainer) {
@@ -367,9 +436,16 @@ define<OreNavbarProps>(NAVBAR_TAG, {
       attr: {
         'data-mobile': () => (isMobile.value ? true : undefined),
         'data-mobile-open': () => (isMobile.value && isMobileMenuOpen.value ? true : undefined),
+        // No own panel, no external drawer: the bar's live navigation (start/center)
+        // wraps onto its own row below the logo instead of vanishing. The end region
+        // still collapses: `persistent` exists precisely to stay, `end` to collapse.
+        'data-mobile-wrap': () =>
+          isMobile.value && !hasMobileMenu.value && !mobileSidebarTarget.value && (hasStart.value || hasCenter.value)
+            ? true
+            : undefined,
         'data-mode': () => computeMode() ?? null,
         'data-mode-transitioning': () => (isModeTransitioning.value ? true : undefined),
-        'data-preview-mode': () => (isPreviewMode.value ? true : undefined),
+        'data-preview-mode': () => (resizeTracker?.isPreviewMode.value ? true : undefined),
         'data-scrolled': () => (props.floating.value && props.sticky.value && isScrolled.value ? true : undefined),
       },
     });
@@ -409,7 +485,6 @@ define<OreNavbarProps>(NAVBAR_TAG, {
         el.shadowRoot?.querySelector<HTMLButtonElement>('[part="mobile-toggle"]')?.focus();
       });
 
-      let mediaCleanup: (() => void) | undefined;
       let mobileSidebarCleanup: (() => void) | undefined;
       let modeTransitionTimeout: ReturnType<typeof setTimeout> | undefined;
       let previousMode: NavbarMode | undefined;
@@ -480,7 +555,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
         modeTransitionTimeout = setTimeout(() => {
           isModeTransitioning.value = false;
           modeTransitionTimeout = undefined;
-        }, 220);
+        }, MODE_TRANSITION_MS);
       };
 
       const stopModeWatch = watch(
@@ -562,113 +637,10 @@ define<OreNavbarProps>(NAVBAR_TAG, {
       // custom element connects; `slotchange` alone does not observe that nested content.
       mobileMenuContentObserver.observe(el, { childList: true, subtree: true });
 
-      watch(
-        props.breakpoint,
-        (query) => {
-          // Untrack the callback body: the watch already tracks `props.breakpoint` via
-          // its internal `read()`. Without untrack, signals read inside (e.g.
-          // `mediaMatches` via `syncMobileMode()`) become dependencies of this watch
-          // effect. When the sentinel updates `mediaMatches` on a viewport change, the
-          // effect re-runs: `EffectNode.run()` disposes the previous scope (killing the
-          // mediaHandle and its MediaQueryList listener) but the callback is NOT invoked
-          // (source unchanged), so no new handle is created. The navbar is then deaf to
-          // further MQ changes and stays stuck in mobile mode after resizing back to
-          // desktop.
-          untrack(() => {
-            mediaCleanup?.();
-            mediaCleanup = undefined;
-
-            const mediaQuery = String(query ?? '').trim();
-
-            maxWidthPx.value = parseMaxWidthPx(mediaQuery);
-            mediaMatches.value = false;
-
-            const width = readContainerWidth(el);
-
-            sizeMatches.value = width > 0 && maxWidthPx.value != null ? width <= maxWidthPx.value : false;
-            syncMobileMode();
-
-            if (props['container-breakpoints'].value && maxWidthPx.value != null) {
-              return;
-            }
-
-            if (!mediaQuery) {
-              return;
-            }
-
-            try {
-              const mediaHandle = createMediaQuery(mediaQuery);
-              const syncMedia = (state: ReturnType<typeof mediaHandle.getSnapshot>) => {
-                if (state) {
-                  mediaMatches.value = state.matches;
-                  syncMobileMode();
-                }
-              };
-
-              syncMedia(mediaHandle.getSnapshot());
-
-              const mediaCleanupFn = watch(
-                fromSubscribable(mediaHandle, { signal: mediaHandle.disposalSignal }),
-                syncMedia,
-              );
-              mediaCleanup = () => {
-                mediaCleanupFn.dispose();
-                mediaHandle.dispose();
-              };
-            } catch (error) {
-              if (!(error instanceof SentinelUnavailableError)) throw error;
-            }
-          });
-        },
-        { immediate: true },
-      );
-
-      const stopResizeEffect =
-        typeof ResizeObserver === 'function'
-          ? (() => {
-              const hostSize = createElementSize(el);
-              onCleanup(() => hostSize.dispose());
-              const hostSizeSignal = fromSubscribable(hostSize, { signal: hostSize.disposalSignal });
-
-              const wrapperEl = el.parentElement;
-              const containerEl = resolveContainerElement(el);
-              const wrapperSize = wrapperEl ? createElementSize(wrapperEl) : undefined;
-              const parentSize = containerEl && containerEl !== wrapperEl ? createElementSize(containerEl) : undefined;
-
-              if (wrapperSize) {
-                onCleanup(() => wrapperSize.dispose());
-              }
-              if (parentSize) {
-                onCleanup(() => parentSize.dispose());
-              }
-
-              const wrapperSizeSignal = wrapperSize
-                ? fromSubscribable(wrapperSize, { signal: wrapperSize.disposalSignal })
-                : undefined;
-              const parentSizeSignal = parentSize
-                ? fromSubscribable(parentSize, { signal: parentSize.disposalSignal })
-                : undefined;
-
-              return watch(
-                computed(() => [
-                  hostSizeSignal.value?.width,
-                  hostSizeSignal.value?.height,
-                  wrapperSizeSignal?.value?.width,
-                  wrapperSizeSignal?.value?.height,
-                  parentSizeSignal?.value?.width,
-                  parentSizeSignal?.value?.height,
-                ]),
-                () => {
-                  const width = readContainerWidth(el);
-                  const parentWidth = resolveContainerElement(el)?.clientWidth ?? 0;
-
-                  sizeMatches.value = width > 0 && maxWidthPx.value != null ? width <= maxWidthPx.value : false;
-                  isPreviewMode.value = parentWidth > 0 && parentWidth < window.innerWidth;
-                  syncMobileMode();
-                },
-              );
-            })()
-          : undefined;
+      // Re-sync once mounted: the responsive/resize helpers run at setup, when the
+      // host may not be laid out yet; sizes are only trustworthy after mount.
+      responsiveMode?.remeasure();
+      syncMobileMode();
 
       return () => {
         stopEscape?.();
@@ -680,9 +652,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
         stopMobileMenuElementsWatch?.dispose();
         stopMobileSidebarWatch?.dispose();
         mobileMenuContentObserver.disconnect();
-        mediaCleanup?.();
         mobileSidebarCleanup?.();
-        stopResizeEffect?.dispose();
 
         if (modeTransitionTimeout != null) {
           clearTimeout(modeTransitionTimeout);
@@ -718,32 +688,26 @@ define<OreNavbarProps>(NAVBAR_TAG, {
             class="mobile-toggle"
             part="mobile-toggle"
             type="button"
-            aria-label="${() =>
-              (hasMobileMenu.value ? isMobileMenuOpen.value : isExternalMobileOpen.value)
-                ? props['menu-close-label'].value
-                : props['menu-open-label'].value}"
+            aria-label="${() => (menuOpen.value ? props['menu-close-label'].value : props['menu-open-label'].value)}"
             aria-controls="mobile-menu-panel"
-            aria-expanded="${() => String(hasMobileMenu.value ? isMobileMenuOpen.value : isExternalMobileOpen.value)}"
+            aria-expanded="${() => String(menuOpen.value)}"
             ?hidden=${() => !isMobile.value || (!hasMobileMenu.value && !mobileSidebarTarget.value)}
             @click="${toggleMobileMenu}">
             <ore-icon
               name="${() =>
-                // The × only belongs here when the toggle owns its own mobile-menu
-                // panel, which it can open *and* close. When it instead drives an
-                // external `ore-sidebar` drawer, the drawer's scrim covers the whole
-                // navbar (it sits above the navbar's z-index), so this button cannot
-                // be clicked while the drawer is open: flipping it to × would paint a
-                // second close button that is a dead affordance. The drawer owns its
-                // own close control, so the toggle stays a hamburger and the drawer's
-                // × is the single close button. aria-expanded/label below still report
-                // the real open state for assistive tech.
-                hasMobileMenu.value && isMobileMenuOpen.value
-                  ? props['menu-close-icon'].value
-                  : props['menu-icon'].value}"
+                // The toggle reflects whichever open state it drives — its own
+                // mobile-menu panel or an external sidebar drawer — because it can
+                // close both (tap-outside on the scrim also closes the drawer, so
+                // this is never a dead affordance).
+                menuOpen.value ? props['menu-close-icon'].value : props['menu-icon'].value}"
               size="18"
               stroke-width="2.5"
               aria-hidden="true"></ore-icon>
           </button>
+        </div>
+
+        <div class="navbar-subnav" part="subnav" ?hidden=${() => !hasSubnav.value}>
+          <slot name="subnav"></slot>
         </div>
 
         <div
@@ -776,7 +740,9 @@ define<OreNavbarProps>(NAVBAR_TAG, {
  * @element ore-navbar-item
  *
  * @attr {string} aria-label - Accessible name for icon-only items, forwarded to the internal control
- * @attr {boolean} active - Marks item as the current active route
+ * @attr {boolean} active - Marks item as the current active route. Wins over the navbar's `active-url` match.
+ *
+ * Reflects `data-active` whenever the item is active, from either source.
  * @attr {boolean} disabled - Disables interaction
  * @attr {string} href - Link URL; renders as `<a>` when set
  * @attr {boolean} icon-only - Compact, symmetric padding for items with no visible label
@@ -818,8 +784,14 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
     const hasEnd = () => slots.has('end').value;
     const navbarCtx = inject(NAVBAR_CTX);
 
+    // Explicit `active` always wins; otherwise the navbar's `active-url` decides.
+    const isActive = computed(
+      () => props.active.value || matchesActiveUrl(props.href.value, navbarCtx?.activeUrl.value),
+    );
+
     bind({
       attr: {
+        'data-active': () => (isActive.value ? true : undefined),
         'navbar-mobile': () => (navbarCtx?.isMobile.value ? true : undefined),
         'navbar-mobile-open': () => (navbarCtx?.mobileMenuOpen.value ? true : undefined),
       },
@@ -834,7 +806,7 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
     // within this document), `page` for actual page routes. Announcing a section
     // anchor as `page` would claim the section is the current document.
     const ariaCurrent = computed<null | 'location' | 'page'>(() => {
-      if (!props.active.value) return null;
+      if (!isActive.value) return null;
       const href = props.href.value;
       return href !== undefined && href.startsWith('#') ? 'location' : 'page';
     });

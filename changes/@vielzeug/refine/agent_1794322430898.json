@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "flip navbar toggle to menu-close-icon while an external mobile-sidebar drawer is open",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

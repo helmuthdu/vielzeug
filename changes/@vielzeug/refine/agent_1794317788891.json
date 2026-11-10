@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "navbar: add active-url automatic active matching, subnav second-tier slot, centered layout, and automatic mobile wrap when there is no mobile-menu panel or mobile-sidebar drawer",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -250,3 +250,129 @@ test.describe('Accessibility', () => {
     expect(results.violations).toEqual([]);
   });
 });
+
+test.describe('Mobile wrap', () => {
+  test('keeps the bar items live on their own row when there is no panel or drawer', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 600, width: 500 });
+    await refinePage.mountComponent(
+      '<ore-navbar id="nav"><span slot="logo">Studio</span>' +
+        '<ore-navbar-item href="#home">Home</ore-navbar-item>' +
+        '<ore-navbar-item href="#team">Team</ore-navbar-item></ore-navbar>',
+    );
+
+    const navbar = page.locator('#nav');
+
+    await expect(navbar).toHaveAttribute('data-mobile-wrap', 'true');
+
+    const logo = navbar.locator('[part="logo"]');
+    const center = navbar.locator('[part="center"]');
+
+    await expect(logo).toBeVisible();
+    await expect(navbar.locator('ore-navbar-item:not([slot])').first()).toBeVisible();
+
+    const logoBox = await logo.boundingBox();
+    const centerBox = await center.boundingBox();
+
+    // The items row sits under the logo row, not hidden behind a toggle.
+    expect(centerBox && logoBox && centerBox.y > logoBox.y + logoBox.height - 2).toBe(true);
+
+    // Nothing overflows the bar horizontally: the row scrolls itself if needed.
+    const bar = navbar.locator('[part="bar"]');
+
+    const barBox = await bar.boundingBox();
+    const centerScroll = await center.evaluate((el) => el.scrollWidth <= el.clientWidth + 1);
+
+    expect(barBox && barBox.width <= 500 + 1).toBe(true);
+    expect(centerScroll).toBe(true);
+
+    // Side clearance: the first pill must sit inside the scroll row's clip edge so
+    // its hover pill and focus ring are not cropped at the sides.
+    const rowBox = await center.boundingBox();
+    const pillBox = await navbar.locator('ore-navbar-item:not([slot])').first().boundingBox();
+
+    if (!rowBox || !pillBox) throw new Error('wrap row has no box');
+
+    expect(pillBox.x - rowBox.x).toBeGreaterThanOrEqual(2);
+  });
+
+  test('the panel collapse still wins when mobile-menu content exists', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 600, width: 500 });
+    await refinePage.mountComponent(
+      '<ore-navbar id="nav"><span slot="logo">Studio</span><ore-navbar-item href="#home">Home</ore-navbar-item>' +
+        '<a slot="mobile-menu" href="#home">Home</a></ore-navbar>',
+    );
+
+    const navbar = page.locator('#nav');
+
+    await expect(navbar).toHaveAttribute('data-mobile', 'true');
+
+    const count = await navbar.locator('[data-mobile-wrap]').count();
+
+    expect(count).toBe(0);
+    await expect(navbar.locator('[part="mobile-toggle"]')).toBeVisible();
+  });
+});
+
+test.describe('Subnav', () => {
+  test('renders as a second row under the bar and stays interactive', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-navbar id="nav"><span slot="logo">Studio</span><ore-navbar-item href="#home" active>Home</ore-navbar-item>' +
+        '<ore-navbar-item slot="subnav" href="#docs">Docs</ore-navbar-item>' +
+        '<ore-navbar-item slot="subnav" href="#blog">Blog</ore-navbar-item></ore-navbar>',
+    );
+
+    const navbar = page.locator('#nav');
+    const subnav = navbar.locator('[part="subnav"]');
+
+    await expect(subnav).toBeVisible();
+
+    const barBox = await navbar.locator('[part="bar"]').boundingBox();
+    const subnavBox = await subnav.boundingBox();
+
+    expect(barBox && subnavBox && subnavBox.y >= barBox.y + barBox.height - 2).toBe(true);
+
+    // The scroll row must not crop the pills: their boxes (and focus rings) need
+    // clearance inside the row's padding box.
+    const rowBox = subnavBox!;
+    const pillBox = await navbar.locator('ore-navbar-item[slot="subnav"]').first().boundingBox();
+
+    if (!pillBox) throw new Error('subnav pill has no box');
+
+    expect(pillBox.y - rowBox.y).toBeGreaterThanOrEqual(2);
+    expect(rowBox.y + rowBox.height - (pillBox.y + pillBox.height)).toBeGreaterThanOrEqual(2);
+
+    await expect(navbar.locator('ore-navbar-item[slot="subnav"] a').first()).toBeVisible();
+  });
+
+  test('stays hidden without subnav content', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-navbar id="nav"><span slot="logo">Studio</span></ore-navbar>');
+
+    await expect(page.locator('#nav [part="subnav"]')).toBeHidden();
+  });
+});
+
+test.describe('Centered', () => {
+  test('centers the default content with equal side space', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 600, width: 900 });
+    await refinePage.mountComponent(
+      '<ore-navbar id="nav" centered><span slot="logo">L</span>' +
+        '<ore-navbar-item href="#a" active>A</ore-navbar-item>' +
+        '<ore-button slot="end" size="sm">A long end action</ore-button></ore-navbar>',
+    );
+
+    const center = page.locator('#nav [part="center"]');
+
+    await expect(center).toBeVisible();
+
+    const box = await center.boundingBox();
+    const barBox = await page.locator('#nav [part="bar"]').boundingBox();
+
+    if (!box || !barBox) throw new Error('regions have no box');
+
+    // True center of the bar itself (the bar may be narrower than the viewport).
+    const centerMid = box.x + box.width / 2;
+    const barMid = barBox.x + barBox.width / 2;
+
+    expect(Math.abs(centerMid - barMid)).toBeLessThan(8);
+  });
+});

@@ -1,6 +1,6 @@
 # Navbar
 
-A responsive navigation bar with desktop and mobile layouts, plus sticky and floating modes. It includes a dedicated mobile menu slot and supports a floating-to-full-width transition when `floating` and `sticky` are used together.
+A responsive navigation bar with desktop and mobile layouts, plus sticky and floating modes. Items can mark themselves active from a single `active-url`, a `subnav` slot adds a second-tier row, `centered` pins the main navigation to the bar's center, and the mobile layout picks itself: an explicit `mobile-menu` panel, an external `mobile-sidebar` drawer, or the bar's own items wrapping under the logo. A floating-to-full-width transition runs when `floating` and `sticky` are used together.
 
 ## Keyboard Navigation
 
@@ -116,12 +116,93 @@ When both are set, the navbar starts as floating and switches to full-width stic
 
 </ComponentPreview>
 
+## Active State from the URL
+
+Set `active-url` once and every item resolves itself: an item is active when its `href` matches exactly, or when the URL nests under it (`/docs` stays highlighted on `/docs/intro`). Root `/` and in-page `#anchors` match exactly only, so they never light up everywhere. An explicit `active` on an item always wins, which keeps the escape hatch for forced or derived states.
+
+<ComponentPreview>
+
+```html
+<ore-navbar active-url="/docs/introduction" label="Docs navigation">
+  <span slot="logo" style="font-weight: var(--font-semibold);">Acme Docs</span>
+  <ore-navbar-item href="/">Home</ore-navbar-item>
+  <ore-navbar-item href="/docs">Docs</ore-navbar-item>
+  <ore-navbar-item href="/pricing">Pricing</ore-navbar-item>
+</ore-navbar>
+```
+
+</ComponentPreview>
+
+Matched items reflect `data-active` and carry `aria-current` (`page` for routes, `location` for in-page anchors), so assistive tech and your own styling see the same answer.
+
+## Second-Tier Navigation
+
+The `subnav` slot renders a quieter row under the bar for section navigation: plain `ore-navbar-item` pills, scrollable when they overflow. It appears only when it has content.
+
+<ComponentPreview>
+
+```html
+<ore-navbar active-url="/docs/introduction" label="Docs navigation">
+  <span slot="logo" style="font-weight: var(--font-semibold);">Acme Docs</span>
+  <ore-navbar-item href="/docs">Docs</ore-navbar-item>
+  <ore-navbar-item href="/changelog">Changelog</ore-navbar-item>
+  <ore-navbar-item slot="subnav" href="/docs/introduction">Introduction</ore-navbar-item>
+  <ore-navbar-item slot="subnav" href="/docs/installation">Installation</ore-navbar-item>
+  <ore-navbar-item slot="subnav" href="/docs/theming">Theming</ore-navbar-item>
+</ore-navbar>
+```
+
+</ComponentPreview>
+
+## Centered Layout
+
+`centered` pins the default-slot content to the bar's true center no matter how much the logo and end regions hold.
+
+<ComponentPreview>
+
+```html
+<ore-navbar centered label="Marketing navigation">
+  <span slot="logo" style="font-weight: var(--font-semibold);">Acme</span>
+  <ore-navbar-item href="#" active>Product</ore-navbar-item>
+  <ore-navbar-item href="#">Pricing</ore-navbar-item>
+  <ore-navbar-item href="#">Docs</ore-navbar-item>
+  <ore-button slot="end" variant="solid" color="primary" size="sm">Sign in</ore-button>
+</ore-navbar>
+```
+
+</ComponentPreview>
+
+## Mobile Layouts
+
+The mobile layout resolves in one order:
+
+1. `mobile-menu` slot content: a toggle opens the navbar's own overflow panel.
+2. A `mobile-sidebar` target: the toggle drives that sidebar's drawer.
+3. Neither: the bar's live navigation wraps onto its own scrollable row(s) under the logo. No duplication, no clone that drifts out of sync, and nothing to maintain twice.
+
+The `end` region still collapses in the wrapped layout: `persistent` exists precisely to stay visible through the collapse, `end` to collapse.
+
+<ComponentPreview>
+
+```html
+<ore-navbar label="Demo navigation" style="max-width: 26rem">
+  <span slot="logo" style="font-weight: var(--font-semibold);">Acme</span>
+  <ore-navbar-item href="#" active>Home</ore-navbar-item>
+  <ore-navbar-item href="#">Team</ore-navbar-item>
+  <ore-navbar-item href="#">Work</ore-navbar-item>
+  <ore-navbar-item href="#">Journal</ore-navbar-item>
+  <ore-navbar-item href="#">Contact</ore-navbar-item>
+</ore-navbar>
+```
+
+</ComponentPreview>
+
 ## Navbar + Sidebar Integration
 
 Recommended app-shell pattern:
 
 - Desktop: keep `ore-sidebar` visible and use the navbar for top-level context/actions.
-- Mobile: switch sidebar to bottom-nav mode and toggle its drawer from the navbar hamburger.
+- Mobile: switch sidebar to bottom-nav mode and toggle its drawer from the navbar control, with `menu-icon="panel-left-open"` so it reads as the same control as the desktop collapse toggle.
 - Use `mobile-sidebar` on `ore-navbar` and `bottom-nav-at="(max-width: ... )"` on `ore-sidebar`.
 
 <ComponentPreview>
@@ -130,7 +211,7 @@ Recommended app-shell pattern:
 <div class="navbar-sidebar-shell">
   <style>
     .navbar-sidebar-shell {
-      --shell-drawer-width: min(14rem, 42vw);
+      --shell-drawer-width: clamp(16rem, 28vw, 22rem);
       --shell-push-gap: var(--size-1);
       position: relative;
       width: 100%;
@@ -139,6 +220,9 @@ Recommended app-shell pattern:
       overflow: hidden;
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
+      /* Definite row: the bottom-nav sidebar is absolute, and its containing
+         block is the (un-stretched) row track — auto would shrink it short. */
+      grid-template-rows: minmax(0, 1fr);
       border: 1px solid var(--color-contrast-200);
       border-radius: var(--rounded-lg);
     }
@@ -148,10 +232,50 @@ Recommended app-shell pattern:
       min-height: 0;
     }
 
+    /* The sidebar sizes to 100% of its track (max-width only caps it), so an `auto`
+       track would shrink it to its content's max-content: above the bottom-nav
+       breakpoint the track is given the rail's real width (plus its inline margins). */
+    @media (width > 640px) {
+      .navbar-sidebar-shell {
+        grid-template-columns: calc(var(--shell-drawer-width) + var(--size-3)) minmax(0, 1fr);
+      }
+
+      /* Collapsed (tablet) rail: back to an auto track sized by the rail itself. */
+      .navbar-sidebar-shell:has(.shell-sidebar[data-collapsed]) {
+        grid-template-columns: auto minmax(0, 1fr);
+      }
+    }
+
     .navbar-sidebar-shell .shell-sidebar {
       --sidebar-width: var(--shell-drawer-width);
       min-height: 0;
       z-index: 3;
+    }
+
+    /* Tablet band: the rail rests inline, but expanding it overlays the panel
+       instead of stealing its track, so the navbar card never shrinks. */
+    @media (width > 640px) and (width <= 900px) {
+      .navbar-sidebar-shell:has(.shell-sidebar:not([data-collapsed])) {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .navbar-sidebar-shell .shell-sidebar:not([data-collapsed], [data-bottom-nav]) {
+        position: absolute;
+        inset: 0;
+        height: auto;
+      }
+    }
+
+    /* Bottom-nav mode: the sidebar is absolutely positioned (out of grid flow),
+       so the panel must be the only track. */
+    @media (width <= 640px) {
+      .navbar-sidebar-shell {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .navbar-sidebar-shell .shell-panel ore-navbar {
+        --navbar-height: var(--size-11);
+      }
     }
 
     .navbar-sidebar-shell .shell-panel {
@@ -195,6 +319,8 @@ Recommended app-shell pattern:
     }
 
     .navbar-sidebar-shell .shell-sidebar[variant='floating']:not([data-bottom-nav]) {
+      /* The panel's 12px padding already separates it from the sidebar, so the
+         sidebar carries no inline-end margin: edge → sidebar → navbar gaps match. */
       margin: var(--size-3) 0 var(--size-3) var(--size-3);
     }
 
@@ -209,7 +335,7 @@ Recommended app-shell pattern:
     label="Workspace navigation"
     variant="floating"
     container-breakpoints
-    responsive="(max-width: 1200px)"
+    responsive="(max-width: 900px)"
     bottom-nav-at="(max-width: 640px)">
     <ore-sidebar-item href="#" active bottom-nav>
       <ore-icon slot="icon" name="layout-dashboard" size="18"></ore-icon>
@@ -230,9 +356,11 @@ Recommended app-shell pattern:
   <section class="shell-panel">
     <ore-navbar
       floating
+      variant="bordered"
       breakpoint="(max-width: 640px)"
       container-breakpoints
       mobile-sidebar="#app-shell-sidebar"
+      menu-icon="panel-left-open"
       label="Workspace navigation">
       <span slot="logo" style="font-weight: var(--font-semibold);">Workspace</span>
       <ore-navbar-item slot="start" href="#" active>Dashboard</ore-navbar-item>
@@ -243,8 +371,9 @@ Recommended app-shell pattern:
 
     <main class="shell-content">
       <ore-text>
-        Desktop keeps the sidebar as a dedicated left rail while the right shell contains a floating navbar and content.
-        On mobile, opening the sidebar drawer pushes the entire right shell sideways.
+        Desktop keeps the sidebar as a dedicated left rail while the right shell contains a floating navbar and
+        content. On tablet the rail collapses, and expanding it overlays the panel so the navbar never shrinks. On
+        mobile the sidebar becomes a bottom bar, and opening its drawer pushes the entire right shell sideways.
       </ore-text>
     </main>
   </section>
@@ -301,10 +430,12 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 
 | Attribute               | Type                                                      | Default                   | Description                                                                                                                                                                                             |
 | ----------------------- | --------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `active-url`            | `string`                                                  | N/A                       | Current page URL; items whose `href` match it (exact, or nested paths keep the parent) become active automatically; explicit `active` wins                                                               |
+| `centered`              | `boolean`                                                 | `false`                   | Pin the default-slot content to the bar's true center                                                                                                                   |
 | `label`                 | `string`                                                  | `'Main navigation'`       | Accessible nav landmark label                                                                                                                                                                           |
 | `menu-icon`             | `string`                                                  | `'menu'`                  | Icon shown while the mobile menu is closed                                                                                                                                                              |
 | `menu-open-label`       | `string`                                                  | `'Open navigation menu'`  | Accessible label for the closed mobile menu toggle                                                                                                                                                      |
-| `menu-close-icon`       | `string`                                                  | `'x'`                     | Icon shown while the navbar's own mobile menu is open. Not applied when the toggle drives an external `mobile-sidebar` drawer: its scrim covers the toggle, so the drawer keeps the single close button |
+| `menu-close-icon`       | `string`                                                  | `'x'`                     | Icon shown while the mobile menu or the external `mobile-sidebar` drawer is open                                                                                                                  |
 | `menu-close-label`      | `string`                                                  | `'Close navigation menu'` | Accessible label for the open mobile menu toggle                                                                                                                                                        |
 | `sticky`                | `boolean`                                                 | `false`                   | Enables sticky mode                                                                                                                                                                                     |
 | `floating`              | `boolean`                                                 | `false`                   | Enables floating mode                                                                                                                                                                                   |
@@ -328,6 +459,8 @@ When `variant="frost"` has an explicit elevation, that elevation replaces the de
 | `start`         | Leading (start) content region |
 | `center`        | Center content region          |
 | `end`           | Trailing (end) content region  |
+| `persistent`    | Trailing region kept in the bar through the mobile collapse |
+| `subnav`        | Second-tier row container under the bar |
 | `mobile-toggle` | Mobile menu toggle button      |
 | `mobile-menu`   | Mobile overflow panel          |
 
@@ -339,13 +472,15 @@ When `variant="frost"` has an explicit elevation, that elevation replaces the de
 | `start`       | Left-aligned desktop content         |
 | (default)     | Center desktop content               |
 | `end`         | Right-aligned desktop content        |
+| `persistent`  | Trailing content that stays in the bar through the mobile collapse (global actions, status icons) |
+| `subnav`      | Second-tier row rendered under the bar |
 | `mobile-menu` | Mobile-only expandable content panel |
 
 **`ore-navbar` Events**
 
-| Event                | Detail              | Description                               |
-| -------------------- | ------------------- | ----------------------------------------- |
-| `mobile-menu-change` | `{ open: boolean }` | Fired when mobile menu open state changes |
+| Event                | Detail              | Description                                                                     |
+| -------------------- | ------------------- | ------------------------------------------------------------------------------- |
+| `mobile-menu-change` | `{ open: boolean }` | Fired when the navbar's own mobile panel toggles (drawer-driven open/close emits the sidebar's `drawer-change` instead) |
 
 **`ore-navbar` CSS Custom Properties**
 
@@ -371,7 +506,7 @@ When `variant="frost"` has an explicit elevation, that elevation replaces the de
 | Attribute  | Type      | Default | Description                                        |
 | ---------- | --------- | ------- | -------------------------------------------------- |
 | `href`     | `string`  | N/A     | Link URL (renders anchor when set)                 |
-| `active`   | `boolean` | `false` | Marks item as current page (`aria-current="page"`) |
+| `active`   | `boolean` | `false` | Marks item as current page (`aria-current="page"`); wins over the navbar's `active-url` match |
 | `disabled` | `boolean` | `false` | Disables interaction                               |
 | `rel`      | `string`  | N/A     | Link relationship when `href` is set               |
 | `target`   | `string`  | N/A     | Link target when `href` is set                     |

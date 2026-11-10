@@ -286,12 +286,10 @@ describe('ore-navbar', () => {
     }
   });
 
-  it('keeps the toggle a hamburger while it drives an external drawer open', async () => {
-    // The drawer's scrim covers the navbar, so the toggle cannot be clicked
-    // while the drawer is open. Flipping it to the × icon would paint a second
-    // close button that is a dead affordance; the drawer owns its own ×. The
-    // toggle must therefore keep the open (hamburger) icon and only report the
-    // open state through aria-expanded/aria-label.
+  it('flips the toggle icon while it drives an external drawer open', async () => {
+    // The toggle can close the external drawer (and tap-outside on the scrim
+    // closes it too), so its icon must reflect the drawer's open state rather
+    // than staying on the open-glyph like a stale control.
     const originalMatchMedia = window.matchMedia;
     const sidebar = document.createElement('ore-sidebar') as HTMLElement & {
       toggleDrawer?: () => void;
@@ -324,10 +322,9 @@ describe('ore-navbar', () => {
       fireClick(btn);
       await fixture.flush();
 
-      // Open state is reported, but the icon never becomes the close glyph.
       expect(btn.getAttribute('aria-expanded')).toBe('true');
       expect(btn.getAttribute('aria-label')).toBe('Close navigation menu');
-      expect(icon?.getAttribute('name')).toBe('menu');
+      expect(icon?.getAttribute('name')).toBe('x');
     } finally {
       sidebar.remove();
       window.matchMedia = originalMatchMedia;
@@ -357,6 +354,38 @@ describe('ore-navbar', () => {
       expect(fixture.element.hasAttribute('data-mobile')).toBe(true);
 
       sidebar.removeAttribute('data-bottom-nav');
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-mobile')).toBe(false);
+    } finally {
+      sidebar.remove();
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('keeps its own breakpoint in charge while a mobile-menu panel exists', async () => {
+    // Precedence pin: a linked drawer drives mobile mode only while the navbar has
+    // no panel of its own. With `mobile-menu` content present, the drawer's
+    // bottom-nav state must not force the navbar narrow: the navbar's own
+    // breakpoint decides.
+    const originalMatchMedia = window.matchMedia;
+    const sidebar = document.createElement('ore-sidebar');
+
+    sidebar.id = 'external-sidebar-precedence';
+    sidebar.setAttribute('data-bottom-nav', '');
+    document.body.append(sidebar);
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: false,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-navbar', {
+        attrs: { 'mobile-sidebar': '#external-sidebar-precedence' },
+        html: '<ore-navbar-item slot="mobile-menu" href="#one">One</ore-navbar-item>',
+      });
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('data-mobile')).toBe(false);
@@ -696,6 +725,107 @@ describe('ore-navbar-item', () => {
       const results = await axeCheck(fixture.element);
 
       expect(results.violations).toHaveLength(0);
+    });
+  });
+
+  describe('active-url matching', () => {
+    it('activates the exact match and the nested parent, not the rest', async () => {
+      fixture = await mount('ore-navbar', {
+        attrs: { 'active-url': '/docs/intro' },
+        html: `
+          <ore-navbar-item href="/">Home</ore-navbar-item>
+          <ore-navbar-item href="/docs">Docs</ore-navbar-item>
+          <ore-navbar-item href="/pricing">Pricing</ore-navbar-item>
+        `,
+      });
+      await fixture.flush();
+
+      const items = [...fixture.element.querySelectorAll('ore-navbar-item')];
+
+      expect(items[0]?.hasAttribute('data-active')).toBe(false);
+      expect(items[1]?.hasAttribute('data-active')).toBe(true);
+      expect(items[1]?.shadowRoot?.querySelector('[part="item"]')?.getAttribute('aria-current')).toBe('page');
+      expect(items[2]?.hasAttribute('data-active')).toBe(false);
+    });
+
+    it('matches the root href exactly, never by prefix', async () => {
+      fixture = await mount('ore-navbar', {
+        attrs: { 'active-url': '/anything' },
+        html: '<ore-navbar-item href="/">Home</ore-navbar-item>',
+      });
+      await fixture.flush();
+
+      expect(fixture.element.querySelector('ore-navbar-item')?.hasAttribute('data-active')).toBe(false);
+    });
+
+    it('lets an explicit active override a non-matching url', async () => {
+      fixture = await mount('ore-navbar', {
+        attrs: { 'active-url': '/docs' },
+        html: '<ore-navbar-item href="/pricing" active>Pricing</ore-navbar-item>',
+      });
+      await fixture.flush();
+
+      expect(fixture.element.querySelector('ore-navbar-item')?.hasAttribute('data-active')).toBe(true);
+    });
+
+    it('re-resolves when the active url changes', async () => {
+      fixture = await mount('ore-navbar', {
+        html: '<ore-navbar-item href="/docs">Docs</ore-navbar-item>',
+      });
+      await fixture.flush();
+
+      const item = fixture.element.querySelector('ore-navbar-item')!;
+
+      expect(item.hasAttribute('data-active')).toBe(false);
+
+      fixture.element.setAttribute('active-url', '/docs/getting-started');
+      await fixture.flush();
+
+      expect(item.hasAttribute('data-active')).toBe(true);
+    });
+  });
+
+  describe('mobile wrap', () => {
+    const withMobileOn = async (run: () => Promise<void>) => {
+      const originalMatchMedia = window.matchMedia;
+
+      window.matchMedia = vi.fn().mockImplementation(() => ({
+        addEventListener: vi.fn(),
+        matches: true,
+        removeEventListener: vi.fn(),
+      }));
+
+      try {
+        await run();
+      } finally {
+        window.matchMedia = originalMatchMedia;
+      }
+    };
+
+    it('flags the bar to wrap its own items when there is no panel or drawer', async () => {
+      await withMobileOn(async () => {
+        fixture = await mount('ore-navbar', {
+          html: '<ore-navbar-item href="/a">A</ore-navbar-item>',
+        });
+        await fixture.flush();
+
+        expect(fixture.element.hasAttribute('data-mobile')).toBe(true);
+        expect(fixture.element.hasAttribute('data-mobile-wrap')).toBe(true);
+      });
+    });
+
+    it('does not wrap when a mobile-menu panel owns the collapse', async () => {
+      await withMobileOn(async () => {
+        fixture = await mount('ore-navbar', {
+          html: `
+            <ore-navbar-item href="/a">A</ore-navbar-item>
+            <a slot="mobile-menu" href="/a">A</a>
+          `,
+        });
+        await fixture.flush();
+
+        expect(fixture.element.hasAttribute('data-mobile-wrap')).toBe(false);
+      });
     });
   });
 });

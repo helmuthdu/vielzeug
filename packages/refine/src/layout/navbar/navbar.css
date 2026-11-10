@@ -56,6 +56,7 @@
   }
 
   .navbar {
+    position: relative;
     box-sizing: border-box;
     display: flex;
     flex-wrap: nowrap;
@@ -114,7 +115,8 @@
   .navbar-start[hidden],
   .navbar-center[hidden],
   .navbar-end[hidden],
-  .navbar-persistent[hidden] {
+  .navbar-persistent[hidden],
+  .navbar-subnav[hidden] {
     display: none;
   }
 
@@ -168,6 +170,38 @@
      reclaim the right edge for the persistent region there. */
   :host([data-mobile]) .navbar-persistent {
     margin-inline-start: auto;
+  }
+
+  /* `centered`: the default-slot content pins to the bar's true center regardless of
+     how much each side holds (flex sizing can't balance three independent groups without
+     a wrapper per side; an absolute center can, and it's the honest geometry). */
+  :host([centered]) .navbar-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* ...except wrapped: the rows flow again, so centering would float over them. */
+  :host([data-mobile-wrap]) .navbar-center {
+    position: static;
+    top: auto;
+    left: auto;
+    transform: none;
+  }
+
+  /* Second tier: a quieter row under the bar; item pills are the content itself. */
+  .navbar-subnav {
+    box-sizing: border-box;
+    display: flex;
+    gap: var(--size-1);
+    align-items: center;
+    width: 100%;
+    max-width: var(--_navbar-width);
+    padding: var(--size-1) var(--size-4) var(--size-2);
+    margin-inline: auto;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
   .mobile-toggle {
@@ -261,6 +295,37 @@
   :host([data-mobile]) .navbar-center,
   :host([data-mobile]) .navbar-end {
     display: none;
+  }
+
+  /* Nothing to hide behind a toggle (no panel content, no external drawer): the bar's
+     own live items wrap onto their own scrollable row(s) under the logo instead of
+     vanishing. Same nodes, same state: no duplication, no clone to drift out of sync. */
+  :host([data-mobile-wrap]) .navbar {
+    flex-wrap: wrap;
+    row-gap: var(--size-1);
+    overflow: visible;
+  }
+
+  :host([data-mobile-wrap]) .navbar-start,
+  :host([data-mobile-wrap]) .navbar-center {
+    display: flex;
+    flex: 1 1 100%;
+    order: 2;
+    padding-block: var(--size-1);
+    padding-inline: var(--size-1);
+    /* Ring clearance at both ends of the scroll row (clipping happens at the padding
+       box); the negative margin gives it back, so pills stay aligned with the logo. */
+    margin-inline: calc(var(--size-1) * -1);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  :host([data-mobile-wrap]) .navbar-logo {
+    order: 0;
+  }
+
+  :host([data-mobile-wrap]) .navbar-persistent {
+    order: 1;
   }
 
   :host([data-mobile][data-mobile-open]) .navbar {
