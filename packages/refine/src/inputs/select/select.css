@@ -64,6 +64,14 @@
     align-items: center;
   }
 
+  /* User-set leading icon (icon attribute), before value/chips. */
+  .trigger-leading-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    color: var(--color-contrast-500);
+  }
+
   .trigger-selected-icon {
     flex-shrink: 0;
     color: var(--color-contrast-500);

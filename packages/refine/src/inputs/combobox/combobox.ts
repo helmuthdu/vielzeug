@@ -9,6 +9,7 @@ import {
   ref,
   useEmit,
   useField,
+  useSlots,
   watchEffect,
 } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
@@ -26,6 +27,7 @@ import { type AddEventListeners, COMPONENT_SIZES, FIELD_VARIANTS, ROUNDED_SIZES,
 import { dispatchNativeFieldEvent } from '../shared/native-field-event';
 import componentStyles from './combobox.css?inline';
 import type {
+  ComboboxLabels,
   ComboboxOptionInput,
   ComboboxOptionItem,
   OreComboboxEvents,
@@ -37,6 +39,7 @@ import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptio
 export { CHIP_TAG } from '../../feedback/chip/chip';
 export { INPUT_TAG } from '../input/input';
 export type {
+  ComboboxLabels,
   ComboboxOptionInput,
   OreComboboxEvents,
   OreComboboxOptionProps,
@@ -67,6 +70,7 @@ define<OreComboboxOptionProps>(COMBOBOX_OPTION_TAG, {
  *
  * @attr {string} value - Selected value(s). Use comma-separated for multiple.
  * @attr {boolean} multiple - Enable multiple selection
+ * @attr {number} max-visible - Maximum selected chips shown in the field; the rest collapse into a "+N" chip (default 3, 0 shows all)
  * @attr {boolean} creatable - Allow users to create custom options from search query
  * @attr {boolean} no-filter - Disable client-side filtering (useful for server-side search)
  * @attr {boolean} hide-label - Hide the visible label while retaining its accessible name
@@ -80,6 +84,9 @@ define<OreComboboxOptionProps>(COMBOBOX_OPTION_TAG, {
  * @fires {CustomEvent} search - Emitted when user types. detail: { query: string }
  *
  * @slot - Slotted combobox options and option groups
+ * @slot footer - Persistent footer row inside the dropdown (select-all, clear, links); hidden when empty
+ *
+ * @prop {Partial<ComboboxLabels>} [labels] - Localized strings for the empty (`noResults`) and creatable (`create(query)`) rows, merged over the English defaults (JS property only)
  * @cssprop --combobox-dropdown-bg - Dropdown panel background color
  * @cssprop --combobox-dropdown-border-color - Dropdown panel border color
  * @cssprop --combobox-option-hover-bg - Option background on hover
@@ -106,6 +113,12 @@ define<OreComboboxOptionProps>(COMBOBOX_OPTION_TAG, {
  * ```
  */
 export const COMBOBOX_TAG = 'ore-combobox' as const;
+
+/** English defaults for the `labels` property; merge a `Partial` to localize. */
+export const DEFAULT_COMBOBOX_LABELS: ComboboxLabels = {
+  create: (query) => `Create "${query}"`,
+  noResults: 'No results found',
+};
 define<OreComboboxProps>(COMBOBOX_TAG, {
   formAssociated: true,
   props: {
@@ -119,7 +132,9 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     'hide-label': prop.bool(false),
     label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
+    labels: prop.data<Partial<ComboboxLabels>>(),
     loading: prop.bool(false),
+    'max-visible': prop.number(3),
     multiple: prop.bool(false),
     name: prop.string(),
     'no-filter': prop.bool(false),
@@ -136,6 +151,9 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     const el = getHost();
     const emit = useEmit<OreComboboxEvents>();
     const watch = watchEffect;
+    const slots = useSlots();
+
+    const labels = computed<ComboboxLabels>(() => ({ ...DEFAULT_COMBOBOX_LABELS, ...props.labels.value }));
 
     const query = signal('');
 
@@ -328,8 +346,25 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
 
     // "Create" option shown when creatable + query doesn't match any existing option
     const creatableLabel = computed(() => {
-      return getCreatableLabel(query.value, isCreatable(), filteredOptions.value);
+      // The helper gates on creatable/query/exact-match and returns a display
+      // string when creation is offered; re-derive the label through the
+      // (localizable) create formatter.
+      if (!getCreatableLabel(query.value, isCreatable(), filteredOptions.value)) return '';
+
+      return labels.value.create(query.value.trim());
     });
+    const visibleSelected = computed(() => {
+      if (!isMultiple()) return [];
+
+      const limit = props['max-visible'].value;
+
+      if (!limit || limit <= 0) return selectedValues.value;
+
+      return selectedValues.value.slice(0, limit);
+    });
+    const hiddenSelectedCount = computed(() =>
+      isMultiple() ? selectedValues.value.length - visibleSelected.value.length : 0,
+    );
     const inputPlaceholder = () =>
       isMultiple() && selectedValues.value.length > 0 ? '' : props.placeholder.value || '';
 
@@ -834,8 +869,8 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
         <div slot="prefix" class="chips-row">
           <!-- Keep chip list diffing isolated so input node identity stays stable. -->
           <span class="chips-list">
-            ${() =>
-              (isMultiple() ? selectedValues.value : []).map(
+            ${() => {
+              const chips = visibleSelected.value.map(
                 (value) => html`
                   <ore-chip
                     value=${value}
@@ -848,7 +883,22 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
                     ${allOptions.value.find((option) => option.value === value)?.label ?? value}
                   </ore-chip>
                 `,
-              )}
+              );
+
+              if (hiddenSelectedCount.value > 0) {
+                const overflowCount = hiddenSelectedCount.value;
+                chips.push(html`<ore-chip
+                  class="chip-overflow"
+                  label="${() => `+${overflowCount}`}"
+                  aria-label="${() => `${overflowCount} more selected`}"
+                  variant="flat"
+                  size="sm">
+                  +${overflowCount}
+                </ore-chip>`);
+              }
+
+              return chips;
+            }}
           </span>
         </div>
         <span slot="suffix" class="combobox-suffix" aria-hidden="true">
@@ -915,7 +965,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
               }
 
               return html`
-                <div class="no-results" role="presentation">No results found</div>
+                <div class="no-results" role="presentation">${() => labels.value.noResults}</div>
               `;
             }
 
@@ -950,6 +1000,9 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
               `;
             });
           }}
+        </div>
+        <div class="dropdown-footer" part="footer" ?hidden="${() => !slots.has('footer').value}">
+          <slot name="footer"></slot>
         </div>
       </div>
     `;

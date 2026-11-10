@@ -61,7 +61,7 @@ Pass a JSON array of day-of-week indices (0 = Sunday … 6 = Saturday) to `weeke
 
 ## Calendar Events
 
-Pass an array of `CalendarEvent` objects via the `events` JS property. Each entry requires an `id`, a `date` (ISO 8601), and a `label`. An optional `color` accepts any CSS color value.
+Pass an array of `CalendarEvent` objects via the `events` JS property. Each entry requires an `id`, a `date` (ISO 8601), and a `label`. An optional `color` accepts any CSS color value, and an optional `endDate` makes the event multi-day: it then renders on every day from `date` through `endDate`.
 
 **Normal mode**: up to 3 colored dots per cell; additional events appear as a `+N` count.
 
@@ -75,7 +75,7 @@ Pass an array of `CalendarEvent` objects via the `events` JS property. Each entr
   document.getElementById('cal-events').events = [
     { id: '1', date: '2025-06-10', label: 'Team standup', color: 'var(--color-primary)' },
     { id: '2', date: '2025-06-10', label: 'Lunch with Alice' },
-    { id: '3', date: '2025-06-15', label: 'Release v2.0', color: '#e11d48' },
+    { id: '3', date: '2025-06-15', endDate: '2025-06-17', label: 'Release v2.0', color: '#e11d48' },
     { id: '4', date: '2025-06-20', label: 'Sprint review' },
     { id: '5', date: '2025-06-20', label: 'Retro', color: 'var(--color-success)' },
     { id: '6', date: '2025-06-20', label: 'Deploy', color: 'var(--color-warning)' },
@@ -186,6 +186,50 @@ Use `expanded` for a full-page, calendar-app style layout. Each day cell becomes
 
 </ComponentPreview>
 
+The locale also drives the grid order: `fr-FR` renders a Monday-first week, `en-US` a Sunday-first one, following the region's standard week info.
+
+## Week Start
+
+Force a specific first day with `week-starts-on` (ISO numbering, `1` = Monday … `7` = Sunday). It overrides the locale-derived value, and unknown locales default to Monday.
+
+```html
+<ore-calendar locale="en-US" week-starts-on="1" value="2025-06-15"></ore-calendar>
+```
+
+## Chrome Labels
+
+Navigation button names, the Today button, and the overflow pill live in the `labels` JavaScript property. Override only what you need:
+
+```js
+const calendar = document.querySelector('ore-calendar');
+
+calendar.labels = {
+  previous: 'Zurück',
+  next: 'Weiter',
+  today: 'Heute',
+  moreEvents: (count) => `+${count} weitere`,
+};
+```
+
+| Key          | Type                        | Default      | Where it appears                  |
+| ------------ | --------------------------- | ------------ | --------------------------------- |
+| `previous`   | `string`                    | `'Previous'` | Previous month/year button (a11y) |
+| `next`       | `string`                    | `'Next'`     | Next month/year button (a11y)     |
+| `today`      | `string`                    | `'Today'`    | Footer shortcut button            |
+| `moreEvents` | `(count: number) => string` | `+N more`    | Expanded-mode overflow pill       |
+
+## Today Shortcut
+
+When the displayed month differs from the current month, a subtle **Today** button appears below the grid. It jumps the display back without changing the selection; it hides itself again once you're looking at the current month.
+
+<ComponentPreview vertical height="460px">
+
+```html
+<ore-calendar value="2030-01-15"></ore-calendar>
+```
+
+</ComponentPreview>
+
 ## Inside a Form
 
 <ComponentPreview vertical>
@@ -220,7 +264,7 @@ The header label button cycles through three views on each click:
 
 1. **Day**: the standard month grid; Previous/Next navigate by month
 2. **Month**: a 4×3 grid of abbreviated month names; click a month to return to day view at that month
-3. **Year**: a 4×3 grid of year numbers; click a year to go to month view for that year
+3. **Year**: a 4×3 grid of year numbers; click a year to go to month view for that year. Previous/Next page the window by whole decades
 
 The calendar panel maintains a stable size across all three views: day view reserves space for a maximum 6-week month, and month/year views fill the same width.
 
@@ -228,31 +272,34 @@ The calendar panel maintains a stable size across all three views: day view rese
 
 ### Props
 
-| Prop           | Type              | Default        | Description                                                                                           |
-| -------------- | ----------------- | -------------- | ----------------------------------------------------------------------------------------------------- |
-| `value`        | `string`          | N/A            | Selected date in ISO 8601 format (`yyyy-MM-dd`)                                                       |
-| `min`          | `string`          | N/A            | Earliest selectable date (`yyyy-MM-dd`, inclusive)                                                    |
-| `max`          | `string`          | N/A            | Latest selectable date (`yyyy-MM-dd`, inclusive)                                                      |
-| `weekend-days` | `number[]`        | `[]`           | JSON array of day-of-week indices to disable (0 = Sunday … 6 = Saturday). e.g. `weekend-days="[0,6]"` |
-| `locale`       | `string`          | browser locale | BCP 47 locale string for day/month names                                                              |
-| `color`        | `string`          | N/A            | Theme color: `primary` \| `secondary` \| `info` \| `success` \| `warning` \| `error`                  |
-| `size`         | `string`          | `md`           | Component size: `sm` \| `md` \| `lg`                                                                  |
-| `rounded`      | `string`          | N/A            | Border radius override                                                                                |
-| `disabled`     | `boolean`         | `false`        | Disable all interaction                                                                               |
-| `required`     | `boolean`         | `false`        | Required field (form association)                                                                     |
-| `name`         | `string`          | N/A            | Form field name                                                                                       |
-| `events`       | `CalendarEvent[]` | `[]`           | Calendar events to display. Dots in normal mode, pills in expanded mode. Set via JS property          |
-| `expanded`     | `boolean`         | `false`        | Expanded calendar-app layout with tall cells and top-aligned day number circles                       |
-| `fullwidth`    | `boolean`         | `false`        | Expand calendar to full container width                                                               |
+| Prop             | Type                      | Default           | Description                                                                                           |
+| ---------------- | ------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------- |
+| `value`          | `string`                  | N/A               | Selected date in ISO 8601 format (`yyyy-MM-dd`)                                                       |
+| `min`            | `string`                  | N/A               | Earliest selectable date (`yyyy-MM-dd`, inclusive)                                                    |
+| `max`            | `string`                  | N/A               | Latest selectable date (`yyyy-MM-dd`, inclusive)                                                      |
+| `weekend-days`   | `number[]`                | `[]`              | JSON array of day-of-week indices to disable (0 = Sunday … 6 = Saturday). e.g. `weekend-days="[0,6]"` |
+| `week-starts-on` | `number`                  | locale week start | First day of the week (ISO: `1` = Monday … `7` = Sunday). Overrides the locale-derived grid order     |
+| `labels`         | `Partial<CalendarLabels>` | defaults          | Chrome string overrides: `previous`, `next`, `today`, `moreEvents` (JS property)                      |
+| `locale`         | `string`                  | browser locale    | BCP 47 locale string for day/month names                                                              |
+| `color`          | `string`                  | N/A               | Theme color: `primary` \| `secondary` \| `info` \| `success` \| `warning` \| `error`                  |
+| `size`           | `string`                  | `md`              | Component size: `sm` \| `md` \| `lg`                                                                  |
+| `rounded`        | `string`                  | N/A               | Border radius override                                                                                |
+| `disabled`       | `boolean`                 | `false`           | Disable all interaction                                                                               |
+| `required`       | `boolean`                 | `false`           | Required field (form association)                                                                     |
+| `name`           | `string`                  | N/A               | Form field name                                                                                       |
+| `events`         | `CalendarEvent[]`         | `[]`              | Calendar events to display. Dots in normal mode, pills in expanded mode. Set via JS property          |
+| `expanded`       | `boolean`                 | `false`           | Expanded calendar-app layout with tall cells and top-aligned day number circles                       |
+| `fullwidth`      | `boolean`                 | `false`           | Expand calendar to full container width                                                               |
 
 ### CalendarEvent
 
-| Field   | Type     | Required | Description                                                    |
-| ------- | -------- | -------- | -------------------------------------------------------------- |
-| `id`    | `string` | Yes      | Unique identifier                                              |
-| `date`  | `string` | Yes      | ISO 8601 date the event falls on (`yyyy-MM-dd`)                |
-| `label` | `string` | Yes      | Short label shown in the cell (pill text in expanded mode)     |
-| `color` | `string` | N/A      | Any CSS color value. Falls back to the component's theme color |
+| Field     | Type     | Required | Description                                                    |
+| --------- | -------- | -------- | -------------------------------------------------------------- |
+| `id`      | `string` | Yes      | Unique identifier                                              |
+| `date`    | `string` | Yes      | ISO 8601 start date of the event (`yyyy-MM-dd`)                |
+| `endDate` | `string` | N/A      | Inclusive ISO end date (`yyyy-MM-dd`) for multi-day events     |
+| `label`   | `string` | Yes      | Short label shown in the cell (pill text in expanded mode)     |
+| `color`   | `string` | N/A      | Any CSS color value. Falls back to the component's theme color |
 
 ### Events
 
@@ -281,6 +328,7 @@ The calendar panel maintains a stable size across all three views: day view rese
 | `header`   | Calendar header (nav buttons + label) |
 | `grid`     | The day grid                          |
 | `day`      | Individual day cell                   |
+| `footer`   | Footer row holding the Today shortcut |
 
 ## Accessibility
 

@@ -81,6 +81,14 @@
     text-align: start;
   }
 
+  [data-align='center'] {
+    text-align: center;
+  }
+
+  [data-align='right'] {
+    text-align: right;
+  }
+
   /* ── Header cells ────────────────────────────────────────────────────── */
 
   thead th,

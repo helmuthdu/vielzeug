@@ -1,5 +1,11 @@
-import { fireClick, fireKeyDown } from '@vielzeug/assay';
+import { fireKeyDown } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
+
+function pressStar(fixture: Fixture<HTMLElement>, star: number): void {
+  const starEl = fixture.shadow?.querySelector<HTMLElement>(`[data-star="${star}"]`);
+
+  if (starEl) starEl.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+}
 
 describe('ore-rating', () => {
   let fixture: Fixture<HTMLElement>;
@@ -15,443 +21,351 @@ describe('ore-rating', () => {
   // ─── Rendering ───────────────────────────────────────────────────────────────
 
   describe('Rendering', () => {
-    it('renders a radiogroup container', async () => {
+    it('renders a single slider (one focus stop) for the star row', async () => {
       fixture = await mount('ore-rating');
 
-      expect(fixture.query('[role="radiogroup"]')).toBeTruthy();
+      const slider = fixture.query('[role="slider"]');
+
+      expect(slider).toBeTruthy();
+      expect(slider?.getAttribute('tabindex')).toBe('0');
+      expect(fixture.shadow?.querySelectorAll('[role="radio"], button').length).toBe(0);
     });
 
-    it('renders 5 star buttons by default', async () => {
+    it('renders 5 stars by default', async () => {
       fixture = await mount('ore-rating');
 
-      expect(fixture.shadow?.querySelectorAll('[role="radio"]').length).toBe(5);
+      expect(fixture.shadow?.querySelectorAll('[data-star]').length).toBe(5);
     });
 
-    it('renders custom number of stars via max prop', async () => {
+    it('renders custom number of stars via max', async () => {
       fixture = await mount('ore-rating', { attrs: { max: '3' } });
 
-      expect(fixture.shadow?.querySelectorAll('[role="radio"]').length).toBe(3);
+      expect(fixture.shadow?.querySelectorAll('[data-star]').length).toBe(3);
     });
 
-    it('each star button has part="star"', async () => {
+    it('each star has part="star" with a fill layer', async () => {
       fixture = await mount('ore-rating');
 
       expect(fixture.shadow?.querySelectorAll('[part="star"]').length).toBe(5);
-    });
-
-    it('each star has type="button"', async () => {
-      fixture = await mount('ore-rating');
-
-      const stars = fixture.shadow?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [];
-
-      for (const star of stars) {
-        expect(star.getAttribute('type')).toBe('button');
-      }
-    });
-  });
-
-  // ─── Props ───────────────────────────────────────────────────────────────────
-
-  describe('Props', () => {
-    it('applies value attribute on host', async () => {
-      fixture = await mount('ore-rating', { attrs: { value: '3' } });
-
-      expect(fixture.element.getAttribute('value')).toBe('3');
-    });
-
-    it('applies color attribute on host', async () => {
-      fixture = await mount('ore-rating', { attrs: { color: 'primary' } });
-
-      expect(fixture.element.getAttribute('color')).toBe('primary');
-    });
-
-    it('applies size attribute on host', async () => {
-      fixture = await mount('ore-rating', { attrs: { size: 'lg' } });
-
-      expect(fixture.element.getAttribute('size')).toBe('lg');
+      expect(fixture.shadow?.querySelectorAll('[part="star"] .star-fill').length).toBe(5);
     });
 
     it('uses token-driven icon sizing instead of a fixed pixel size', async () => {
       fixture = await mount('ore-rating');
 
-      const firstIcon = fixture.shadow?.querySelector<HTMLElement>('ore-icon[name="star"]');
+      const firstIcon = fixture.shadow?.querySelector<HTMLElement>('ore-icon.base-icon');
 
       expect(firstIcon?.getAttribute('size')).toBe('var(--_star-size)');
     });
+  });
 
-    it('reflects disabled attribute', async () => {
-      fixture = await mount('ore-rating', { attrs: { disabled: '' } });
+  // ─── Label & ARIA value ──────────────────────────────────────────────────────
 
-      expect(fixture.element.hasAttribute('disabled')).toBe(true);
+  describe('Label & ARIA value', () => {
+    it('falls back to an aria-label "Rating" when no visible label is set', async () => {
+      fixture = await mount('ore-rating');
+
+      const slider = fixture.query('[role="slider"]');
+
+      expect(slider?.getAttribute('aria-label')).toBe('Rating');
+      expect(slider?.hasAttribute('aria-labelledby')).toBe(false);
+      expect(fixture.query('.label')?.hasAttribute('hidden')).toBe(true);
     });
 
-    it('reflects readonly attribute', async () => {
-      fixture = await mount('ore-rating', { attrs: { readonly: '' } });
+    it('renders a visible label and names the slider via aria-labelledby', async () => {
+      fixture = await mount('ore-rating', { attrs: { label: 'Product rating' } });
 
-      expect(fixture.element.hasAttribute('readonly')).toBe(true);
+      const slider = fixture.query('[role="slider"]');
+      const label = fixture.query<HTMLElement>('.label');
+
+      expect(label?.hidden).toBe(false);
+      expect(label?.textContent).toContain('Product rating');
+      expect(slider?.getAttribute('aria-labelledby')).toBe(label?.id);
+      expect(slider?.getAttribute('aria-label')).toBeNull();
     });
 
-    it('reflects solid attribute', async () => {
-      fixture = await mount('ore-rating', { attrs: { solid: '' } });
+    it('exposes value bounds on the slider', async () => {
+      fixture = await mount('ore-rating', { attrs: { max: '10', value: '4' } });
 
-      expect(fixture.element.hasAttribute('solid')).toBe(true);
+      const slider = fixture.query('[role="slider"]');
+
+      expect(slider?.getAttribute('aria-valuemin')).toBe('0');
+      expect(slider?.getAttribute('aria-valuemax')).toBe('10');
+      expect(slider?.getAttribute('aria-valuenow')).toBe('4');
+    });
+
+    it('announces the value and unrated state via aria-valuetext', async () => {
+      fixture = await mount('ore-rating', { attrs: { value: '3' } });
+
+      expect(fixture.query('[role="slider"]')?.getAttribute('aria-valuetext')).toBe('3 out of 5 stars');
+
+      fixture.element.setAttribute('value', '0');
+      await fixture.flush();
+
+      expect(fixture.query('[role="slider"]')?.getAttribute('aria-valuetext')).toBe('Not rated');
+    });
+
+    it('applies localized labels via the labels property', async () => {
+      fixture = await mount('ore-rating', {
+        attrs: { precision: '0.5', value: '4.5' },
+        props: { labels: { value: (v: number, max: number) => `${v} von ${max} Sternen` } },
+      });
+
+      expect(fixture.query('[role="slider"]')?.getAttribute('aria-valuetext')).toBe('4.5 von 5 Sternen');
     });
   });
 
   // ─── Selection ───────────────────────────────────────────────────────────────
 
   describe('Selection', () => {
-    it('clicking a star updates the value attribute', async () => {
+    it('pressing a star updates the value attribute', async () => {
       fixture = await mount('ore-rating');
 
-      const star3 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="3"]');
-
-      if (star3) {
-        fireClick(star3);
-        await fixture.flush();
-
-        expect(fixture.element.getAttribute('value')).toBe('3');
-      }
-    });
-
-    it('clicking a star does not change value when readonly', async () => {
-      fixture = await mount('ore-rating', { attrs: { readonly: '' } });
-
-      const star4 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="4"]');
-
-      if (star4) {
-        fireClick(star4);
-        await fixture.flush();
-
-        expect(fixture.element.getAttribute('value')).toBe('0');
-      }
-    });
-
-    it('clicking a star does not change value when disabled', async () => {
-      fixture = await mount('ore-rating', { attrs: { disabled: '' } });
-
-      const star2 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="2"]');
-
-      if (star2) {
-        fireClick(star2);
-        await fixture.flush();
-
-        expect(fixture.element.getAttribute('value')).toBe('0');
-      }
-    });
-
-    it('clicking a different star updates the selected state', async () => {
-      fixture = await mount('ore-rating', { attrs: { value: '2' } });
-
-      const star2 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="2"]');
-      const star4 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="4"]');
-      const star3 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="3"]');
-
-      expect(star2?.getAttribute('aria-checked')).toBe('true');
-      expect(star2?.hasAttribute('data-filled')).toBe(true);
-      expect(star3?.hasAttribute('data-filled')).toBe(false);
-
-      if (star4) {
-        fireClick(star4);
-        await fixture.flush();
-      }
-
-      expect(fixture.element.getAttribute('value')).toBe('4');
-      expect(star2?.getAttribute('aria-checked')).toBe('false');
-      expect(star4?.getAttribute('aria-checked')).toBe('true');
-      expect(star3?.hasAttribute('data-filled')).toBe(true);
-      expect(star4?.hasAttribute('data-filled')).toBe(true);
-    });
-
-    it('keeps selected stars marked filled when solid mode is enabled', async () => {
-      fixture = await mount('ore-rating', { attrs: { solid: '', value: '3' } });
-
-      const star1 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="1"]');
-      const star3 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="3"]');
-      const star4 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="4"]');
-
-      expect(star1?.hasAttribute('data-filled')).toBe(true);
-      expect(star3?.hasAttribute('data-filled')).toBe(true);
-      expect(star4?.hasAttribute('data-filled')).toBe(false);
-    });
-
-    it('updates selection on consecutive star clicks', async () => {
-      fixture = await mount('ore-rating', { attrs: { value: '1' } });
-
-      const star2 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="2"]');
-      const star5 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="5"]');
-
-      if (star2) {
-        fireClick(star2);
-        await fixture.flush();
-      }
-
-      expect(fixture.element.getAttribute('value')).toBe('2');
-
-      if (star5) {
-        fireClick(star5);
-        await fixture.flush();
-      }
-
-      expect(fixture.element.getAttribute('value')).toBe('5');
-      expect(star2?.getAttribute('aria-checked')).toBe('false');
-      expect(star5?.getAttribute('aria-checked')).toBe('true');
-    });
-
-    it('ArrowRight increases rating from focused star', async () => {
-      fixture = await mount('ore-rating', { attrs: { value: '2' } });
-
-      const star2 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="2"]');
-
-      if (!star2) return;
-
-      star2.focus();
-      fireKeyDown(star2, { key: 'ArrowRight' });
+      pressStar(fixture, 3);
       await fixture.flush();
 
       expect(fixture.element.getAttribute('value')).toBe('3');
     });
 
+    it('pressing the selected star clears back to 0', async () => {
+      fixture = await mount('ore-rating', { attrs: { value: '3' } });
+
+      pressStar(fixture, 3);
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('0');
+    });
+
+    it('clearable="false" keeps re-press a no-op', async () => {
+      fixture = await mount('ore-rating', { attrs: { clearable: 'false', value: '3' } });
+
+      const handler = vi.fn();
+
+      fixture.element.addEventListener('change', handler);
+      pressStar(fixture, 3);
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('3');
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('readonly blocks selection and removes the tab stop', async () => {
+      fixture = await mount('ore-rating', { attrs: { readonly: '', value: '2' } });
+
+      const slider = fixture.query('[role="slider"]');
+
+      expect(slider?.hasAttribute('tabindex')).toBe(false);
+      expect(slider?.getAttribute('aria-readonly')).toBe('true');
+
+      pressStar(fixture, 4);
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('2');
+    });
+
+    it('disabled blocks selection and marks aria-disabled', async () => {
+      fixture = await mount('ore-rating', { attrs: { disabled: '', value: '2' } });
+
+      const slider = fixture.query('[role="slider"]');
+
+      expect(slider?.hasAttribute('tabindex')).toBe(false);
+      expect(slider?.getAttribute('aria-disabled')).toBe('true');
+
+      pressStar(fixture, 5);
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('2');
+    });
+
+    it('fills stars up to the value (fractional widths included)', async () => {
+      fixture = await mount('ore-rating', { attrs: { precision: '0.5', value: '2.5' } });
+
+      const widths = [...(fixture.shadow?.querySelectorAll<HTMLElement>('.star-fill') ?? [])].map(
+        (el) => el.style.width,
+      );
+
+      expect(widths).toEqual(['100%', '100%', '50%', '0%', '0%']);
+    });
+
+    it('snaps external values onto the precision grid', async () => {
+      fixture = await mount('ore-rating', { attrs: { value: '4.3' } });
+
+      expect(fixture.query('[role="slider"]')?.getAttribute('aria-valuenow')).toBe('4');
+
+      fixture.element.setAttribute('precision', '0.5');
+      fixture.element.setAttribute('value', '4.3');
+      await fixture.flush();
+
+      expect(fixture.query('[role="slider"]')?.getAttribute('aria-valuenow')).toBe('4.5');
+    });
+  });
+
+  // ─── Keyboard ────────────────────────────────────────────────────────────────
+
+  describe('Keyboard', () => {
+    it('ArrowRight/ArrowLeft adjust by one step', async () => {
+      fixture = await mount('ore-rating', { attrs: { value: '2' } });
+
+      const slider = fixture.query<HTMLElement>('[role="slider"]');
+
+      if (!slider) return;
+
+      fireKeyDown(slider, { key: 'ArrowRight' });
+      await fixture.flush();
+      expect(fixture.element.getAttribute('value')).toBe('3');
+
+      fireKeyDown(slider, { key: 'ArrowLeft' });
+      await fixture.flush();
+      expect(fixture.element.getAttribute('value')).toBe('2');
+    });
+
+    it('arrows step by precision', async () => {
+      fixture = await mount('ore-rating', { attrs: { precision: '0.5', value: '2' } });
+
+      const slider = fixture.query<HTMLElement>('[role="slider"]');
+
+      if (!slider) return;
+
+      fireKeyDown(slider, { key: 'ArrowUp' });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('2.5');
+    });
+
+    it('decrementing below one star unrates to 0', async () => {
+      fixture = await mount('ore-rating', { attrs: { value: '1' } });
+
+      const slider = fixture.query<HTMLElement>('[role="slider"]');
+
+      if (!slider) return;
+
+      fireKeyDown(slider, { key: 'ArrowLeft' });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('0');
+    });
+
     it('Home/End set rating to min/max', async () => {
       fixture = await mount('ore-rating', { attrs: { max: '7', value: '4' } });
 
-      const star4 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="4"]');
+      const slider = fixture.query<HTMLElement>('[role="slider"]');
 
-      if (!star4) return;
+      if (!slider) return;
 
-      star4.focus();
-      fireKeyDown(star4, { key: 'Home' });
+      fireKeyDown(slider, { key: 'Home' });
       await fixture.flush();
-      expect(fixture.element.getAttribute('value')).toBe('1');
+      expect(fixture.element.getAttribute('value')).toBe('0');
 
-      fireKeyDown(star4, { key: 'End' });
+      fireKeyDown(slider, { key: 'End' });
       await fixture.flush();
       expect(fixture.element.getAttribute('value')).toBe('7');
+    });
+
+    it('ignores keys when readonly', async () => {
+      fixture = await mount('ore-rating', { attrs: { readonly: '', value: '2' } });
+
+      const slider = fixture.query<HTMLElement>('[role="slider"]');
+
+      if (!slider) return;
+
+      fireKeyDown(slider, { key: 'ArrowRight' });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('2');
     });
   });
 
   // ─── Events ──────────────────────────────────────────────────────────────────
 
   describe('Events', () => {
-    it('fires change event when a star is clicked', async () => {
+    it('fires input and change when the rating changes', async () => {
       fixture = await mount('ore-rating');
 
-      const handler = vi.fn();
+      const input = vi.fn();
+      const change = vi.fn();
 
-      fixture.element.addEventListener('change', handler);
+      fixture.element.addEventListener('input', input);
+      fixture.element.addEventListener('change', change);
 
-      const star = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="4"]');
-
-      if (star) fireClick(star);
-
+      pressStar(fixture, 4);
       await fixture.flush();
 
-      expect(handler).toHaveBeenCalled();
+      expect(input).toHaveBeenCalled();
+      expect(change).toHaveBeenCalled();
     });
 
-    it('change event exposes the selected star value on the host', async () => {
-      fixture = await mount('ore-rating');
-
-      let target: (HTMLElement & { value: string }) | undefined;
-
-      fixture.element.addEventListener('change', (e: Event) => {
-        target = e.currentTarget as HTMLElement & { value: string };
-      });
-
-      const star = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="2"]');
-
-      if (star) fireClick(star);
-
-      await fixture.flush();
-
-      expect(target?.value).toBe('2');
-    });
-
-    it('does not fire change when readonly', async () => {
+    it('does not fire events when readonly', async () => {
       fixture = await mount('ore-rating', { attrs: { readonly: '' } });
 
       const handler = vi.fn();
 
       fixture.element.addEventListener('change', handler);
-
-      const firstStar = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="1"]');
-
-      if (firstStar) fireClick(firstStar);
-
-      await fixture.flush();
-
-      expect(handler).not.toHaveBeenCalled();
-    });
-
-    it('does not fire change when disabled', async () => {
-      fixture = await mount('ore-rating', { attrs: { disabled: '' } });
-
-      const handler = vi.fn();
-
-      fixture.element.addEventListener('change', handler);
-
-      const star = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="5"]');
-
-      if (star) fireClick(star);
-
+      pressStar(fixture, 1);
       await fixture.flush();
 
       expect(handler).not.toHaveBeenCalled();
     });
   });
 
-  // ─── Edge Cases ──────────────────────────────────────────────────────────────
+  // ─── Required ────────────────────────────────────────────────────────────────
 
-  describe('Edge Cases', () => {
-    it('supports star counts other than 5', async () => {
-      fixture = await mount('ore-rating', { attrs: { max: '10' } });
+  describe('Required', () => {
+    it('marks the slider aria-required', async () => {
+      fixture = await mount('ore-rating', { attrs: { required: '' } });
 
-      expect(fixture.shadow?.querySelectorAll('[role="radio"]').length).toBe(10);
+      expect(fixture.query('[role="slider"]')?.getAttribute('aria-required')).toBe('true');
+    });
+
+    it('omits aria-required when disabled', async () => {
+      fixture = await mount('ore-rating', { attrs: { disabled: '', required: '' } });
+
+      expect(fixture.query('[role="slider"]')?.hasAttribute('aria-required')).toBe(false);
     });
   });
+
+  // ─── Helper / Error Text ─────────────────────────────────────────────────────
 
   describe('Helper / Error Text', () => {
-    it('renders helper text when helper attribute is set', async () => {
+    it('renders helper text and describes the slider with it', async () => {
       fixture = await mount('ore-rating', { attrs: { helper: 'Rate your experience' } });
 
-      const helperEl = fixture.query('.helper-text:not([role="alert"])');
+      const helper = fixture.query('[part="helper"]');
 
-      expect(helperEl?.textContent?.trim()).toBe('Rate your experience');
+      expect(helper?.hasAttribute('hidden')).toBe(false);
+      expect(helper?.textContent?.trim()).toBe('Rate your experience');
+      expect(fixture.query('[role="slider"]')?.getAttribute('aria-describedby')).toBe(helper?.id);
     });
 
-    it('renders error text with role="alert" when error attribute is set', async () => {
+    it('renders error text with role="alert" and invalidates the slider', async () => {
       fixture = await mount('ore-rating', { attrs: { error: 'A rating is required' } });
 
-      const errorEl = fixture.query('.helper-text[role="alert"]');
+      const error = fixture.query('[part="error"]');
+      const slider = fixture.query('[role="slider"]');
 
-      expect(errorEl?.textContent?.trim()).toBe('A rating is required');
+      expect(error?.getAttribute('role')).toBe('alert');
+      expect(error?.textContent?.trim()).toBe('A rating is required');
+      expect(slider?.getAttribute('aria-invalid')).toBe('true');
+      expect(slider?.getAttribute('aria-errormessage')).toBe(error?.id);
+      expect(slider?.getAttribute('aria-describedby')).toBe(error?.id);
     });
 
-    it('shows error text (not helper text) when both are set', async () => {
-      fixture = await mount('ore-rating', { attrs: { error: 'A rating is required', helper: 'Rate your experience' } });
+    it('error hides the helper text', async () => {
+      fixture = await mount('ore-rating', { attrs: { error: 'Required', helper: 'Pick 1-5' } });
 
-      const region = fixture.query('.helper-text');
-
-      expect(region?.getAttribute('role')).toBe('alert');
-      expect(region?.textContent?.trim()).toBe('A rating is required');
-      expect(region?.textContent).not.toContain('Rate your experience');
+      expect(fixture.query('[part="helper"]')?.hasAttribute('hidden')).toBe(true);
+      expect(fixture.query('[part="error"]')?.hasAttribute('hidden')).toBe(false);
     });
 
-    it('wires aria-describedby to the helper text region', async () => {
-      fixture = await mount('ore-rating', { attrs: { helper: 'Pick 1-5' } });
-
-      const group = fixture.query('[role="radiogroup"]');
-      const helperEl = fixture.query('.helper-text');
-
-      expect(group?.getAttribute('aria-describedby')).toBe(helperEl?.id);
-    });
-
-    it('has no aria-describedby when neither helper nor error is set', async () => {
+    it('has no description when neither helper nor error is set', async () => {
       fixture = await mount('ore-rating');
 
-      expect(fixture.query('[role="radiogroup"]')?.hasAttribute('aria-describedby')).toBe(false);
-    });
-  });
-});
-
-// ─── Accessibility ────────────────────────────────────────────────────────────
-
-describe('ore-rating accessibility', () => {
-  let fixture: Fixture<HTMLElement>;
-
-  beforeAll(async () => {
-    await (() => import('./rating'))();
-  });
-
-  afterEach(() => {
-    fixture?.dispose();
-  });
-
-  describe('WAI-ARIA Radiogroup Pattern', () => {
-    it('container has role="radiogroup"', async () => {
-      fixture = await mount('ore-rating');
-
-      expect(fixture.query('[role="radiogroup"]')).toBeTruthy();
-    });
-
-    it('each star has role="radio"', async () => {
-      fixture = await mount('ore-rating');
-
-      const stars = fixture.shadow?.querySelectorAll('[role="radio"]') ?? [];
-
-      expect(stars.length).toBe(5);
-    });
-
-    it('radiogroup has aria-label', async () => {
-      fixture = await mount('ore-rating', { attrs: { label: 'Product rating' } });
-
-      expect(fixture.query('[role="radiogroup"]')?.getAttribute('aria-label')).toBe('Product rating');
-    });
-
-    it('default radiogroup label is "Rating"', async () => {
-      fixture = await mount('ore-rating');
-
-      expect(fixture.query('[role="radiogroup"]')?.getAttribute('aria-label')).toBe('Rating');
-    });
-  });
-
-  describe('Star Labels', () => {
-    it('each star has a descriptive aria-label', async () => {
-      fixture = await mount('ore-rating');
-
-      const stars = fixture.shadow?.querySelectorAll('[role="radio"]') ?? [];
-
-      expect(stars[0]?.getAttribute('aria-label')).toBe('1 star');
-      expect(stars[1]?.getAttribute('aria-label')).toBe('2 stars');
-      expect(stars[4]?.getAttribute('aria-label')).toBe('5 stars');
-    });
-  });
-
-  describe('Selected State', () => {
-    it('selected star has aria-checked="true"', async () => {
-      fixture = await mount('ore-rating', { attrs: { value: '3' } });
-
-      const star3 = fixture.shadow?.querySelector('[data-star="3"]');
-
-      expect(star3?.getAttribute('aria-checked')).toBe('true');
-    });
-
-    it('non-selected stars have aria-checked="false"', async () => {
-      fixture = await mount('ore-rating', { attrs: { value: '3' } });
-
-      const star1 = fixture.shadow?.querySelector('[data-star="1"]');
-      const star5 = fixture.shadow?.querySelector('[data-star="5"]');
-
-      expect(star1?.getAttribute('aria-checked')).toBe('false');
-      expect(star5?.getAttribute('aria-checked')).toBe('false');
-    });
-  });
-
-  describe('Disabled & Readonly', () => {
-    it('star buttons are disabled when rating is disabled', async () => {
-      fixture = await mount('ore-rating', { attrs: { disabled: '' } });
-
-      const stars = fixture.shadow?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [];
-
-      for (const star of stars) {
-        expect(star.disabled).toBe(true);
-      }
-    });
-
-    it('star buttons are disabled when rating is readonly', async () => {
-      fixture = await mount('ore-rating', { attrs: { readonly: '' } });
-
-      const stars = fixture.shadow?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [];
-
-      for (const star of stars) {
-        expect(star.disabled).toBe(true);
-      }
+      expect(fixture.query('[role="slider"]')?.hasAttribute('aria-describedby')).toBe(false);
     });
   });
 
   describe('Accessibility', () => {
     it('passes axe checks', async () => {
-      fixture = await mount('ore-rating', { attrs: { label: 'Product rating' } });
+      fixture = await mount('ore-rating', { attrs: { label: 'Product rating', value: '3' } });
 
       const results = await axeCheck(fixture.element);
 

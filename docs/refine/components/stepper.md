@@ -216,6 +216,32 @@ applyOrientation();
 </script>
 ```
 
+## Step Counter
+
+The accessible “Step X of Y” text is per-step and screen-reader-only. A visible counter is a one-line composition; drive it from the same state that sets `value`.
+
+<ComponentPreview vertical>
+
+```html
+<ore-text id="stepper-counter" size="sm" style="color: var(--color-contrast-500)">Step 2 of 3</ore-text>
+<ore-stepper id="stepper-counter-example" value="shipping" clickable color="primary" style="width:100%">
+  <ore-step value="cart">Cart</ore-step>
+  <ore-step value="shipping">Shipping</ore-step>
+  <ore-step value="payment">Payment</ore-step>
+</ore-stepper>
+<script>
+  const counterStepper = document.getElementById('stepper-counter-example');
+  const counter = document.getElementById('stepper-counter');
+  const values = [...counterStepper.querySelectorAll('ore-step')].map((step) => step.getAttribute('value'));
+
+  counterStepper.addEventListener('change', (e) => {
+    counter.textContent = `Step ${values.indexOf(e.detail.value) + 1} of ${values.length}`;
+  });
+</script>
+```
+
+</ComponentPreview>
+
 ## API Reference
 
 **`ore-stepper`** Attributes
@@ -269,6 +295,16 @@ applyOrientation();
 | (default)     | Step label                                                       |
 | `description` | Optional supporting text shown below the label                   |
 | `icon`        | Custom icon replacing the automatic number/check/error indicator |
+
+**`ore-step`** CSS Custom Properties
+
+| Property                | Description                                                         |
+| ----------------------- | ------------------------------------------------------------------- |
+| `--step-indicator-size` | Indicator circle diameter (size tiers set 24/32/40 px for sm/md/lg) |
+| `--step-font-size`      | Step label font size                                                |
+| `--step-gap`            | Gap between the indicator and the label content                     |
+
+Set them on `ore-step` (inline style or a document selector); outer declarations win over the component's own defaults.
 
 ## Accessibility
 

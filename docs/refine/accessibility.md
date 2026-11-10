@@ -92,7 +92,7 @@ Before each minor release:
 | `ore-radio`        | `radio` (native)          | Arrow keys (group nav)             | `aria-checked`                                                                |
 | `ore-switch`       | `switch`                  | Space                              | `aria-checked`                                                                |
 | `ore-slider`       | `slider`                  | Arrow keys                         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext`           |
-| `ore-rating`       | `radiogroup` + `radio`    | Arrow keys                         | `aria-label` per star                                                         |
+| `ore-rating`       | `slider`                  | Arrow keys                         | `aria-valuetext` for the value                                                |
 | `ore-color-picker` | `radiogroup` + `radio`    | Arrow keys, Home/End               | `aria-checked` per swatch, roving `tabindex`, group `aria-label` from `label` |
 | `ore-counter`      | `group` + `spinbutton`    | Arrow keys, Home/End, Page Up/Down | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-live`                |
 | `ore-number-input` | `spinbutton`              | Arrow keys                         | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`                             |

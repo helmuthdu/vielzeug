@@ -248,14 +248,24 @@
     margin-top: var(--size-2);
   }
 
+  .dg-error-message {
+    display: inline-flex;
+    gap: var(--size-2);
+    align-items: center;
+    color: var(--color-error);
+  }
+
   /* ── Controls bar (tabs + action row) ───────────────────────────────────── */
 
   .dg-controls {
+    /* Compact toolbar: shrink the shared 44px button touch target so ghost
+       triggers and view tabs read as pills inside the bar. */
+    --button-min-height: var(--size-7);
+
     display: flex;
     gap: var(--size-3);
     align-items: center;
     justify-content: space-between;
-    height: var(--size-8);
     padding: var(--size-1-5) var(--_cell-padding-x);
     background: var(--_header-bg);
     border-block-end: var(--border) solid var(--_border-color);
@@ -275,7 +285,7 @@
   .dg-tab {
     --button-padding: var(--size-0-5) var(--size-2-5);
     --button-font-size: var(--text-xs);
-    --button-color: var(--color-contrast-500);
+    --button-color: var(--color-contrast-600);
 
     flex: 1;
     min-width: 0;
@@ -539,6 +549,10 @@
   /* ── Footer / pagination bar ─────────────────────────────────────────────── */
 
   .dg-footer {
+    /* Match the controls bar: sm buttons read at their 32px preset height,
+       not the 44px touch-target floor, so the compact footer stays even. */
+    --button-min-height: var(--size-7);
+
     display: flex;
     flex-wrap: wrap;
     gap: var(--size-2);

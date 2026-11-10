@@ -303,6 +303,8 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
  * - Prev/next buttons call `source.previous()` / `source.next()`.
  * - Search calls `source.setParams(search)` when that optional method exists.
  * - `source.state.loading` contributes to the grid's `aria-busy` state.
+ * - A set `source.state.error` renders an error row instead of the empty state; the retry
+ *   button calls `source.reload()` when that optional method exists.
  * - Client-side sort and filter are bypassed; update source params from grid events externally.
  *
  * @example
@@ -324,6 +326,8 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
 export type DataGridSource<T = Record<string, unknown>> = {
   next(): Promise<void> | void;
   previous(): Promise<void> | void;
+  /** Re-runs the source's current load. When present, the error row offers a retry button. */
+  reload?(): Promise<void> | void;
   setParams?(search: string): Promise<void> | void;
   readonly state: {
     readonly error: { message: string } | null;
@@ -528,6 +532,10 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       { immediate: true },
     );
 
+    // A failed source load outranks the empty state: "No data" would mislabel
+    // an outage as an empty dataset.
+    const sourceError = computed(() => (hasSource.value ? sourceMeta.value.error : null));
+
     // ── Feature model ─────────────────────────────────────────────────────────
     // One model owns every client-side grid transform and interaction state.
     // Source-backed grids retain source-owned filtering, sorting, and pagination.
@@ -597,6 +605,10 @@ define<OreDataGridProps>(DATAGRID_TAG, {
 
     const settleSourceCommand = (result: Promise<unknown> | void): void => {
       if (result) void result.catch((error) => warn(`ore-datagrid: source command failed: ${String(error)}`));
+    };
+
+    const retrySource = (): void => {
+      settleSourceCommand(props.source.value?.reload?.());
     };
     const setSourceSearch = (search: string): void => {
       settleSourceCommand(props.source.value?.setParams?.(search));
@@ -1337,7 +1349,37 @@ define<OreDataGridProps>(DATAGRID_TAG, {
           <tbody class="dg-body" part="tbody">
             ${() =>
               model.currentPageItems.value.length === 0
-                ? html`
+                ? sourceError.value
+                  ? html`
+                      <tr role="row">
+                        <td
+                          class="dg-empty dg-empty-error"
+                          role="gridcell"
+                          colspan="${() => String(effectiveColCount.value)}">
+                          <div class="dg-empty-content" role="alert">
+                            <span class="dg-error-message">
+                              <ore-icon
+                                name="triangle-alert"
+                                size="16"
+                                stroke-width="2"
+                                aria-hidden="true"></ore-icon>
+                              ${() => labels.value.errorText}
+                            </span>
+                            ${() =>
+                              props.source.value?.reload
+                                ? html`
+                                    <div class="dg-empty-actions">
+                                      <ore-button variant="text" size="sm" @click="${retrySource}">
+                                        ${() => labels.value.retry}
+                                      </ore-button>
+                                    </div>
+                                  `
+                                : html``}
+                          </div>
+                        </td>
+                      </tr>
+                    `
+                  : html`
                     <tr role="row">
                       <td class="dg-empty" role="gridcell" colspan="${() => String(effectiveColCount.value)}">
                         <div class="dg-empty-content">

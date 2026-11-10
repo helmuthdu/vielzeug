@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "rating redesigned as a slider control: single tab stop, half-star precision, gold default via --color-star, label/helper/error chrome, clearable + required; solid and sparkle burst removed",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

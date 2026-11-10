@@ -128,12 +128,12 @@ Use native `<optgroup>` elements to create labelled groups. For lists longer tha
 
 ## Multiple Selection
 
-Add `multiple` to allow selecting more than one option. Each selected value is displayed as a removable `ore-chip` tag inside the trigger field: clicking the × on a chip deselects that value without closing the dropdown. Only use `multiple` for selections where more than one value logically makes sense.
+Add `multiple` to allow selecting more than one option. Each selected value is displayed as a removable `ore-chip` tag inside the trigger field: clicking the × on a chip deselects that value without closing the dropdown. Only the first three chips are shown; the rest collapse into a `+N` chip. Set `max-visible` to change the cap, or `0` to show every chip. Only use `multiple` for selections where more than one value logically makes sense.
 
 <ComponentPreview vertical>
 
 ```html
-<ore-select label="Skills" multiple color="primary">
+<ore-select label="Skills" multiple color="primary" value="ts,rust,go,python">
   <option value="ts">TypeScript</option>
   <option value="rust">Rust</option>
   <option value="go">Go</option>
@@ -269,6 +269,15 @@ select.options = [
 
 Icons inherit the option's state color: muted by default, the theme color when the option is selected. In single-select mode the selected option's icon(s) also appear in the trigger before the value text.
 
+To put a static icon on the control itself, use the `icon` attribute. It renders before the value (or chips) in the trigger:
+
+```html
+<ore-select label="Search scope" icon="search">
+  <option value="all">Everything</option>
+  <option value="docs">Documentation</option>
+</ore-select>
+```
+
 ## In a Form
 
 `ore-select` is form-associated. Read the value via `FormData` or a `change` event. Supply a placeholder `<option value="">…</option>` when the field is not pre-selected.
@@ -309,24 +318,26 @@ Icons inherit the option's state color: muted by default, the theme color when t
 
 ### Attributes
 
-| Attribute         | Type                                                                                   | Default     | Description                                |
-| ----------------- | -------------------------------------------------------------------------------------- | ----------- | ------------------------------------------ |
-| `value`           | `string`                                                                               | `''`        | Currently selected value                   |
-| `name`            | `string`                                                                               | `''`        | Form field name                            |
-| `label`           | `string`                                                                               | `''`        | Label text                                 |
-| `label-placement` | `'inset' \| 'outside'`                                                                 | `'inset'`   | Label positioning                          |
-| `placeholder`     | `string`                                                                               | `''`        | Empty-state placeholder text               |
-| `helper`          | `string`                                                                               | `''`        | Helper text shown below the control        |
-| `error`           | `string`                                                                               | `''`        | Error message; overrides helper text       |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                              | `'solid'`   | Visual style variant                       |
-| `color`           | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                                |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                                 | `'md'`      | Control size                               |
-| `multiple`        | `boolean`                                                                              | `false`     | Allow multiple selections                  |
-| `disabled`        | `boolean`                                                                              | `false`     | Disable the control                        |
-| `required`        | `boolean`                                                                              | `false`     | Mark field as required for form validation |
-| `fullwidth`       | `boolean`                                                                              | `false`     | Expand to full width                       |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                             | N/A         | Override border-radius                     |
-| `loading`         | `boolean`                                                                              | `false`     | Show loading indicator in the dropdown     |
+| Attribute         | Type                                                                                   | Default     | Description                                                 |
+| ----------------- | -------------------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------- |
+| `value`           | `string`                                                                               | `''`        | Currently selected value                                    |
+| `name`            | `string`                                                                               | `''`        | Form field name                                             |
+| `label`           | `string`                                                                               | `''`        | Label text                                                  |
+| `label-placement` | `'inset' \| 'outside'`                                                                 | `'inset'`   | Label positioning                                           |
+| `placeholder`     | `string`                                                                               | `''`        | Empty-state placeholder text                                |
+| `helper`          | `string`                                                                               | `''`        | Helper text shown below the control                         |
+| `error`           | `string`                                                                               | `''`        | Error message; overrides helper text                        |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                              | `'solid'`   | Visual style variant                                        |
+| `color`           | `'default' \| 'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error' \| 'info'` | `'default'` | Color theme                                                 |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                                 | `'md'`      | Control size                                                |
+| `multiple`        | `boolean`                                                                              | `false`     | Allow multiple selections                                   |
+| `max-visible`     | `number`                                                                               | `3`         | Chips shown before the `+N` overflow chip (`0` = unlimited) |
+| `icon`            | `string`                                                                               | N/A         | Leading icon rendered inside the trigger                    |
+| `disabled`        | `boolean`                                                                              | `false`     | Disable the control                                         |
+| `required`        | `boolean`                                                                              | `false`     | Mark field as required for form validation                  |
+| `fullwidth`       | `boolean`                                                                              | `false`     | Expand to full width                                        |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                             | N/A         | Override border-radius                                      |
+| `loading`         | `boolean`                                                                              | `false`     | Show loading indicator in the dropdown                      |
 
 ### Slots
 

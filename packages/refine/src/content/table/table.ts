@@ -54,6 +54,7 @@ if (!customElements.get('ore-tr')) customElements.define('ore-tr', class extends
  * @element ore-th
  * @attr {number} colspan  - Mirrors to native `<th colspan>`
  * @attr {number} rowspan  - Mirrors to native `<th rowspan>`
+ * @attr {string} align    - Text alignment: 'left' | 'center' | 'right'
  * @attr {string} scope    - Mirrors to native `<th scope>`: 'col' | 'row' | 'colgroup' | 'rowgroup'
  * @attr {string} headers  - Mirrors to native `<th headers>`
  *
@@ -73,6 +74,7 @@ if (!customElements.get('ore-th')) customElements.define('ore-th', class extends
  * @element ore-td
  * @attr {number} colspan  - Mirrors to native `<td colspan>`
  * @attr {number} rowspan  - Mirrors to native `<td rowspan>`
+ * @attr {string} align    - Text alignment: 'left' | 'center' | 'right'
  * @attr {string} headers  - Mirrors to native `<td headers>`
  *
  * @example
@@ -103,16 +105,17 @@ function syncCell(source: Element, native: HTMLTableCellElement, fallbackScope?:
     // components like ore-skeleton render correctly inside the shadow table.
     // Guard: skip re-clone if the serialised content is identical to avoid
     // redundant DOM work on every MutationObserver tick (e.g. 250+ cells
-    // of skeleton loaders all cloning on each attribute change).
+    // of skeleton loaders all cloning on each attribute change). Attribute
+    // mirroring below still runs: only the clone is skipped.
     const snapshot = source.innerHTML;
 
-    if (native.getAttribute('data-src-html') === snapshot) return;
+    if (native.getAttribute('data-src-html') !== snapshot) {
+      native.setAttribute('data-src-html', snapshot);
+      native.textContent = '';
 
-    native.setAttribute('data-src-html', snapshot);
-    native.textContent = '';
-
-    for (const child of source.childNodes) {
-      native.appendChild(child.cloneNode(true));
+      for (const child of source.childNodes) {
+        native.appendChild(child.cloneNode(true));
+      }
     }
   } else {
     const text = source.textContent ?? '';
@@ -126,6 +129,13 @@ function syncCell(source: Element, native: HTMLTableCellElement, fallbackScope?:
     if (val !== null) native.setAttribute(attr, val);
     else native.removeAttribute(attr);
   }
+
+  // align: mirrored as a data attribute styled by the table stylesheet
+  // (same vocabulary as ore-datagrid columns), not the deprecated HTML attr.
+  const align = source.getAttribute('align');
+
+  if (align) native.setAttribute('data-align', align);
+  else native.removeAttribute('data-align');
 
   // scope: explicit attribute wins; otherwise restore the inferred fallback.
   const explicitScope = source.getAttribute('scope');
@@ -317,7 +327,7 @@ define<OreTableProps>(TABLE_TAG, {
       contentObserver.observe(el, {
         // Include 'scope' in attributeFilter so explicit scope changes are picked
         // up and the fallback-restore logic in syncCell runs correctly.
-        attributeFilter: [...CELL_ATTRS, 'scope'],
+        attributeFilter: [...CELL_ATTRS, 'align', 'scope'],
         attributes: true,
         characterData: true,
         childList: true,

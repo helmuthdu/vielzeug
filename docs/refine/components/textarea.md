@@ -185,7 +185,7 @@ Control the resize handle with the `resize` attribute. Avoid `resize="horizontal
 | `--textarea-resize`             | CSS resize direction (`vertical`/`horizontal`/`both`/`none`) | `vertical`                    |
 | `--textarea-hover-bg`           | Field background on hover (flat/ghost variants)              | Variant-dependent             |
 | `--textarea-hover-border-color` | Field border on hover (flat/bordered variants)               | Variant-dependent             |
-| `--textarea-focus-bg`           | Field background when focused (flat variant)                 | Variant-dependent             |
+| `--textarea-focus-bg`           | Field background when focused (flat/bordered variants)       | Variant-dependent             |
 | `--textarea-focus-border-color` | Field border when focused (flat variant)                     | Variant-dependent             |
 
 ## Accessibility

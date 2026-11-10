@@ -10,7 +10,7 @@
     margin: 0;
     overflow: auto;
     overscroll-behavior: contain;
-    background: var(--navigation-menu-bg, color-mix(in oklch, var(--surface-overlay) 85%, transparent));
+    background: var(--navigation-menu-bg, color-mix(in oklch, var(--surface-overlay) 92%, transparent));
     border: var(--border) solid var(--navigation-menu-border-color, var(--color-divider));
     border-radius: var(--navigation-menu-radius, var(--rounded-lg));
     box-shadow: var(--navigation-menu-shadow, var(--shadow-xl));

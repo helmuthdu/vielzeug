@@ -117,6 +117,20 @@
     display: none;
   }
 
+  /* On the neutral surfaces severity rides on the glyph — same channel the
+     toast uses for its status icon — so the icon keeps the theme color while
+     text and border stay calm. Solid inverts the surface, so there the icon
+     just inherits the contrast ink. */
+  :host(:not([variant='solid'])[color]) .icon {
+    color: var(--_theme-base);
+  }
+
+  /* Automatic glyph: sized through ore-icon's own hook so --alert-icon-size
+     stays the single public knob (slotted icons keep their own sizing). */
+  .icon .auto-icon {
+    --ore-icon-size: var(--alert-icon-size, var(--size-5));
+  }
+
   /* ── Header row (heading + meta) ───────────────── */
 
   .header {
@@ -222,6 +236,21 @@
     grid-column: 4;
   }
 
+  /* Horizontal with a heading: header and body stack in the content column
+     instead of colliding in row 1; the leading, trailing, and closing
+     controls span both rows and stay centered against the text block. */
+  :host([horizontal]) .alert:has(.header:not([hidden])) .body {
+    grid-row: 2;
+    margin-top: var(--size-1);
+  }
+
+  :host([horizontal]) .alert:has(.header:not([hidden])) .icon,
+  :host([horizontal]) .alert:has(.header:not([hidden])) .actions:not([hidden]),
+  :host([horizontal]) .alert:has(.header:not([hidden])) .close {
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+
   /* Phones keep the horizontal contract: the trailing action stays in its column beside
      the body. Snackbars and tallies ride on phone-width toasts every session, and a
      forced second row read as a broken layout; the 1fr body column wraps its own text. */
@@ -289,13 +318,17 @@
 }
 
 @layer refine.variants {
-  /* Flat (Default): canvas background, theme-colored border and text */
+  /* Flat (default): the toast surface, adopted — opaque neutral card, ink text,
+     hairline border, light elevation. Severity lives in the icon and the
+     accent, not in the whole box: a stack of alerts reads calm and errors
+     still stand out. Toasts keep their own heavier elevation by overriding
+     --alert-shadow. */
   :host(:not([variant])),
   :host([variant='flat']) {
-    --_bg: var(--alert-bg, var(--color-canvas));
-    --_color: var(--alert-color, var(--_theme-base));
-    --_border-color: var(--alert-border-color, var(--_theme-base));
-    --_shadow: var(--alert-shadow, var(--shadow-none));
+    --_bg: var(--alert-bg, var(--color-contrast-100));
+    --_color: var(--alert-color, var(--color-contrast-800));
+    --_border-color: var(--alert-border-color, color-mix(in oklch, var(--color-contrast-900) 8%, transparent));
+    --_shadow: var(--alert-shadow, var(--shadow-xs));
   }
 
   /* Solid: fully filled with theme color */
@@ -306,11 +339,14 @@
     --_shadow: var(--alert-shadow, var(--shadow-xs));
   }
 
-  /* Bordered: tinted background with a subtle themed border */
+  /* Bordered: the theme's designed tinted backdrop with its matching border
+     (the badge surface pairing), while text stays neutral ink — AA on every
+     color in both schemes, with the color carried by surface, border, and
+     icon instead of the type. */
   :host([variant='bordered']) {
-    --_bg: var(--alert-bg, color-mix(in oklch, var(--_theme-backdrop), var(--color-canvas)));
-    --_color: var(--alert-color, var(--_theme-base));
-    --_border-color: var(--alert-border-color, color-mix(in oklch, var(--_theme-focus) 30%, transparent));
-    --_shadow: var(--alert-shadow, var(--inset-shadow-2xs));
+    --_bg: var(--alert-bg, var(--_theme-backdrop));
+    --_color: var(--alert-color, var(--color-contrast-800));
+    --_border-color: var(--alert-border-color, var(--_theme-border));
+    --_shadow: var(--alert-shadow, var(--shadow-xs));
   }
 }

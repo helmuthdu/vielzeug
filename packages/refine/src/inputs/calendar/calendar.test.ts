@@ -901,4 +901,117 @@ describe('ore-calendar', () => {
       expect(css).not.toMatch(/^\s*\[hidden\]\s*\{/m);
     });
   });
+
+  describe('Locale week start', () => {
+    const heads = () => Array.from(fixture.queryAll('.cal-cell-head')).map((h) => h.textContent?.trim());
+
+    it('starts the week Sunday for en-US', async () => {
+      fixture = await mount('ore-calendar', { attrs: { locale: 'en-US', value: '2025-06-15' } });
+
+      expect(heads()[0]).toBe('Sun');
+    });
+
+    it('starts the week Monday for de-DE', async () => {
+      fixture = await mount('ore-calendar', { attrs: { locale: 'de-DE', value: '2025-06-15' } });
+
+      expect(heads()[0]).toContain('Mo');
+      // 2025-06-01 is a Sunday: a Monday grid leads with the trailing Monday of May.
+      expect(getDayCells(fixture)[0]?.getAttribute('data-day')).toBe('26');
+    });
+
+    it('honors the week-starts-on override', async () => {
+      fixture = await mount('ore-calendar', { attrs: { locale: 'de-DE', value: '2025-06-15', 'week-starts-on': '7' } });
+
+      expect(heads()[0]).toContain('So');
+    });
+  });
+
+  describe('Labels', () => {
+    it('uses default nav labels', async () => {
+      fixture = await mount('ore-calendar', {});
+      const navs = fixture.queryAll('.nav-btn');
+
+      expect(navs[0]?.getAttribute('aria-label')).toBe('Previous');
+      expect(navs[1]?.getAttribute('aria-label')).toBe('Next');
+    });
+
+    it('applies label overrides to nav buttons', async () => {
+      fixture = await mount('ore-calendar', { props: { labels: { next: 'Weiter', previous: 'Zurück' } } });
+      const navs = fixture.queryAll('.nav-btn');
+
+      expect(navs[0]?.getAttribute('aria-label')).toBe('Zurück');
+      expect(navs[1]?.getAttribute('aria-label')).toBe('Weiter');
+    });
+  });
+
+  describe('Today shortcut', () => {
+    it('stays hidden while the current month is displayed', async () => {
+      fixture = await mount('ore-calendar', {});
+
+      expect(fixture.query('.cal-footer')?.hasAttribute('hidden')).toBe(true);
+    });
+
+    it('appears when the display drifts and jumps back to today', async () => {
+      fixture = await mount('ore-calendar', { attrs: { value: '2030-01-15' } });
+
+      expect(fixture.query('.cal-footer')?.hasAttribute('hidden')).toBe(false);
+
+      fireClick(fixture.query<HTMLElement>('.cal-today-btn')!);
+
+      const now = new Date();
+      const monthName = new Intl.DateTimeFormat(navigator.language, { month: 'long' }).format(
+        new Date(now.getFullYear(), now.getMonth(), 1),
+      );
+
+      expect(fixture.query('.cal-label-month')?.textContent).toBe(monthName);
+      expect(fixture.query('.cal-footer')?.hasAttribute('hidden')).toBe(true);
+    });
+  });
+
+  describe('Year view decade paging', () => {
+    it('pages the decade window with the nav buttons', async () => {
+      fixture = await mount('ore-calendar', { attrs: { value: '2026-06-15' } });
+      const labelBtn = fixture.query<HTMLElement>('.cal-label-btn')!;
+
+      fireClick(labelBtn);
+      fireClick(labelBtn);
+
+      const years = () => Array.from(fixture.queryAll('.cal-cell-year')).map((c) => c.textContent?.trim());
+
+      expect(years()).toContain('2020');
+
+      fireClick(fixture.queryAll<HTMLElement>('.nav-btn')[1]!);
+
+      expect(years()).toContain('2038');
+      expect(years()).not.toContain('2020');
+    });
+  });
+
+  describe('Multi-day events', () => {
+    it('renders an event on every day of its span', async () => {
+      fixture = await mount('ore-calendar', {
+        attrs: { value: '2025-06-15' },
+        props: { events: [{ date: '2025-06-10', endDate: '2025-06-12', id: 'r', label: 'Release' }] },
+      });
+
+      const days = getDayCells(fixture)
+        .filter((c) => c.querySelector('.cal-dots'))
+        .map((c) => c.getAttribute('data-day'));
+
+      expect(days).toEqual(['10', '11', '12']);
+    });
+
+    it('ignores an endDate earlier than the start date', async () => {
+      fixture = await mount('ore-calendar', {
+        attrs: { value: '2025-06-15' },
+        props: { events: [{ date: '2025-06-10', endDate: '2025-06-02', id: 'r', label: 'Release' }] },
+      });
+
+      const days = getDayCells(fixture)
+        .filter((c) => c.querySelector('.cal-dots'))
+        .map((c) => c.getAttribute('data-day'));
+
+      expect(days).toEqual(['10']);
+    });
+  });
 });

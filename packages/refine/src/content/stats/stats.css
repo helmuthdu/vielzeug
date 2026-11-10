@@ -104,22 +104,35 @@
   }
 
   .trend {
-    flex-shrink: 0;
+    display: inline-flex;
+    gap: var(--size-1);
+    align-items: center;
     font-weight: var(--font-semibold);
     color: var(--color-contrast-700);
   }
 
-  .trend[data-direction='up'] {
-    color: var(--stats-trend-up, var(--color-success));
+  .trend[data-tone='positive'] {
+    color: var(--stats-trend-positive, var(--color-success));
   }
 
-  .trend[data-direction='down'] {
-    color: var(--stats-trend-down, var(--color-error));
+  .trend[data-tone='negative'] {
+    color: var(--stats-trend-negative, var(--color-error));
+  }
+
+  .trend-arrow {
+    flex-shrink: 0;
   }
 
   .description {
     min-width: 0;
     color: var(--color-contrast-700);
+  }
+
+  .card-footer {
+    width: 100%;
+    padding-block-start: var(--size-3);
+    font-size: var(--text-sm);
+    border-block-start: var(--border) solid var(--stats-border-color, var(--color-divider));
   }
 
   .loading {

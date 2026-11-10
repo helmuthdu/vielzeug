@@ -24,7 +24,7 @@ export {
   NAVIGATION_MENU_PANEL_TAG,
   NAVIGATION_MENU_TAG,
 } from './navigation-menu/navigation-menu';
-export type { OrePaginationEvents, OrePaginationProps } from './pagination/pagination';
+export type { OrePaginationEvents, OrePaginationProps, PaginationLabels } from './pagination/pagination';
 export { PAGINATION_TAG } from './pagination/pagination';
 export type { OreStepProps } from './stepper/step';
 export { STEP_TAG } from './stepper/step';

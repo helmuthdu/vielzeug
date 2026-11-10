@@ -111,6 +111,16 @@ describe('ore-table', () => {
       expect(fixture.query('tbody td')?.textContent).toBe('Alice');
     });
 
+    it('mirrors align from ore-th and ore-td to data-align on native cells', async () => {
+      fixture = await mount('ore-table', {
+        html: `<ore-tr head><ore-th align="right">Score</ore-th></ore-tr>
+               <ore-tr><ore-td align="center">10</ore-td></ore-tr>`,
+      });
+
+      expect(fixture.query('thead th')?.getAttribute('data-align')).toBe('right');
+      expect(fixture.query('tbody td')?.getAttribute('data-align')).toBe('center');
+    });
+
     it('generates two body rows for two ore-tr markers', async () => {
       fixture = await mount('ore-table', { html: BODY_ROWS });
 
@@ -153,6 +163,33 @@ describe('ore-table', () => {
       await fixture.flush();
 
       expect(fixture.query('thead th')?.getAttribute('scope')).toBe('colgroup');
+    });
+
+    it('syncs align attribute changes on ore-td including removal', async () => {
+      fixture = await mount('ore-table', { html: BODY_ROWS });
+
+      const source = fixture.element.querySelector('ore-td') as HTMLElement;
+
+      source.setAttribute('align', 'right');
+      await fixture.flush();
+      expect(fixture.query('tbody td')?.getAttribute('data-align')).toBe('right');
+
+      source.removeAttribute('align');
+      await fixture.flush();
+      expect(fixture.query('tbody td')?.getAttribute('data-align')).toBeNull();
+    });
+
+    it('syncs align on element-child cells whose content is unchanged', async () => {
+      fixture = await mount('ore-table', {
+        html: `<ore-tr><ore-td><span>9</span></ore-td></ore-tr>`,
+      });
+
+      const source = fixture.element.querySelector('ore-td') as HTMLElement;
+
+      source.setAttribute('align', 'center');
+      await fixture.flush();
+
+      expect(fixture.query('tbody td')?.getAttribute('data-align')).toBe('center');
     });
 
     it('removing explicit scope from ore-th reverts to inferred value', async () => {

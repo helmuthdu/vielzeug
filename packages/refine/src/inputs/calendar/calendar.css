@@ -453,6 +453,45 @@
     border-color: transparent;
   }
 
+  /* ── Today shortcut ──────────────────────────────────────────────────────── */
+
+  .cal-footer {
+    display: flex;
+    justify-content: center;
+    padding: var(--size-1) var(--size-2) var(--size-2);
+  }
+
+  .cal-footer[hidden] {
+    display: none;
+  }
+
+  .cal-today-btn {
+    padding: var(--size-1) var(--size-3);
+    font: inherit;
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    color: var(--color-contrast-600);
+    cursor: pointer;
+    background: transparent;
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--rounded-full);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast),
+      border-color var(--transition-fast);
+  }
+
+  .cal-today-btn:hover {
+    color: var(--color-contrast-900);
+    background: color-mix(in oklch, var(--_theme-base) 8%, transparent);
+    border-color: var(--_theme-border);
+  }
+
+  .cal-today-btn:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
   /* ── Disabled host ───────────────────────────────────────────────────────── */
 
   :host(.is-disabled) .calendar {

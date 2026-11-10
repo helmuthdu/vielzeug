@@ -382,7 +382,7 @@ A bottom sheet: `size="content"` fits the actions, `detents` lets a dragged shee
 | `size`                  | `'sm' \| 'lg' \| 'full' \| 'content'`    | unset       | Size preset; `content` fits top/bottom sheets to content with bounded body scrolling                           |
 | `detents`               | `string`                                 | N/A         | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only |
 | `title`                 | `string`                                 | N/A         | Visible header title text                                                                                      |
-| `label`                 | `string`                                 | N/A         | Accessible name (`aria-label`); also shown as the header title when `title` is not set                        |
+| `label`                 | `string`                                 | N/A         | Accessible name (`aria-label`); also shown as the header title when `title` is not set                         |
 | `drag-handle-placement` | `'outside' \| 'inset'`                   | `'outside'` | Position of the swipe drag handle                                                                              |
 | `dismissible`           | `boolean`                                | `true`      | Shows a close (×) button in the header                                                                         |
 | `backdrop`              | `'opaque' \| 'blur' \| 'transparent'`    | `'opaque'`  | Backdrop style, matching `ore-dialog`                                                                          |
@@ -400,9 +400,9 @@ Beyond these attributes, any element inside the drawer's content — in the body
 
 ### Events
 
-| Event           | Detail                                                                                                       | Description                               |
-| --------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| `open-change`   | `{ open: boolean, reason: string }`                                                                          | Fired whenever the drawer opens or closes |
+| Event           | Detail                                                                                                                                | Description                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `open-change`   | `{ open: boolean, reason: string }`                                                                                                   | Fired whenever the drawer opens or closes |
 | `close-request` | `{ placement: 'left' \| 'right' \| 'top' \| 'bottom', reason: 'trigger' \| 'escape' \| 'outsideClick' \| 'swipe' \| 'programmatic' }` | Fired before close and can be prevented   |
 
 ### CSS Custom Properties

@@ -134,7 +134,7 @@ const VALID_INPUT_TYPES = [
  * @cssprop --input-height - Field height
  * @cssprop --input-hover-bg - Field background on hover (flat/ghost variants)
  * @cssprop --input-hover-border-color - Field border on hover (flat/bordered variants)
- * @cssprop --input-focus-bg - Field background when focused (flat variant)
+ * @cssprop --input-focus-bg - Field background when focused (flat/bordered variants)
  * @cssprop --input-focus-border-color - Field border when focused (flat/text variants)
  *
  * @example
@@ -396,6 +396,6 @@ define<OreInputProps>(INPUT_TAG, {
     // `refine.variants` rules need to win over). Placed earlier, `refine.variants` would end up
     // registered as the *lower*-priority layer, and every variant would silently render as the
     // base default: exactly the bug this ordering fixes.
-    fieldVariantMixin({ container: '.field', text: 'input', tokenPrefix: 'input' }),
+    fieldVariantMixin({ container: '.field', tokenPrefix: 'input' }),
   ],
 });

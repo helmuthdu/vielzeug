@@ -268,3 +268,49 @@ test.describe('Interaction', () => {
     await expect(grid.getByRole('row')).toHaveCount(3);
   });
 });
+
+test.describe('Source error state', () => {
+  test('renders an error row whose retry reloads the source', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-datagrid id="grid" label="Customers"></ore-datagrid>');
+
+    await page.locator('#grid').evaluate((element) => {
+      const grid = element as HTMLElement & { columns: unknown[]; source: unknown };
+
+      grid.columns = [{ key: 'name', label: 'Name' }];
+
+      const state = {
+        error: { message: 'offline' },
+        items: [],
+        loading: false,
+        pagination: { page: 1, pageCount: 1, pageSize: 10, totalItems: 0 },
+      };
+
+      grid.source = {
+        next() {},
+        previous() {},
+        reload() {
+          (window as unknown as { reloads: number }).reloads =
+            ((window as unknown as { reloads?: number }).reloads ?? 0) + 1;
+        },
+        get state() {
+          return state;
+        },
+        subscribe() {
+          return () => {};
+        },
+      };
+    });
+
+    const errorRow = page.locator('.dg-empty-error');
+
+    await expect(errorRow).toContainText('Something went wrong');
+    await expect(errorRow.getByRole('button', { name: 'Retry' })).toBeVisible();
+
+    await errorRow.getByRole('button', { name: 'Retry' }).click();
+    await expect(page.evaluate(() => (window as unknown as { reloads?: number }).reloads)).resolves.toBe(1);
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
+  });
+});

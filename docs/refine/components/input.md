@@ -316,21 +316,21 @@ For first-run forms, combine a visible label, helper text, and progressive valid
 
 ### CSS Custom Properties
 
-| Property                     | Description                                     | Default             |
-| ---------------------------- | ----------------------------------------------- | ------------------- |
-| `--input-bg`                 | Background color                                | Variant-dependent   |
-| `--input-color`              | Text color                                      | Variant-dependent   |
-| `--input-border-color`       | Border color                                    | Variant-dependent   |
-| `--input-placeholder-color`  | Placeholder text color                          | Theme-dependent     |
-| `--input-radius`             | Border radius                                   | `var(--rounded-lg)` |
-| `--input-padding`            | Inner padding (block inline)                    | Size-dependent      |
-| `--input-gap`                | Gap between prefix/suffix icons and input text  | Size-dependent      |
-| `--input-font-size`          | Font size                                       | Size-dependent      |
-| `--input-height`             | Field height                                    | Size-dependent      |
-| `--input-hover-bg`           | Field background on hover (flat/ghost variants) | Variant-dependent   |
-| `--input-hover-border-color` | Field border on hover (flat/bordered variants)  | Variant-dependent   |
-| `--input-focus-bg`           | Field background when focused (flat variant)    | Variant-dependent   |
-| `--input-focus-border-color` | Field border when focused (flat/text variants)  | Variant-dependent   |
+| Property                     | Description                                            | Default             |
+| ---------------------------- | ------------------------------------------------------ | ------------------- |
+| `--input-bg`                 | Background color                                       | Variant-dependent   |
+| `--input-color`              | Text color                                             | Variant-dependent   |
+| `--input-border-color`       | Border color                                           | Variant-dependent   |
+| `--input-placeholder-color`  | Placeholder text color                                 | Theme-dependent     |
+| `--input-radius`             | Border radius                                          | `var(--rounded-lg)` |
+| `--input-padding`            | Inner padding (block inline)                           | Size-dependent      |
+| `--input-gap`                | Gap between prefix/suffix icons and input text         | Size-dependent      |
+| `--input-font-size`          | Font size                                              | Size-dependent      |
+| `--input-height`             | Field height                                           | Size-dependent      |
+| `--input-hover-bg`           | Field background on hover (flat/ghost variants)        | Variant-dependent   |
+| `--input-hover-border-color` | Field border on hover (flat/bordered variants)         | Variant-dependent   |
+| `--input-focus-bg`           | Field background when focused (flat/bordered variants) | Variant-dependent   |
+| `--input-focus-border-color` | Field border when focused (flat/text variants)         | Variant-dependent   |
 
 ## Accessibility
 

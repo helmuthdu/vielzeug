@@ -4,12 +4,10 @@ An accessible, keyboard-navigable date picker with an inline calendar popup. Sup
 
 ## Basic Usage
 
-<ComponentPreview vertical height="400px;">
+<ComponentPreview align="start" justify="start" vertical height="400px;">
 
 ```html
-<div style="height: 400px;">
 <ore-date-picker label="Appointment date"></ore-date-picker>
-</div>
 ```
 
 </ComponentPreview>
@@ -26,7 +24,7 @@ document.querySelector('ore-date-picker').addEventListener('change', (e) => {
 
 Restrict the selectable range with ISO 8601 `min` and `max` attributes.
 
-<ComponentPreview vertical height="400px;">
+<ComponentPreview align="start" justify="start" vertical height="400px;">
 
 ```html
 <ore-date-picker label="Conference date" min="2025-09-01" max="2025-09-30"> </ore-date-picker>
@@ -38,7 +36,7 @@ Restrict the selectable range with ISO 8601 `min` and `max` attributes.
 
 Pass a JSON array of day-of-week indices (0 = Sunday … 6 = Saturday) to `weekend-days`.
 
-<ComponentPreview vertical height="400px;">
+<ComponentPreview align="start" justify="start" vertical height="400px;">
 
 ```html
 <ore-date-picker label="Business day" weekend-days="[0,6]"></ore-date-picker>
@@ -48,13 +46,15 @@ Pass a JSON array of day-of-week indices (0 = Sunday … 6 = Saturday) to `weeke
 
 ## Locale
 
-Override the display locale with any BCP 47 tag. Day and month names update automatically.
+Override the display locale with any BCP 47 tag. Day and month names update automatically, and the grid follows the locale's week start (`de-DE` renders a Monday-first week, `en-US` a Sunday-first one).
 
-<ComponentPreview>
+<ComponentPreview align="start" justify="start">
 
 ```html
-<ore-date-picker label="Datum" locale="de-DE"></ore-date-picker>
-<ore-date-picker label="日付" locale="ja-JP"></ore-date-picker>
+<ore-grid cols="2" gap="md">
+  <ore-date-picker fullwidth label="Datum" locale="de-DE"></ore-date-picker>
+  <ore-date-picker fullwidth label="日付" locale="ja-JP"></ore-date-picker>
+</ore-grid>
 ```
 
 </ComponentPreview>
@@ -63,7 +63,7 @@ Override the display locale with any BCP 47 tag. Day and month names update auto
 
 Set `value` to an ISO 8601 date string to initialise the selection.
 
-<ComponentPreview vertical height="400px;">
+<ComponentPreview align="start" justify="start" vertical height="400px;">
 
 ```html
 <ore-date-picker label="Start date" value="2025-06-15"></ore-date-picker>
@@ -75,10 +75,10 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 `ore-date-picker` is form-associated. The submitted value is the ISO 8601 string or empty string when no date is selected.
 
-<ComponentPreview vertical height="400px;">
+<ComponentPreview align="start" justify="start" vertical height="400px;">
 
 ```html
-<form>
+<form style="display: flex; gap: 1rem; align-items: flex-start;">
   <ore-date-picker name="booking_date" label="Booking date" required></ore-date-picker>
   <button type="submit">Submit</button>
 </form>
@@ -88,32 +88,36 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 ## Sizes
 
-<ComponentPreview vertical height="400px;">
+<ComponentPreview align="start" justify="start" vertical height="400px;">
 
 ```html
-<ore-date-picker size="sm" placeholder="Small"></ore-date-picker>
-<ore-date-picker size="md" placeholder="Medium"></ore-date-picker>
-<ore-date-picker size="lg" placeholder="Large"></ore-date-picker>
+<ore-grid cols="2" cols-md="3" gap="md">
+  <ore-date-picker fullwidth size="sm" placeholder="Small"></ore-date-picker>
+  <ore-date-picker fullwidth size="md" placeholder="Medium"></ore-date-picker>
+  <ore-date-picker fullwidth size="lg" placeholder="Large"></ore-date-picker>
+</ore-grid>
 ```
 
 </ComponentPreview>
 
 ## Variants
 
-<ComponentPreview>
+<ComponentPreview align="start" justify="start">
 
 ```html
-<ore-date-picker variant="flat" placeholder="Flat"></ore-date-picker>
-<ore-date-picker variant="bordered" placeholder="Bordered"></ore-date-picker>
-<ore-date-picker variant="outline" placeholder="Outline"></ore-date-picker>
-<ore-date-picker variant="ghost" placeholder="Ghost"></ore-date-picker>
+<ore-grid cols="2" cols-md="4" gap="md">
+  <ore-date-picker fullwidth variant="flat" placeholder="Flat"></ore-date-picker>
+  <ore-date-picker fullwidth variant="bordered" placeholder="Bordered"></ore-date-picker>
+  <ore-date-picker fullwidth variant="outline" placeholder="Outline"></ore-date-picker>
+  <ore-date-picker fullwidth variant="ghost" placeholder="Ghost"></ore-date-picker>
+</ore-grid>
 ```
 
 </ComponentPreview>
 
 ## Colors
 
-<ComponentPreview vertical height="400px;">
+<ComponentPreview align="start" justify="start" vertical height="400px;">
 
 ```html
 <ore-grid cols="2" cols-sm="3" cols-md="4" gap="md">
@@ -131,19 +135,21 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 ## Error and Helper Text
 
-<ComponentPreview vertical height="400px;">
+<ComponentPreview align="start" justify="start" vertical height="400px;">
 
 ```html
-<ore-date-picker label="Return date" helper="Pick a date within the next 30 days"> </ore-date-picker>
+<ore-grid gap="md" style="max-width: 22rem;">
+  <ore-date-picker fullwidth label="Return date" helper="Pick a date within the next 30 days"></ore-date-picker>
 
-<ore-date-picker label="Departure date" error="A valid date is required" color="error"> </ore-date-picker>
+  <ore-date-picker fullwidth label="Departure date" error="A valid date is required" color="error"></ore-date-picker>
+</ore-grid>
 ```
 
 </ComponentPreview>
 
 ## Disabled
 
-<ComponentPreview vertical height="400px;">
+<ComponentPreview align="start" justify="start" vertical height="400px;">
 
 ```html
 <ore-date-picker label="Read-only date" value="2025-01-01" disabled></ore-date-picker>

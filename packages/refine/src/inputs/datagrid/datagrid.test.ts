@@ -814,6 +814,81 @@ describe('ore-datagrid', () => {
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('source command failed: Error: offline'));
       warn.mockRestore();
     });
+
+    it('renders an error row instead of the empty state when the source fails', async () => {
+      const external = createSource();
+
+      (external.source as { reload?: unknown }).reload = vi.fn(() => Promise.resolve());
+      fixture = await mountGrid({ source: external.source });
+
+      external.publish({
+        error: { message: 'offline' },
+        items: [],
+        loading: false,
+        pagination: { page: 1, pageCount: 1, pageSize: 10, totalItems: 0 },
+      });
+      await Promise.resolve();
+
+      const errorCell = fixture.query('.dg-empty-error');
+
+      expect(errorCell?.textContent).toContain('Something went wrong');
+      expect(errorCell?.textContent).not.toContain('No data');
+      expect(fixture.query('.dg-empty-error ore-button')?.textContent).toContain('Retry');
+    });
+
+    it('reloads the source from the error row retry button', async () => {
+      const external = createSource();
+      const reload = vi.fn(() => Promise.resolve());
+
+      (external.source as { reload?: unknown }).reload = reload;
+      fixture = await mountGrid({ source: external.source });
+
+      external.publish({
+        error: { message: 'offline' },
+        items: [],
+        loading: false,
+        pagination: { page: 1, pageCount: 1, pageSize: 10, totalItems: 0 },
+      });
+      await Promise.resolve();
+
+      fireClick(fixture.query('.dg-empty-error ore-button')!);
+
+      expect(reload).toHaveBeenCalledOnce();
+    });
+
+    it('omits the retry button when the source has no reload', async () => {
+      const external = createSource();
+
+      delete (external.source as { reload?: unknown }).reload;
+      fixture = await mountGrid({ source: external.source });
+
+      external.publish({
+        error: { message: 'offline' },
+        items: [],
+        loading: false,
+        pagination: { page: 1, pageCount: 1, pageSize: 10, totalItems: 0 },
+      });
+      await Promise.resolve();
+
+      expect(fixture.query('.dg-empty-error')).not.toBeNull();
+      expect(fixture.query('.dg-empty-error ore-button')).toBeNull();
+    });
+
+    it('keeps rendering loaded rows when the source reports an error with items present', async () => {
+      const external = createSource();
+      fixture = await mountGrid({ source: external.source });
+
+      external.publish({
+        error: { message: 'refresh failed' },
+        items: [ROWS[1]],
+        loading: false,
+        pagination: { page: 1, pageCount: 1, pageSize: 10, totalItems: 1 },
+      });
+      await Promise.resolve();
+
+      expect(getBodyRows(fixture)[0]?.textContent).toContain('Bob');
+      expect(fixture.query('.dg-empty-error')).toBeNull();
+    });
   });
 
   describe('Disabled & loading', () => {

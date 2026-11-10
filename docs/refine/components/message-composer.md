@@ -321,7 +321,7 @@ If you're building a Slack/Notion-style inline `/`-command menu anchored under t
 | `--message-composer-min-height`         | Minimum field height                                         | `1lh` (one line)            |
 | `--message-composer-hover-bg`           | Card background on hover (`flat`/`ghost` variants)           | Variant-dependent           |
 | `--message-composer-hover-border-color` | Card border on hover (`flat`/`bordered` variants)            | Variant-dependent           |
-| `--message-composer-focus-bg`           | Card background when focused (`flat` variant)                | Variant-dependent           |
+| `--message-composer-focus-bg`           | Card background when focused (`flat`/`bordered` variants)    | Variant-dependent           |
 | `--message-composer-focus-border-color` | Card border when focused (`flat` variant)                    | Variant-dependent           |
 
 The card owns all of the composer's visual chrome: there's no nested `ore-textarea` whose own background/border/box-shadow needs suppressing, since the `<textarea>` is rendered directly by this component and styled flush inside the card.

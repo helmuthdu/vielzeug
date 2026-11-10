@@ -18,14 +18,29 @@ Set `label` and `value` for the primary metric. Add `description` when the value
 
 ## Trends
 
-Use `trend` for the displayed change and `trend-direction` to apply up, down, or neutral treatment. Include a sign or word in the trend text so direction is not conveyed by color alone.
+Use `trend` for the displayed change and `trend-direction` for the arrow: `up` and `down` render a matching arrow icon beside the built-in trend text (a slotted trend draws its own indicator). Color is a separate axis: `trend-tone` takes `positive`, `negative`, or `neutral` and defaults to the direction, so lower-is-better metrics stay honest — churn rising is an up arrow in negative colors. Include a sign or word in the trend text so direction is not conveyed by color and icon alone.
 
 <ComponentPreview center>
 
 ```html
 <ore-stats label="New customers" value="1,284" trend="+12.5%" trend-direction="up"></ore-stats>
-<ore-stats label="Churn" value="2.1%" trend="-0.4 points" trend-direction="down" color="success"></ore-stats>
+<ore-stats label="Churn" value="2.9%" trend="+0.8%" trend-direction="up" trend-tone="negative"></ore-stats>
+<ore-stats label="Latency" value="182 ms" trend="-23 ms" trend-direction="down" trend-tone="positive"></ore-stats>
 <ore-stats label="Open tickets" value="36" trend="No change" trend-direction="neutral"></ore-stats>
+```
+
+</ComponentPreview>
+
+## Footer Row
+
+Slot `footer` for a divider-separated action row below the metric — a link, a button, or a note.
+
+<ComponentPreview center>
+
+```html
+<ore-stats label="Conversion rate" value="3.8%" trend="+0.6 points" trend-direction="up" description="vs last quarter">
+  <ore-text slot="footer">Today</ore-text>
+</ore-stats>
 ```
 
 </ComponentPreview>
@@ -96,47 +111,49 @@ Loading cards expose a busy state, while disabled cards expose their unavailable
 
 ### Attributes
 
-| Attribute         | Type                                                                      | Default      | Description                                |
-| ----------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------ |
-| `label`           | `string`                                                                  | N/A          | Metric label                               |
-| `value`           | `string`                                                                  | N/A          | Primary metric value                       |
-| `description`     | `string`                                                                  | N/A          | Supporting context shown below the metric  |
-| `trend`           | `string`                                                                  | N/A          | Displayed change or comparison text        |
-| `trend-direction` | `'up' \| 'down' \| 'neutral'`                                             | `'neutral'`  | Semantic and visual direction of the trend |
-| `variant`         | `'outlined' \| 'plain' \| 'solid'`                                        | `'outlined'` | Surface treatment                          |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A          | Semantic color theme                       |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`       | Component size                             |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | N/A          | Border radius                              |
-| `disabled`        | `boolean`                                                                 | `false`      | Marks the metric as unavailable            |
-| `loading`         | `boolean`                                                                 | `false`      | Shows the loading state                    |
+| Attribute         | Type                                                                      | Default      | Description                                                             |
+| ----------------- | ------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------- |
+| `label`           | `string`                                                                  | N/A          | Metric label                                                            |
+| `value`           | `string`                                                                  | N/A          | Primary metric value                                                    |
+| `description`     | `string`                                                                  | N/A          | Supporting context shown below the metric                               |
+| `trend`           | `string`                                                                  | N/A          | Displayed change or comparison text                                     |
+| `trend-direction` | `'up' \| 'down' \| 'neutral'`                                             | `'neutral'`  | Trend arrow; up/down also render an arrow icon on the built-in trend    |
+| `trend-tone`      | `'positive' \| 'negative' \| 'neutral'`                                   | Derived      | Trend color; defaults to the direction (up → positive, down → negative) |
+| `variant`         | `'outlined' \| 'plain' \| 'solid'`                                        | `'outlined'` | Surface treatment                                                       |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A          | Semantic color theme                                                    |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`       | Component size                                                          |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | N/A          | Border radius                                                           |
+| `disabled`        | `boolean`                                                                 | `false`      | Marks the metric as unavailable                                         |
+| `loading`         | `boolean`                                                                 | `false`      | Shows the loading state                                                 |
 
 Attribute content is used when the corresponding named slot is empty.
 
 ### Slots
 
-| Slot          | Description                                   |
-| ------------- | --------------------------------------------- |
-| `icon`        | Leading icon or compact graphic               |
-| `label`       | Custom label content                          |
-| `value`       | Custom value content                          |
-| `visual`      | Supporting visualization, such as a sparkline |
-| `trend`       | Custom trend content                          |
-| `description` | Custom supporting description                 |
+| Slot          | Description                                               |
+| ------------- | --------------------------------------------------------- |
+| `icon`        | Leading icon or compact graphic                           |
+| `label`       | Custom label content                                      |
+| `value`       | Custom value content                                      |
+| `visual`      | Supporting visualization, such as a sparkline             |
+| `trend`       | Custom trend content (also replaces the auto trend arrow) |
+| `description` | Custom supporting description                             |
+| `footer`      | Divider-separated bottom row: actions, links, or notes    |
 
 ### CSS Custom Properties
 
-| Property               | Description               |
-| ---------------------- | ------------------------- |
-| `--stats-bg`           | Card background           |
-| `--stats-color`        | Card text color           |
-| `--stats-border-color` | Border color              |
-| `--stats-radius`       | Border radius             |
-| `--stats-padding`      | Internal padding          |
-| `--stats-min-height`   | Minimum card height       |
-| `--stats-value-size`   | Value font size           |
-| `--stats-icon-bg`      | Icon container background |
-| `--stats-trend-up`     | Upward trend color        |
-| `--stats-trend-down`   | Downward trend color      |
+| Property                 | Description               |
+| ------------------------ | ------------------------- |
+| `--stats-bg`             | Card background           |
+| `--stats-color`          | Card text color           |
+| `--stats-border-color`   | Border color              |
+| `--stats-radius`         | Border radius             |
+| `--stats-padding`        | Internal padding          |
+| `--stats-min-height`     | Minimum card height       |
+| `--stats-value-size`     | Value font size           |
+| `--stats-icon-bg`        | Icon container background |
+| `--stats-trend-positive` | Positive trend color      |
+| `--stats-trend-negative` | Negative trend color      |
 
 ### CSS Parts
 
@@ -152,4 +169,5 @@ Attribute content is used when the corresponding named slot is empty.
 | `footer`      | Footer containing trend and description |
 | `trend`       | Trend container                         |
 | `description` | Description container                   |
+| `actions`     | Footer slot row                         |
 | `loading`     | Loading indicator                       |

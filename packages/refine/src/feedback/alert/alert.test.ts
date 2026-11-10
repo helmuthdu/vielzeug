@@ -270,3 +270,95 @@ describe('ore-alert accessibility', () => {
     });
   });
 });
+
+describe('ore-alert auto icon', () => {
+  let fixture: Fixture<HTMLElement>;
+
+  beforeAll(async () => {
+    await import('./alert');
+  });
+
+  afterEach(() => {
+    fixture?.dispose();
+  });
+
+  it('renders the glyph derived from color', async () => {
+    for (const [color, name] of [
+      ['primary', 'info'],
+      ['secondary', 'info'],
+      ['info', 'info'],
+      ['success', 'check'],
+      ['warning', 'triangle-alert'],
+      ['error', 'circle-alert'],
+    ] as const) {
+      fixture = await mount('ore-alert', { attrs: { color } });
+
+      expect(fixture.query('.auto-icon')?.getAttribute('name')).toBe(name);
+      fixture.dispose();
+    }
+  });
+
+  it('stays bare without a color', async () => {
+    fixture = await mount('ore-alert', { html: 'Plain notice' });
+
+    expect(fixture.query('.auto-icon')).toBeNull();
+  });
+
+  it('lets the icon attribute override the derived glyph', async () => {
+    fixture = await mount('ore-alert', { attrs: { color: 'error', icon: 'star' } });
+
+    expect(fixture.query('.auto-icon')?.getAttribute('name')).toBe('star');
+  });
+
+  it('renders no icon for icon="none"', async () => {
+    fixture = await mount('ore-alert', { attrs: { color: 'error', icon: 'none' } });
+
+    expect(fixture.query('.auto-icon')).toBeNull();
+  });
+
+  it('lets slotted icons win over the automatic glyph', async () => {
+    fixture = await mount('ore-alert', {
+      attrs: { color: 'success' },
+      html: '<ore-icon slot="icon" name="zap"></ore-icon>Done',
+    });
+
+    expect(fixture.query('.auto-icon')).toBeNull();
+    expect(fixture.element.querySelector('[slot="icon"]')).toBeTruthy();
+  });
+});
+
+describe('ore-alert labels', () => {
+  let fixture: Fixture<HTMLElement>;
+
+  beforeAll(async () => {
+    await import('./alert');
+  });
+
+  afterEach(() => {
+    fixture?.dispose();
+  });
+
+  it('merges partial labels over the English defaults', async () => {
+    fixture = await mount('ore-alert', {
+      attrs: { dismissible: '' },
+      props: { labels: { dismiss: 'Hinweis schließen' } },
+    });
+
+    expect(fixture.query('.close')?.getAttribute('aria-label')).toBe('Hinweis schließen');
+  });
+
+  it('announces the custom dismissed label', async () => {
+    fixture = await mount('ore-alert', {
+      attrs: { dismissible: '' },
+      props: { labels: { dismissed: 'Hinweis geschlossen' } },
+    });
+
+    fireClick(fixture.query<HTMLElement>('.close')!);
+    fixture.element.dispatchEvent(new Event('animationend'));
+    await fixture.flush();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await fixture.flush();
+
+    expect(fixture.query('.sr-announce')?.textContent).toBe('Hinweis geschlossen');
+  });
+});

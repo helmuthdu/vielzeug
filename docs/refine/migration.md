@@ -165,9 +165,9 @@ flattens category leaves into one result list.
 - **Entering a category emits `category-open`, not `select`.** `{ value, label, count }` fires when
   a category row opens; `select` still only ever carries a command, so existing command handlers
   need no guard.
-- **Group headings are now searchable and pinned.** A query that matches a `group` name keeps that
-  group's items, and each heading sticks to the top of the list while its own group scrolls. Each
-  named group is also a `role="group"` container labelled by its heading, which changes the
+- **Group headings are now searchable.** A query that matches a `group` name keeps that group's
+  items, and headings are plain section labels separated by a hairline between groups. Each named
+  group is also a `role="group"` container labelled by its heading, which changes the
   accessibility tree for screen readers without changing any attribute consumers read.
 
 ## Touch inputs no longer trigger the iOS page zoom

@@ -419,6 +419,15 @@
     --safe-area-inset-inline-start: env(safe-area-inset-left, 0px);
     --safe-area-inset-inline-end: env(safe-area-inset-right, 0px);
 
+    /* ========================================
+       Star Gold
+       The rating control's default fill. Lives here (a hand-authored singleton,
+       not one of the generated families) so `light-dark()` resolves once at the
+       themed root: per-component copies of the function get lowered against a
+       stylesheet that lacks the scheme switches.
+       ======================================== */
+    --color-star: light-dark(oklch(76% 0.16 76deg), oklch(81% 0.15 76deg));
+
     /* ── theme-tokens:generated:begin: run `bun run sync:theme`, do not hand-edit ── */
     /* ── Contrast scale: Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline ── */
     --color-contrast-50: light-dark(oklch(99% 0.001 264deg), oklch(17% 0.001 250deg)); /* Canvas, page background */

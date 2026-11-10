@@ -24,6 +24,7 @@ export type DataGridLabels = {
   descending: string;
   emptyValue: string;
   equals: string;
+  errorText: string;
   expandRow: string;
   filter: string;
   filterBy: string;
@@ -41,6 +42,7 @@ export type DataGridLabels = {
   range: (start: number, end: number, total: number) => string;
   removeFilter: string;
   resetColumns: string;
+  retry: string;
   rowDetails: string;
   rows: (count: number) => string;
   rowsPerPage: string;
@@ -72,6 +74,7 @@ export const DEFAULT_LABELS: DataGridLabels = {
   descending: 'Z → A',
   emptyValue: '(empty)',
   equals: 'Equals',
+  errorText: 'Something went wrong',
   expandRow: 'Expand row',
   filter: 'Filter',
   filterBy: 'Filter by',
@@ -89,6 +92,7 @@ export const DEFAULT_LABELS: DataGridLabels = {
   range: (start, end, total) => `${start} to ${end} of ${total}`,
   removeFilter: 'Remove filter',
   resetColumns: 'Reset',
+  retry: 'Retry',
   rowDetails: 'Row details',
   rows: (count) => `${count} row${count === 1 ? '' : 's'}`,
   rowsPerPage: 'Rows per page',

@@ -1,62 +1,91 @@
-import { bind, createId, define, getHost, html, prop, useField } from '@vielzeug/ore';
+import { bind, createId, define, getHost, html, prop, useField, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-import { createErrorHelperState, createSliderControl } from '../../core';
+import { createSliderControl } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
-import { motionReduced } from '../../shared/motion-reduced';
 import { colorThemeMixin, sizeVariantMixin, touchTargetMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
-import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './rating.css?inline';
 
-export { ICON_TAG } from '../../content/icon/icon';
 export type OreRatingEvents = {
   change: Event;
   input: Event;
+};
+
+/** Localizable strings for the rating control. */
+export type RatingLabels = {
+  /** `aria-valuetext` shown when nothing is rated. */
+  unrated: string;
+  /** `aria-valuetext` for a selected rating. */
+  value: (value: number, max: number) => string;
+};
+
+/** Default (English) rating labels. */
+export const DEFAULT_RATING_LABELS: RatingLabels = {
+  unrated: 'Not rated',
+  value: (value, max) => `${value} out of ${max} ${max === 1 ? 'star' : 'stars'}`,
 };
 
 /** Rating props */
 export type OreRatingProps = {
   /** Theme color */
   color?: ThemeColor;
+  /** Re-clicking the selected star clears the rating back to 0 */
+  clearable?: boolean;
   /** Disable interaction */
   disabled?: boolean;
-  /** Error message: marks the field as invalid (fallback when the `error` slot is empty) */
+  /** Error message: marks the field as invalid */
   error?: string;
-  /** Helper text displayed below the stars (fallback when the `helper` slot is empty) */
+  /** Helper text displayed below the stars */
   helper?: string;
-  /** Accessible group label */
+  /** Visible label above the stars (falls back to an accessible-only label when unset) */
   label?: string;
+  /** Localized `aria-valuetext` strings */
+  labels?: Partial<RatingLabels>;
   /** Maximum rating (number of stars) */
   max?: number;
   /** Form field name */
   name?: string;
+  /** Selection granularity: `1` or `0.5` stars */
+  precision?: number;
   /** Make rating read-only */
   readonly?: boolean;
+  /** Mark the field as required (blocks form submission until rated) */
+  required?: boolean;
   /** Component size */
   size?: ComponentSize;
-  /** Render selected stars as solid-filled instead of outline-only */
-  solid?: boolean;
   /** Current rating value */
   value?: number;
 };
 
 /**
- * A star rating input.
+ * A star rating control.
+ *
+ * Implements the WAI-ARIA slider rating pattern: the star row is a single
+ * focusable `role="slider"`, arrows adjust by `precision`, Home/End jump to
+ * 0/max, click or drag sets the star (the right half of a star with
+ * `precision="0.5"` selects the half step). Selected stars are always filled,
+ * so filled-vs-outline carries the value without relying on color.
  *
  * @element ore-rating
  *
- * @attr {number} value - Current rating value (default: 0)
+ * @attr {number} value - Current rating value, snapped to `precision` (default: 0)
  * @attr {number} max - Maximum number of stars (default: 5)
+ * @attr {number} precision - Selection granularity: 1 or 0.5 (default: 1)
+ * @attr {boolean} clearable - Re-clicking the selected star clears to 0 (default: true)
  * @attr {boolean} readonly - Read-only display mode
+ * @attr {boolean} required - Required until a rating is selected
  * @attr {boolean} disabled - Disabled state
- * @attr {string} label - aria-label for the group (default: 'Rating')
+ * @attr {string} label - Visible label above the stars
+ * @attr {string} helper - Helper text below the stars
+ * @attr {string} error - Error text below the stars (hides the helper text)
  * @attr {string} color - Theme color for filled stars: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} name - Form field name
- * @attr {boolean} solid - Fill selected stars (outline remains default when omitted)
- * @attr {string} helper - Helper text below the stars
- * @attr {string} error - Error message below the stars
+ *
+ * @slot label - Visible label content (overrides `label`).
+ * @slot helper - Helper text content (overrides `helper`).
+ * @slot error - Error text content (overrides `error`).
  *
  * @fires input - Emitted when the rating changes.
  * @fires change - Emitted when the rating changes.
@@ -66,13 +95,17 @@ export type OreRatingProps = {
  * @cssprop --rating-color-filled - Filled star color
  * @cssprop --rating-gap - Gap between stars
  *
- * @part stars - Stars container.
- * @part star - Star item element.
- * @part helper-text - The helper/error text element.
+ * @part wrapper - Column wrapping label, stars, and assistive text.
+ * @part label - The visible label element.
+ * @part stars - The focusable slider row.
+ * @part star - One star cell (fill + outline layers).
+ * @part helper - The helper text element.
+ * @part error - The error text element.
+ *
  * @example
  * ```html
- * <ore-rating value="3" max="5" color="warning"></ore-rating>
- * <ore-rating value="4" solid></ore-rating>
+ * <ore-rating label="Quality" value="4" color="warning"></ore-rating>
+ * <ore-rating value="4.5" precision="0.5" color="warning" readonly></ore-rating>
  * ```
  */
 export const RATING_TAG = 'ore-rating' as const;
@@ -82,26 +115,61 @@ define<OreRatingProps>(RATING_TAG, {
     ...themableBundle,
     ...sizableBundle,
     ...disablableBundle,
+    clearable: prop.bool(true),
     error: prop.string(),
     helper: prop.string(),
-    label: prop.string('Rating'),
+    label: prop.string(''),
+    labels: prop.data<Partial<RatingLabels>>({}),
     max: prop.number(5),
     name: prop.string(),
+    precision: prop.number(1),
     readonly: prop.bool(false),
-    solid: prop.bool(false),
+    required: prop.bool(false),
     value: prop.number(0),
   },
   setup(props) {
     const el = getHost();
-    const normalizedValue = computed(() => {
-      const max = Math.max(1, Number(props.max?.value) || 5);
-      const raw = Number(props.value?.value);
-      const safe = Number.isFinite(raw) ? raw : 0;
-
-      return Math.min(max, Math.max(0, safe));
-    });
+    const slots = useSlots();
+    const labels = computed<RatingLabels>(() => ({ ...DEFAULT_RATING_LABELS, ...props.labels.value }));
 
     const isDisabled = computed(() => Boolean(props.disabled.value));
+    const isInteractive = computed(() => !props.readonly.value && !isDisabled.value);
+
+    // ── Field chrome (label / helper / error) ─────────────────────────────────
+    const labelId = createId('rating-label');
+    const assistiveId = createId('rating-helper');
+    const errorId = createId('rating-error');
+
+    const errorText = computed(() => props.error.value ?? '');
+    const helperText = computed(() => props.helper.value ?? '');
+
+    const labelVisible = computed(() => Boolean(props.label.value) || slots.has('label').value);
+    const labelHidden = () => !labelVisible.value;
+    const helperHidden = () => Boolean(errorText.value) || (!helperText.value && !slots.has('helper').value);
+    const errorHidden = () => !errorText.value && !slots.has('error').value;
+
+    const sliderLabelledBy = () => (labelVisible.value ? labelId : null);
+    const sliderAriaLabel = () => (labelVisible.value ? null : 'Rating');
+    const ariaDescribedBy = () => (errorText.value ? errorId : helperText.value ? assistiveId : null);
+    const ariaInvalid = computed<'true' | null>(() => (errorText.value ? 'true' : null));
+
+    // ── Value model ────────────────────────────────────────────────────────────
+    const maxValue = computed(() => Math.max(1, Number(props.max.value) || 5));
+    const stepSize = computed(() => (Number(props.precision.value) === 0.5 ? 0.5 : 1));
+    const ratingControl = createSliderControl({
+      disabled: isDisabled,
+      max: maxValue,
+      readonly: props.readonly,
+      step: stepSize,
+    });
+
+    // Snaps every value (including external sets) onto the precision grid.
+    const normalizedValue = computed(() => ratingControl.snap(Number(props.value.value)));
+    const hovered = signal<number | null>(null);
+    const displayValue = computed(() => hovered.value ?? normalizedValue.value);
+    const dragging = signal(false);
+
+    let starsEl: HTMLDivElement | null = null;
 
     defineFieldValue(
       el,
@@ -111,135 +179,168 @@ define<OreRatingProps>(RATING_TAG, {
       },
     );
 
-    useField({
+    useField<string>({
       disabled: isDisabled,
-      value: computed(() => String(normalizedValue.value || 0)),
+      validity: computed(() =>
+        props.required.value && normalizedValue.value < 1
+          ? { flags: { valueMissing: true }, message: 'Select a rating.' }
+          : null,
+      ),
+      value: computed(() => String(normalizedValue.value)),
     });
 
-    const assistiveId = createId('helper');
-    const assistive = createErrorHelperState({ error: props.error, helper: props.helper });
-    const errorText = computed(() => assistive.value.errorText);
-    const helperText = computed(() => assistive.value.helperText);
-    const ariaDescribedBy = computed(() => (errorText.value || helperText.value ? assistiveId : null));
+    function commit(next: number, fromPress: boolean): void {
+      const current = normalizedValue.value;
 
-    const isInteractive = computed(() => !props.readonly?.value && !isDisabled.value);
-    const hovered = signal<number | null>(null);
-    const displayValue = computed(() => hovered.value ?? normalizedValue.value);
-    const getStarButtons = () => {
-      return [...(el.shadowRoot?.querySelectorAll<HTMLButtonElement>('[data-star]') ?? [])];
-    };
-    const ratingControl = createSliderControl({
-      max: computed(() => Number(props.max?.value) || 5),
-      min: signal(1),
-      step: signal(1),
-    });
+      if (next === current) {
+        // Re-pressing the same star clears the rating; a drag passing back over
+        // it (fromPress=false) must not.
+        if (!fromPress || next === 0 || !props.clearable.value) return;
 
-    function spawnSparkles(star: number) {
-      // The burst is spawned from JavaScript, so the CSS hatch cannot suppress
-      // it: a zero-duration animation would still create ten nodes per click.
-      // Ask the motion mode instead.
-      if (motionReduced()) return;
-
-      const layer = el.shadowRoot?.querySelector<HTMLElement>('.sparkle-layer');
-      const btn = el.shadowRoot?.querySelector<HTMLElement>(`[data-star="${star}"]`);
-
-      if (!layer || !btn) return;
-
-      const cx = btn.offsetLeft + btn.offsetWidth / 2;
-      const cy = btn.offsetTop + btn.offsetHeight / 2;
-      const count = 10;
-
-      for (let i = 0; i < count; i++) {
-        const p = document.createElement('span');
-        const angle = (360 / count) * i + (Math.random() * 30 - 15);
-        const dist = 18 + Math.random() * 20;
-        const size = 3 + Math.random() * 4;
-        const dur = 380 + Math.random() * 220;
-
-        p.className = 'sparkle';
-        p.style.cssText = [
-          `left:${cx}px`,
-          `top:${cy}px`,
-          `--_angle:${angle}deg`,
-          `--_dist:${dist}px`,
-          `width:${size}px`,
-          `height:${size}px`,
-          `--_dur:${dur}ms`,
-          `animation-delay:${Math.random() * 60}ms`,
-        ].join(';');
-        layer.appendChild(p);
-        p.addEventListener('animationend', () => p.remove(), { once: true });
+        next = 0;
       }
-    }
-    function select(star: number, _originalEvent?: Event) {
-      if (!isInteractive.value) return;
 
-      const max = Math.max(1, Number(props.max?.value) || 5);
-      const nextValue = Math.min(max, Math.max(0, star));
-
-      if (nextValue === normalizedValue.value) return;
-
-      setFieldValue(el, String(nextValue));
+      setFieldValue(el, String(next));
       dispatchNativeFieldEvent(el, 'input');
       dispatchNativeFieldEvent(el, 'change');
-      spawnSparkles(nextValue);
-    }
-    function handleKeydown(e: KeyboardEvent, star: number) {
-      const next = ratingControl.nextFromKey(e.key, star);
-
-      if (next == null) return;
-
-      e.preventDefault();
-      select(next, e);
-
-      const buttons = getStarButtons();
-
-      buttons[next - 1]?.focus();
     }
 
-    const stars = computed(() => {
-      const max = Number(props.max?.value) || 5;
+    // ── Pointer interaction ────────────────────────────────────────────────────
+    function pointerValue(e: PointerEvent): number | null {
+      const starEl = (e.target as Element | null)?.closest?.('[data-star]') as HTMLElement | null;
 
-      return Array.from({ length: max }, (_, i) => i + 1);
-    });
+      if (starEl) {
+        const index = Number(starEl.dataset.star);
+
+        if (stepSize.value < 1) {
+          const width = starEl.clientWidth;
+
+          if (width > 0) {
+            const x = (e as PointerEvent & MouseEvent).clientX - starEl.getBoundingClientRect().left;
+
+            if (x < width / 2) return ratingControl.snap(index - 0.5);
+          }
+        }
+
+        return ratingControl.snap(index);
+      }
+
+      // During a drag, pointer capture retargets events to the row; map by X.
+      if (starsEl) {
+        const rect = starsEl.getBoundingClientRect();
+
+        if (rect.width > 0) return ratingControl.fromClientX((e as PointerEvent & MouseEvent).clientX, rect);
+      }
+
+      return null;
+    }
+
+    function handlePointerDown(e: PointerEvent): void {
+      if (!isInteractive.value) return;
+
+      dragging.value = true;
+
+      if (starsEl && 'setPointerCapture' in starsEl) {
+        try {
+          starsEl.setPointerCapture(e.pointerId);
+        } catch {
+          // Pointer already released between hit-test and capture.
+        }
+      }
+
+      const next = pointerValue(e);
+
+      if (next !== null) commit(next, true);
+    }
+
+    function handlePointerMove(e: PointerEvent): void {
+      if (!isInteractive.value) return;
+
+      const next = pointerValue(e);
+
+      if (next === null) return;
+
+      hovered.value = next;
+      if (dragging.value) commit(next, false);
+    }
+
+    function handlePointerUp(): void {
+      dragging.value = false;
+    }
+
+    function handlePointerLeave(): void {
+      hovered.value = null;
+    }
+
+    function handleKeydown(e: KeyboardEvent): void {
+      ratingControl.handleKeydown(e, normalizedValue.value, (next) => commit(next, false));
+    }
+
+    const stars = computed(() => Array.from({ length: maxValue.value }, (_, i) => i + 1));
 
     bind({ attr: { size: props.size } });
 
     return html`
-      <div
-        class="stars"
-        part="stars"
-        role="radiogroup"
-        aria-label="${props.label}"
-        aria-describedby="${ariaDescribedBy}">
-        ${() =>
-          stars.value.map(
-            (star) => html`
-              <button
-                class="star-btn"
-                part="star"
-                type="button"
-                role="radio"
-                aria-label="${() => `${star} ${star === 1 ? 'star' : 'stars'}`}"
-                aria-checked="${() => String(star === normalizedValue.value)}"
-                data-star="${star}"
-                ?data-filled="${() => star <= displayValue.value}"
-                disabled="${() => (!isInteractive.value ? true : null)}"
-                @click="${(e: Event) => select(star, e)}"
-                @pointerenter="${() => {
-                  if (isInteractive.value) hovered.value = star;
-                }}"
-                @pointerleave="${() => {
-                  hovered.value = null;
-                }}"
-                @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}">
-                <ore-icon name="star" size="var(--_star-size)" stroke-width="1.5" aria-hidden="true"></ore-icon>
-              </button>
-            `,
-          )}
-        <div class="sparkle-layer"></div>
+      <div class="rating-wrapper" part="wrapper">
+        <span class="label" id="${labelId}" part="label" ?hidden="${labelHidden}">
+          <slot name="label">${props.label}</slot>
+        </span>
+        <div
+          class="stars"
+          part="stars"
+          role="slider"
+          tabindex="${() => (isInteractive.value ? '0' : null)}"
+          aria-valuemin="0"
+          aria-valuenow="${() => String(normalizedValue.value)}"
+          aria-valuetext="${() =>
+            normalizedValue.value === 0
+              ? labels.value.unrated
+              : labels.value.value(normalizedValue.value, maxValue.value)}"
+          aria-valuemax="${() => String(maxValue.value)}"
+          aria-label="${sliderAriaLabel}"
+          aria-labelledby="${sliderLabelledBy}"
+          aria-describedby="${ariaDescribedBy}"
+          aria-errormessage="${() => (errorText.value ? errorId : null)}"
+          aria-invalid="${ariaInvalid}"
+          aria-required="${() => (props.required.value && isInteractive.value ? 'true' : null)}"
+          aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+          aria-readonly="${() => (props.readonly.value && !isDisabled.value ? 'true' : null)}"
+          ref=${(node: HTMLDivElement | null) => {
+            starsEl = node;
+          }}
+          @pointerdown="${handlePointerDown}"
+          @pointermove="${handlePointerMove}"
+          @pointerup="${handlePointerUp}"
+          @pointercancel="${handlePointerUp}"
+          @pointerleave="${handlePointerLeave}"
+          @keydown="${handleKeydown}">
+          ${() =>
+            stars.value.map(
+              (star) => html`
+                <span
+                  class="star"
+                  part="star"
+                  aria-hidden="true"
+                  data-star="${star}"
+                  ?data-current="${() =>
+                    isInteractive.value && normalizedValue.value > 0 && star === Math.ceil(normalizedValue.value)}">
+                  <span class="star-fill" style="${() => `width:${Math.max(0, Math.min(1, displayValue.value - (star - 1))) * 100}%`}">
+                    <span class="star-fill-inner">
+                      <ore-icon name="star" size="var(--_star-size)" aria-hidden="true"></ore-icon>
+                    </span>
+                  </span>
+                  <ore-icon name="star" class="base-icon" size="var(--_star-size)" stroke-width="1.5" aria-hidden="true"></ore-icon>
+                </span>
+              `,
+            )}
+        </div>
+        <div class="helper-text" aria-live="polite" id="${assistiveId}" part="helper" ?hidden="${helperHidden}">
+          <slot name="helper">${() => helperText.value}</slot>
+        </div>
+        <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden="${errorHidden}">
+          <slot name="error">${() => errorText.value}</slot>
+        </div>
       </div>
-      ${renderHelperRegion(assistiveId, errorText, helperText)}
     `;
   },
   styles: [colorThemeMixin, sizeVariantMixin({}), touchTargetMixin, componentStyles],

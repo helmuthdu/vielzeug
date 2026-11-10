@@ -35,6 +35,33 @@ test.describe('Interaction', () => {
     expect(values).toContain('beta');
   });
 
+  test('tints the keyboard-focused item with the neutral theme tint', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`<ore-command-palette open label="Palette">${itemsHtml}</ore-command-palette>`);
+
+    await page.locator('ore-command-palette').locator('input').press('ArrowDown');
+
+    // The fill fades in, so poll until the transition lands on the final color.
+    await expect
+      .poll(() =>
+        page.locator('ore-command-palette').evaluate((palette) => {
+          const shadow = palette.shadowRoot!;
+          const focused = shadow.querySelector<HTMLElement>('.item[data-focused]')!;
+          const probe = document.createElement('div');
+
+          // Same recipe the option lists (select/combobox/query-bar) focus with by default.
+          probe.style.background = 'color-mix(in oklch, var(--color-neutral) 12%, var(--color-contrast-100))';
+          shadow.append(probe);
+
+          const expected = getComputedStyle(probe).backgroundColor;
+
+          probe.remove();
+
+          return getComputedStyle(focused).backgroundColor === expected;
+        }),
+      )
+      .toBe(true);
+  });
+
   test('emits an empty active-change when the query matches nothing', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`<ore-command-palette open label="Palette">${itemsHtml}</ore-command-palette>`);
 
@@ -97,33 +124,34 @@ test.describe('Layout', () => {
     expect(hidden).toBe(true);
   });
 
-  test('pins the group heading while its group scrolls', async ({ page, refinePage }) => {
-    const many = Array.from(
-      { length: 20 },
-      (_, i) => `<ore-command-palette-item value="i-${i}" group="Many">Item ${i}</ore-command-palette-item>`,
-    ).join('');
+  test('renders group headings as plain labels with a divider between groups', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-command-palette open label="Palette">
+        <ore-command-palette-item value="a" group="First">A</ore-command-palette-item>
+        <ore-command-palette-item value="b" group="Second">B</ore-command-palette-item>
+      </ore-command-palette>
+    `);
 
-    await refinePage.mountComponent(`<ore-command-palette open label="Palette">${many}</ore-command-palette>`);
-
-    const pinned = await page.locator('ore-command-palette').evaluate((palette) => {
+    const styles = await page.locator('ore-command-palette').evaluate((palette) => {
       const shadow = palette.shadowRoot!;
-      const list = shadow.querySelector<HTMLElement>('.listbox')!;
-      const heading = shadow.querySelector<HTMLElement>('.group-heading')!;
-
-      const topBefore = heading.getBoundingClientRect().top;
-
-      list.scrollTop = list.scrollHeight;
+      const [first, second] = [...shadow.querySelectorAll<HTMLElement>('.group-heading')];
 
       return {
-        position: getComputedStyle(heading).position,
-        scrolled: list.scrollTop > 0,
-        staysAtTop: Math.abs(heading.getBoundingClientRect().top - topBefore) < 2,
+        backdrop: getComputedStyle(first).backdropFilter,
+        background: getComputedStyle(first).backgroundColor,
+        firstBorder: getComputedStyle(first).borderTopWidth,
+        position: getComputedStyle(first).position,
+        secondBorder: getComputedStyle(second).borderTopWidth,
       };
     });
 
-    expect(pinned.position).toBe('sticky');
-    expect(pinned.scrolled).toBe(true);
-    expect(pinned.staysAtTop).toBe(true);
+    // No sticky paint job: the label sits directly on the panel frost.
+    expect(styles.position).toBe('static');
+    expect(styles.background).toBe('rgba(0, 0, 0, 0)');
+    expect(styles.backdrop).toBe('none');
+    // The hairline only separates groups: the first heading carries none.
+    expect(Number.parseFloat(styles.firstBorder)).toBe(0);
+    expect(Number.parseFloat(styles.secondBorder)).toBeGreaterThan(0);
   });
 });
 

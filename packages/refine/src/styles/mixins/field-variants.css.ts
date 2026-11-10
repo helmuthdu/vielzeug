@@ -10,13 +10,6 @@ export type FieldVariantMixinOptions = {
   accentVar?: string;
   /** Selector for the element that gets the variant's background/border/shadow: the visual "box". */
   container: string;
-  /**
-   * Selector for the text-bearing element the `bordered` variant tints to the theme color.
-   * Defaults to `container` for components where the box and the text-bearing element are the
-   * same node (`ore-input`/`ore-textarea`'s `.field`). Pass a distinct selector when they're
-   * split (`ore-message-composer`'s `.composer` card vs its bare `.field` textarea).
-   */
-  text?: string;
   /** CSS custom-property namespace, e.g. `'input'` → `--input-bg`, `--input-hover-bg`, ... */
   tokenPrefix: string;
 };
@@ -26,10 +19,9 @@ export type FieldVariantMixinOptions = {
  * field component (`ore-input`, `ore-textarea`, `ore-message-composer`, `ore-otp-input`) :
  * previously hand-duplicated across them, mostly identically but not quite: this version also
  * uniformly adds a `:not([disabled])` guard to the `flat` variant's hover/focus rules (only
- * `ore-message-composer` had it) and the `bordered` variant's text/placeholder/caret tint
- * (`ore-input`/`ore-otp-input` were missing pieces of it): clearly-unintentional per-component
- * gaps, not deliberate differences, so this mixin converges on the more complete behavior for
- * every consumer rather than picking one component's version arbitrarily.
+ * `ore-message-composer` had it): clearly-unintentional per-component gaps, not deliberate
+ * differences, so this mixin converges on the more complete behavior for every consumer rather
+ * than picking one component's version arbitrarily.
  *
  * Deliberately does **not** touch `:focus-within` box-shadow for `solid`/`outline`/`ghost` :
  * every current consumer already covers that with its own single `:host(:not([disabled],
@@ -50,10 +42,10 @@ export type FieldVariantMixinOptions = {
  * // ore-textarea / ore-input (box and text-bearing element are the same `.field`)
  * styles: [..., fieldVariantMixin({ container: '.field', tokenPrefix: 'textarea' }), componentStyles]
  *
- * // ore-message-composer (card `.composer` vs its own bare `.field` textarea)
+ * // ore-message-composer (card `.composer` is the visual box)
  * styles: [
  *   ...,
- *   fieldVariantMixin({ container: '.composer', text: '.field', tokenPrefix: 'message-composer' }),
+ *   fieldVariantMixin({ container: '.composer', tokenPrefix: 'message-composer' }),
  *   componentStyles,
  * ]
  *
@@ -68,7 +60,6 @@ export type FieldVariantMixinOptions = {
 export const fieldVariantMixin = ({
   accentVar = '--_theme-focus',
   container,
-  text = container,
   tokenPrefix,
 }: FieldVariantMixinOptions) => css`
   @layer refine.variants {
@@ -107,23 +98,24 @@ export const fieldVariantMixin = ({
       box-shadow: var(--_theme-shadow);
     }
 
-    /* Bordered */
+    /* Bordered: the themed surface pairing (backdrop background + its designed border
+       color), matching the bordered recipe of ore-alert/ore-badge. The typed text stays
+       neutral ink on purpose: the theme base color on the pale backdrop misses AA contrast
+       (axe-verified in the alert wave) and turns user content into decoration. The accent
+       appears on hover/focus borders instead — that interaction is the variant's identity. */
     :host([variant='bordered']) {
       --_bg: var(--${tokenPrefix}-bg, var(--_theme-backdrop));
-      --_border-color: var(--${tokenPrefix}-border-color, color-mix(in oklch, var(${accentVar}) 70%, transparent));
+      --_border-color: var(--${tokenPrefix}-border-color, var(--_theme-border));
     }
 
     :host([variant='bordered']:not([disabled])) ${container}:hover {
       border-color: var(--${tokenPrefix}-hover-border-color, var(${accentVar}));
     }
 
-    :host([variant='bordered']) ${text} {
-      color: var(--_theme-base);
-      caret-color: var(--_theme-base);
-    }
-
-    :host([variant='bordered']) ${text}::placeholder {
-      color: var(--${tokenPrefix}-placeholder-color, color-mix(in oklch, var(--_theme-base) 45%, transparent));
+    :host([variant='bordered']) ${container}:focus-within {
+      background: var(--${tokenPrefix}-focus-bg, var(--_theme-backdrop));
+      border-color: var(--${tokenPrefix}-focus-border-color, var(${accentVar}));
+      box-shadow: var(--_theme-shadow);
     }
 
     /* Outline: border always visible, so unlike the other variants it can't lean on a

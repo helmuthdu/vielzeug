@@ -130,6 +130,30 @@ A checkbox column is prepended automatically. The header checkbox selects/desele
 
 </ComponentPreview>
 
+### Bulk Actions Bar
+
+The grid owns selection state; the action bar belongs to the page. Listen to `selection-change` and render a contextual strip from the selected keys — compose it from ordinary refine parts instead of a grid API.
+
+```html
+<ore-datagrid id="dg-bulk" label="Users" selection-mode="multi"></ore-datagrid>
+<div id="bulk-bar" hidden>
+  <span id="bulk-count"></span>
+  <ore-button size="sm" variant="flat">Archive</ore-button>
+  <ore-button size="sm" variant="flat" emphasis="destructive">Delete</ore-button>
+</div>
+<script>
+  const grid = document.getElementById('dg-bulk');
+  const bar = document.getElementById('bulk-bar');
+  const count = document.getElementById('bulk-count');
+
+  grid.addEventListener('selection-change', (e) => {
+    const keys = e.detail.keys;
+    bar.hidden = keys.length === 0;
+    count.textContent = `${keys.length} selected`;
+  });
+</script>
+```
+
 ## Pagination
 
 Set `page-size` to control how many rows appear per page. Set it to `0` to disable pagination and show all rows.
@@ -285,6 +309,8 @@ Use the `density` attribute to control cell padding. Font size is unaffected.
 </ComponentPreview>
 
 ## Empty State
+
+The empty row appears when there are no rows to display. For source-backed grids a failed load shows an [error row](#error-handling) instead.
 
 <ComponentPreview>
 
@@ -601,6 +627,7 @@ Set `selectedKeys` to programmatically control which rows are selected. Any chan
 - Prev/next buttons call `source.previous()` / `source.next()`.
 - The inline search input calls `source.setParams(search)` when available.
 - `source.state.loading` is reflected in the grid's `aria-busy` state.
+- A failed load (`source.state.error` set with no items) renders an error row instead of the empty state; the row offers a Retry button when the source exposes `reload()`.
 - Client-side sort and filter are bypassed: update source params from emitted grid events for server-side behavior.
 
 ### In-memory data (no source)
@@ -652,6 +679,7 @@ Any object that satisfies the `DataGridSource` structural interface works as a s
 type DataGridSource<T> = {
   next(): Promise<void> | void;
   previous(): Promise<void> | void;
+  reload?(): Promise<void> | void;
   setParams?(search: string): Promise<void> | void;
   readonly state: {
     readonly error: { message: string } | null;
@@ -663,6 +691,16 @@ type DataGridSource<T> = {
 };
 ```
 :::
+
+### Error Handling
+
+When a load fails the source reports `state.error`. With no rows to show the grid renders an error row (localized through `labels.errorText` and `labels.retry`) instead of the misleading "No data" empty state. The Retry button re-runs the load through the optional `reload()` method, which every sourcerer source provides; sources without it show the error without a button. If the failed load still has items from an earlier success, the rows stay visible.
+
+```js
+// Sourcerer sources already expose reload(); the retry button calls it.
+const source = createPageSource({ load: fetchUsers, params: '' });
+grid.source = source;
+```
 
 ## Localization
 
@@ -690,30 +728,30 @@ Provided `filterOptions` define available choices without activating those filte
 
 ### Attributes / Properties
 
-| Name                 | Type                                   | Default                   | Description                                                                                                                                      |
-| -------------------- | -------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `columns`            | `DataGridColumn[]`                     | N/A                       | Column definitions with optional `cell` text formatting and safe `renderCell` `HTMLResult` output. Takes precedence over `<ore-column>` children |
-| `rows`               | `object[]`                             | `[]`                      | Row data (JS property only)                                                                                                                      |
-| `getRowKey`          | `(row) => string`                      | `(row) => String(row.id)` | Returns a unique key per row. Required when rows lack an `id` field (JS property only)                                                           |
-| `views`              | `DataGridView[]`                       | N/A                       | Controlled tabs with optional client-side `filter(row)` predicates, rendered in the left controls region (JS property)                           |
-| `active-view`        | `string`                               | N/A                       | ID of the currently active view. Must match an `id` in `views`. Consumer keeps this in sync via `view-change`                                    |
-| `label`              | `string`                               | N/A                       | Accessible label for the grid (`aria-label`)                                                                                                     |
-| `labels`             | `Partial<DataGridLabels>`              | English defaults          | Localized built-in control labels, filter operators, and range/row formatters (JS property)                                                      |
-| `selectedKeys`       | `string[]`                             | `[]`                      | Controlled selection: set externally to override the internal selection state (JS property)                                                      |
-| `selection-mode`     | `'none' \| 'single' \| 'multi'`        | `'none'`                  | Row selection behaviour                                                                                                                          |
-| `sort-mode`          | `'client' \| 'server'`                 | `'client'`                | `'server'` disables client-side sorting; consumer handles it via `sort-change`                                                                   |
-| `page-size`          | `number`                               | `10`                      | Rows per page; `0` disables pagination. Reactive: can be changed after mount                                                                     |
-| `expandable`         | `boolean`                              | `false`                   | Enable row expansion. Requires at least one column to have `renderExpanded`                                                                      |
-| `empty-text`         | `string`                               | `'No data'`               | Text shown when `rows` is empty                                                                                                                  |
-| `density`            | `'compact' \| 'cozy' \| 'comfortable'` | `'cozy'`                  | Cell padding; `compact` = tight, `cozy` = default, `comfortable` = spacious                                                                      |
-| `striped`            | `boolean`                              | `false`                   | Alternating row backgrounds                                                                                                                      |
-| `fullwidth`          | `boolean`                              | `false`                   | Stretch the grid to fill its container's width                                                                                                   |
-| `search-placeholder` | `string`                               | `'Search…'`               | Placeholder text for the inline search input in the controls bar                                                                                 |
-| `filterOptions`      | `FilterOption[]`                       | N/A                       | Available choices for column or non-visible metadata filters. Definitions remain inactive until selected in the Filter popover (JS property)     |
-| `pageSizeOptions`    | `number[]`                             | N/A                       | When set, renders a page-size `ore-select` in the footer (JS property)                                                                           |
-| `source`             | `DataGridSource`                       | N/A                       | A reactive source. When set, drives rows and pagination; string-param sources also drive search (JS property)                                    |
-| `loading`            | `boolean`                              | `false`                   | Show busy/loading state. Also set automatically from `source.state.loading` when `source` is provided                                            |
-| `disabled`           | `boolean`                              | `false`                   | Disable all interaction                                                                                                                          |
+| Name                 | Type                                   | Default                   | Description                                                                                                                                                                                |
+| -------------------- | -------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `columns`            | `DataGridColumn[]`                     | N/A                       | Column definitions with optional `cell` text formatting and safe `renderCell` `HTMLResult` output. Takes precedence over `<ore-column>` children                                           |
+| `rows`               | `object[]`                             | `[]`                      | Row data (JS property only)                                                                                                                                                                |
+| `getRowKey`          | `(row) => string`                      | `(row) => String(row.id)` | Returns a unique key per row. Required when rows lack an `id` field (JS property only)                                                                                                     |
+| `views`              | `DataGridView[]`                       | N/A                       | Controlled tabs with optional client-side `filter(row)` predicates, rendered in the left controls region (JS property)                                                                     |
+| `active-view`        | `string`                               | N/A                       | ID of the currently active view. Must match an `id` in `views`. Consumer keeps this in sync via `view-change`                                                                              |
+| `label`              | `string`                               | N/A                       | Accessible label for the grid (`aria-label`)                                                                                                                                               |
+| `labels`             | `Partial<DataGridLabels>`              | English defaults          | Localized built-in control labels, filter operators, and range/row formatters (JS property)                                                                                                |
+| `selectedKeys`       | `string[]`                             | `[]`                      | Controlled selection: set externally to override the internal selection state (JS property)                                                                                                |
+| `selection-mode`     | `'none' \| 'single' \| 'multi'`        | `'none'`                  | Row selection behaviour                                                                                                                                                                    |
+| `sort-mode`          | `'client' \| 'server'`                 | `'client'`                | `'server'` disables client-side sorting; consumer handles it via `sort-change`                                                                                                             |
+| `page-size`          | `number`                               | `10`                      | Rows per page; `0` disables pagination. Reactive: can be changed after mount                                                                                                               |
+| `expandable`         | `boolean`                              | `false`                   | Enable row expansion. Requires at least one column to have `renderExpanded`                                                                                                                |
+| `empty-text`         | `string`                               | `'No data'`               | Text shown when `rows` is empty                                                                                                                                                            |
+| `density`            | `'compact' \| 'cozy' \| 'comfortable'` | `'cozy'`                  | Cell padding; `compact` = tight, `cozy` = default, `comfortable` = spacious                                                                                                                |
+| `striped`            | `boolean`                              | `false`                   | Alternating row backgrounds                                                                                                                                                                |
+| `fullwidth`          | `boolean`                              | `false`                   | Stretch the grid to fill its container's width                                                                                                                                             |
+| `search-placeholder` | `string`                               | `'Search…'`               | Placeholder text for the inline search input in the controls bar                                                                                                                           |
+| `filterOptions`      | `FilterOption[]`                       | N/A                       | Available choices for column or non-visible metadata filters. Definitions remain inactive until selected in the Filter popover (JS property)                                               |
+| `pageSizeOptions`    | `number[]`                             | N/A                       | When set, renders a page-size `ore-select` in the footer (JS property)                                                                                                                     |
+| `source`             | `DataGridSource`                       | N/A                       | A reactive source. When set, drives rows and pagination; string-param sources also drive search. A set `state.error` renders the error row; optional `reload()` powers retry (JS property) |
+| `loading`            | `boolean`                              | `false`                   | Show busy/loading state. Also set automatically from `source.state.loading` when `source` is provided                                                                                      |
+| `disabled`           | `boolean`                              | `false`                   | Disable all interaction                                                                                                                                                                    |
 
 ### DataGridView
 

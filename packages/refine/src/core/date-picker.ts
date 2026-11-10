@@ -79,7 +79,40 @@ export type DatePickerControlOptions = {
    * @example [0, 6] disables weekends
    */
   weekendDays?: number[];
+  /**
+   * First day of the week for the grid (ISO: 1 = Monday … 7 = Sunday).
+   * When unset/invalid, derived from the locale via `Intl.Locale.weekInfo`,
+   * falling back to Monday (ISO default) for locales without week data.
+   */
+  weekStartsOn?: number | null;
 };
+
+/**
+ * Region week-start lookups from `Intl.Locale.weekInfo`, memoized per locale
+ * tag (locale is a stable per-session string; the lookup itself is cheap).
+ * @internal
+ */
+const localeWeekStartCache = new Map<string, number | undefined>();
+
+/** @internal */
+function localeWeekStart(loc: string): number | undefined {
+  if (!localeWeekStartCache.has(loc)) {
+    let firstDay: number | undefined;
+
+    try {
+      firstDay = (new Intl.Locale(loc) as unknown as { weekInfo?: { firstDay?: number } }).weekInfo?.firstDay;
+    } catch {
+      firstDay = undefined; // invalid BCP 47 tag
+    }
+
+    localeWeekStartCache.set(
+      loc,
+      typeof firstDay === 'number' && firstDay >= 1 && firstDay <= 7 ? firstDay : undefined,
+    );
+  }
+
+  return localeWeekStartCache.get(loc);
+}
 
 export type DatePickerControl = {
   /** Ordered day cells for the visible month grid (includes leading/trailing days) */
@@ -179,6 +212,15 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
     return options.weekendDays ?? [];
   }
 
+  /** First day of the week as a 0-based weekday index (0=Sun…6=Sat) for grid offsets. */
+  function weekStartIndex(): number {
+    const explicit = options.weekStartsOn;
+
+    if (typeof explicit === 'number' && explicit >= 1 && explicit <= 7) return explicit % 7;
+
+    return (localeWeekStart(locale()) ?? 1) % 7;
+  }
+
   // ── Range / disabled helpers ───────────────────────────────────────────────
 
   function isOutOfRange(date: Temporal.PlainDate): boolean {
@@ -203,8 +245,9 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
     const todayDate = todayPlain();
     const firstOfMonth = Temporal.PlainDate.from({ day: 1, month: _displayMonth, year: _displayYear });
 
-    // Sunday-start grid: Temporal dayOfWeek is 1=Mon…7=Sun, convert to 0=Sun offset
-    const startOffset = temporalDowToIndex(firstOfMonth.dayOfWeek);
+    // Week-start from locale (or explicit override): cells begin on the week's
+    // first day, so a Monday-first locale renders a Mo–Su grid.
+    const startOffset = (temporalDowToIndex(firstOfMonth.dayOfWeek) - weekStartIndex() + 7) % 7;
     const cells: DateCell[] = [];
 
     // Leading days from previous month
@@ -315,12 +358,14 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
   }
 
   function buildWeekdayLabels(): string[] {
-    // 2024-01-07 is a Sunday: use it as the Sunday anchor
+    // 2024-01-07 is a Sunday: use it as the Sunday anchor, then rotate the
+    // sequence to start on the resolved week-start day.
     const sunday = parse('2024-01-07', { as: 'plainDate' });
     const loc = locale();
+    const start = weekStartIndex();
 
     return Array.from({ length: 7 }, (_, i) =>
-      format(sunday.add({ days: i }), { intl: { weekday: 'short' }, locale: loc, timeZone: 'UTC' }),
+      format(sunday.add({ days: (start + i) % 7 }), { intl: { weekday: 'short' }, locale: loc, timeZone: 'UTC' }),
     );
   }
 

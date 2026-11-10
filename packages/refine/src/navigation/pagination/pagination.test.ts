@@ -35,6 +35,13 @@ describe('ore-pagination', () => {
       expect(pageBtns?.length).toBeGreaterThanOrEqual(1);
     });
 
+    it('renders prev/next buttons by default', async () => {
+      fixture = await mount('ore-pagination', { attrs: { page: '3', 'total-pages': '5' } });
+
+      expect(fixture.query('[aria-label="Previous page"]')).toBeTruthy();
+      expect(fixture.query('[aria-label="Next page"]')).toBeTruthy();
+    });
+
     it('renders prev/next buttons when show-prev-next is set', async () => {
       fixture = await mount('ore-pagination', { attrs: { page: '3', 'show-prev-next': 'true', 'total-pages': '5' } });
 
@@ -333,6 +340,40 @@ describe('ore-pagination accessibility', () => {
       if (ellipsis) {
         expect(ellipsis.getAttribute('aria-hidden')).toBe('true');
       }
+    });
+  });
+
+  describe('Labels', () => {
+    it('overrides accessible names through the labels property', async () => {
+      fixture = await mount('ore-pagination', {
+        attrs: { page: '2', 'show-first-last': 'true', 'show-prev-next': 'true', 'total-pages': '5' },
+        props: {
+          labels: {
+            first: 'Première page',
+            last: 'Dernière page',
+            next: 'Page suivante',
+            page: (page: number) => `Page ${page} sur 5`,
+            previous: 'Page précédente',
+          },
+        },
+      });
+
+      expect(fixture.query('[aria-label="Première page"]')).toBeTruthy();
+      expect(fixture.query('[aria-label="Page précédente"]')).toBeTruthy();
+      expect(fixture.query('[aria-label="Page suivante"]')).toBeTruthy();
+      expect(fixture.query('[aria-label="Dernière page"]')).toBeTruthy();
+      expect(fixture.query('[aria-label="Page 2 sur 5"]')).toBeTruthy();
+    });
+
+    it('merges partial labels over the English defaults', async () => {
+      fixture = await mount('ore-pagination', {
+        attrs: { page: '1', 'show-prev-next': 'true', 'total-pages': '5' },
+        props: { labels: { next: 'Next' } },
+      });
+
+      expect(fixture.query('[aria-label="Next"]')).toBeTruthy();
+      expect(fixture.query('[aria-label="Previous page"]')).toBeTruthy();
+      expect(fixture.query('[aria-label="Page 1"]')).toBeTruthy();
     });
   });
 

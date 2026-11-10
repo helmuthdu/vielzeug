@@ -84,27 +84,27 @@ Set `pressed` directly on `ore-keyboard-key` only when displaying one independen
 
 **CSS Custom Properties**
 
-| Property                                   | Default                   | Description                               |
-| ------------------------------------------ | ------------------------- | ----------------------------------------- |
-| `--keyboard-key-bg`                        | Theme-dependent           | Key surface color                         |
-| `--keyboard-key-color`                     | Theme-dependent           | Key label color                           |
-| `--keyboard-key-border-color`              | Theme-dependent           | Key border color                          |
-| `--keyboard-key-radius`                    | Size-dependent            | Key corner radius                         |
-| `--keyboard-key-font-family`               | `var(--font-sans)`        | Key label typeface                        |
-| `--keyboard-key-font-size`                 | Size-dependent            | Key label size                            |
-| `--keyboard-key-font-weight`               | Size-dependent            | Key label weight                          |
-| `--keyboard-key-padding-block`             | Size-dependent            | Vertical padding                          |
-| `--keyboard-key-padding-inline`            | Size-dependent            | Horizontal padding                        |
-| `--keyboard-key-min-width`                 | `var(--size-6)`, `var(--size-16)` for `lg` | Key minimum width (square-ish chips)   |
-| `--keyboard-key-min-height`                | `var(--size-16)` for `lg` | Large key minimum height                  |
-| `--keyboard-key-shadow`                    | Size-dependent            | Key shadow                                |
-| `--keyboard-key-symbol-color`              | Theme-dependent           | Large modifier symbol color               |
-| `--keyboard-key-pressed-ring-color`        | Theme-dependent           | Individual pressed-key surround color     |
-| `--keyboard-shortcut-gap`                  | `var(--size-2)`           | Space between grouped keys                |
-| `--keyboard-shortcut-padding`              | `var(--size-2)`           | Space between keys and the group surround |
-| `--keyboard-shortcut-radius`               | `var(--rounded-lg)`       | Group surround corner radius              |
-| `--keyboard-shortcut-pressed-bg`           | Theme-dependent           | Pressed group surround color              |
-| `--keyboard-shortcut-pressed-border-color` | Theme-dependent           | Pressed group border color                |
+| Property                                   | Default                                    | Description                               |
+| ------------------------------------------ | ------------------------------------------ | ----------------------------------------- |
+| `--keyboard-key-bg`                        | Theme-dependent                            | Key surface color                         |
+| `--keyboard-key-color`                     | Theme-dependent                            | Key label color                           |
+| `--keyboard-key-border-color`              | Theme-dependent                            | Key border color                          |
+| `--keyboard-key-radius`                    | Size-dependent                             | Key corner radius                         |
+| `--keyboard-key-font-family`               | `var(--font-sans)`                         | Key label typeface                        |
+| `--keyboard-key-font-size`                 | Size-dependent                             | Key label size                            |
+| `--keyboard-key-font-weight`               | Size-dependent                             | Key label weight                          |
+| `--keyboard-key-padding-block`             | Size-dependent                             | Vertical padding                          |
+| `--keyboard-key-padding-inline`            | Size-dependent                             | Horizontal padding                        |
+| `--keyboard-key-min-width`                 | `var(--size-6)`, `var(--size-16)` for `lg` | Key minimum width (square-ish chips)      |
+| `--keyboard-key-min-height`                | `var(--size-16)` for `lg`                  | Large key minimum height                  |
+| `--keyboard-key-shadow`                    | Size-dependent                             | Key shadow                                |
+| `--keyboard-key-symbol-color`              | Theme-dependent                            | Large modifier symbol color               |
+| `--keyboard-key-pressed-ring-color`        | Theme-dependent                            | Individual pressed-key surround color     |
+| `--keyboard-shortcut-gap`                  | `var(--size-2)`                            | Space between grouped keys                |
+| `--keyboard-shortcut-padding`              | `var(--size-2)`                            | Space between keys and the group surround |
+| `--keyboard-shortcut-radius`               | `var(--rounded-lg)`                        | Group surround corner radius              |
+| `--keyboard-shortcut-pressed-bg`           | Theme-dependent                            | Pressed group surround color              |
+| `--keyboard-shortcut-pressed-border-color` | Theme-dependent                            | Pressed group border color                |
 
 ## Accessibility
 

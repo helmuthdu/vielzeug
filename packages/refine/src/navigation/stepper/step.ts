@@ -61,6 +61,10 @@ export type OreStepProps = {
  * @part description - Step description element
  * @part connector - Connector line segments (leading and trailing halves) either side of this step's indicator
  *
+ * @cssprop --step-indicator-size - Indicator circle diameter (default 32 px; size tiers sm/md/lg set 24/32/40 px)
+ * @cssprop --step-font-size - Step label font size
+ * @cssprop --step-gap - Gap between the indicator and the label content
+ *
  * @example
  * ```html
  * <ore-step value="details">Account details</ore-step>

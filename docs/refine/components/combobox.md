@@ -6,7 +6,7 @@ An autocomplete input that combines a text field with a filterable dropdown list
 
 Place `<ore-combobox-option>` elements inside `<ore-combobox>`. The `value` attribute is what gets submitted; the text content is the label used for display and filtering.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
 <ore-combobox label="Country" placeholder="Search countries…">
@@ -24,29 +24,31 @@ Place `<ore-combobox-option>` elements inside `<ore-combobox>`. The `value` attr
 
 Five visual variants for different UI contexts and levels of emphasis.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
-<ore-combobox variant="solid" placeholder="Solid">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox variant="flat" placeholder="Flat">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox variant="bordered" placeholder="Bordered">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox variant="outline" placeholder="Outline">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox variant="ghost" placeholder="Ghost">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
+<ore-grid cols="2" cols-sm="3" gap="md">
+  <ore-combobox fullwidth variant="solid" placeholder="Solid">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth variant="flat" placeholder="Flat">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth variant="bordered" placeholder="Bordered">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth variant="outline" placeholder="Outline">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth variant="ghost" placeholder="Ghost">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+</ore-grid>
 ```
 
 </ComponentPreview>
@@ -55,7 +57,7 @@ Five visual variants for different UI contexts and levels of emphasis.
 
 Add an `icon` named slot inside any `<ore-combobox-option>` for a leading icon. The icon is rendered in the dropdown alongside the label.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
 <ore-combobox label="Role" placeholder="Select a role…">
@@ -82,58 +84,62 @@ Add an `icon` named slot inside any `<ore-combobox-option>` for a leading icon. 
 
 ## Colors
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
-<ore-combobox variant="bordered" label="Default">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox variant="bordered" label="Primary" color="primary">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox variant="bordered" label="Secondary" color="secondary">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox variant="bordered" label="Info" color="info">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox variant="bordered" label="Warning" color="warning">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox variant="bordered" label="Success" color="success">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox variant="bordered" label="Error" color="error">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
+<ore-grid cols="2" cols-sm="3" cols-md="4" gap="md">
+  <ore-combobox fullwidth variant="bordered" label="Default">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth variant="bordered" label="Primary" color="primary">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth variant="bordered" label="Secondary" color="secondary">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth variant="bordered" label="Info" color="info">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth variant="bordered" label="Warning" color="warning">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth variant="bordered" label="Success" color="success">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth variant="bordered" label="Error" color="error">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+</ore-grid>
 ```
 
 </ComponentPreview>
 
 ## Sizes
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
-<ore-combobox label="Small" size="sm">
-  <ore-combobox-option value="a">Alpha</ore-combobox-option>
-  <ore-combobox-option value="b">Beta</ore-combobox-option>
-</ore-combobox>
-<ore-combobox label="Medium (default)" size="md">
-  <ore-combobox-option value="a">Alpha</ore-combobox-option>
-  <ore-combobox-option value="b">Beta</ore-combobox-option>
-</ore-combobox>
-<ore-combobox label="Large" size="lg">
-  <ore-combobox-option value="a">Alpha</ore-combobox-option>
-  <ore-combobox-option value="b">Beta</ore-combobox-option>
-</ore-combobox>
+<ore-grid gap="md" style="max-width: 22rem;">
+  <ore-combobox fullwidth label="Small" size="sm">
+    <ore-combobox-option value="a">Alpha</ore-combobox-option>
+    <ore-combobox-option value="b">Beta</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth label="Medium (default)" size="md">
+    <ore-combobox-option value="a">Alpha</ore-combobox-option>
+    <ore-combobox-option value="b">Beta</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth label="Large" size="lg">
+    <ore-combobox-option value="a">Alpha</ore-combobox-option>
+    <ore-combobox-option value="b">Beta</ore-combobox-option>
+  </ore-combobox>
+</ore-grid>
 ```
 
 </ComponentPreview>
@@ -142,21 +148,23 @@ Add an `icon` named slot inside any `<ore-combobox-option>` for a leading icon. 
 
 The label can be placed **inset** (inside the field, above the input: default) or **outside** (above the field border). Use `hide-label` only when surrounding context and placeholder text make the purpose clear; the label remains the combobox's accessible name.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
-<ore-combobox label="Inset label (default)" label-placement="inset">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox label="Outside label" label-placement="outside">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
-<ore-combobox label="Compact option" hide-label placeholder="Choose an option…">
-  <ore-combobox-option value="a">Option A</ore-combobox-option>
-  <ore-combobox-option value="b">Option B</ore-combobox-option>
-</ore-combobox>
+<ore-grid cols="2" gap="md">
+  <ore-combobox fullwidth label="Inset label (default)" label-placement="inset">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth label="Outside label" label-placement="outside">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+  <ore-combobox fullwidth label="Compact option" hide-label placeholder="Choose an option…">
+    <ore-combobox-option value="a">Option A</ore-combobox-option>
+    <ore-combobox-option value="b">Option B</ore-combobox-option>
+  </ore-combobox>
+</ore-grid>
 ```
 
 </ComponentPreview>
@@ -165,7 +173,7 @@ The label can be placed **inset** (inside the field, above the input: default) o
 
 Add `clearable` to show a clear (×) button whenever a value is selected. Use this when the field is optional and users might want to reset their choice.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
 <ore-combobox label="Clearable combobox" clearable>
@@ -179,15 +187,16 @@ Add `clearable` to show a clear (×) button whenever a value is selected. Use th
 
 ## Multiselect
 
-Add `multiple` to allow selecting more than one option. Each selected value is shown as a removable `ore-chip` inside the field. Pressing **Backspace** on an empty input removes the last chip.
+Add `multiple` to allow selecting more than one option. Each selected value is shown as a removable `ore-chip` inside the field. Pressing **Backspace** on an empty input removes the last chip. By default only the first three chips are shown; the rest collapse into a `+N` chip. Set `max-visible` to change the cap, or `0` to show every chip.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
 <ore-combobox
   id="combobox-multiselect-demo"
   label="Technologies"
   multiple
+  value="ts,rust,go,python"
   placeholder="Search…"
   style="max-width: 300px;">
   <ore-combobox-option value="ts">TypeScript</ore-combobox-option>
@@ -208,23 +217,57 @@ document.querySelector('ore-combobox').addEventListener('change', (e) => {
 });
 ```
 
+## Footer Actions
+
+Slotted content in the `footer` slot renders pinned under the option list inside the dropdown. Keep actions light — the footer sits in the scrolling panel, so a couple of buttons is the design budget.
+
+<ComponentPreview align="start" justify="start" height="430px">
+
+```html
+<ore-combobox id="combobox-footer-demo" label="Team" multiple placeholder="Search…" style="max-width: 300px;">
+  <ore-combobox-option value="ada">Ada</ore-combobox-option>
+  <ore-combobox-option value="grace">Grace</ore-combobox-option>
+  <ore-combobox-option value="linus">Linus</ore-combobox-option>
+  <div slot="footer" style="display: flex; gap: 4px;">
+    <ore-button id="combobox-footer-all" size="sm" variant="ghost">Select all</ore-button>
+    <ore-button id="combobox-footer-clear" size="sm" variant="ghost">Clear</ore-button>
+  </div>
+</ore-combobox>
+
+<script>
+  const footerCombobox = document.getElementById('combobox-footer-demo');
+  const allValues = Array.from(footerCombobox.querySelectorAll('ore-combobox-option'), (option) => option.value);
+
+  document.getElementById('combobox-footer-all').addEventListener('click', () => {
+    footerCombobox.value = allValues;
+  });
+  document.getElementById('combobox-footer-clear').addEventListener('click', () => {
+    footerCombobox.value = [];
+  });
+</script>
+```
+
+</ComponentPreview>
+
 ## Helper & Error Text
 
 Pair `error` text with `color="error"` for form validation feedback.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
-<ore-combobox label="Language" helper="Start typing to filter available languages.">
-  <ore-combobox-option value="en">English</ore-combobox-option>
-  <ore-combobox-option value="de">German</ore-combobox-option>
-  <ore-combobox-option value="fr">French</ore-combobox-option>
-</ore-combobox>
+<ore-grid gap="md" style="max-width: 22rem;">
+  <ore-combobox fullwidth label="Language" helper="Start typing to filter available languages.">
+    <ore-combobox-option value="en">English</ore-combobox-option>
+    <ore-combobox-option value="de">German</ore-combobox-option>
+    <ore-combobox-option value="fr">French</ore-combobox-option>
+  </ore-combobox>
 
-<ore-combobox label="Country" error="Please select a valid country." color="error">
-  <ore-combobox-option value="us">United States</ore-combobox-option>
-  <ore-combobox-option value="gb">United Kingdom</ore-combobox-option>
-</ore-combobox>
+  <ore-combobox fullwidth label="Country" error="Please select a valid country." color="error">
+    <ore-combobox-option value="us">United States</ore-combobox-option>
+    <ore-combobox-option value="gb">United Kingdom</ore-combobox-option>
+  </ore-combobox>
+</ore-grid>
 ```
 
 </ComponentPreview>
@@ -233,7 +276,7 @@ Pair `error` text with `color="error"` for form validation feedback.
 
 Add the `disabled` attribute on a `<ore-combobox-option>` to prevent selection. Add `disabled-reason` to explain why the choice is unavailable; the reason remains visible and is included in the option's accessible name.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
 <ore-combobox label="Role">
@@ -254,7 +297,7 @@ combobox.options = [{ value: 'viewer', label: 'Viewer', disabled: true, disabled
 
 ## Disabled State
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
 <ore-combobox label="Disabled combobox" disabled>
@@ -268,7 +311,7 @@ combobox.options = [{ value: 'viewer', label: 'Viewer', disabled: true, disabled
 
 Set `no-filter` to keep all options visible regardless of what the user types. Use this when filtering happens server-side: replace the `<ore-combobox-option>` children based on the `search` event. For short lists (fewer than 6 items) consider a plain `ore-select` instead.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
 <ore-combobox label="User search" no-filter id="user-cb" placeholder="Type to search…">
@@ -300,7 +343,7 @@ cb.addEventListener('search', async (e) => {
 
 Add `creatable` to allow users to create a new option when their query does not match any existing option. A **Create "X"** button appears at the bottom of the dropdown. Selecting it adds the new option and emits a `ore-change` event like any normal selection.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
 <ore-combobox label="Tags" creatable placeholder="Search or create a tag…">
@@ -319,11 +362,29 @@ document.querySelector('ore-combobox').addEventListener('change', (e) => {
 });
 ```
 
+## Custom Labels
+
+Built-in strings live in the `labels` JavaScript property. Override only what you need — anything unset keeps its default. Use it for localization or rewording.
+
+```js
+const combobox = document.querySelector('ore-combobox');
+
+combobox.labels = {
+  noResults: 'Rien trouvé',
+  create: (query) => `Ajouter « ${query} »`,
+};
+```
+
+| Key         | Type                        | Default              | Where it appears                           |
+| ----------- | --------------------------- | -------------------- | ------------------------------------------ |
+| `noResults` | `string`                    | `'No results found'` | Empty-state row in the dropdown            |
+| `create`    | `(query: string) => string` | `Create "X"`         | Creatable row (only offered for new terms) |
+
 ## Loading State
 
 Set `loading` to show a loading indicator inside the dropdown while options are being fetched. Use this together with `no-filter` for server-side search.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
 <ore-combobox label="Server search" no-filter loading placeholder="Fetching options…"> </ore-combobox>
@@ -356,7 +417,7 @@ Assigning a new array to `options` updates the dropdown immediately. When both `
 
 `ore-combobox` is form-associated: its `name` attribute participates in native `FormData` submissions. Set `required` to fail constraint validation while nothing is selected: a native `<form>` blocks submission and `checkValidity()`/`reportValidity()` return `false` until an option is chosen; resetting the ancestor form restores the initial selection.
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
 <form id="myForm">
@@ -381,7 +442,7 @@ document.getElementById('myForm').addEventListener('submit', (e) => {
 
 ## Listening to Events
 
-<ComponentPreview height="400px">
+<ComponentPreview align="start" justify="start" height="400px">
 
 ```html
 <ore-combobox id="my-cb" label="Programming language">
@@ -435,15 +496,23 @@ cb.addEventListener('open-change', (e) => {
 | `creatable`       | `boolean`                                                                 | `false`   | Show a "Create X" option when no match is found             |
 | `loading`         | `boolean`                                                                 | `false`   | Show a loading indicator in the dropdown                    |
 | `multiple`        | `boolean`                                                                 | `false`   | Allow selecting multiple options (chips are shown in field) |
+| `max-visible`     | `number`                                                                  | `3`       | Chips shown before the `+N` overflow chip (`0` = unlimited) |
 | `fullwidth`       | `boolean`                                                                 | `false`   | Expand to fill the container width                          |
 | `disabled`        | `boolean`                                                                 | `false`   | Disable the control                                         |
 | `required`        | `boolean`                                                                 | `false`   | Require a non-blank selection for native-form validation    |
 
 **`ore-combobox` Slots**
 
-| Slot      | Description                                             |
-| --------- | ------------------------------------------------------- |
-| (default) | `ore-combobox-option` elements defining the option list |
+| Slot      | Description                                                    |
+| --------- | -------------------------------------------------------------- |
+| (default) | `ore-combobox-option` elements defining the option list        |
+| `footer`  | Optional content pinned under the option list inside the panel |
+
+**`ore-combobox` JavaScript Properties**
+
+| Prop     | Type                      | Default           | Description                                      |
+| -------- | ------------------------- | ----------------- | ------------------------------------------------ |
+| `labels` | `Partial<ComboboxLabels>` | see Custom Labels | Overrides for built-in `noResults`/`create` text |
 
 **`ore-combobox-option` Attributes**
 

@@ -67,6 +67,46 @@
     color: var(--color-contrast-400);
     user-select: none;
   }
+
+  /* ========================================
+       Field chrome (label / helper / error)
+       ======================================== */
+
+  .otp-wrapper {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--size-1);
+  }
+
+  .label {
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-600);
+    transition: var(--_motion-transition, color var(--transition-fast));
+  }
+
+  .label[hidden],
+  .helper-text[hidden] {
+    display: none;
+  }
+
+  .helper-text {
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    /* Plain --color-contrast-500: the theme's AA-compliant tertiary text token. */
+    color: var(--color-contrast-500);
+    overflow-wrap: anywhere;
+  }
+
+  .helper-text[role='alert'] {
+    color: var(--color-error);
+  }
+
+  /* Error state: cells read invalid at rest (mirrors ore-input's pattern). */
+  :host([error]:not([error=''])) .cell {
+    border-color: var(--color-error);
+  }
 }
 
 /*
@@ -86,6 +126,13 @@
      `flat:focus-within` rule already sets a bespoke `box-shadow` for it. */
   :host(:not([disabled], [variant='flat'])) .cell:focus {
     box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
+  }
+
+  /* Error overrides the accent glow (later rule in the same layer/sheet, so it wins
+     the tie against the glow above, exactly like ore-input's error/success order). */
+  :host([error]:not([error=''])) .cell:focus {
+    border-color: var(--color-error);
+    box-shadow: var(--color-error-focus-shadow);
   }
 }
 

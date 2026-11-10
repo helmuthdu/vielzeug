@@ -19,6 +19,32 @@ test.describe('Accessibility', () => {
   }
 });
 
+test.describe('Trend tone', () => {
+  test('trend-tone recolors an upward trend without changing the arrow', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-stats id="stats" label="Churn" value="4.2%" trend="+0.8%" trend-direction="up" trend-tone="negative"></ore-stats>',
+    );
+
+    const probe = await page.locator('#stats').evaluate((card) => {
+      const trend = card.shadowRoot!.querySelector<HTMLElement>('[part="trend"]')!;
+      const marker = document.createElement('span');
+
+      marker.style.color = 'var(--color-error)';
+      document.body.append(marker);
+
+      const errorColor = getComputedStyle(marker).color;
+      const arrow = trend.querySelector('ore-icon')?.getAttribute('name');
+
+      marker.remove();
+
+      return { arrow, errorColor, trendColor: getComputedStyle(trend).color };
+    });
+
+    expect(probe.arrow).toBe('arrow-up');
+    expect(probe.trendColor).toBe(probe.errorColor);
+  });
+});
+
 test.describe('Layout', () => {
   test('value and visual share the body without overflow', async ({ page, refinePage }) => {
     await refinePage.mountComponent(

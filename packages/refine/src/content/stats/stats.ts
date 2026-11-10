@@ -1,10 +1,12 @@
 import { bind, define, html, prop, useSlots } from '@vielzeug/ore';
+import { computed } from '@vielzeug/ripple';
 import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './stats.css?inline';
 
 export type StatsTrendDirection = 'down' | 'neutral' | 'up';
+export type StatsTrendTone = 'negative' | 'neutral' | 'positive';
 export type StatsVariant = 'outlined' | 'plain' | 'solid';
 
 export type OreStatsProps = {
@@ -17,6 +19,7 @@ export type OreStatsProps = {
   size?: ComponentSize;
   trend?: string;
   'trend-direction'?: StatsTrendDirection;
+  'trend-tone'?: StatsTrendTone;
   value?: string;
   variant?: StatsVariant;
 };
@@ -30,7 +33,8 @@ export type OreStatsProps = {
  * @attr {string} value - Primary metric value
  * @attr {string} description - Supporting context
  * @attr {string} trend - Trend text
- * @attr {string} trend-direction - Trend direction: 'up' | 'down' | 'neutral'
+ * @attr {string} trend-direction - Trend arrow: 'up' | 'down' | 'neutral' (an up/down direction with a built-in trend renders a matching arrow icon)
+ * @attr {string} trend-tone - Trend color: 'positive' | 'negative' | 'neutral' (default: derived from trend-direction)
  * @attr {string} variant - Visual variant: 'outlined' | 'plain' | 'solid'
  * @attr {string} color - Semantic theme color
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
@@ -42,8 +46,9 @@ export type OreStatsProps = {
  * @slot label - Replaces label text
  * @slot value - Replaces value text
  * @slot visual - Compact chart, progress, or other metric visual
- * @slot trend - Replaces trend text
+ * @slot trend - Replaces trend text (also replaces the auto trend arrow)
  * @slot description - Replaces supporting context
+ * @slot footer - Bottom row below the card content, divider-separated (actions, links, notes)
  *
  * @cssprop --stats-bg - Card background
  * @cssprop --stats-color - Card foreground color
@@ -53,8 +58,8 @@ export type OreStatsProps = {
  * @cssprop --stats-min-height - Minimum card height
  * @cssprop --stats-value-size - Primary value font size
  * @cssprop --stats-icon-bg - Icon surface background
- * @cssprop --stats-trend-up - Positive trend color
- * @cssprop --stats-trend-down - Negative trend color
+ * @cssprop --stats-trend-positive - Positive trend color
+ * @cssprop --stats-trend-negative - Negative trend color
  *
  * @part card - Card surface
  * @part loading - Loading indicator
@@ -67,6 +72,7 @@ export type OreStatsProps = {
  * @part footer - Trend and description row
  * @part trend - Trend container
  * @part description - Description container
+ * @part actions - Footer slot row
  *
  * @example
  * ```html
@@ -87,17 +93,39 @@ define<OreStatsProps>(STATS_TAG, {
     label: prop.string(),
     trend: prop.string(),
     'trend-direction': prop.oneOf<StatsTrendDirection>(['up', 'down', 'neutral'], 'neutral'),
+    'trend-tone': prop.oneOf<StatsTrendTone>(['positive', 'negative', 'neutral']),
     value: prop.string(),
     variant: prop.oneOf<StatsVariant>(['outlined', 'plain', 'solid'], 'outlined'),
   },
   setup(props) {
-    const slots = useSlots<'description' | 'icon' | 'label' | 'trend' | 'value' | 'visual'>();
+    const slots = useSlots<'description' | 'footer' | 'icon' | 'label' | 'trend' | 'value' | 'visual'>();
     const hasDescription = () => Boolean(props.description.value) || slots.has('description').value;
     const hasIcon = () => slots.has('icon').value;
     const hasLabel = () => Boolean(props.label.value) || slots.has('label').value;
     const hasTrend = () => Boolean(props.trend.value) || slots.has('trend').value;
     const hasValue = () => Boolean(props.value.value) || slots.has('value').value;
     const hasVisual = () => slots.has('visual').value;
+
+    // Color means "good/bad", the arrow means "went up/down": churn rising is up + red.
+    // Unset tone derives from the direction so the common case stays zero-config.
+    const trendTone = computed<StatsTrendTone>(() => {
+      const explicit = props['trend-tone'].value;
+
+      if (explicit) return explicit;
+
+      const direction = props['trend-direction'].value;
+
+      return direction === 'up' ? 'positive' : direction === 'down' ? 'negative' : 'neutral';
+    });
+
+    // Built-in trend + a real direction earns an arrow glyph; a slotted trend owns its own.
+    const trendArrow = computed(() => {
+      const direction = props['trend-direction'].value;
+
+      if (slots.has('trend').value || !props.trend.value) return null;
+
+      return direction === 'up' ? 'arrow-up' : direction === 'down' ? 'arrow-down' : null;
+    });
 
     bind({
       attr: {
@@ -118,8 +146,23 @@ define<OreStatsProps>(STATS_TAG, {
           <span class="visual" part="visual" ?hidden=${() => !hasVisual()}><slot name="visual"></slot></span>
         </div>
         <footer class="footer" part="footer" ?hidden=${() => !hasTrend() && !hasDescription()}>
-          <span class="trend" part="trend" data-direction=${props['trend-direction']} ?hidden=${() => !hasTrend()}><slot name="trend">${props.trend}</slot></span>
+          <span
+            class="trend"
+            part="trend"
+            data-direction=${props['trend-direction']}
+            data-tone=${() => trendTone.value}
+            ?hidden=${() => !hasTrend()}>
+            ${() =>
+              trendArrow.value
+                ? html`
+                    <ore-icon class="trend-arrow" name="${trendArrow.value}" size="14" aria-hidden="true"></ore-icon>
+                  `
+                : ''}<slot name="trend">${props.trend}</slot>
+          </span>
           <span class="description" part="description" ?hidden=${() => !hasDescription()}><slot name="description">${props.description}</slot></span>
+        </footer>
+        <footer class="card-footer" part="actions" ?hidden=${() => !slots.has('footer').value}>
+          <slot name="footer"></slot>
         </footer>
       </article>
     `;

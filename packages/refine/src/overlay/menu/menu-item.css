@@ -247,7 +247,7 @@
     max-height: var(--menu-panel-max-height, min(70vh, 32rem));
     overflow-y: auto;
     pointer-events: none;
-    background: var(--menu-panel-bg, color-mix(in oklch, var(--surface-overlay) 85%, transparent));
+    background: var(--menu-panel-bg, color-mix(in oklch, var(--surface-overlay) 92%, transparent));
     border-radius: var(--menu-panel-radius, var(--rounded-lg));
     box-shadow: var(--menu-panel-shadow, var(--shadow-xl));
 

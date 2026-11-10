@@ -429,58 +429,58 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 
 **`ore-navbar` Attributes**
 
-| Attribute               | Type                                                      | Default                   | Description                                                                                                                                                                                             |
-| ----------------------- | --------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `active-url`            | `string`                                                  | N/A                       | Current page URL; items whose `href` match it (exact, or nested paths keep the parent) become active automatically; explicit `active` wins                                                               |
-| `centered`              | `boolean`                                                 | `false`                   | Pin the default-slot content to the bar's true center                                                                                                                   |
-| `label`                 | `string`                                                  | `'Main navigation'`       | Accessible nav landmark label                                                                                                                                                                           |
-| `menu-icon`             | `string`                                                  | `'menu'`                  | Icon shown while the mobile menu is closed                                                                                                                                                              |
-| `menu-open-label`       | `string`                                                  | `'Open navigation menu'`  | Accessible label for the closed mobile menu toggle                                                                                                                                                      |
-| `menu-close-icon`       | `string`                                                  | `'x'`                     | Icon shown while the mobile menu or the external `mobile-sidebar` drawer is open                                                                                                                  |
-| `menu-close-label`      | `string`                                                  | `'Close navigation menu'` | Accessible label for the open mobile menu toggle                                                                                                                                                        |
-| `sticky`                | `boolean`                                                 | `false`                   | Enables sticky mode                                                                                                                                                                                     |
-| `floating`              | `boolean`                                                 | `false`                   | Enables floating mode                                                                                                                                                                                   |
-| `scroll-threshold`      | `number`                                                  | `80`                      | Scroll px threshold for floating+sticky transition                                                                                                                                                      |
-| `breakpoint`            | `string`                                                  | `'(max-width: 768px)'`    | Media query used for mobile mode                                                                                                                                                                        |
-| `container-breakpoints` | `boolean`                                                 | `false`                   | Evaluates parseable `max-width` breakpoints against the navbar container width                                                                                                                          |
-| `variant`               | `'flat' \| 'solid' \| 'bordered' \| 'outline' \| 'frost'` | N/A                       | Surface style variant                                                                                                                                                                                   |
-| `color`                 | `ThemeColor`                                              | N/A                       | Theme color                                                                                                                                                                                             |
-| `rounded`               | `RoundedSize`                                             | N/A                       | Border radius token                                                                                                                                                                                     |
-| `elevation`             | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                  | N/A                       | Elevation shadow level                                                                                                                                                                                  |
+| Attribute               | Type                                                      | Default                   | Description                                                                                                                                |
+| ----------------------- | --------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `active-url`            | `string`                                                  | N/A                       | Current page URL; items whose `href` match it (exact, or nested paths keep the parent) become active automatically; explicit `active` wins |
+| `centered`              | `boolean`                                                 | `false`                   | Pin the default-slot content to the bar's true center                                                                                      |
+| `label`                 | `string`                                                  | `'Main navigation'`       | Accessible nav landmark label                                                                                                              |
+| `menu-icon`             | `string`                                                  | `'menu'`                  | Icon shown while the mobile menu is closed                                                                                                 |
+| `menu-open-label`       | `string`                                                  | `'Open navigation menu'`  | Accessible label for the closed mobile menu toggle                                                                                         |
+| `menu-close-icon`       | `string`                                                  | `'x'`                     | Icon shown while the mobile menu or the external `mobile-sidebar` drawer is open                                                           |
+| `menu-close-label`      | `string`                                                  | `'Close navigation menu'` | Accessible label for the open mobile menu toggle                                                                                           |
+| `sticky`                | `boolean`                                                 | `false`                   | Enables sticky mode                                                                                                                        |
+| `floating`              | `boolean`                                                 | `false`                   | Enables floating mode                                                                                                                      |
+| `scroll-threshold`      | `number`                                                  | `80`                      | Scroll px threshold for floating+sticky transition                                                                                         |
+| `breakpoint`            | `string`                                                  | `'(max-width: 768px)'`    | Media query used for mobile mode                                                                                                           |
+| `container-breakpoints` | `boolean`                                                 | `false`                   | Evaluates parseable `max-width` breakpoints against the navbar container width                                                             |
+| `variant`               | `'flat' \| 'solid' \| 'bordered' \| 'outline' \| 'frost'` | N/A                       | Surface style variant                                                                                                                      |
+| `color`                 | `ThemeColor`                                              | N/A                       | Theme color                                                                                                                                |
+| `rounded`               | `RoundedSize`                                             | N/A                       | Border radius token                                                                                                                        |
+| `elevation`             | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                  | N/A                       | Elevation shadow level                                                                                                                     |
 
 When `variant="frost"` has an explicit elevation, that elevation replaces the default frost halo so levels remain visually distinct.
 
 **`ore-navbar` Parts**
 
-| Part            | Description                    |
-| --------------- | ------------------------------ |
-| `nav`           | Outer `<nav>` landmark element |
-| `bar`           | Main navbar row container      |
-| `logo`          | Logo slot container            |
-| `start`         | Leading (start) content region |
-| `center`        | Center content region          |
-| `end`           | Trailing (end) content region  |
+| Part            | Description                                                 |
+| --------------- | ----------------------------------------------------------- |
+| `nav`           | Outer `<nav>` landmark element                              |
+| `bar`           | Main navbar row container                                   |
+| `logo`          | Logo slot container                                         |
+| `start`         | Leading (start) content region                              |
+| `center`        | Center content region                                       |
+| `end`           | Trailing (end) content region                               |
 | `persistent`    | Trailing region kept in the bar through the mobile collapse |
-| `subnav`        | Second-tier row container under the bar |
-| `mobile-toggle` | Mobile menu toggle button      |
-| `mobile-menu`   | Mobile overflow panel          |
+| `subnav`        | Second-tier row container under the bar                     |
+| `mobile-toggle` | Mobile menu toggle button                                   |
+| `mobile-menu`   | Mobile overflow panel                                       |
 
 **`ore-navbar` Slots**
 
-| Slot          | Description                          |
-| ------------- | ------------------------------------ |
-| `logo`        | Brand mark/logo                      |
-| `start`       | Left-aligned desktop content         |
-| (default)     | Center desktop content               |
-| `end`         | Right-aligned desktop content        |
+| Slot          | Description                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| `logo`        | Brand mark/logo                                                                                   |
+| `start`       | Left-aligned desktop content                                                                      |
+| (default)     | Center desktop content                                                                            |
+| `end`         | Right-aligned desktop content                                                                     |
 | `persistent`  | Trailing content that stays in the bar through the mobile collapse (global actions, status icons) |
-| `subnav`      | Second-tier row rendered under the bar |
-| `mobile-menu` | Mobile-only expandable content panel |
+| `subnav`      | Second-tier row rendered under the bar                                                            |
+| `mobile-menu` | Mobile-only expandable content panel                                                              |
 
 **`ore-navbar` Events**
 
-| Event                | Detail              | Description                                                                     |
-| -------------------- | ------------------- | ------------------------------------------------------------------------------- |
+| Event                | Detail              | Description                                                                                                             |
+| -------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `mobile-menu-change` | `{ open: boolean }` | Fired when the navbar's own mobile panel toggles (drawer-driven open/close emits the sidebar's `drawer-change` instead) |
 
 **`ore-navbar` CSS Custom Properties**
@@ -504,13 +504,13 @@ When `variant="frost"` has an explicit elevation, that elevation replaces the de
 
 **`ore-navbar-item` Attributes**
 
-| Attribute  | Type      | Default | Description                                        |
-| ---------- | --------- | ------- | -------------------------------------------------- |
-| `href`     | `string`  | N/A     | Link URL (renders anchor when set)                 |
+| Attribute  | Type      | Default | Description                                                                                   |
+| ---------- | --------- | ------- | --------------------------------------------------------------------------------------------- |
+| `href`     | `string`  | N/A     | Link URL (renders anchor when set)                                                            |
 | `active`   | `boolean` | `false` | Marks item as current page (`aria-current="page"`); wins over the navbar's `active-url` match |
-| `disabled` | `boolean` | `false` | Disables interaction                               |
-| `rel`      | `string`  | N/A     | Link relationship when `href` is set               |
-| `target`   | `string`  | N/A     | Link target when `href` is set                     |
+| `disabled` | `boolean` | `false` | Disables interaction                                                                          |
+| `rel`      | `string`  | N/A     | Link relationship when `href` is set                                                          |
+| `target`   | `string`  | N/A     | Link target when `href` is set                                                                |
 
 **`ore-navbar-item` Slots**
 

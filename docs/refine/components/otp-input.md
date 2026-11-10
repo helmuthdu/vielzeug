@@ -124,6 +124,43 @@ Use `separator` to add a visual divider between cells.
 
 </ComponentPreview>
 
+## Label, Helper & Error
+
+`label` renders a visible caption above the cells; `helper` and `error` render assistive text below. An `error` replaces the helper text, marks every cell invalid, and sets `aria-invalid`/`aria-errormessage` on the group. Pass richer markup through the `label`, `helper`, and `error` slots instead of the text attributes.
+
+<ComponentPreview vertical>
+
+```html
+<ore-otp-input label="Verification code" helper="We sent a 6-digit code to your phone." color="primary"></ore-otp-input>
+<ore-otp-input label="Wrong code" error="That code is expired. Request a new one." length="4" color="error"></ore-otp-input>
+<ore-otp-input label="With link">
+  <span slot="helper">Need help? <a href="/support">Contact support</a></span>
+</ore-otp-input>
+```
+
+</ComponentPreview>
+
+## Localized Labels
+
+Cell and group labels are screen-reader-only and default to English. Override them with the `labels` JS property: `group` names the group when no visible `label` is set, and `digit(index, total)` names each cell.
+
+<ComponentPreview vertical>
+
+```html
+<ore-otp-input id="otp-de" length="4" color="primary"></ore-otp-input>
+
+<script type="module">
+  import '@vielzeug/refine/otp-input';
+
+  document.getElementById('otp-de').labels = {
+    group: 'Einmalpasswort',
+    digit: (index, total) => `Stelle ${index} von ${total}`,
+  };
+</script>
+```
+
+</ComponentPreview>
+
 ## API Reference
 
 ### Attributes
@@ -136,11 +173,19 @@ Use `separator` to add a visual divider between cells.
 | `masked`    | `boolean`                                                                 | `false`     | Render cells as hidden characters                |
 | `separator` | `boolean`                                                                 | `false`     | Show a visual divider between cells              |
 | `disabled`  | `boolean`                                                                 | `false`     | Disable all cells                                |
-| `label`     | `string`                                                                  | N/A         | Accessible label for the group                   |
+| `label`     | `string`                                                                  | `''`        | Visible label above the cells                    |
+| `helper`    | `string`                                                                  | N/A         | Helper text below the cells (hidden by `error`)  |
+| `error`     | `string`                                                                  | N/A         | Error text; invalidates the cells and group      |
 | `name`      | `string`                                                                  | N/A         | Form field name                                  |
 | `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A         | Focus ring / active cell color                   |
 | `size`      | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`      | Cell size                                        |
 | `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'`   | Visual style variant                             |
+
+### JS Properties
+
+| Property | Type                                               | Default          | Description                                      |
+| -------- | -------------------------------------------------- | ---------------- | ------------------------------------------------ |
+| `labels` | `{ group?: string; digit?: (i, total) => string }` | English defaults | Screen-reader labels for the group and each cell |
 
 ### Events
 
@@ -151,25 +196,25 @@ Use `separator` to add a visual divider between cells.
 
 ### CSS Custom Properties
 
-| Property                        | Description                                    |
-| ------------------------------- | ---------------------------------------------- |
-| `--otp-cell-size`               | Width and height of each cell                  |
-| `--otp-cell-gap`                | Gap between cells                              |
-| `--otp-cell-font-size`          | Font size inside each cell                     |
-| `--otp-cell-radius`             | Cell border radius                             |
-| `--otp-cell-bg`                 | Cell background color                          |
-| `--otp-cell-border-color`       | Default cell border color                      |
-| `--otp-cell-focus-border`       | Focused border/caret color                     |
-| `--otp-cell-hover-bg`           | Cell background on hover (flat/ghost variants) |
-| `--otp-cell-hover-border-color` | Cell border on hover (flat/bordered variants)  |
-| `--otp-cell-focus-bg`           | Cell background when focused (flat variant)    |
-| `--otp-cell-focus-border-color` | Cell border when focused (flat variant)        |
+| Property                        | Description                                           |
+| ------------------------------- | ----------------------------------------------------- |
+| `--otp-cell-size`               | Width and height of each cell                         |
+| `--otp-cell-gap`                | Gap between cells                                     |
+| `--otp-cell-font-size`          | Font size inside each cell                            |
+| `--otp-cell-radius`             | Cell border radius                                    |
+| `--otp-cell-bg`                 | Cell background color                                 |
+| `--otp-cell-border-color`       | Default cell border color                             |
+| `--otp-cell-focus-border`       | Focused border/caret color                            |
+| `--otp-cell-hover-bg`           | Cell background on hover (flat/ghost variants)        |
+| `--otp-cell-hover-border-color` | Cell border on hover (flat/bordered variants)         |
+| `--otp-cell-focus-bg`           | Cell background when focused (flat/bordered variants) |
+| `--otp-cell-focus-border-color` | Cell border when focused (flat variant)               |
 
 ## Accessibility
 
-The OTP input component follows WCAG 2.1 Level AA standards. It renders as a `<fieldset>` with a `<legend>` derived from the `label` attribute, so always provide a `label` to ensure screen readers announce the group correctly. Each cell input has `autocomplete="one-time-code"` set automatically, and `aria-disabled` reflects the disabled state.
+The OTP input component follows WCAG 2.1 Level AA standards. It renders a `role="group"` container named by the visible `label` (via `aria-labelledby`) or, when no label is shown, by the `labels.group` string. Each cell input has `autocomplete="one-time-code"` set automatically, `aria-disabled` reflects the disabled state, and an active `error` sets `aria-invalid` plus `aria-errormessage` on the group.
 
-Keyboard navigation is fully supported: focus auto-advances to the next cell on valid input, `Backspace` moves back and clears the cell, `Tab` moves focus out of the group, and paste fills all cells at once.
+Keyboard navigation is fully supported: focus auto-advances to the next cell on valid input, `Backspace` moves back and clears the cell, `Tab` moves focus out of the group, and pasting fills cells from the focused cell onward.
 
 Do not auto-submit without giving users a chance to review: show a confirmation step before sending.
 

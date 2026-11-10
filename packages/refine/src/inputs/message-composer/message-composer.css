@@ -178,7 +178,7 @@
  * `ore-otp-input`'s focus ring.
  */
 @layer refine.variants {
-  :host(:not([disabled], [variant='flat'])) .composer:focus-within {
+  :host(:not([disabled], [variant='flat'], [variant='bordered'])) .composer:focus-within {
     --_surface: var(--color-canvas);
 
     border-color: var(--_theme-focus);

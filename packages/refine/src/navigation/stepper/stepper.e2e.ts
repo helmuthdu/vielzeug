@@ -494,3 +494,28 @@ test.describe('Layout', () => {
     expect(shippingIndicatorTop).toBeGreaterThan(cartIndicatorBottom);
   });
 });
+
+test.describe('Custom properties', () => {
+  test('host-level --step-* overrides win over the component defaults', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-stepper value="a" label="Shipping">' +
+        '<ore-step value="a" style="--step-indicator-size: 12px">Cart</ore-step>' +
+        '<ore-step value="b" style="--step-font-size: 18px">Ship</ore-step>' +
+        '</ore-stepper>',
+    );
+
+    const vars = await page.evaluate(() => {
+      const steps = document.querySelectorAll('ore-step');
+      const indicator = steps[0].shadowRoot!.querySelector<HTMLElement>('[part="indicator"]')!;
+      const label = steps[1].shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+
+      return {
+        indicatorSize: getComputedStyle(indicator).width,
+        labelFontSize: getComputedStyle(label).fontSize,
+      };
+    });
+
+    expect(vars.indicatorSize).toBe('12px');
+    expect(vars.labelFontSize).toBe('18px');
+  });
+});

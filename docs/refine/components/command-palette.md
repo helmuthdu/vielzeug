@@ -77,7 +77,7 @@ Pass the `items` property for programmatically generated commands instead of (or
 
 ## Groups and Icons
 
-Items sharing a `group` value are clustered under a heading, in the order groups first appear. The heading stays pinned to the top of the list while its own group scrolls, and its name is searchable: typing a group name keeps that group's items and drops the rest. Add an `icon` (a [registered icon name](./icon.md)) for a leading icon.
+Items sharing a `group` value are clustered under a plain section heading, in the order groups first appear, separated from the previous group by a hairline. The heading's name is searchable: typing a group name keeps that group's items and drops the rest. Add an `icon` (a [registered icon name](./icon.md)) for a leading icon.
 
 Grouping is presentation only: every item stays visible in one list. To keep the list short instead, nest items into [drill-down categories](#drill-down-categories).
 
@@ -397,18 +397,17 @@ An item that contains nested `<ore-command-palette-item>` elements (or, data-dri
 
 **CSS Custom Properties**
 
-| Property                            | Description                                              | Default               |
-| ----------------------------------- | -------------------------------------------------------- | --------------------- |
-| `--command-palette-bg`              | Panel background color                                   | `var(--color-canvas)` |
-| `--command-palette-border-color`    | Panel border color                                       | Theme-dependent       |
-| `--command-palette-radius`          | Panel border radius                                      | `var(--rounded-lg)`   |
-| `--command-palette-shadow`          | Panel drop shadow                                        | `var(--shadow-2xl)`   |
-| `--command-palette-max-width`       | Maximum panel width                                      | `40rem`               |
-| `--command-palette-backdrop-bg`     | Backdrop veil color                                      | `var(--overlay-veil)` |
-| `--command-palette-option-hover-bg` | Item background on hover                                 | Theme-dependent       |
-| `--command-palette-option-focus-bg` | Item background when keyboard-focused                    | Theme-dependent       |
-| `--command-palette-group-sticky-bg` | Background of the pinned group heading while it sticks   | Theme-dependent       |
-| `--command-palette-preview-width`   | Preview pane width (when the `preview` slot has content) | `18rem`               |
+| Property                            | Description                                              | Default                     |
+| ----------------------------------- | -------------------------------------------------------- | --------------------------- |
+| `--command-palette-bg`              | Panel background color                                   | Frosted `--surface-overlay` |
+| `--command-palette-border-color`    | Panel border color                                       | Theme-dependent             |
+| `--command-palette-radius`          | Panel border radius                                      | `var(--rounded-lg)`         |
+| `--command-palette-shadow`          | Panel drop shadow                                        | `var(--shadow-2xl)`         |
+| `--command-palette-max-width`       | Maximum panel width                                      | `40rem`                     |
+| `--command-palette-backdrop-bg`     | Backdrop veil color                                      | `var(--overlay-veil)`       |
+| `--command-palette-option-hover-bg` | Item background on hover                                 | Theme-dependent             |
+| `--command-palette-option-focus-bg` | Item background when keyboard-focused                    | Neutral theme tint          |
+| `--command-palette-preview-width`   | Preview pane width (when the `preview` slot has content) | `18rem`                     |
 
 ## Accessibility
 

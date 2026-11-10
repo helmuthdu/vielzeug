@@ -252,6 +252,101 @@ Mix attributes for a fully styled, accessible table.
 
 </ComponentPreview>
 
+## Recipes
+
+Common product patterns composed from existing refine parts — no extra components needed.
+
+### Table Card
+
+Wrap the table in `ore-card` with `padding="none"` so it sits flush, and use the `header` slot for the title, status badge, and trailing actions.
+
+<ComponentPreview height="340px">
+
+```html
+<ore-card variant="flat" padding="none" style="max-width: 640px">
+  <div
+    slot="header"
+    style="display: flex; align-items: center; gap: var(--size-3); padding: var(--size-4) var(--size-5)">
+    <ore-text variant="heading" size="md">Team members</ore-text>
+    <ore-badge size="sm" variant="flat" color="primary">4 active</ore-badge>
+    <ore-button variant="ghost" size="sm" aria-label="More options" style="margin-inline-start: auto">
+      <ore-icon name="more-horizontal" size="16" slot="icon"></ore-icon>
+    </ore-button>
+    <ore-button variant="flat" size="sm">Add member</ore-button>
+  </div>
+  <ore-table>
+    <ore-tr head>
+      <ore-th>Name</ore-th>
+      <ore-th>Role</ore-th>
+      <ore-th align="right">Sessions</ore-th>
+    </ore-tr>
+    <ore-tr>
+      <ore-td>Alice</ore-td>
+      <ore-td>Admin</ore-td>
+      <ore-td align="right">128</ore-td>
+    </ore-tr>
+    <ore-tr>
+      <ore-td>Bob</ore-td>
+      <ore-td>Editor</ore-td>
+      <ore-td align="right">42</ore-td>
+    </ore-tr>
+    <ore-tr>
+      <ore-td>Carol</ore-td>
+      <ore-td>Viewer</ore-td>
+      <ore-td align="right">7</ore-td>
+    </ore-tr>
+  </ore-table>
+</ore-card>
+```
+
+</ComponentPreview>
+
+### Row Actions
+
+Give each row a menu trigger. Keep the actions column narrow and unlabelled so the data stays primary; screen readers still get a labelled trigger.
+
+<ComponentPreview height="340px">
+
+```html
+<ore-table style="max-width: 560px">
+  <ore-tr head>
+    <ore-th>File</ore-th>
+    <ore-th align="right">Size</ore-th>
+    <ore-th aria-label="Actions"></ore-th>
+  </ore-tr>
+  <ore-tr>
+    <ore-td>Deck.pdf</ore-td>
+    <ore-td align="right">2.4 MB</ore-td>
+    <ore-td>
+      <ore-menu>
+        <ore-button slot="trigger" variant="ghost" size="sm" aria-label="Actions for Deck.pdf">
+          <ore-icon name="more-horizontal" size="16" slot="icon"></ore-icon>
+        </ore-button>
+        <ore-menu-item value="download">Download</ore-menu-item>
+        <ore-menu-item value="share">Share</ore-menu-item>
+        <ore-menu-item value="delete">Delete</ore-menu-item>
+      </ore-menu>
+    </ore-td>
+  </ore-tr>
+  <ore-tr>
+    <ore-td>Notes.md</ore-td>
+    <ore-td align="right">12 KB</ore-td>
+    <ore-td>
+      <ore-menu>
+        <ore-button slot="trigger" variant="ghost" size="sm" aria-label="Actions for Notes.md">
+          <ore-icon name="more-horizontal" size="16" slot="icon"></ore-icon>
+        </ore-button>
+        <ore-menu-item value="download">Download</ore-menu-item>
+        <ore-menu-item value="share">Share</ore-menu-item>
+        <ore-menu-item value="delete">Delete</ore-menu-item>
+      </ore-menu>
+    </ore-td>
+  </ore-tr>
+</ore-table>
+```
+
+</ComponentPreview>
+
 ## API Reference
 
 ### Attributes
@@ -286,6 +381,7 @@ Attributes on `<ore-th>` and `<ore-td>` are forwarded to the generated native `<
 | --------- | ------------------ | ----------------------------------------------- |
 | `colspan` | `ore-th`, `ore-td` | Spans multiple columns                          |
 | `rowspan` | `ore-th`, `ore-td` | Spans multiple rows                             |
+| `align`   | `ore-th`, `ore-td` | Text alignment: `left` \| `center` \| `right`   |
 | `scope`   | `ore-th`           | Column/row association: auto-inferred if absent |
 | `headers` | `ore-th`, `ore-td` | Associates cell with header IDs                 |
 

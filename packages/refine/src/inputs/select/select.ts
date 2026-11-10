@@ -73,10 +73,14 @@ export type OreSelectEvents = {
 };
 
 export type OreSelectProps = SelectableFieldProps<InputVariant> & {
+  /** Leading icon name shown before the value/chips */
+  icon?: string;
   /** Hide the visible label while preserving the accessible name via `aria-label` */
   'hide-label'?: boolean;
   /** Show loading state in dropdown */
   loading?: boolean;
+  /** Maximum selected chips shown in the trigger; the rest collapse into a "+N" chip (0 shows all) */
+  'max-visible'?: number;
   /** Allow selecting multiple options */
   multiple?: boolean;
   /** JS options array (alternative to slotted <option> elements) */
@@ -96,8 +100,10 @@ export type OreSelectProps = SelectableFieldProps<InputVariant> & {
  * @attr {boolean} hide-label - Hide the visible label; the label text is exposed as `aria-label` on the trigger instead
  * @attr {string} value - Current selected value(s) (comma-separated for multiple)
  * @attr {string} placeholder - Placeholder when no option selected
+ * @attr {string} icon - Leading icon name shown before the value/chips
  * @attr {string} name - Form field name
  * @attr {boolean} multiple - Enable multi-select
+ * @attr {number} max-visible - Maximum selected chips shown in the trigger; the rest collapse into a "+N" chip (default 3, 0 shows all)
  * @attr {boolean} disabled - Disable the select
  * @attr {boolean} required - Required field
  * @attr {string} helper - Helper text below the select
@@ -158,8 +164,10 @@ define<OreSelectProps>(SELECT_TAG, {
     fullwidth: prop.bool(false),
     helper: prop.string(),
     'hide-label': prop.bool(false),
+    icon: prop.string(),
     label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
+    'max-visible': prop.number(3),
     multiple: prop.bool(false),
     name: prop.string(),
     options: prop.json(undefined as OreSelectOptionInput[] | undefined),
@@ -340,6 +348,14 @@ define<OreSelectProps>(SELECT_TAG, {
       }));
     });
     const showChips = computed(() => props.multiple.value && selectedValues.value.length > 0);
+    const visibleChipItems = computed(() => {
+      const limit = props['max-visible'].value;
+
+      if (!limit || limit <= 0) return selectedChipItems.value;
+
+      return selectedChipItems.value.slice(0, limit);
+    });
+    const hiddenChipCount = computed(() => selectedChipItems.value.length - visibleChipItems.value.length);
     const triggerText = computed(() => displayLabel.value || props.placeholder.value || '');
 
     function buildFlatList(opts: OptionItem[]): FlatRow[] {
@@ -562,9 +578,15 @@ define<OreSelectProps>(SELECT_TAG, {
             )}
           </span>`;
         }}
+        ${() =>
+          props.icon.value
+            ? html`<span class="trigger-leading-icon" slot="prefix" aria-hidden="true">
+                <ore-icon name="${props.icon.value}" size="14"></ore-icon>
+              </span>`
+            : null}
         <div slot="prefix" class="chips-row" ?hidden="${() => !showChips.value}">
-          ${() =>
-            selectedChipItems.value.map(
+          ${() => {
+            const chips = visibleChipItems.value.map(
               (item) => html`
                 <ore-chip
                   value="${item.value}"
@@ -577,7 +599,22 @@ define<OreSelectProps>(SELECT_TAG, {
                   ${item.label}
                 </ore-chip>
               `,
-            )}
+            );
+
+            if (hiddenChipCount.value > 0) {
+              const overflowCount = hiddenChipCount.value;
+              chips.push(html`<ore-chip
+                class="chip-overflow"
+                label="${() => `+${overflowCount}`}"
+                aria-label="${() => `${overflowCount} more selected`}"
+                variant="flat"
+                size="sm">
+                +${overflowCount}
+              </ore-chip>`);
+            }
+
+            return chips;
+          }}
         </div>
         <span slot="suffix" class="trigger-suffix" aria-hidden="true">
           <span class="loader"></span>

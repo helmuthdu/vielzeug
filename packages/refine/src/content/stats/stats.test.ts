@@ -41,6 +41,74 @@ describe('ore-stats', () => {
     expect(fixture.query('[part="trend"]')?.getAttribute('data-direction')).toBe(direction);
   });
 
+  it.each([
+    ['up', 'positive'],
+    ['down', 'negative'],
+    ['neutral', 'neutral'],
+  ])('derives %s trend tone as %s when trend-tone is unset', async (direction, tone) => {
+    fixture = await mount('ore-stats', {
+      attrs: { trend: '12%', 'trend-direction': direction },
+    });
+
+    expect(fixture.query('[part="trend"]')?.getAttribute('data-tone')).toBe(tone);
+  });
+
+  it('lets trend-tone decouple color from the arrow direction', async () => {
+    fixture = await mount('ore-stats', {
+      attrs: { trend: '+5%', 'trend-direction': 'up', 'trend-tone': 'negative' },
+    });
+
+    const trend = fixture.query('[part="trend"]');
+
+    expect(trend?.getAttribute('data-direction')).toBe('up');
+    expect(trend?.getAttribute('data-tone')).toBe('negative');
+  });
+
+  it('renders an auto trend arrow for up and down directions', async () => {
+    fixture = await mount('ore-stats', {
+      attrs: { trend: '+12%', 'trend-direction': 'up', value: '$42,800' },
+    });
+
+    const arrow = fixture.query('[part="trend"] ore-icon');
+
+    expect(arrow?.getAttribute('name')).toBe('arrow-up');
+    expect(arrow?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('omits the auto arrow for neutral trends and slotted trends', async () => {
+    fixture = await mount('ore-stats', {
+      attrs: { trend: 'steady', 'trend-direction': 'neutral', value: '7' },
+      html: '',
+    });
+
+    expect(fixture.query('[part="trend"] ore-icon')).toBeNull();
+
+    fixture.dispose();
+    fixture = await mount('ore-stats', {
+      attrs: { 'trend-direction': 'up', value: '7' },
+      html: '<span slot="trend">+9%</span>',
+    });
+
+    expect(fixture.query('[part="trend"] ore-icon')).toBeNull();
+    expect(fixture.element.querySelector('[slot="trend"]')?.textContent).toBe('+9%');
+  });
+
+  it('renders the footer slot row only when slotted', async () => {
+    fixture = await mount('ore-stats', { attrs: { label: 'Orders', value: '12' } });
+
+    expect(fixture.query('[part="actions"]')?.hasAttribute('hidden')).toBe(true);
+
+    const footer = document.createElement('span');
+
+    footer.slot = 'footer';
+    footer.textContent = 'View report';
+    fixture.element.append(footer);
+    await fixture.flush();
+
+    expect(fixture.query('[part="actions"]')?.hasAttribute('hidden')).toBe(false);
+    expect(fixture.element.querySelector('[slot="footer"]')?.textContent).toBe('View report');
+  });
+
   it('shows and hides optional sections when slots change', async () => {
     fixture = await mount('ore-stats');
 

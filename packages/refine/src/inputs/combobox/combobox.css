@@ -263,6 +263,18 @@
     opacity: 1;
   }
 
+  /* Persistent footer row (select-all, clear, links); hairline separator
+     keeps it visually distinct from the scrolling option list. */
+  .dropdown-footer {
+    padding: var(--size-2);
+    margin-top: var(--size-1);
+    border-top: var(--border) solid var(--combobox-dropdown-border-color, var(--color-contrast-200));
+  }
+
+  .dropdown-footer[hidden] {
+    display: none;
+  }
+
   .no-results,
   .no-results-create,
   .dropdown-loading {

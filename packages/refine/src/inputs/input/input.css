@@ -393,7 +393,7 @@
    * unconditional rest-state `box-shadow`, focused/error/success or not: the same bug class
    * fixed for `ore-otp-input`'s focus ring.
    */
-  :host(:not([disabled], [variant='text'], [variant='flat'])) .field:focus-within {
+  :host(:not([disabled], [variant='text'], [variant='flat'], [variant='bordered'])) .field:focus-within {
     background: var(--color-canvas);
     border-color: var(--_theme-focus);
     box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));

@@ -1102,4 +1102,49 @@ describe('ore-select accessibility', () => {
       expect(results.violations).toHaveLength(0);
     });
   });
+  describe('Chip overflow', () => {
+    const FOUR_OPTIONS = `${SELECT_OPTIONS}<option value="date">Date</option>`;
+
+    it('collapses chips past max-visible into a +N chip', async () => {
+      fixture = await mount('ore-select', {
+        attrs: { multiple: true, value: 'apple,banana,cherry,date' },
+        html: FOUR_OPTIONS,
+      });
+
+      const removable = fixture.element.shadowRoot!.querySelectorAll('.chips-row ore-chip[mode="removable"]');
+      const overflow = fixture.query<HTMLElement>('.chip-overflow');
+
+      expect(removable).toHaveLength(3);
+      expect(overflow?.getAttribute('label')).toBe('+1');
+    });
+
+    it('shows all chips when max-visible is 0', async () => {
+      fixture = await mount('ore-select', {
+        attrs: { 'max-visible': '0', multiple: true, value: 'apple,banana,cherry,date' },
+        html: FOUR_OPTIONS,
+      });
+
+      expect(fixture.element.shadowRoot!.querySelectorAll('.chips-row ore-chip[mode="removable"]')).toHaveLength(4);
+      expect(fixture.query('.chip-overflow')).toBeNull();
+    });
+  });
+
+  describe('Leading icon', () => {
+    it('renders the leading icon before the value', async () => {
+      fixture = await mount('ore-select', {
+        attrs: { icon: 'search', label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
+
+      const icon = fixture.query<HTMLElement>('.trigger-leading-icon ore-icon');
+
+      expect(icon?.getAttribute('name')).toBe('search');
+    });
+
+    it('renders no leading icon by default', async () => {
+      fixture = await mount('ore-select', { attrs: { label: 'Fruit' }, html: SELECT_OPTIONS });
+
+      expect(fixture.query('.trigger-leading-icon')).toBeNull();
+    });
+  });
 });

@@ -2,7 +2,7 @@
   :host {
     --_backdrop-bg: var(--drawer-backdrop-bg, var(--overlay-veil));
     --_backdrop-filter: none;
-    --_panel-bg: var(--drawer-bg, color-mix(in oklch, var(--surface-overlay) 85%, transparent));
+    --_panel-bg: var(--drawer-bg, color-mix(in oklch, var(--surface-overlay) 92%, transparent));
     --_panel-blur: var(--drawer-panel-blur, var(--blur-md));
     --_panel-shadow: var(--drawer-shadow, var(--shadow-xl));
     --_panel-border-color: var(--color-divider);

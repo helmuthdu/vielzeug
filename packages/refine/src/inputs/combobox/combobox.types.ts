@@ -26,14 +26,25 @@ export type ComboboxOptionItem = {
   value: string;
 };
 
+export type ComboboxLabels = {
+  /** Message shown when no option matches the query. */
+  noResults: string;
+  /** Label of the creatable row for the current query. */
+  create: (query: string) => string;
+};
+
 export type OreComboboxProps = Omit<SelectableFieldProps<FieldVariant>, 'label-placement' | 'value'> & {
   /** Automatically close the dropdown after selecting an option (even in multiple mode) */
   autoclose?: boolean;
   /** Allow typing a new value to create a new option */
   creatable?: boolean;
   'label-placement'?: 'outside' | 'inset';
+  /** Localized strings for the empty and creatable rows (JS property only). */
+  labels?: Partial<ComboboxLabels>;
   /** Hide the visible label while preserving the combobox's accessible name. */
   'hide-label'?: boolean;
+  /** Maximum selected chips shown in the field; the rest collapse into a "+N" chip (0 shows all). */
+  'max-visible'?: number;
   /** Show loading state in the dropdown */
   loading?: boolean;
   multiple?: boolean;

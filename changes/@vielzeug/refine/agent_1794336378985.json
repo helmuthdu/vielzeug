@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "ore-datagrid renders a localized error row with retry for failed source loads; ore-th and ore-td accept an align attribute; datagrid controls bar and footer render sm buttons at their preset height; ore-button text variant label meets AA contrast",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

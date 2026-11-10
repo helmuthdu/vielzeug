@@ -113,7 +113,7 @@ export type OreTextareaProps = TextFieldProps<FieldVariant> & {
  * @cssprop --textarea-resize - CSS resize direction ('vertical' | 'horizontal' | 'both' | 'none')
  * @cssprop --textarea-hover-bg - Field background on hover (flat/ghost variants)
  * @cssprop --textarea-hover-border-color - Field border on hover (flat/bordered variants)
- * @cssprop --textarea-focus-bg - Field background when focused (flat variant)
+ * @cssprop --textarea-focus-bg - Field background when focused (flat/bordered variants)
  * @cssprop --textarea-focus-border-color - Field border when focused (flat variant)
  *
  * @part wrapper - Outer wrapper element.
@@ -305,6 +305,6 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     // (`@layer` precedence is fixed by which layer name is *first* referenced across this whole
     // array; `componentStyles` establishes `refine.base`, which this mixin's `refine.variants`
     // rules need to win over).
-    fieldVariantMixin({ container: '.field', text: 'textarea', tokenPrefix: 'textarea' }),
+    fieldVariantMixin({ container: '.field', tokenPrefix: 'textarea' }),
   ],
 });

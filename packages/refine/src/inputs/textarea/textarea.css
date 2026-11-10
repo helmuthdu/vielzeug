@@ -242,7 +242,7 @@
  * focus ring.
  */
 @layer refine.variants {
-  :host(:not([disabled], [variant='flat'])) .field:focus-within {
+  :host(:not([disabled], [variant='flat'], [variant='bordered'])) .field:focus-within {
     background: var(--color-canvas);
     border-color: var(--_theme-focus);
     box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));

@@ -325,12 +325,16 @@ describe('ore-otp-input accessibility', () => {
       expect(group?.getAttribute('aria-label')).toBe('One-time password');
     });
 
-    it('group aria-label reflects label prop', async () => {
+    it('label prop renders a visible label and names the group via aria-labelledby', async () => {
       fixture = await mount('ore-otp-input', { attrs: { label: 'Security code' } });
 
       const group = fixture.query('[role="group"]');
+      const label = fixture.query<HTMLElement>('.label');
 
-      expect(group?.getAttribute('aria-label')).toBe('Security code');
+      expect(label?.hidden).toBe(false);
+      expect(label?.textContent).toContain('Security code');
+      expect(group?.getAttribute('aria-labelledby')).toBe(label?.id);
+      expect(group?.getAttribute('aria-label')).toBeNull();
     });
   });
 
@@ -376,6 +380,76 @@ describe('ore-otp-input accessibility', () => {
       const results = await axeCheck(fixture.element);
 
       expect(results.violations).toHaveLength(0);
+    });
+  });
+
+  describe('Field chrome', () => {
+    it('hides helper, error, and label regions by default', async () => {
+      fixture = await mount('ore-otp-input', {});
+
+      expect(fixture.query('.label')?.hasAttribute('hidden')).toBe(true);
+      expect(fixture.query('[part="helper"]')?.hasAttribute('hidden')).toBe(true);
+      expect(fixture.query('[part="error"]')?.hasAttribute('hidden')).toBe(true);
+    });
+
+    it('shows helper text and wires aria-describedby', async () => {
+      fixture = await mount('ore-otp-input', { attrs: { helper: 'Codes expire in 5 minutes' } });
+
+      const helper = fixture.query('[part="helper"]');
+      const group = fixture.query('[role="group"]');
+
+      expect(helper?.hasAttribute('hidden')).toBe(false);
+      expect(helper?.textContent).toContain('Codes expire in 5 minutes');
+      expect(group?.getAttribute('aria-describedby')).toBe(helper?.id);
+    });
+
+    it('error overrides helper and invalidates the group', async () => {
+      fixture = await mount('ore-otp-input', { attrs: { error: 'Wrong code', helper: 'Hint', length: '4' } });
+
+      const group = fixture.query('[role="group"]');
+      const error = fixture.query('[part="error"]');
+
+      expect(fixture.query('[part="helper"]')?.hasAttribute('hidden')).toBe(true);
+      expect(error?.hasAttribute('hidden')).toBe(false);
+      expect(error?.getAttribute('role')).toBe('alert');
+      expect(group?.getAttribute('aria-invalid')).toBe('true');
+      expect(group?.getAttribute('aria-errormessage')).toBe(error?.id);
+
+      const cells = fixture.shadow?.querySelectorAll('input.cell');
+
+      expect(cells?.[0]).toBeTruthy();
+    });
+  });
+
+  describe('Labels', () => {
+    it('applies group and digit label overrides', async () => {
+      fixture = await mount('ore-otp-input', {
+        attrs: { length: '3' },
+        props: { labels: { digit: (i: number, total: number) => `Stelle ${i}/${total}`, group: 'Einmalcode' } },
+      });
+
+      const group = fixture.query('[role="group"]');
+      const cells = fixture.shadow?.querySelectorAll('input.cell');
+
+      expect(group?.getAttribute('aria-label')).toBe('Einmalcode');
+      expect(cells?.[0]?.getAttribute('aria-label')).toBe('Stelle 1/3');
+    });
+  });
+
+  describe('Paste at focused cell', () => {
+    it('fills from the focused cell onward', async () => {
+      fixture = await mount('ore-otp-input', { attrs: { length: '6' } });
+
+      const cells = fixture.shadow?.querySelectorAll<HTMLInputElement>('input.cell') ?? [];
+
+      const clipboardData = { getData: () => '98765' } as unknown as DataTransfer;
+      cells[2]?.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, clipboardData }));
+      await fixture.flush();
+
+      expect([...cells].map((c) => c.value).join('')).toBe('9876');
+      // Cells 2–5 receive '9','8','7','6'; the surplus '5' has nowhere to go.
+      expect(cells[2]?.value).toBe('9');
+      expect(cells[1]?.value).toBe('');
     });
   });
 });

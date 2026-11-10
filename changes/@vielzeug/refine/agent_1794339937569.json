@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "restyle the bordered alert with the theme backdrop/border pairing and neutral ink text",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

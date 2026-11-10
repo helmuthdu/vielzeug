@@ -12,9 +12,33 @@ export type OrePaginationEvents = {
   change: { page: number };
 };
 
+/**
+ * Accessible strings for `ore-pagination`, overridable through the `labels`
+ * JS property (a `Partial<PaginationLabels>` merged over the English
+ * defaults). Same seam as `ore-datagrid`'s `labels`: omit entries to keep the
+ * default, supply translated strings for screen readers in any locale.
+ */
+export type PaginationLabels = {
+  first: string;
+  last: string;
+  next: string;
+  page: (page: number) => string;
+  previous: string;
+};
+
+export const DEFAULT_PAGINATION_LABELS: PaginationLabels = {
+  first: 'First page',
+  last: 'Last page',
+  next: 'Next page',
+  page: (page) => `Page ${page}`,
+  previous: 'Previous page',
+};
+
 export type OrePaginationProps = {
   color?: ThemeColor;
   label?: string;
+  /** Localized button labels (JS property only). */
+  labels?: Partial<PaginationLabels>;
   page?: number;
   'show-first-last'?: boolean;
   'show-prev-next'?: boolean;
@@ -65,11 +89,17 @@ function buildPageRange(
  * @attr {number} total-pages - Total number of pages (required)
  * @attr {number} siblings - Sibling pages around current (default: 1)
  * @attr {boolean} show-first-last - Show first/last page buttons (default: false)
- * @attr {boolean} show-prev-next - Show prev/next buttons (default: false)
+ * @attr {boolean} show-prev-next - Show prev/next buttons (default: true)
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} variant - Visual variant for nav buttons: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost' (default: 'ghost')
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} label - Accessible nav label (default: 'Pagination')
+ *
+ * The `page` attribute updates optimistically on selection and `change` fires in the same
+ * step, so plain attribute-driven usage works without extra wiring. Router-driven apps
+ * write `page` from the URL as normal: the grid-external state remains the destination of
+ * truth and a later attribute write simply re-syncs the control. The JS-only `labels`
+ * property localizes the boundary and page-button accessible names.
  *
  * @fires change - Emitted when the page changes, with { page: number }
  *
@@ -102,9 +132,10 @@ define<OrePaginationProps>(PAGINATION_TAG, {
     ...themableBundle,
     ...sizableBundle,
     label: prop.string('Pagination'),
+    labels: prop.data<Partial<PaginationLabels>>(),
     page: prop.number(1),
     'show-first-last': prop.bool(false),
-    'show-prev-next': prop.bool(false),
+    'show-prev-next': prop.bool(true),
     siblings: prop.number(1),
     'total-pages': prop.number(1),
     variant: prop.oneOf(VISUAL_VARIANTS),
@@ -112,6 +143,7 @@ define<OrePaginationProps>(PAGINATION_TAG, {
   setup(props) {
     const el = getHost();
     const emit = useEmit<OrePaginationEvents>();
+    const labels = computed<PaginationLabels>(() => ({ ...DEFAULT_PAGINATION_LABELS, ...props.labels.value }));
 
     function goTo(page: number) {
       const total = props['total-pages'].value || 1;
@@ -141,7 +173,7 @@ define<OrePaginationProps>(PAGINATION_TAG, {
                       type="button"
                       class="nav-btn"
                       part="first-btn"
-                      aria-label="First page"
+                      aria-label=${() => labels.value.first}
                       ?disabled=${isFirst}
                       @click=${() => goTo(1)}>
                       <ore-icon name="chevrons-left" size="16" aria-hidden="true"></ore-icon>
@@ -157,7 +189,7 @@ define<OrePaginationProps>(PAGINATION_TAG, {
                       type="button"
                       class="nav-btn"
                       part="prev-btn"
-                      aria-label="Previous page"
+                      aria-label=${() => labels.value.previous}
                       ?disabled=${isFirst}
                       @click=${() => goTo((props.page.value || 1) - 1)}>
                       <ore-icon name="chevron-left" size="16" aria-hidden="true"></ore-icon>
@@ -176,7 +208,7 @@ define<OrePaginationProps>(PAGINATION_TAG, {
 
                 const pg = item as number;
                 const isCurrent = pg === (props.page.value || 1);
-                const pgLabel = `Page ${pg}`;
+                const pgLabel = () => labels.value.page(pg);
 
                 return isCurrent
                   ? html`
@@ -204,7 +236,7 @@ define<OrePaginationProps>(PAGINATION_TAG, {
                       type="button"
                       class="nav-btn"
                       part="next-btn"
-                      aria-label="Next page"
+                      aria-label=${() => labels.value.next}
                       ?disabled=${isLast}
                       @click=${() => goTo((props.page.value || 1) + 1)}>
                       <ore-icon name="chevron-right" size="16" aria-hidden="true"></ore-icon>
@@ -220,7 +252,7 @@ define<OrePaginationProps>(PAGINATION_TAG, {
                       type="button"
                       class="nav-btn"
                       part="last-btn"
-                      aria-label="Last page"
+                      aria-label=${() => labels.value.last}
                       ?disabled=${isLast}
                       @click=${() => goTo(props['total-pages'].value || 1)}>
                       <ore-icon name="chevrons-right" size="16" aria-hidden="true"></ore-icon>

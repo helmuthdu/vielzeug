@@ -168,7 +168,7 @@ export type OreMessageComposerProps = {
  * @cssprop --message-composer-min-height - Minimum field height (default one line)
  * @cssprop --message-composer-hover-bg - Card background on hover (flat/ghost variants)
  * @cssprop --message-composer-hover-border-color - Card border on hover (flat/bordered variants)
- * @cssprop --message-composer-focus-bg - Card background when focused (flat variant)
+ * @cssprop --message-composer-focus-bg - Card background when focused (flat/bordered variants)
  * @cssprop --message-composer-focus-border-color - Card border when focused (flat variant)
  *
  * @part composer - Root card container
@@ -378,6 +378,6 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     // (`@layer` precedence is fixed by which layer name is *first* referenced across this whole
     // array; `componentStyles` establishes `refine.base`, which this mixin's `refine.variants`
     // rules need to win over).
-    fieldVariantMixin({ container: '.composer', text: '.field', tokenPrefix: 'message-composer' }),
+    fieldVariantMixin({ container: '.composer', tokenPrefix: 'message-composer' }),
   ],
 });

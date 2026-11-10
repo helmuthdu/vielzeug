@@ -268,7 +268,8 @@
   /* Text */
   :host([variant='text']) {
     --_bg: var(--button-bg, transparent);
-    --_color: var(--button-color, var(--_theme-base));
+    /* contrast-600 keeps borderless labels AA-legible on light surfaces */
+    --_color: var(--button-color, var(--color-contrast-600));
     --_border-color: var(--button-border-color, transparent);
     --_hover-color: var(--_theme-focus);
     --_active-color: color-mix(in oklch, var(--_theme-focus) 85%, black);

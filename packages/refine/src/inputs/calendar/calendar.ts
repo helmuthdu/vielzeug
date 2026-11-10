@@ -38,12 +38,37 @@ export type CalendarEvent = {
    * invalid (but injection-safe) value may still render as no color.
    */
   color?: string;
-  /** ISO date the event falls on (yyyy-MM-dd) */
+  /** ISO date the event starts on (yyyy-MM-dd) */
   date: string;
+  /**
+   * Optional inclusive ISO end date (yyyy-MM-dd) for multi-day events.
+   * The event then renders on every day from `date` through `endDate`.
+   * Missing, invalid, or earlier-than-`date` values render a single-day event.
+   */
+  endDate?: string;
   /** Unique identifier */
   id: string;
   /** Short label shown in the calendar cell */
   label: string;
+};
+
+/** Localizable chrome strings for `ore-calendar` (see the `labels` property). */
+export type CalendarLabels = {
+  /** Accessible name of the next period button */
+  next: string;
+  /** Accessible name of the previous period button */
+  previous: string;
+  /** Footer button that jumps the display back to the current month */
+  today: string;
+  /** Expanded-mode overflow pill text for `count` hidden events */
+  moreEvents: (count: number) => string;
+};
+
+export const DEFAULT_CALENDAR_LABELS: CalendarLabels = {
+  moreEvents: (count) => `+${count} more`,
+  next: 'Next',
+  previous: 'Previous',
+  today: 'Today',
 };
 
 export type OreCalendarProps = {
@@ -100,6 +125,24 @@ export type OreCalendarProps = {
    * ```
    */
   'weekend-days'?: number[];
+  /**
+   * First day of the week for the grid (ISO: 1 = Monday … 7 = Sunday).
+   * Defaults to the locale's week start (Intl week info), Monday when unknown.
+   * @example
+   * ```html
+   * <ore-calendar week-starts-on="1"></ore-calendar>
+   * ```
+   */
+  'week-starts-on'?: number;
+  /**
+   * Overrides for built-in chrome strings (previous/next/today/moreEvents).
+   * Unset keys keep their defaults.
+   * @example
+   * ```js
+   * calendar.labels = { previous: 'Zurück', next: 'Weiter', today: 'Heute' };
+   * ```
+   */
+  labels?: Partial<CalendarLabels>;
 };
 
 /**
@@ -122,6 +165,9 @@ export type OreCalendarProps = {
  * @attr {string} weekend-days - JSON array of day indices to disable (0=Sun…6=Sat)
  * @attr {boolean} fullwidth - Expand to full container width
  * @attr {boolean} expanded - Large-cell calendar-app layout with top-aligned day numbers
+ * @attr {number} week-starts-on - First day of the week (ISO: 1=Mon…7=Sun); defaults to the locale's week start
+ *
+ * @prop {Partial<CalendarLabels>} labels - Chrome string overrides: previous/next/today/moreEvents
  *
  * @fires change - Fired when a date is selected. detail: { isoValue: string | null }
  *
@@ -137,6 +183,7 @@ export type OreCalendarProps = {
  * @part header - Calendar header (nav + label)
  * @part grid - Day grid
  * @part day - Individual day cell
+ * @part footer - Footer row holding the Today shortcut
  *
  * @example
  * ```html
@@ -164,17 +211,21 @@ define<OreCalendarProps>(CALENDAR_TAG, {
     events: prop.json([] as CalendarEvent[]),
     expanded: prop.bool(false),
     fullwidth: prop.bool(false),
+    labels: prop.data<Partial<CalendarLabels>>({}),
     locale: prop.string(),
     max: prop.string(),
     min: prop.string(),
     name: prop.string(),
     required: prop.bool(false),
     value: prop.string(),
+    'week-starts-on': prop.number(0),
     'weekend-days': prop.json([] as number[]),
   },
 
   setup(props) {
     const emit = useEmit<OreCalendarEvents>();
+
+    const labels = computed<CalendarLabels>(() => ({ ...DEFAULT_CALENDAR_LABELS, ...props.labels.value }));
 
     // ── Derived flags ────────────────────────────────────────────────────────
 
@@ -218,6 +269,11 @@ define<OreCalendarProps>(CALENDAR_TAG, {
       get weekendDays() {
         return props['weekend-days'].value ?? [];
       },
+      get weekStartsOn() {
+        const n = props['week-starts-on'].value;
+
+        return n != null && n >= 1 && n <= 7 ? n : null;
+      },
     });
 
     // ── Reactive display state ────────────────────────────────────────────────
@@ -242,10 +298,25 @@ define<OreCalendarProps>(CALENDAR_TAG, {
       const map = new Map<string, CalendarEvent[]>();
 
       for (const evt of props.events.value ?? []) {
-        const list = map.get(evt.date) ?? [];
+        const start = parseIso(evt.date);
 
-        list.push(evt);
-        map.set(evt.date, list);
+        if (!start) continue;
+
+        const end = evt.endDate ? parseIso(evt.endDate) : null;
+        // Spans are clamped to a year so a bogus endDate can't lock up the loop.
+        let last = end && Temporal.PlainDate.compare(end, start) >= 0 ? end : start;
+
+        if (Temporal.PlainDate.compare(last, start.add({ days: 366 })) > 0) last = start.add({ days: 366 });
+
+        for (let d = start; ; d = d.add({ days: 1 })) {
+          const iso = d.toString().slice(0, 10);
+          const list = map.get(iso) ?? [];
+
+          list.push(evt);
+          map.set(iso, list);
+
+          if (Temporal.PlainDate.compare(d, last) >= 0) break;
+        }
       }
 
       return map;
@@ -283,10 +354,32 @@ define<OreCalendarProps>(CALENDAR_TAG, {
     const displayYear_ = computed(() => String(displayYear.value));
     const displayLabel = computed(() => `${displayMonth_.value} ${displayYear_.value}`);
 
+    // ── Today shortcut ───────────────────────────────────────────────────────
+    // The footer button only earns its space once the display has drifted from
+    // the current month. (Evaluated per render: a calendar left open across
+    // midnight updates on the next interaction, which is acceptable here.)
+
+    const todayDate = computed(() => Temporal.Now.plainDateISO());
+    const showToday = computed(
+      () =>
+        currentView.value === 'day' &&
+        (displayMonth.value !== todayDate.value.month || displayYear.value !== todayDate.value.year),
+    );
+
+    function handleToday(): void {
+      ctrl.goTo(todayDate.value.year, todayDate.value.month);
+      ctrl.setView('day');
+      currentView.value = 'day';
+      displayYear.value = ctrl.displayYear();
+      displayMonth.value = ctrl.displayMonth();
+    }
+
     // ── Navigation ───────────────────────────────────────────────────────────
 
     function handlePrev(): void {
       if (currentView.value === 'day') ctrl.prevMonth();
+      // The year view shows a 12-cell window: page whole decades, not single years.
+      else if (currentView.value === 'year') ctrl.goTo(ctrl.displayYear() - 12, ctrl.displayMonth());
       else ctrl.prevYear();
 
       displayYear.value = ctrl.displayYear();
@@ -295,6 +388,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
 
     function handleNext(): void {
       if (currentView.value === 'day') ctrl.nextMonth();
+      else if (currentView.value === 'year') ctrl.goTo(ctrl.displayYear() + 12, ctrl.displayMonth());
       else ctrl.nextYear();
 
       displayYear.value = ctrl.displayYear();
@@ -366,7 +460,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
       <div class="calendar" part="calendar" role="presentation">
         <!-- Header -->
         <div class="cal-header" part="header">
-          <button class="nav-btn" type="button" aria-label="Previous" ?disabled="${isDisabled}" @click="${handlePrev}">
+          <button class="nav-btn" type="button" aria-label="${() => labels.value.previous}" ?disabled="${isDisabled}" @click="${handlePrev}">
             <ore-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></ore-icon>
           </button>
 
@@ -382,7 +476,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
             <span class="cal-label-year">${displayYear_}</span>
           </button>
 
-          <button class="nav-btn" type="button" aria-label="Next" ?disabled="${isDisabled}" @click="${handleNext}">
+          <button class="nav-btn" type="button" aria-label="${() => labels.value.next}" ?disabled="${isDisabled}" @click="${handleNext}">
             <ore-icon name="chevron-right" size="16" stroke-width="2" aria-hidden="true"></ore-icon>
           </button>
         </div>
@@ -447,7 +541,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                             const overflowPill =
                               overflow > 0
                                 ? html`<span class="cal-event-pill-overflow" aria-hidden="true"
-                                  >+${overflow} more</span
+                                  >${() => labels.value.moreEvents(overflow)}</span
                                 >`
                                 : html``;
 
@@ -585,6 +679,13 @@ define<OreCalendarProps>(CALENDAR_TAG, {
               `,
             );
           }}
+        </div>
+
+        <!-- Today shortcut: visible only while the day view has drifted from the current month -->
+        <div class="cal-footer" part="footer" ?hidden="${() => !showToday.value}">
+          <button class="cal-today-btn" type="button" ?disabled="${isDisabled}" @click="${handleToday}">
+            ${() => labels.value.today}
+          </button>
         </div>
       </div>
     `;

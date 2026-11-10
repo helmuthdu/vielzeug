@@ -97,7 +97,6 @@ define(COMMAND_PALETTE_ITEM_TAG, {
  * @cssprop --command-palette-backdrop-bg - Backdrop veil color (default: var(--overlay-veil))
  * @cssprop --command-palette-option-hover-bg - Item background on hover
  * @cssprop --command-palette-option-focus-bg - Item background when keyboard-focused
- * @cssprop --command-palette-group-sticky-bg - Background of the pinned group heading while it sticks (default: near-opaque var(--surface-overlay))
  * @cssprop --command-palette-preview-width - Preview panel width when the `preview` slot has content
  *
  * @part dialog - Dialog root container

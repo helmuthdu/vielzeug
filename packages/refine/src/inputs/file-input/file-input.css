@@ -448,8 +448,8 @@
     --_border-color: var(--file-input-border-color, var(--color-contrast-300));
   }
 
-  /* Flat: a near-invisible border, deliberately weaker than bordered's
-     70%-focus border (matches button.css's flat/bordered split) so the two
+  /* Flat: a near-invisible border, deliberately weaker than bordered's themed
+     border (matches button.css's flat/bordered split) so the two
      don't read as the same box at a glance. */
   :host([variant='flat']) {
     --_bg: var(--file-input-bg, var(--color-contrast-100));
@@ -474,7 +474,7 @@
   /* Bordered */
   :host([variant='bordered']) {
     --_bg: var(--file-input-bg, var(--_theme-backdrop));
-    --_border-color: var(--file-input-border-color, color-mix(in oklch, var(--_theme-focus) 70%, transparent));
+    --_border-color: var(--file-input-border-color, var(--_theme-border));
   }
 
   :host([variant='bordered']) .dropzone:hover {

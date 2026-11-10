@@ -1084,4 +1084,81 @@ describe('ore-combobox', () => {
       expect(results.violations).toHaveLength(0);
     });
   });
+  describe('Chip overflow', () => {
+    it('collapses chips past max-visible into a +N chip', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { label: 'Country', multiple: '', value: 'us,gb,de,fr' },
+        html: `${optionsHtml}<ore-combobox-option value="fr">France</ore-combobox-option>`,
+      });
+
+      const removable = fixture.element.shadowRoot!.querySelectorAll('.chips-list ore-chip[mode="removable"]');
+      const overflow = fixture.query<HTMLElement>('.chip-overflow');
+
+      expect(removable.length).toBe(3);
+      expect(overflow?.getAttribute('label')).toBe('+1');
+    });
+
+    it('shows all chips when max-visible is 0', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { label: 'Country', 'max-visible': '0', multiple: '', value: 'us,gb,de,fr' },
+        html: `${optionsHtml}<ore-combobox-option value="fr">France</ore-combobox-option>`,
+      });
+
+      expect(fixture.element.shadowRoot!.querySelectorAll('.chips-list ore-chip[mode="removable"]')).toHaveLength(4);
+      expect(fixture.query('.chip-overflow')).toBeNull();
+    });
+  });
+
+  describe('Labels', () => {
+    async function typeQuery(input: HTMLInputElement, text: string) {
+      fireClick(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      input.value = text;
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' }));
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      await fixture.flush();
+    }
+
+    it('uses the noResults label for empty results', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { label: 'Country' },
+        html: optionsHtml,
+        props: { labels: { noResults: 'Rien trouv\u00e9' } },
+      });
+
+      await typeQuery(getInput()!, 'zzz');
+
+      expect(fixture.query('.no-results')?.textContent?.trim()).toBe('Rien trouv\u00e9');
+    });
+
+    it('formats the create row through the create label', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { creatable: '', label: 'Country' },
+        html: optionsHtml,
+        props: { labels: { create: (q: string) => `Ajouter "${q}"` } },
+      });
+
+      await typeQuery(getInput()!, 'Atlantis');
+
+      expect(fixture.query('.no-results-create')?.textContent).toContain('Ajouter "Atlantis"');
+    });
+  });
+
+  describe('Footer slot', () => {
+    it('renders the footer row only when content is slotted', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { label: 'Country' },
+        html: `${optionsHtml}<button slot="footer">Select all</button>`,
+      });
+
+      expect(fixture.query('.dropdown-footer')?.hasAttribute('hidden')).toBe(false);
+      fixture.dispose();
+
+      fixture = await mount('ore-combobox', { attrs: { label: 'Country' }, html: optionsHtml });
+
+      expect(fixture.query('.dropdown-footer')?.hasAttribute('hidden')).toBe(true);
+    });
+  });
 });

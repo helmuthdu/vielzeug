@@ -75,6 +75,34 @@ test.describe('Layout', () => {
     expect(new Set(backgrounds).size).toBeGreaterThan(1);
   });
 
+  // Regression guard for the bordered redesign: the variant rides the themed backdrop/border
+  // pairing (like ore-alert's), but typed text must stay neutral ink — the theme base color
+  // on the pale backdrop misses AA contrast and decorates user content.
+  test('bordered variant keeps neutral ink text on the themed backdrop', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<span id="ink" style="color: var(--color-contrast-900)"></span>' +
+        '<span id="backdrop" style="background-color: var(--color-error-backdrop)"></span>' +
+        '<ore-input id="bordered-themed" variant="bordered" color="error" value="typed"></ore-input>',
+    );
+
+    const probe = await page.evaluate(() => {
+      const field = document
+        .querySelector<HTMLElement>('#bordered-themed')!
+        .shadowRoot!.querySelector<HTMLElement>('.field')!;
+      const color = (el: HTMLElement) => getComputedStyle(el).color;
+      const ink = color(document.getElementById('ink')!);
+      const backdrop = getComputedStyle(document.getElementById('backdrop')!).backgroundColor;
+
+      return {
+        bgIsBackdrop: getComputedStyle(field).backgroundColor === backdrop,
+        textNeutral: color(field.querySelector('input')!) === ink,
+      };
+    });
+
+    expect(probe.textNeutral).toBe(true);
+    expect(probe.bgIsBackdrop).toBe(true);
+  });
+
   // Regression coverage for a related bug: the focus/error/success glow (`box-shadow` on
   // `.field:focus-within`) lived in `@layer refine.overrides`, while solid/outline/ghost's
   // rest-state `box-shadow` (`fieldVariantMixin`) lives in `@layer refine.variants`: cascade

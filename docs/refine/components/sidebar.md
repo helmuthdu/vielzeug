@@ -586,22 +586,22 @@ ore-sidebar-item {
 
 **`ore-sidebar` Attributes**
 
-| Attribute            | Type      | Default                | Description                                                                                       |
-| -------------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------- |
-| `collapsed`          | `boolean` | N/A                    | Controlled collapsed state                                                                        |
-| `default-collapsed`  | `boolean` | `false`                | Initial collapsed state in uncontrolled mode                                                      |
-| `collapsible`        | `boolean` | `false`                | Shows the collapse/expand toggle button in the header                                             |
-| `responsive`         | `string`  | N/A                    | Media query that enables compact (collapsed) sidebar mode                                         |
-| `bottom-nav-at`      | `string`  | N/A                    | Media query that switches to mobile bottom-nav + drawer mode                                      |
-| `container-breakpoints` | `boolean` | `false`             | Evaluates parseable `max-width` breakpoints against the sidebar container width instead of the viewport |
-| `backdrop`           | `string`  | N/A                    | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` (unset = click-to-close, no dim) |
-| `close-on-select`    | `boolean` | `true`                 | Closes the drawer after primary item activation                                                   |
-| `collapse-label`     | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                                                         |
-| `expand-label`       | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                                                           |
-| `drawer`             | `boolean` | `false`                | Drawer-only mode: the sidebar exists solely as the overlay drawer                                 |
-| `drawer-close-label` | `string`  | `'Close sidebar'`      | Accessible label for the drawer close button                                                      |
-| `variant`            | `string`  | N/A                    | Visual variant: `'floating'` \| `'inset'`                                                         |
-| `label`              | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                                                             |
+| Attribute               | Type      | Default                | Description                                                                                             |
+| ----------------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| `collapsed`             | `boolean` | N/A                    | Controlled collapsed state                                                                              |
+| `default-collapsed`     | `boolean` | `false`                | Initial collapsed state in uncontrolled mode                                                            |
+| `collapsible`           | `boolean` | `false`                | Shows the collapse/expand toggle button in the header                                                   |
+| `responsive`            | `string`  | N/A                    | Media query that enables compact (collapsed) sidebar mode                                               |
+| `bottom-nav-at`         | `string`  | N/A                    | Media query that switches to mobile bottom-nav + drawer mode                                            |
+| `container-breakpoints` | `boolean` | `false`                | Evaluates parseable `max-width` breakpoints against the sidebar container width instead of the viewport |
+| `backdrop`              | `string`  | N/A                    | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` (unset = click-to-close, no dim)       |
+| `close-on-select`       | `boolean` | `true`                 | Closes the drawer after primary item activation                                                         |
+| `collapse-label`        | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                                                               |
+| `expand-label`          | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                                                                 |
+| `drawer`                | `boolean` | `false`                | Drawer-only mode: the sidebar exists solely as the overlay drawer                                       |
+| `drawer-close-label`    | `string`  | `'Close sidebar'`      | Accessible label for the drawer close button                                                            |
+| `variant`               | `string`  | N/A                    | Visual variant: `'floating'` \| `'inset'`                                                               |
+| `label`                 | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                                                                   |
 
 **`ore-sidebar` Slots**
 

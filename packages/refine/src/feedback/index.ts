@@ -1,4 +1,4 @@
-export type { OreAlertEvents, OreAlertProps } from './alert/alert';
+export type { AlertLabels, OreAlertEvents, OreAlertProps } from './alert/alert';
 export { ALERT_TAG } from './alert/alert';
 export type { OreBadgeProps } from './badge/badge';
 export { BADGE_TAG } from './badge/badge';

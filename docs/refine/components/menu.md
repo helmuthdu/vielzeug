@@ -230,125 +230,6 @@ Use `ore-menu-separator` to add a horizontal divider between groups of related i
 
 </ComponentPreview>
 
-## Grid Layout
-
-Set `layout="grid"` to turn the panel into a grid of cards: icon above a centered, two-line-clamped label, equal columns, no scroller to fight. This suits a small, complete action set (three to six verbs a thumb should see at once). For longer lists, keep the default `list` layout. Use `columns` to set the row size (default 3); `ore-menu-separator` still works and spans the full width between clusters. The `columns` prop owns the column count outright: the panel's grid tracks and the arrow-key rows always read the same number.
-
-<ComponentPreview align="start" justify="start" height="400px" vertical>
-
-```html
-<ore-menu layout="grid">
-  <ore-button slot="trigger">Actions</ore-button>
-  <ore-menu-item value="forge">
-    <ore-icon slot="icon" name="hammer" size="18"></ore-icon>
-    Open Forge
-  </ore-menu-item>
-  <ore-menu-item value="decks">
-    <ore-icon slot="icon" name="layers" size="18"></ore-icon>
-    Edit decks
-  </ore-menu-item>
-  <ore-menu-item value="share">
-    <ore-icon slot="icon" name="share-2" size="18"></ore-icon>
-    Share build
-  </ore-menu-item>
-  <ore-menu-separator></ore-menu-separator>
-  <ore-menu-item value="export">
-    <ore-icon slot="icon" name="download" size="18"></ore-icon>
-    Export
-  </ore-menu-item>
-  <ore-menu-item value="delete" disabled>
-    <ore-icon slot="icon" name="trash-2" size="18"></ore-icon>
-    Delete
-  </ore-menu-item>
-</ore-menu>
-```
-
-</ComponentPreview>
-
-Keyboard navigation follows the grid: `ArrowLeft` / `ArrowRight` step one card, `ArrowUp` / `ArrowDown` step one row, `Home` / `End` jump to the ends. Disabled cards are still stepped over (skipping them would desync the arrows from the visible rows) but never activated.
-
-## Checkable Items
-
-### Checkbox Items
-
-Set `type="checkbox"` on a `ore-menu-item` to make it toggleable. Clicking or pressing `Enter`/`Space` toggles the `checked` attribute and emits `select` with `checked` in the event detail. The menu stays open when a checkbox item is activated.
-
-<ComponentPreview align="start" justify="start" height="400px" vertical>
-
-```html
-<ore-menu id="view-menu">
-  <ore-button slot="trigger">View</ore-button>
-  <ore-menu-item value="sidebar" type="checkbox" checked>Show Sidebar</ore-menu-item>
-  <ore-menu-item value="toolbar" type="checkbox">Show Toolbar</ore-menu-item>
-  <ore-menu-item value="statusbar" type="checkbox" checked>Show Status Bar</ore-menu-item>
-</ore-menu>
-
-<script>
-  document.getElementById('view-menu').addEventListener('select', (e) => {
-    console.log(e.detail.value, 'checked:', e.detail.checked);
-  });
-</script>
-```
-
-</ComponentPreview>
-
-### Radio Items
-
-Set `type="radio"` to create a group where only one item can be checked at a time. Selecting a radio item automatically unchecks all other `type="radio"` siblings.
-
-<ComponentPreview align="start" justify="start" height="400px" vertical>
-
-```html
-<ore-menu id="sort-menu">
-  <ore-button slot="trigger">Sort By</ore-button>
-  <ore-menu-item value="name" type="radio" checked>Name</ore-menu-item>
-  <ore-menu-item value="date" type="radio">Date Modified</ore-menu-item>
-  <ore-menu-item value="size" type="radio">File Size</ore-menu-item>
-</ore-menu>
-```
-
-</ComponentPreview>
-
-## Listening to Events
-
-```html
-<ore-menu id="action-menu">
-  <ore-button slot="trigger">Actions</ore-button>
-  <ore-menu-item value="rename">Rename</ore-menu-item>
-  <ore-menu-item value="move">Move to folder</ore-menu-item>
-  <ore-menu-item value="delete">Delete</ore-menu-item>
-</ore-menu>
-
-<script type="module">
-  import '@vielzeug/refine/menu';
-  import '@vielzeug/refine/button';
-
-  const menu = document.getElementById('action-menu');
-
-  // Fired when a menu item is selected
-  menu.addEventListener('select', (e) => {
-    console.log('selected:', e.detail.value, 'checked:', e.detail.checked);
-    switch (e.detail.value) {
-      case 'rename':
-        openRenameDialog();
-        break;
-      case 'move':
-        openMoveDialog();
-        break;
-      case 'delete':
-        confirmDelete();
-        break;
-    }
-  });
-
-  menu.addEventListener('open-change', (e) => {
-    console.log('menu open:', e.detail.open, e.detail.reason);
-  });
-</script>
-```
-
-Use `value` on each item to handle selection in a single `select` listener rather than per-item click handlers. Keep menu items short and action-oriented (verb + noun: "Edit post", "Delete file").
-
 ## User Selector (Account Switcher)
 
 `ore-menu` composes into a full user selector: any element can be the trigger, avatar rows are items with slotted content, `ore-menu-label` names the account group, radio items switch the active account, and the `end` slot carries shortcut hints.
@@ -509,6 +390,125 @@ Use `value` on each item to handle selection in a single `select` listener rathe
 
 Shortcut hints live in the `end` slot as display only: wrap one `ore-keyboard-key` per pressed key in an `ore-keyboard-shortcut` so each key renders its own cap with menu-tight spacing. If the shortcuts are real, register the same keys on the page so the hint stays true.
 
+## Grid Layout
+
+Set `layout="grid"` to turn the panel into a grid of cards: icon above a centered, two-line-clamped label, equal columns, no scroller to fight. This suits a small, complete action set (three to six verbs a thumb should see at once). For longer lists, keep the default `list` layout. Use `columns` to set the row size (default 3); `ore-menu-separator` still works and spans the full width between clusters. The `columns` prop owns the column count outright: the panel's grid tracks and the arrow-key rows always read the same number.
+
+<ComponentPreview align="start" justify="start" height="400px" vertical>
+
+```html
+<ore-menu layout="grid">
+  <ore-button slot="trigger">Actions</ore-button>
+  <ore-menu-item value="forge">
+    <ore-icon slot="icon" name="hammer" size="18"></ore-icon>
+    Open Forge
+  </ore-menu-item>
+  <ore-menu-item value="decks">
+    <ore-icon slot="icon" name="layers" size="18"></ore-icon>
+    Edit decks
+  </ore-menu-item>
+  <ore-menu-item value="share">
+    <ore-icon slot="icon" name="share-2" size="18"></ore-icon>
+    Share build
+  </ore-menu-item>
+  <ore-menu-separator></ore-menu-separator>
+  <ore-menu-item value="export">
+    <ore-icon slot="icon" name="download" size="18"></ore-icon>
+    Export
+  </ore-menu-item>
+  <ore-menu-item value="delete" disabled>
+    <ore-icon slot="icon" name="trash-2" size="18"></ore-icon>
+    Delete
+  </ore-menu-item>
+</ore-menu>
+```
+
+</ComponentPreview>
+
+Keyboard navigation follows the grid: `ArrowLeft` / `ArrowRight` step one card, `ArrowUp` / `ArrowDown` step one row, `Home` / `End` jump to the ends. Disabled cards are still stepped over (skipping them would desync the arrows from the visible rows) but never activated.
+
+## Checkable Items
+
+### Checkbox Items
+
+Set `type="checkbox"` on a `ore-menu-item` to make it toggleable. Clicking or pressing `Enter`/`Space` toggles the `checked` attribute and emits `select` with `checked` in the event detail. The menu stays open when a checkbox item is activated.
+
+<ComponentPreview align="start" justify="start" height="400px" vertical>
+
+```html
+<ore-menu id="view-menu">
+  <ore-button slot="trigger">View</ore-button>
+  <ore-menu-item value="sidebar" type="checkbox" checked>Show Sidebar</ore-menu-item>
+  <ore-menu-item value="toolbar" type="checkbox">Show Toolbar</ore-menu-item>
+  <ore-menu-item value="statusbar" type="checkbox" checked>Show Status Bar</ore-menu-item>
+</ore-menu>
+
+<script>
+  document.getElementById('view-menu').addEventListener('select', (e) => {
+    console.log(e.detail.value, 'checked:', e.detail.checked);
+  });
+</script>
+```
+
+</ComponentPreview>
+
+### Radio Items
+
+Set `type="radio"` to create a group where only one item can be checked at a time. Selecting a radio item automatically unchecks all other `type="radio"` siblings.
+
+<ComponentPreview align="start" justify="start" height="400px" vertical>
+
+```html
+<ore-menu id="sort-menu">
+  <ore-button slot="trigger">Sort By</ore-button>
+  <ore-menu-item value="name" type="radio" checked>Name</ore-menu-item>
+  <ore-menu-item value="date" type="radio">Date Modified</ore-menu-item>
+  <ore-menu-item value="size" type="radio">File Size</ore-menu-item>
+</ore-menu>
+```
+
+</ComponentPreview>
+
+## Listening to Events
+
+```html
+<ore-menu id="action-menu">
+  <ore-button slot="trigger">Actions</ore-button>
+  <ore-menu-item value="rename">Rename</ore-menu-item>
+  <ore-menu-item value="move">Move to folder</ore-menu-item>
+  <ore-menu-item value="delete">Delete</ore-menu-item>
+</ore-menu>
+
+<script type="module">
+  import '@vielzeug/refine/menu';
+  import '@vielzeug/refine/button';
+
+  const menu = document.getElementById('action-menu');
+
+  // Fired when a menu item is selected
+  menu.addEventListener('select', (e) => {
+    console.log('selected:', e.detail.value, 'checked:', e.detail.checked);
+    switch (e.detail.value) {
+      case 'rename':
+        openRenameDialog();
+        break;
+      case 'move':
+        openMoveDialog();
+        break;
+      case 'delete':
+        confirmDelete();
+        break;
+    }
+  });
+
+  menu.addEventListener('open-change', (e) => {
+    console.log('menu open:', e.detail.open, e.detail.reason);
+  });
+</script>
+```
+
+Use `value` on each item to handle selection in a single `select` listener rather than per-item click handlers. Keep menu items short and action-oriented (verb + noun: "Edit post", "Delete file").
+
 ## API Reference
 
 **`ore-menu`** Attributes
@@ -527,9 +527,9 @@ Shortcut hints live in the `end` slot as display only: wrap one `ore-keyboard-ke
 
 **`ore-menu`** Slots
 
-| Slot      | Description                                         |
-| --------- | --------------------------------------------------- |
-| `trigger` | The element that opens/closes the menu panel        |
+| Slot      | Description                                                                                         |
+| --------- | --------------------------------------------------------------------------------------------------- |
+| `trigger` | The element that opens/closes the menu panel                                                        |
 | (default) | `ore-menu-item` elements, plus optional `ore-menu-label` captions and `ore-menu-separator` dividers |
 
 **`ore-menu-item`** Attributes
@@ -562,7 +562,7 @@ Shortcut hints live in the `end` slot as display only: wrap one `ore-keyboard-ke
 | Property                        | Description                                      | Default                                   |
 | ------------------------------- | ------------------------------------------------ | ----------------------------------------- |
 | `--menu-panel-min-width`        | Minimum width of the panel                       | `10rem`                                   |
-| `--menu-panel-max-height`       | Panel height cap                               | Unset: fits the room on the opened side   |
+| `--menu-panel-max-height`       | Panel height cap                                 | Unset: fits the room on the opened side   |
 | `--menu-panel-radius`           | Border radius of the panel                       | `var(--rounded-lg)`                       |
 | `--menu-panel-shadow`           | Box shadow of the panel                          | `var(--shadow-xl)`                        |
 | `--menu-panel-bg`               | Panel background surface                         | Theme-dependent                           |

@@ -3,8 +3,8 @@ export type { OreButtonProps } from './button/button';
 export { BUTTON_TAG } from './button/button';
 export type { ButtonGroupContext, OreButtonGroupEvents, OreButtonGroupProps } from './button-group/button-group';
 export { BUTTON_GROUP_CTX, BUTTON_GROUP_TAG } from './button-group/button-group';
-export type { CalendarEvent, OreCalendarEvents, OreCalendarProps } from './calendar/calendar';
-export { CALENDAR_TAG } from './calendar/calendar';
+export type { CalendarEvent, CalendarLabels, OreCalendarEvents, OreCalendarProps } from './calendar/calendar';
+export { CALENDAR_TAG, DEFAULT_CALENDAR_LABELS } from './calendar/calendar';
 export type { OreCheckboxEvents, OreCheckboxProps } from './checkbox/checkbox';
 export { CHECKBOX_TAG } from './checkbox/checkbox';
 export type { OreCheckboxGroupEvents, OreCheckboxGroupProps } from './checkbox-group/checkbox-group';
@@ -12,6 +12,7 @@ export { CHECKBOX_GROUP_CTX, CHECKBOX_GROUP_TAG } from './checkbox-group/checkbo
 export type { OreColorPickerEvents, OreColorPickerOption, OreColorPickerProps } from './color-picker/color-picker';
 export { COLOR_PICKER_TAG } from './color-picker/color-picker';
 export type {
+  ComboboxLabels,
   ComboboxOptionInput,
   OreComboboxEvents,
   OreComboboxOptionProps,
@@ -39,8 +40,8 @@ export type { OreMessageComposerEvents, OreMessageComposerProps } from './messag
 export { MESSAGE_COMPOSER_TAG } from './message-composer/message-composer';
 export type { OreNumberInputEvents, OreNumberInputProps } from './number-input/number-input';
 export { NUMBER_INPUT_TAG } from './number-input/number-input';
-export type { OreOtpInputEvents, OreOtpInputProps } from './otp-input/otp-input';
-export { OTP_INPUT_TAG } from './otp-input/otp-input';
+export type { OreOtpInputEvents, OreOtpInputProps, OtpLabels } from './otp-input/otp-input';
+export { DEFAULT_OTP_LABELS, OTP_INPUT_TAG } from './otp-input/otp-input';
 export type {
   OreQrScannerEvents,
   OreQrScannerProps,
@@ -67,8 +68,8 @@ export type { OreRadioEvents, OreRadioProps } from './radio/radio';
 export { RADIO_TAG } from './radio/radio';
 export type { OreRadioGroupEvents, OreRadioGroupProps } from './radio-group/radio-group';
 export { RADIO_GROUP_CTX, RADIO_GROUP_TAG } from './radio-group/radio-group';
-export type { OreRatingEvents, OreRatingProps } from './rating/rating';
-export { RATING_TAG } from './rating/rating';
+export type { OreRatingEvents, OreRatingProps, RatingLabels } from './rating/rating';
+export { DEFAULT_RATING_LABELS, RATING_TAG } from './rating/rating';
 export type { OreSelectEvents, OreSelectProps } from './select/select';
 export { SELECT_TAG } from './select/select';
 export type { OreSliderEvents, OreSliderProps } from './slider/slider';
