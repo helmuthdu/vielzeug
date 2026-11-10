@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "keyboard-key: render key caps in the sans stack with a square-ish min-width so modifier symbols match letter keys",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

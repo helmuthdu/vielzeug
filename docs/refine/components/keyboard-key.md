@@ -90,12 +90,12 @@ Set `pressed` directly on `ore-keyboard-key` only when displaying one independen
 | `--keyboard-key-color`                     | Theme-dependent           | Key label color                           |
 | `--keyboard-key-border-color`              | Theme-dependent           | Key border color                          |
 | `--keyboard-key-radius`                    | Size-dependent            | Key corner radius                         |
-| `--keyboard-key-font-family`               | Size-dependent            | Key label typeface                        |
+| `--keyboard-key-font-family`               | `var(--font-sans)`        | Key label typeface                        |
 | `--keyboard-key-font-size`                 | Size-dependent            | Key label size                            |
 | `--keyboard-key-font-weight`               | Size-dependent            | Key label weight                          |
 | `--keyboard-key-padding-block`             | Size-dependent            | Vertical padding                          |
 | `--keyboard-key-padding-inline`            | Size-dependent            | Horizontal padding                        |
-| `--keyboard-key-min-width`                 | `var(--size-16)` for `lg` | Large key minimum width                   |
+| `--keyboard-key-min-width`                 | `var(--size-6)`, `var(--size-16)` for `lg` | Key minimum width (square-ish chips)   |
 | `--keyboard-key-min-height`                | `var(--size-16)` for `lg` | Large key minimum height                  |
 | `--keyboard-key-shadow`                    | Size-dependent            | Key shadow                                |
 | `--keyboard-key-symbol-color`              | Theme-dependent           | Large modifier symbol color               |
