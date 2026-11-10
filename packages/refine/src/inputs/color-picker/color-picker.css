@@ -21,6 +21,11 @@
      label stays stable while the swatches scale with `size`. */
   legend {
     padding: 0;
+    /* Chrome lays the legend out outside the fieldset's grid flow, so the grid's
+       row gap never separates it from the swatch row. The checked/focus selection
+       ring reaches up to ~8px above a swatch; this margin reserves the gap the
+       grid would otherwise provide so the ring cannot cut into the label. */
+    margin-block-end: var(--size-3);
     font-size: var(--text-sm);
     font-weight: var(--font-medium);
     color: var(--color-contrast-600);

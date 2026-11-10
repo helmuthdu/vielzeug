@@ -77,6 +77,30 @@ test.describe('Color picker', () => {
     expect(focused).toBe('midnight');
   });
 
+  test('keeps the selection ring clear of the legend', async ({ page, refinePage }) => {
+    // Chrome lays the legend out outside the fieldset's grid, so the row gap cannot
+    // separate it from the swatches; the legend's margin must clear the scaled
+    // checked/focus ring instead (color-picker.css legend margin).
+    await refinePage.mountComponent(
+      '<ore-color-picker label="Paint" size="lg" value="midnight" options=\'[{"value":"midnight","color":"#19202b","label":"Midnight Black"},{"value":"pearl","color":"#f2efe9","label":"Pearl White"}]\'></ore-color-picker>',
+    );
+    const checked = page.locator('ore-color-picker [role="radio"][aria-checked="true"]');
+    await checked.focus();
+
+    const ringClearance = () =>
+      checked.evaluate((el) => {
+        const root = el.getRootNode() as ShadowRoot;
+        const legend = root.querySelector('legend')!.getBoundingClientRect();
+        const swatch = el.getBoundingClientRect();
+        const styles = getComputedStyle(el);
+        const ringExtend = (parseFloat(styles.outlineOffset) + parseFloat(styles.outlineWidth)) * 1.08;
+
+        return swatch.top - ringExtend - legend.bottom;
+      });
+
+    await expect.poll(ringClearance).toBeGreaterThan(0);
+  });
+
   test('meets axe expectations', async ({ page, refinePage }) => {
     await refinePage.mountComponent(PALETTE);
 
