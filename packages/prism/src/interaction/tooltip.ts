@@ -11,14 +11,21 @@ export interface TooltipRow {
 const SCREEN_READER_ONLY =
   'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';
 
+/** Inset the tooltip keeps from the edge of its visible box. */
+const BOUNDARY_PADDING = 8;
+
 /**
- * The shift boundary: the chart container intersected with the tooltip's clipping-ancestor
- * rect (what a host `overflow: hidden` actually shows). Clamping to the container alone would
- * let the tooltip sit inside a container that is itself clipped by a smaller ancestor; the
- * intersection keeps it inside what is actually visible. A degenerate intersection (zero area)
- * falls back to the container rect.
+ * The placement boundary: the chart container intersected with the tooltip's clipping-ancestor
+ * rect (what a host `overflow: hidden` actually shows). Both `flip` and `shift` are scored
+ * against it. Clamping to the container alone would let the tooltip sit inside a container that
+ * is itself clipped by a smaller ancestor; the intersection keeps it inside what is actually
+ * visible. A degenerate intersection (zero area) falls back to the container rect.
+ *
+ * Scoring `flip` against the viewport instead — its default — picks the side that overflows the
+ * *page* least, which is not the side a user can read: a card with `overflow: hidden` clips the
+ * overhanging half, so a tall comparison tooltip loses its title and first rows in plain view.
  */
-function shiftBoundary(container: HTMLElement, tooltip: HTMLElement): Rect {
+function placementBoundary(container: HTMLElement, tooltip: HTMLElement): Rect {
   const box = container.getBoundingClientRect();
   const containerRect: Rect = { height: box.height, width: box.width, x: box.x, y: box.y };
   const visible = getClippingAncestorRect(tooltip);
@@ -182,9 +189,17 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
         },
       };
 
+      // Measured once per show: the box only depends on the container and the host's
+      // clipping ancestors, neither of which moves while the pipeline runs.
+      const boundary = placementBoundary(container, el);
+
       const { x: positionX, y: positionY } = computePosition(virtualRef, el, {
         containingBlock: container,
-        middleware: [offset(tooltipOffset), flip(), shift({ boundary: shiftBoundary(container, el), padding: 8 })],
+        middleware: [
+          offset(tooltipOffset),
+          flip({ boundary, padding: BOUNDARY_PADDING }),
+          shift({ boundary, padding: BOUNDARY_PADDING }),
+        ],
         placement: 'top',
       });
 

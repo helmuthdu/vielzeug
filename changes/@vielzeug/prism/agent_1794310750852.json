@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(prism): keep chart tooltips inside the host's visible box",
+      "packageName": "@vielzeug/prism",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}
