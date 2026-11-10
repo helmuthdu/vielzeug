@@ -12,8 +12,7 @@ import {
   useSlots,
   when,
 } from '@vielzeug/ore';
-import { computed, fromSubscribable, type Readable, signal, watch } from '@vielzeug/ripple';
-import { createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
+import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 import {
   createDropdownPositioner,
@@ -22,6 +21,7 @@ import {
   type OverlayOpenChangeDetail,
   parseOptionalBool,
 } from '../../core';
+import { createResponsiveMode } from '../../layout/shared';
 import { overlayMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
 import type { SpotlightRect } from '../spotlight/spotlight';
@@ -339,24 +339,18 @@ define<OreTourProps>(TOUR_TAG, {
 
     // Created during setup (not onMounted) so the first `auto` resolution, which
     // can happen while props are already set at parse time, sees the real
-    // viewport state rather than the default.
-    try {
-      const mediaHandle = createMediaQuery(NARROW_QUERY);
-      const syncMedia = (state: ReturnType<typeof mediaHandle.getSnapshot> | undefined): void => {
-        if (state) narrow.value = state.matches;
-      };
+    // viewport state rather than the default. A fixed query has no container
+    // story, so the breakpoint stays viewport-driven.
+    const narrowMode = createResponsiveMode(
+      el,
+      computed(() => NARROW_QUERY),
+      computed(() => false),
+      (matches) => {
+        narrow.value = matches;
+      },
+    );
 
-      syncMedia(mediaHandle.getSnapshot());
-
-      const mediaWatch = watch(fromSubscribable(mediaHandle, { signal: mediaHandle.disposalSignal }), syncMedia);
-
-      onCleanup(() => {
-        mediaWatch.dispose();
-        mediaHandle.dispose();
-      });
-    } catch (error) {
-      if (!(error instanceof SentinelUnavailableError)) throw error;
-    }
+    onCleanup(() => narrowMode.dispose());
 
     // `auto` tracks the viewport while the card is closed and freezes on the
     // open edge: a resize that crosses the narrow threshold must not rebuild a

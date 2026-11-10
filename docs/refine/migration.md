@@ -1,9 +1,21 @@
 ---
 title: Migration
-description: Migrate the async state container to ore-state, command palette categories and the item type, the mobile input font-size floor, the standardized overlay backdrop, the sidebar drawer backdrop default, toast statuses, the human-interface-guideline adoption, surface variants, tabs density, the tabs active pill, the sidebar drawer overlay, DataGrid sources, and framework type declarations to Refine.
+description: Migrate the viewport-only responsive breakpoints in Refine's sidebar, the async state container to ore-state, command palette categories and the item type, the mobile input font-size floor, the standardized overlay backdrop, the sidebar drawer backdrop default, toast statuses, the human-interface-guideline adoption, surface variants, tabs density, the tabs active pill, the sidebar drawer overlay, DataGrid sources, and framework type declarations to Refine.
 ---
 
 # Migration
+
+## Responsive breakpoints measure the viewport unless you opt into containers
+
+`ore-sidebar`'s `responsive` and `bottom-nav-at` queries are now evaluated against the viewport width only, unless you set `container-breakpoints` (before, a parseable `max-width` query could also match on container width without any opt-in). `ore-navbar`'s `breakpoint` already worked that way, and with `container-breakpoints` set both components now treat the container width as the sole authority: once opted in with a parseable `max-width` query, the viewport no longer contributes at all. Toggling `container-breakpoints` at runtime takes effect immediately.
+
+```html
+<!-- Before: collapsed because its container was narrow, even in a wide window -->
+<ore-sidebar responsive="(max-width: 768px)">…</ore-sidebar>
+
+<!-- After: the viewport decides, until you opt in -->
+<ore-sidebar responsive="(max-width: 768px)" container-breakpoints>…</ore-sidebar>
+```
 
 ## Carousel and picker navigation use a shared component
 
