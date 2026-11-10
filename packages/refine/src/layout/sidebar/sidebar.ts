@@ -14,14 +14,13 @@ import {
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { computed, fromSubscribable, type Readable, signal, watch } from '@vielzeug/ripple';
-import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
+import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 import { truncationRevealRef } from '../../core';
 import { createBackgroundLock } from '../../overlay/shared/background-lock';
 import { projectFling } from '../../shared/fling';
 import { touchTargetMixin } from '../../styles';
 import { computeSafeRel } from '../../utils';
-import { parseMaxWidthPx, readContainerWidth, resolveContainerElement } from '../shared';
+import { createResizeTracker, createResponsiveMode, type ResizeTracker, type ResponsiveMode } from '../shared';
 import sidebarStyles from './sidebar.css?inline';
 import groupStyles from './sidebar-group.css?inline';
 import itemStyles from './sidebar-item.css?inline';
@@ -157,7 +156,7 @@ export type OreSidebarProps = {
  * @cssprop --sidebar-border-color - Border color
  *
  * @part drawer-backdrop - Backdrop behind the open drawer (click closes it; dimming is opt-in via `backdrop`).
- * @part drawer-close-btn - Close button shown in the header while the drawer is open.
+ * @part drawer-close-btn - Close button shown in the header while the drawer is open (sidebars without header content keep the drawer headerless and close via backdrop, swipe, Escape, or the navbar toggle).
  * @part swipe-handle - Grabber nub on the drawer edge that drag-closes it (touch/mouse pan).
  * @part nav - Navigation container.
  * @part header - Header container.
@@ -220,14 +219,13 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     const isBottomNav = signal(false);
     const isDrawerOpen = signal(false);
     const bottomNavItems = signal<BottomNavItem[]>([]);
-    const responsiveMediaMatches = signal(false);
-    const responsiveSizeMatches = signal(false);
-    const responsiveMaxWidthPx = signal<number | undefined>(parseMaxWidthPx(props.responsive.value));
-    const hasResponsiveQuery = signal(Boolean(String(props.responsive.value ?? '').trim()));
-    const bottomNavMediaMatches = signal(false);
-    const bottomNavSizeMatches = signal(false);
-    const bottomNavMaxWidthPx = signal<number | undefined>(parseMaxWidthPx(props['bottom-nav-at'].value));
-    const isPreviewMode = signal(false);
+    // Declared before `applyResponsiveState` (which reads them) and assigned at the
+    // end of `setup()`; always defined by the time bind/render runs.
+    let responsiveMode: ResponsiveMode | undefined;
+    let bottomNavMode: ResponsiveMode | undefined;
+    let resizeTracker: ResizeTracker | undefined;
+    // Assigned in `onMounted`; the resize callback reaches it through this reference.
+    let unlockTransition: (() => void) | undefined;
     const bgLock = createBackgroundLock();
     let restoreDrawerFocus: FocusRestorer | null = null;
 
@@ -239,13 +237,8 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     });
 
     const applyResponsiveState = () => {
-      const useContainerBreakpoints = props['container-breakpoints'].value;
-      const responsiveMatched = useContainerBreakpoints
-        ? responsiveSizeMatches.value
-        : responsiveMediaMatches.value || responsiveSizeMatches.value;
-      const bottomMatched = useContainerBreakpoints
-        ? bottomNavSizeMatches.value
-        : bottomNavMediaMatches.value || bottomNavSizeMatches.value;
+      const responsiveMatched = responsiveMode?.matches.value ?? false;
+      const bottomMatched = bottomNavMode?.matches.value ?? false;
 
       // If the drawer is currently open, stay in bottom-nav mode
       // regardless of the responsive match. This prevents the drawer from
@@ -260,7 +253,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         setDrawerOpen(false, 'responsive');
       }
 
-      if (hasResponsiveQuery.value) {
+      if (String(props.responsive.value ?? '').trim()) {
         setCollapsed(responsiveMatched, 'responsive');
       }
     };
@@ -371,13 +364,32 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     sidebarEl.closeDrawer = () => setDrawerOpen(false, 'api');
     sidebarEl.toggleDrawer = () => setDrawerOpen(!isDrawerOpen.value, 'toggle');
 
+    responsiveMode = createResponsiveMode(el, props.responsive, props['container-breakpoints'], applyResponsiveState);
+    bottomNavMode = createResponsiveMode(
+      el,
+      props['bottom-nav-at'],
+      props['container-breakpoints'],
+      applyResponsiveState,
+    );
+    resizeTracker = createResizeTracker(el, () => {
+      responsiveMode?.remeasure();
+      bottomNavMode?.remeasure();
+      unlockTransition?.();
+      applyResponsiveState();
+    });
+    onCleanup(() => {
+      responsiveMode?.dispose();
+      bottomNavMode?.dispose();
+      resizeTracker?.dispose();
+    });
+
     bind({
       attr: {
         'data-bottom-nav': () => (isBottomNav.value ? true : undefined),
         'data-collapsed': () => (isCollapsed() && !isBottomNav.value ? true : undefined),
         'data-drawer-open': () => (isDrawerOpen.value ? true : undefined),
         'data-has-logo': () => (hasLogo() ? true : undefined),
-        'data-preview-mode': () => (isPreviewMode.value ? true : undefined),
+        'data-preview-mode': () => (resizeTracker?.isPreviewMode.value ? true : undefined),
       },
     });
 
@@ -387,7 +399,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       el.setAttribute('data-no-transition', '');
 
       let transitionUnlocked = false;
-      const unlockTransition = () => {
+      unlockTransition = () => {
         if (transitionUnlocked) return;
 
         transitionUnlocked = true;
@@ -395,10 +407,13 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       };
 
       // Fallback: unlock after two frames in case ResizeObserver doesn't fire.
-      requestAnimationFrame(() => requestAnimationFrame(unlockTransition));
+      requestAnimationFrame(() => requestAnimationFrame(() => unlockTransition?.()));
 
-      let mediaCleanup: (() => void) | undefined;
-      let bottomNavCleanup: (() => void) | undefined;
+      // Re-sync once mounted: the helpers ran at setup, when the host may not be
+      // laid out yet; sizes are only trustworthy after mount.
+      responsiveMode?.remeasure();
+      bottomNavMode?.remeasure();
+      applyResponsiveState();
       const itemObservers = new Map<HTMLElement, MutationObserver>();
       const observer = new MutationObserver(() => {
         if (!el.hasAttribute('collapsed') && !isControlled.value) return;
@@ -498,187 +513,10 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       };
       document.addEventListener('focusin', keepFocusInDrawer);
 
-      watch(
-        props.responsive,
-        (query) => {
-          mediaCleanup?.();
-          mediaCleanup = undefined;
-
-          const mediaQuery = String(query ?? '').trim();
-
-          hasResponsiveQuery.value = Boolean(mediaQuery);
-          responsiveMaxWidthPx.value = parseMaxWidthPx(mediaQuery);
-          responsiveMediaMatches.value = false;
-
-          const width = readContainerWidth(el);
-
-          responsiveSizeMatches.value =
-            width > 0 && responsiveMaxWidthPx.value != null ? width <= responsiveMaxWidthPx.value : false;
-          applyResponsiveState();
-
-          // For parseable max-width queries, keep behavior container-driven.
-          // This avoids preview viewport controls being overridden by window width.
-          if (props['container-breakpoints'].value && responsiveMaxWidthPx.value != null) {
-            return;
-          }
-
-          if (!mediaQuery) {
-            return;
-          }
-
-          try {
-            const mediaHandle = createMediaQuery(mediaQuery);
-            const syncMedia = (state: ReturnType<typeof mediaHandle.getSnapshot>) => {
-              if (state) {
-                responsiveMediaMatches.value = state.matches;
-                applyResponsiveState();
-              }
-            };
-
-            syncMedia(mediaHandle.getSnapshot());
-
-            const mediaCleanupFn = watch(
-              fromSubscribable(mediaHandle, { signal: mediaHandle.disposalSignal }),
-              syncMedia,
-            );
-            mediaCleanup = () => {
-              mediaCleanupFn.dispose();
-              mediaHandle.dispose();
-            };
-          } catch (error) {
-            if (!(error instanceof SentinelUnavailableError)) throw error;
-          }
-        },
-        { immediate: true },
-      );
-
-      watch(
-        props['bottom-nav-at'],
-        (query) => {
-          bottomNavCleanup?.();
-          bottomNavCleanup = undefined;
-
-          const mediaQuery = String(query ?? '').trim();
-
-          bottomNavMaxWidthPx.value = parseMaxWidthPx(mediaQuery);
-          bottomNavMediaMatches.value = false;
-
-          const width = readContainerWidth(el);
-
-          bottomNavSizeMatches.value =
-            width > 0 && bottomNavMaxWidthPx.value != null ? width <= bottomNavMaxWidthPx.value : false;
-          applyResponsiveState();
-
-          // For parseable max-width queries, keep behavior container-driven.
-          // This avoids preview viewport controls being overridden by window width.
-          if (props['container-breakpoints'].value && bottomNavMaxWidthPx.value != null) {
-            return;
-          }
-
-          if (!mediaQuery) {
-            return;
-          }
-
-          try {
-            const mediaHandle = createMediaQuery(mediaQuery);
-            const syncMedia = (state: ReturnType<typeof mediaHandle.getSnapshot>) => {
-              if (state) {
-                bottomNavMediaMatches.value = state.matches;
-                applyResponsiveState();
-              }
-            };
-
-            syncMedia(mediaHandle.getSnapshot());
-
-            const mediaCleanupFn = watch(
-              fromSubscribable(mediaHandle, { signal: mediaHandle.disposalSignal }),
-              syncMedia,
-            );
-            bottomNavCleanup = () => {
-              mediaCleanupFn.dispose();
-              mediaHandle.dispose();
-            };
-          } catch (error) {
-            if (!(error instanceof SentinelUnavailableError)) throw error;
-          }
-        },
-        { immediate: true },
-      );
-
       watch(props.drawer, () => {
         applyResponsiveState();
         readBottomNavItems();
       });
-
-      const stopResizeEffect =
-        typeof ResizeObserver === 'function'
-          ? (() => {
-              const hostSize = createElementSize(el);
-              onCleanup(() => hostSize.dispose());
-              const hostSizeSignal = fromSubscribable(hostSize, { signal: hostSize.disposalSignal });
-
-              const wrapperEl = el.parentElement;
-              const containerEl = resolveContainerElement(el);
-              const wrapperSize = wrapperEl ? createElementSize(wrapperEl) : undefined;
-              const parentSize = containerEl && containerEl !== wrapperEl ? createElementSize(containerEl) : undefined;
-
-              if (wrapperSize) {
-                onCleanup(() => wrapperSize.dispose());
-              }
-              if (parentSize) {
-                onCleanup(() => parentSize.dispose());
-              }
-
-              const wrapperSizeSignal = wrapperSize
-                ? fromSubscribable(wrapperSize, { signal: wrapperSize.disposalSignal })
-                : undefined;
-              const parentSizeSignal = parentSize
-                ? fromSubscribable(parentSize, { signal: parentSize.disposalSignal })
-                : undefined;
-
-              let rafId: number | undefined;
-
-              const onResize = () => {
-                if (rafId !== undefined) cancelAnimationFrame(rafId);
-
-                rafId = requestAnimationFrame(() => {
-                  const resolvedContainer = resolveContainerElement(el);
-                  const width = readContainerWidth(el);
-                  const responsiveWasMatched = responsiveSizeMatches.value;
-                  const bottomNavWasMatched = bottomNavSizeMatches.value;
-                  const parentWidth = resolvedContainer?.clientWidth ?? 0;
-
-                  isPreviewMode.value = parentWidth > 0 && parentWidth < window.innerWidth;
-
-                  responsiveSizeMatches.value =
-                    width > 0 && responsiveMaxWidthPx.value != null ? width <= responsiveMaxWidthPx.value : false;
-                  bottomNavSizeMatches.value =
-                    width > 0 && bottomNavMaxWidthPx.value != null ? width <= bottomNavMaxWidthPx.value : false;
-
-                  if (
-                    responsiveWasMatched !== responsiveSizeMatches.value ||
-                    bottomNavWasMatched !== bottomNavSizeMatches.value
-                  ) {
-                    applyResponsiveState();
-                  }
-
-                  unlockTransition();
-                });
-              };
-
-              return watch(
-                computed(() => [
-                  hostSizeSignal.value?.width,
-                  hostSizeSignal.value?.height,
-                  wrapperSizeSignal?.value?.width,
-                  wrapperSizeSignal?.value?.height,
-                  parentSizeSignal?.value?.width,
-                  parentSizeSignal?.value?.height,
-                ]),
-                onResize,
-              );
-            })()
-          : undefined;
 
       const bindItemObservers = (items: HTMLElement[]) => {
         const set = new Set(items);
@@ -728,9 +566,6 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         el.removeEventListener('keydown', closeOnEscape);
         document.removeEventListener('focusin', keepFocusInDrawer);
         bgLock.unlock();
-        mediaCleanup?.();
-        bottomNavCleanup?.();
-        stopResizeEffect?.dispose();
 
         for (const itemObserver of itemObservers.values()) {
           itemObserver.disconnect();
@@ -756,7 +591,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         <div
           class="sidebar-header"
           part="header"
-          ?hidden=${() => !hasHeader() && !props.collapsible.value && !isDrawerOpen.value}>
+          ?hidden=${() => !hasHeader() && !props.collapsible.value}>
           <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
             <slot name="logo"></slot>
           </span>
@@ -768,7 +603,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
             part="drawer-close-btn"
             type="button"
             aria-label="${props['drawer-close-label']}"
-            ?hidden=${() => !isDrawerOpen.value}
+            ?hidden=${() => !isDrawerOpen.value || (!hasHeader() && !props.collapsible.value)}
             @click=${() => setDrawerOpen(false, 'toggle')}>
             <ore-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></ore-icon>
           </button>
@@ -861,10 +696,15 @@ export type OreSidebarGroupProps = {
  * @attr {boolean} open - Controlled expanded state
  * @attr {boolean} default-open - Initial expanded state in uncontrolled mode
  *
+ * A collapsible group opens itself when a contained item is `active`, so a
+ * deep-linked page never starts with its current location folded away. Later user
+ * collapses are respected: the group reopens only when `active` moves in again.
+ *
  * @fires open-change - Fired when the group open state changes (collapsible groups only). detail: { open: boolean }
  *
  * @slot - Navigation items (`ore-sidebar-item`)
  * @slot icon - Icon displayed before the label
+ * @slot end - Trailing content (badge, count) after the label
  *
  * @example
  * ```html
@@ -890,6 +730,7 @@ define<OreSidebarGroupProps>(SIDEBAR_GROUP_TAG, {
     const emit = useEmit<OreSidebarGroupEvents>();
 
     const hasIcon = () => slots.has('icon').value;
+    const hasEnd = () => slots.has('end').value;
     const sidebarCtx = inject(SIDEBAR_CTX);
 
     bind({
@@ -930,6 +771,54 @@ define<OreSidebarGroupProps>(SIDEBAR_GROUP_TAG, {
     // chevron, and aria-expanded stay in step with the panel) and emits the
     // documented open-change event. Controlled groups veto native toggling so
     // the open prop stays the single source of truth.
+    // Auto-expand for the active item: an uncontrolled collapsible group opens
+    // when an item inside it gains `active` (deep links, router changes). Once
+    // open — or once the user collapses it with `active` still inside — it stays
+    // put; only a fresh activation reopens it.
+    const activeWatchers = new Map<HTMLElement, MutationObserver>();
+
+    const syncActiveExpand = () => {
+      if (!props.collapsible.value || isControlled() || openState.value) return;
+
+      const items = slots.elements().value;
+
+      if (items.some((item) => item instanceof HTMLElement && item.hasAttribute('active'))) {
+        openState.value = true;
+        emit('open-change', { open: true });
+      }
+    };
+
+    watch(
+      slots.elements(),
+      (rawItems) => {
+        const next = new Set(rawItems.filter((item): item is HTMLElement => item instanceof HTMLElement));
+
+        for (const [item, watcher] of activeWatchers) {
+          if (next.has(item)) continue;
+
+          watcher.disconnect();
+          activeWatchers.delete(item);
+        }
+
+        for (const item of next) {
+          if (activeWatchers.has(item)) continue;
+
+          const watcher = new MutationObserver(syncActiveExpand);
+          watcher.observe(item, { attributeFilter: ['active'], attributes: true });
+          activeWatchers.set(item, watcher);
+        }
+
+        syncActiveExpand();
+      },
+      { immediate: true },
+    );
+
+    onCleanup(() => {
+      for (const watcher of activeWatchers.values()) watcher.disconnect();
+
+      activeWatchers.clear();
+    });
+
     const handleToggle = (event: Event) => {
       if (!props.collapsible.value || isControlled()) return;
 
@@ -956,6 +845,9 @@ define<OreSidebarGroupProps>(SIDEBAR_GROUP_TAG, {
             <slot name="icon"></slot>
           </span>
           <span class="group-label" part="group-label">${props.label}</span>
+          <span class="group-end" part="group-end" ?hidden=${() => !hasEnd()}>
+            <slot name="end"></slot>
+          </span>
           <span class="chevron" ?hidden=${() => !props.collapsible.value} aria-hidden="true">
             <ore-icon name="chevron-right" size="12" stroke-width="2" aria-hidden="true"></ore-icon>
           </span>
@@ -1018,10 +910,19 @@ export type OreSidebarItemProps = {
  * @cssprop --sidebar-item-active-bg - Active background
  * @cssprop --sidebar-item-active-color - Active text color
  *
+ * On a collapsed sidebar the label becomes a fixed-position bubble on
+ * hover/focus, so icon-only navigation stays explainable.
+ *
  * @part item - The inner anchor or button element
  * @part item-icon - The icon wrapper
  * @part item-label - The label wrapper
  * @part item-end - The trailing content wrapper
+ * @part item-reveal - The collapsed-mode label bubble
+ *
+ * @cssprop --sidebar-item-reveal-bg - Label bubble background
+ * @cssprop --sidebar-item-reveal-color - Label bubble text color
+ * @cssprop --sidebar-item-reveal-radius - Label bubble corner radius
+ * @cssprop --sidebar-item-reveal-shadow - Label bubble shadow
  *
  * @example
  * ```html
@@ -1050,6 +951,7 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
     target: prop.string(),
   },
   setup(props) {
+    const el = getHost();
     const slots = useSlots();
 
     const hasIcon = () => slots.has('icon').value;
@@ -1075,6 +977,38 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
       queueMicrotask(sidebarCtx.closeDrawer);
     };
 
+    // Collapsed-rail label bubble: fixed positioning escapes the sidebar's
+    // scroll container (which would clip an absolutely positioned bubble), and
+    // the content is filled on demand from the slotted label.
+    const showReveal = () => {
+      if (!sidebarCtx?.collapsed.value) return;
+
+      const bubble = el.shadowRoot?.querySelector<HTMLElement>('.item-reveal');
+
+      if (!bubble) return;
+
+      // Only the default slot: the label, never the trailing `end` badge text.
+      const text = (
+        (el.shadowRoot?.querySelector('.item-label slot') as HTMLSlotElement | null)
+          ?.assignedNodes({ flatten: true })
+          .map((node) => node.textContent)
+          .join(' ') ?? ''
+      )
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (!text) return;
+
+      bubble.textContent = text;
+
+      const rect = el.getBoundingClientRect();
+      const rtl = getComputedStyle(el).direction === 'rtl';
+
+      bubble.dataset.side = rtl ? 'left' : 'right';
+      bubble.style.left = `${rtl ? rect.left - 8 : rect.right + 8}px`;
+      bubble.style.top = `${rect.top + rect.height / 2}px`;
+    };
+
     const renderItemContent = () => html`
       <span class="item-icon" part="item-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
         <slot name="icon"></slot>
@@ -1083,6 +1017,7 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
       <span class="item-end" part="item-end" ?hidden=${() => !hasEnd()}>
         <slot name="end"></slot>
       </span>
+      <span class="item-reveal" part="item-reveal" aria-hidden="true"></span>
     `;
 
     return html`
@@ -1097,7 +1032,9 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
               target="${props.target}"
               aria-label="${props.label}"
               aria-current="${() => (props.active.value ? 'page' : null)}"
-              @click=${closeDrawerOnSelect}>
+              @click=${closeDrawerOnSelect}
+              @pointerenter=${showReveal}
+              @focusin=${showReveal}>
               ${renderItemContent()}
             </a>
           `;
@@ -1111,7 +1048,9 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
               aria-disabled="true"
               tabindex="-1"
               aria-label="${props.label}"
-              aria-current="${() => (props.active.value ? 'page' : null)}">
+              aria-current="${() => (props.active.value ? 'page' : null)}"
+              @pointerenter=${showReveal}
+              @focusin=${showReveal}>
               ${renderItemContent()}
             </div>
           `;
@@ -1125,7 +1064,9 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
             ?disabled="${props.disabled}"
             aria-label="${props.label}"
             aria-current="${() => (props.active.value ? 'page' : null)}"
-            @click=${closeDrawerOnSelect}>
+            @click=${closeDrawerOnSelect}
+            @pointerenter=${showReveal}
+            @focusin=${showReveal}>
             ${renderItemContent()}
           </button>
         `;

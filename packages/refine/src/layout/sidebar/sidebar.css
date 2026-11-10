@@ -301,6 +301,14 @@
     white-space: nowrap;
   }
 
+  /* Component display rules beat the UA [hidden] default inside the shadow tree,
+     so every ?hidden-bound element needs an explicit escape (same contract as
+     .sidebar-logo[hidden] above). */
+  .sidebar-header[hidden],
+  .bottom-tab-icon[hidden] {
+    display: none;
+  }
+
   .sidebar-header {
     box-sizing: border-box;
     display: flex;

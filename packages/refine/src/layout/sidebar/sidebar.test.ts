@@ -339,6 +339,7 @@ describe('ore-sidebar', () => {
     try {
       fixture = await mount('ore-sidebar', {
         attrs: { 'bottom-nav-at': '(max-width: 768px)', 'drawer-close-label': 'Close navigation' },
+        html: '<span slot="header">Workspace</span>',
       });
       const sidebar = fixture.element as HTMLElement & { openDrawer(): void };
       const closeBtn = fixture.query<HTMLButtonElement>('[part="drawer-close-btn"]')!;
@@ -367,10 +368,46 @@ describe('ore-sidebar', () => {
     }
   });
 
+  it('hides the drawer close button when the sidebar has no header content', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-sidebar', {
+        attrs: { 'bottom-nav-at': '(max-width: 768px)' },
+        html: '<ore-sidebar-item>Dashboard</ore-sidebar-item>',
+      });
+      await fixture.flush();
+
+      const sidebar = fixture.element as HTMLElement & { openDrawer(): void };
+
+      sidebar.openDrawer();
+      await fixture.flush();
+
+      expect(sidebar.hasAttribute('data-drawer-open')).toBe(true);
+      expect(fixture.query<HTMLButtonElement>('[part="drawer-close-btn"]')?.hidden).toBe(true);
+
+      // Escape still dismisses a headerless drawer.
+      sidebar.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+      await fixture.flush();
+      expect(sidebar.hasAttribute('data-drawer-open')).toBe(false);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('keeps drawer-only mode in the overlay presentation without a bottom bar', async () => {
     fixture = await mount('ore-sidebar', {
       attrs: { drawer: '' },
-      html: '<ore-sidebar-item>Dashboard</ore-sidebar-item>',
+      html: `
+        <span slot="header">Workspace</span>
+        <ore-sidebar-item>Dashboard</ore-sidebar-item>
+      `,
     });
     await fixture.flush();
 
@@ -676,5 +713,99 @@ describe('ore-sidebar responsive integration', () => {
     } finally {
       window.matchMedia = originalMatchMedia;
     }
+  });
+  describe('ore-sidebar-group', () => {
+    it('auto-opens a collapsed collapsible group that contains the active item', async () => {
+      fixture = await mount('ore-sidebar', {
+        html: `
+          <ore-sidebar-group label="Main" collapsible default-open="false">
+            <ore-sidebar-item href="/a">Alpha</ore-sidebar-item>
+          </ore-sidebar-group>
+        `,
+      });
+      await fixture.flush();
+
+      const group = fixture.element.querySelector('ore-sidebar-group')!;
+      const opens: Event[] = [];
+      group.addEventListener('open-change', (event) => opens.push(event));
+
+      expect(group.hasAttribute('data-open')).toBe(false);
+
+      fixture.element.querySelector('ore-sidebar-item')!.setAttribute('active', '');
+      await fixture.flush();
+
+      expect(group.hasAttribute('data-open')).toBe(true);
+      expect(opens).toHaveLength(1);
+    });
+
+    it('does not auto-open controlled groups', async () => {
+      fixture = await mount('ore-sidebar', {
+        html: `
+          <ore-sidebar-group label="Main" collapsible open="false">
+            <ore-sidebar-item href="/a" active>Alpha</ore-sidebar-item>
+          </ore-sidebar-group>
+        `,
+      });
+      await fixture.flush();
+
+      expect(fixture.element.querySelector('ore-sidebar-group')!.hasAttribute('data-open')).toBe(false);
+    });
+
+    it('renders an end slot in the group header', async () => {
+      fixture = await mount('ore-sidebar', {
+        html: `
+          <ore-sidebar-group label="Inbox">
+            <span slot="end">12</span>
+            <ore-sidebar-item href="/a">Alpha</ore-sidebar-item>
+          </ore-sidebar-group>
+        `,
+      });
+      await fixture.flush();
+
+      const group = fixture.element.querySelector('ore-sidebar-group')!;
+      const end = group.shadowRoot!.querySelector<HTMLSpanElement>('[part="group-end"]')!;
+
+      expect(end.hasAttribute('hidden')).toBe(false);
+      expect(end.querySelector('slot[name="end"]')).toBeTruthy();
+    });
+  });
+
+  describe('collapsed label reveal', () => {
+    it('fills the bubble from the label when hovering a collapsed item', async () => {
+      fixture = await mount('ore-sidebar', {
+        attrs: { 'default-collapsed': '' },
+        html: `
+          <ore-sidebar-item href="/a">
+            Dashboard
+            <span slot="end">12</span>
+          </ore-sidebar-item>
+        `,
+      });
+      await fixture.flush();
+
+      const item = fixture.element.querySelector('ore-sidebar-item')!;
+      const bubble = item.shadowRoot!.querySelector<HTMLElement>('.item-reveal')!;
+
+      expect(bubble.textContent).toBe('');
+
+      item.shadowRoot!.querySelector('.item')!.dispatchEvent(new Event('pointerenter'));
+
+      // Label only: the trailing end-slot badge must not leak into the bubble.
+      expect(bubble.textContent).toBe('Dashboard');
+      expect(['left', 'right']).toContain(bubble.dataset.side);
+    });
+
+    it('stays empty while the sidebar is expanded', async () => {
+      fixture = await mount('ore-sidebar', {
+        html: '<ore-sidebar-item href="/a">Dashboard</ore-sidebar-item>',
+      });
+      await fixture.flush();
+
+      const item = fixture.element.querySelector('ore-sidebar-item')!;
+
+      item.shadowRoot!.querySelector('.item')!.dispatchEvent(new Event('pointerenter'));
+
+      expect(item.shadowRoot!.querySelector('.item-reveal')!.textContent).toBe('');
+    });
   });
 });

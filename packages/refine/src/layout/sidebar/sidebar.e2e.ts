@@ -341,3 +341,132 @@ test.describe('Accessibility', () => {
     expect(results.violations).toEqual([]);
   });
 });
+
+test.describe('Active group auto-expand', () => {
+  test('opens a collapsed collapsible group that contains the active item', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-sidebar id="sidebar">
+        <ore-sidebar-group label="Workspace" collapsible default-open="false">
+          <ore-sidebar-item href="/reports" active>Reports</ore-sidebar-item>
+        </ore-sidebar-group>
+      </ore-sidebar>
+    `);
+
+    const group = page.locator('#sidebar ore-sidebar-group');
+
+    await expect(group).toHaveAttribute('data-open');
+    await expect(group.locator('details')).toHaveJSProperty('open', true);
+    await expect(group.locator('ore-sidebar-item')).toBeVisible();
+  });
+
+  test('keeps controlled groups closed', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-sidebar id="sidebar">
+        <ore-sidebar-group label="Workspace" collapsible open="false">
+          <ore-sidebar-item href="/reports" active>Reports</ore-sidebar-item>
+        </ore-sidebar-group>
+      </ore-sidebar>
+    `);
+
+    await expect(page.locator('#sidebar ore-sidebar-group')).not.toHaveAttribute('data-open');
+    await expect(page.locator('#sidebar ore-sidebar-group ore-sidebar-item')).toBeHidden();
+  });
+});
+
+test.describe('Collapsed label reveal', () => {
+  test('shows a fixed label bubble to the side of a hovered collapsed item', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <style>
+        #clip { overflow: hidden; width: 140px; }
+      </style>
+      <div id="clip">
+        <ore-sidebar id="sidebar" default-collapsed>
+          <ore-sidebar-item href="/analytics">Analytics</ore-sidebar-item>
+        </ore-sidebar>
+      </div>
+    `);
+
+    const item = page.locator('#sidebar ore-sidebar-item');
+    const bubble = item.locator('[part="item-reveal"]');
+
+    await expect(bubble).toHaveCSS('opacity', '0');
+
+    await item.hover();
+
+    await expect(bubble).toHaveCSS('opacity', '1');
+    await expect(bubble).toHaveText('Analytics');
+
+    // Fixed positioning escapes the clipping wrapper: the bubble reaches past
+    // the #clip box instead of being cut off by it.
+    const clip = await page.locator('#clip').boundingBox();
+    const box = await bubble.boundingBox();
+
+    expect(box).not.toBeNull();
+    expect(box!.x + box!.width).toBeGreaterThan(clip!.x + clip!.width);
+
+    await item.focus();
+    await expect(bubble).toHaveCSS('opacity', '1');
+  });
+});
+
+test.describe('Header visibility', () => {
+  test('keeps a headerless sidebar headerless in the drawer', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="width:320px;height:400px;">
+        <ore-sidebar id="sidebar" bottom-nav-at="(max-width: 2000px)">
+          <ore-sidebar-item bottom-nav>Overview</ore-sidebar-item>
+        </ore-sidebar>
+      </div>
+    `);
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-bottom-nav'));
+
+    const sidebar = page.locator('#sidebar');
+
+    expect((await sidebar.locator('[part="header"]').boundingBox())?.height ?? 0).toBe(0);
+
+    await sidebar.evaluate((el) => (el as HTMLElement & { openDrawer(): void }).openDrawer());
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
+
+    // Same chrome as desktop/tablet: no header strip in the drawer either.
+    expect((await sidebar.locator('[part="header"]').boundingBox())?.height ?? 0).toBe(0);
+    await expect(sidebar.locator('[part="drawer-close-btn"]')).toBeHidden();
+
+    const firstItem = await sidebar.locator('ore-sidebar-item').boundingBox();
+    const nav = await sidebar.locator('[part="nav"]').boundingBox();
+
+    // Navigation starts at the panel top (just the content padding), not below a header row.
+    expect(firstItem!.y - nav!.y).toBeLessThan(40);
+
+    // The drawer still dismisses: backdrop tap.
+    await sidebar.locator('[part="drawer-backdrop"]').click({ position: { x: 300, y: 200 } });
+    await expect(sidebar).not.toHaveAttribute('data-drawer-open');
+  });
+
+  test('places the drawer close button in the header row like the desktop toggle', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="width:320px;height:400px;">
+        <ore-sidebar id="sidebar" bottom-nav-at="(max-width: 2000px)">
+          <span slot="header">Workspace</span>
+          <ore-sidebar-item bottom-nav>Overview</ore-sidebar-item>
+        </ore-sidebar>
+      </div>
+    `);
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-bottom-nav'));
+
+    const sidebar = page.locator('#sidebar');
+    await sidebar.evaluate((el) => (el as HTMLElement & { openDrawer(): void }).openDrawer());
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
+
+    const header = await sidebar.locator('[part="header"]').boundingBox();
+    const closeBtn = await sidebar.locator('[part="drawer-close-btn"]').boundingBox();
+
+    expect(header).not.toBeNull();
+    expect(closeBtn).not.toBeNull();
+    expect(closeBtn!.y).toBeGreaterThanOrEqual(header!.y - 1);
+    expect(closeBtn!.y + closeBtn!.height).toBeLessThanOrEqual(header!.y + header!.height + 1);
+    expect(closeBtn!.x + closeBtn!.width).toBeLessThanOrEqual(header!.x + header!.width + 1);
+
+    await sidebar.locator('[part="drawer-close-btn"]').click();
+    await expect(sidebar).not.toHaveAttribute('data-drawer-open');
+  });
+});

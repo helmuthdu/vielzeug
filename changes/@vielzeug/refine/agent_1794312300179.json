@@ -1,0 +1,16 @@
+{
+  "changes": [
+    {
+      "comment": "`ore-sidebar-group` auto-opens for active items and gains an `end` header slot; `ore-sidebar-item` reveals its label in a bubble on hover/focus when the sidebar is collapsed.",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    },
+    {
+      "comment": "`ore-sidebar` header row and bottom-tab icons now honor the `hidden` attribute, so an app-shell sidebar without header content or a toggle no longer renders a blank bordered bar; such headerless sidebars also keep the drawer headerless, matching the desktop and tablet layout.",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -42,9 +42,11 @@ Add the `collapsible` attribute to show the collapse control. Sidebars with a lo
 
 Use two breakpoints to get the full three-state behavior:
 
-- Desktop: full sidebar
+- Desktop: full sidebar, collapsed from a navbar button (`toggle()`)
 - Tablet: compact/collapsed sidebar (`responsive`)
-- Mobile: bottom navigation + drawer (`bottom-nav-at`), usually opened from a navbar hamburger
+- Mobile: bottom navigation + drawer (`bottom-nav-at`), opened from the same navbar control (`menu-icon="panel-left-open"`) and closed by backdrop tap, swipe, `Escape`, or the control again
+
+The navbar owns the chrome in an app shell: the sidebar keeps no header of its own (branding lives in the navbar) and no built-in toggle (drop `collapsible`; the navbar button calls `sidebar.toggle()` instead).
 
 <ComponentPreview>
 
@@ -85,10 +87,32 @@ Use two breakpoints to get the full three-state behavior:
       padding: var(--size-4);
       overflow: auto;
     }
+
+    /* The navbar hamburger drives the drawer on mobile; the collapse toggle is desktop/tablet chrome. */
+    .sidebar-shell-preview ore-navbar[data-mobile] #docs-shell-toggle {
+      display: none;
+    }
+
+    /* The bottom bar floats over content; reserve its height so nothing scrolls under it. */
+    @media (max-width: 640px) {
+      .sidebar-shell-preview .shell-content {
+        padding-bottom: calc(var(--size-4) + var(--sidebar-bottom-nav-height, 3.75rem));
+      }
+    }
   </style>
 
-  <ore-navbar sticky breakpoint="(max-width: 640px)" mobile-sidebar="#docs-shell-sidebar" label="Workspace navigation">
-    <span slot="logo" style="font-weight: var(--font-semibold);">Workspace</span>
+  <ore-navbar
+    sticky
+    breakpoint="(max-width: 640px)"
+    menu-icon="panel-left-open"
+    mobile-sidebar="#docs-shell-sidebar"
+    label="Workspace navigation">
+    <span slot="logo" style="display: inline-flex; align-items: center; gap: var(--size-2);">
+      <ore-button id="docs-shell-toggle" variant="ghost" size="sm" icon-only label="Toggle sidebar">
+        <ore-icon id="docs-shell-toggle-icon" name="panel-left-close" size="18"></ore-icon>
+      </ore-button>
+      <span style="font-weight: var(--font-semibold);">Workspace</span>
+    </span>
     <ore-navbar-item slot="start" href="#" active>Dashboard</ore-navbar-item>
     <ore-navbar-item href="#">Projects</ore-navbar-item>
     <ore-navbar-item href="#">Reports</ore-navbar-item>
@@ -102,13 +126,9 @@ Use two breakpoints to get the full three-state behavior:
           id="docs-shell-sidebar"
           class="shell-sidebar"
           container-breakpoints
-          collapsible
           label="Workspace sidebar"
           responsive="(max-width: 1200px)"
           bottom-nav-at="(max-width: 640px)">
-          <ore-icon slot="logo" name="rocket" size="20"></ore-icon>
-          <span slot="header">Workspace</span>
-
           <ore-sidebar-item href="#" active bottom-nav>
             <ore-icon slot="icon" name="layout-dashboard" size="18"></ore-icon>
             Dashboard
@@ -137,12 +157,29 @@ Use two breakpoints to get the full three-state behavior:
 
       <ore-grid-item area="main" class="shell-content">
         <ore-text>
-          Resize preview width: desktop uses full sidebar, tablet collapses, and mobile turns sidebar into bottom tabs.
-          The navbar hamburger opens the mobile drawer.
+          Resize preview width: desktop uses the full sidebar, tablet collapses it, and mobile turns navigation into
+          bottom tabs with a drawer. The navbar button collapses the sidebar on desktop and tablet; the navbar
+          hamburger opens the drawer on mobile.
         </ore-text>
       </ore-grid-item>
     </ore-grid>
   </div>
+
+  <script type="module">
+    const sidebar = document.getElementById('docs-shell-sidebar');
+    const toggle = document.getElementById('docs-shell-toggle');
+    const toggleIcon = document.getElementById('docs-shell-toggle-icon');
+
+    // data-collapsed is reflected on the host, so the icon also matches the
+    // initial state when a breakpoint collapsed the sidebar before load.
+    const sync = () => {
+      toggleIcon.setAttribute('name', sidebar.hasAttribute('data-collapsed') ? 'panel-left-open' : 'panel-left-close');
+    };
+
+    toggle.addEventListener('click', () => sidebar.toggle());
+    sidebar.addEventListener('collapsed-change', sync);
+    sync();
+  </script>
 </div>
 ```
 
@@ -155,7 +192,9 @@ Use two breakpoints to get the full three-state behavior:
 - Use `bottom-nav-label` when the mobile tab needs a shorter label than the desktop item.
 - Use `label` to give an item's internal link or button an explicit accessible name, especially in collapsed icon-only navigation.
 - `ore-sidebar-group` content remains available in the drawer opened by `openDrawer()` or a linked `ore-navbar mobile-sidebar` trigger.
+- In an app shell with a navbar, omit `collapsible` and the sidebar `header`/`logo` slots: the navbar carries branding and its own button drives `toggle()`, so the sidebar shows navigation only. Give the navbar `menu-icon="panel-left-open"` and the mobile drawer control reads as the same control as the desktop one; the headerless drawer opens straight into the navigation, matching the desktop and tablet layout.
 - Use `responsive` for tablet compact mode and `bottom-nav-at` for mobile bottom-nav mode.
+- The bottom bar is an overlay: give scrollable page content bottom clearance (`--sidebar-bottom-nav-height`) in the mobile breakpoint so the last items are reachable.
 
 ## Drawer Behavior
 
@@ -164,7 +203,7 @@ When the sidebar enters bottom-nav mode (or you call `openDrawer()`), the panel 
 The drawer offers three ways to dismiss it, covering touch, pointer, and keyboard:
 
 - **Backdrop tap** — clicking outside the panel closes the drawer.
-- **Close button** — an `×` button appears in the drawer header, labelled by `drawer-close-label`.
+- **Close button** — when the sidebar has header content, an `×` button appears in the drawer header, in the same row position the collapse toggle holds on desktop, labelled by `drawer-close-label`. A sidebar without header content (the app-shell pattern above) keeps the drawer headerless so the panel matches its desktop and tablet layout; it closes through the other routes.
 - **Swipe** — dragging the grabber nub on the panel's trailing edge past a threshold closes the drawer; releasing early snaps back.
 
 `Escape` also closes the drawer, and focus returns to the element that opened it. Selecting a navigation item closes the drawer by default; set `close-on-select="false"` to keep it open.
@@ -186,6 +225,10 @@ Use `ore-sidebar-group` to organize items into labelled sections. Add the `colla
 `ore-sidebar-group` uses native `details/summary` semantics internally: the header is a real `summary`, so keyboard activation (`Enter`/`Space`), focus, and the disclosed-region relationship come from the browser. Collapsible headers carry `aria-expanded` reflecting the real open state, and toggling an uncontrolled group emits `open-change` with `{ open }`.
 
 Set `default-open="false"` for uncontrolled groups that start collapsed, or pass `open` to control the group state externally. While `open` is set, the prop is the single source of truth: header clicks no longer change the state until the attribute is removed.
+
+An uncontrolled collapsible group **opens itself** when one of its items is (or becomes) `active`, so a deep-linked page never starts with the current location folded away. It reopens only on a fresh activation: collapsing the group while its item stays active is respected. Auto-expansion emits the same `open-change` event as a manual toggle.
+
+The group header takes an `end` slot for trailing content such as a count badge.
 
 Use `ore-sidebar-group` to group semantically related items: it adds a visible label and an implicit `role="list"` on the items container. Avoid setting `active` on more than one item simultaneously, as it breaks `aria-current` semantics.
 
@@ -226,6 +269,35 @@ Use `ore-sidebar-group` to group semantically related items: it adds a visible l
 
 </ComponentPreview>
 
+## Collapsed Label Bubble
+
+When the sidebar is collapsed to its icon rail, labels are hidden. Hovering or focusing an item then shows the label as a small bubble next to the rail. The bubble is fixed-position, so scroll containers and `overflow: hidden` wrappers cannot clip it, and it mirrors the reading side in RTL.
+
+<ComponentPreview>
+
+```html
+<ore-sidebar collapsible default-collapsed label="App navigation" style="height: 320px;">
+  <ore-sidebar-group label="Main">
+    <ore-sidebar-item href="#" active>
+      <ore-icon slot="icon" name="home" size="18"></ore-icon>
+      Dashboard
+    </ore-sidebar-item>
+    <ore-sidebar-item href="#">
+      <ore-icon slot="icon" name="chart-column" size="18"></ore-icon>
+      Analytics
+    </ore-sidebar-item>
+    <ore-sidebar-item href="#">
+      <ore-icon slot="icon" name="user" size="18"></ore-icon>
+      Profile
+    </ore-sidebar-item>
+  </ore-sidebar-group>
+</ore-sidebar>
+```
+
+</ComponentPreview>
+
+Style it with `--sidebar-item-reveal-bg`, `--sidebar-item-reveal-color`, `--sidebar-item-reveal-radius`, and `--sidebar-item-reveal-shadow`. Screen readers already receive the full label from the item itself; the bubble is a sighted-user affordance and carries `aria-hidden`.
+
 ## Items with Badges
 
 Use the `end` slot on `ore-sidebar-item` for trailing content such as notification counts or keyboard shortcuts.
@@ -239,7 +311,8 @@ Use the `end` slot on `ore-sidebar-item` for trailing content such as notificati
   gap="none"
   style="height: 300px; --grid-cols: auto 1fr; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg); overflow: hidden;">
   <ore-sidebar label="App navigation" style="grid-area: sidebar;">
-    <ore-sidebar-group label="Inbox">
+    <ore-sidebar-group label="Mail">
+      <ore-badge slot="end" color="primary">16</ore-badge>
       <ore-sidebar-item href="#">
         <ore-icon slot="icon" name="inbox" size="18"></ore-icon>
         Inbox
@@ -444,6 +517,48 @@ group.addEventListener('open-change', (e) => {
 
 - [Navbar](./navbar.md)
 
+## Recipes
+
+### Section dividers
+
+Drop an [`ore-separator`](./separator.md) between groups for a plain rule instead of a labelled heading:
+
+```html
+<ore-sidebar label="App navigation">
+  <ore-sidebar-group label="Workspace">…</ore-sidebar-group>
+  <ore-separator></ore-separator>
+  <ore-sidebar-group label="Account">…</ore-sidebar-group>
+</ore-sidebar>
+```
+
+### Featured footer card
+
+The `footer` slot fits a compact card: upgrade CTAs, usage progress, or a scan-to-install QR. Keep the card narrow: it lives inside the sidebar's width.
+
+```html
+<ore-sidebar label="App navigation">
+  <ore-sidebar-group label="Workspace">…</ore-sidebar-group>
+  <ore-card slot="footer" padding="sm" variant="outlined">
+    <p style="font-weight: var(--font-semibold);">Try Pro</p>
+    <p style="font-size: var(--text-sm); color: var(--text-color-secondary);">Unlimited boards and guests.</p>
+    <ore-progress value="62" aria-label="Boards used"></ore-progress>
+    <ore-button variant="primary" size="sm" fullwidth>Upgrade</ore-button>
+  </ore-card>
+</ore-sidebar>
+```
+
+Scan-to-install pairs nicely with [`ore-qr-code`](./qr-code.md):
+
+```html
+<ore-qr-code
+  slot="footer"
+  value="https://example.test/install"
+  size="112"
+  error-correction="H"
+  image="/favicon.svg"
+  variant="card"></ore-qr-code>
+```
+
 ## CSS Customization
 
 ### Global Variables
@@ -478,6 +593,7 @@ ore-sidebar-item {
 | `collapsible`        | `boolean` | `false`                | Shows the collapse/expand toggle button in the header                                             |
 | `responsive`         | `string`  | N/A                    | Media query that enables compact (collapsed) sidebar mode                                         |
 | `bottom-nav-at`      | `string`  | N/A                    | Media query that switches to mobile bottom-nav + drawer mode                                      |
+| `container-breakpoints` | `boolean` | `false`             | Evaluates parseable `max-width` breakpoints against the sidebar container width instead of the viewport |
 | `backdrop`           | `string`  | N/A                    | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` (unset = click-to-close, no dim) |
 | `close-on-select`    | `boolean` | `true`                 | Closes the drawer after primary item activation                                                   |
 | `collapse-label`     | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                                                         |
@@ -562,16 +678,17 @@ ore-sidebar-item {
 
 **`ore-sidebar-group` Slots**
 
-| Slot      | Description                                 |
-| --------- | ------------------------------------------- |
-| `icon`    | Optional icon displayed in the group header |
-| (default) | `ore-sidebar-item` elements                 |
+| Slot      | Description                                           |
+| --------- | ----------------------------------------------------- |
+| `icon`    | Optional icon displayed in the group header           |
+| (default) | `ore-sidebar-item` elements                           |
+| `end`     | Trailing header content: badge, count, shortcut, etc. |
 
 **`ore-sidebar-group` Events**
 
-| Event         | Detail              | Description                                             |
-| ------------- | ------------------- | ------------------------------------------------------- |
-| `open-change` | `{ open: boolean }` | Fired when an uncontrolled collapsible group is toggled |
+| Event         | Detail              | Description                                                                                               |
+| ------------- | ------------------- | --------------------------------------------------------------------------------------------------------- |
+| `open-change` | `{ open: boolean }` | Fired when an uncontrolled collapsible group opens or closes, including auto-expansion for an active item |
 
 ---
 
@@ -597,22 +714,27 @@ ore-sidebar-item {
 
 **`ore-sidebar-item` Parts**
 
-| Part         | Description                           |
-| ------------ | ------------------------------------- |
-| `item`       | The inner `<a>` or `<button>` element |
-| `item-icon`  | The icon slot wrapper                 |
-| `item-label` | The label text wrapper                |
-| `item-end`   | The trailing content wrapper          |
+| Part          | Description                           |
+| ------------- | ------------------------------------- |
+| `item`        | The inner `<a>` or `<button>` element |
+| `item-icon`   | The icon slot wrapper                 |
+| `item-label`  | The label text wrapper                |
+| `item-end`    | The trailing content wrapper          |
+| `item-reveal` | Collapsed-mode label bubble           |
 
 **`ore-sidebar-item` CSS Custom Properties**
 
-| Property                      | Description            |
-| ----------------------------- | ---------------------- |
-| `--sidebar-item-color`        | Default text color     |
-| `--sidebar-item-hover-bg`     | Background on hover    |
-| `--sidebar-item-hover-color`  | Text color on hover    |
-| `--sidebar-item-active-bg`    | Background when active |
-| `--sidebar-item-active-color` | Text color when active |
+| Property                       | Description                |
+| ------------------------------ | -------------------------- |
+| `--sidebar-item-color`         | Default text color         |
+| `--sidebar-item-hover-bg`      | Background on hover        |
+| `--sidebar-item-hover-color`   | Text color on hover        |
+| `--sidebar-item-active-bg`     | Background when active     |
+| `--sidebar-item-active-color`  | Text color when active     |
+| `--sidebar-item-reveal-bg`     | Label bubble background    |
+| `--sidebar-item-reveal-color`  | Label bubble text color    |
+| `--sidebar-item-reveal-radius` | Label bubble corner radius |
+| `--sidebar-item-reveal-shadow` | Label bubble shadow        |
 
 ## Accessibility
 
@@ -626,7 +748,7 @@ The `ore-sidebar` element renders a `<nav>` landmark with an `aria-label`. When 
 
 `ore-sidebar-item` sets `aria-current="page"` on the inner `<a>` or `<button>` when `active` is applied. Screen readers announce the item as the current location. Set `active` on the item matching the current URL on every page load, and avoid setting it on more than one item simultaneously.
 
-When the sidebar is collapsed to icon-only mode, the toggle button updates `aria-label` and `aria-expanded` to reflect the current state. Navigation within the sidebar uses native DOM focus order: no roving tabindex: keeping behaviour predictable and compatible with all screen readers.
+When the sidebar is collapsed to icon-only mode, the toggle button updates `aria-label` and `aria-expanded` to reflect the current state, and each item reveals its hidden label in a bubble on hover **and keyboard focus**, so icon-only navigation stays legible without assistive tech. Navigation within the sidebar uses native DOM focus order: no roving tabindex: keeping behaviour predictable and compatible with all screen readers.
 
 ### Keyboard Navigation
 

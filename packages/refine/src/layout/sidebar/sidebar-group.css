@@ -133,6 +133,17 @@
     opacity: 1;
   }
 
+  .group-end {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-1);
+    align-items: center;
+  }
+
+  :host([sidebar-collapsed]) .group-end {
+    display: none;
+  }
+
   /* Collapsible group closed: hide items */
   :host([collapsible]:not([data-open])) .group-items {
     display: none;

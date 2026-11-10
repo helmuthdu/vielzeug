@@ -208,6 +208,49 @@
     left: var(--size-2);
   }
 
+  /* Collapsed-rail label bubble: fixed position (JS sets left/top on hover/focus
+     so the sidebar's scroll container cannot clip it), revealed by CSS state. */
+  .item-reveal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    max-width: var(--sidebar-item-reveal-max-width, 16rem);
+    padding: var(--size-1) var(--size-2-5);
+    font-size: var(--sidebar-item-font-size, var(--text-sm));
+    font-weight: var(--font-medium);
+    color: var(--sidebar-item-reveal-color, var(--color-contrast-50));
+    white-space: nowrap;
+    pointer-events: none;
+    background: var(--sidebar-item-reveal-bg, color-mix(in oklch, var(--color-contrast-900) 80%, transparent));
+    border-radius: var(--sidebar-item-reveal-radius, var(--rounded-lg));
+    box-shadow: var(--sidebar-item-reveal-shadow, var(--shadow-md));
+    opacity: 0;
+    transform: translateY(-50%) scale(0.96);
+    transition:
+      opacity var(--transition-fast),
+      transform var(--transition-fast);
+  }
+
+  .item-reveal[data-side='left'] {
+    transform: translate(-100%, -50%) scale(0.96);
+  }
+
+  .item-reveal:empty {
+    display: none;
+  }
+
+  :host([sidebar-collapsed]) .item:hover .item-reveal,
+  :host([sidebar-collapsed]) .item:focus-within .item-reveal {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+
+  :host([sidebar-collapsed]) .item:hover .item-reveal[data-side='left'],
+  :host([sidebar-collapsed]) .item:focus-within .item-reveal[data-side='left'] {
+    transform: translate(-100%, -50%) scale(1);
+  }
+
   /* The bottom tab bar (`.bottom-bar` in sidebar.ts) renders its own promoted-item
      buttons from the same data: the original <ore-sidebar-item> stays inside the
      (visually off-screen while closed) <nav>, so it must be fully hidden here to
