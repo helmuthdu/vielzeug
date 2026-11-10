@@ -102,6 +102,83 @@ describe('ore-qr-code', () => {
     });
   });
 
+  describe('Styling options', () => {
+    it('dot-style="dots" paints circular data modules', async () => {
+      fixture = await mountQrCode('HELLO WORLD', { 'dot-style': 'dots' });
+
+      expect(fixture.element.shadowRoot?.querySelector('svg')?.querySelectorAll('circle').length).toBeGreaterThan(0);
+    });
+
+    it('gradient attrs paint a two-stop gradient', async () => {
+      fixture = await mountQrCode('HELLO WORLD', { 'gradient-from': '#111111', 'gradient-to': '#eeeeee' });
+
+      const svg = fixture.element.shadowRoot?.querySelector('svg');
+      expect(svg?.querySelector('linearGradient')).toBeTruthy();
+      expect(svg?.querySelector('path')?.getAttribute('fill')).toMatch(/^url\(#sigil-qr-gradient-\d+\)$/);
+    });
+
+    it('a single gradient attr is ignored', async () => {
+      fixture = await mountQrCode('HELLO WORLD', { 'gradient-from': '#111111' });
+
+      expect(fixture.element.shadowRoot?.querySelector('linearGradient')).toBeFalsy();
+    });
+
+    it('image attr embeds a logo', async () => {
+      fixture = await mountQrCode('HELLO WORLD', { image: 'https://example.test/logo.png' });
+
+      expect(fixture.element.shadowRoot?.querySelector('svg')?.querySelector('image')).toBeTruthy();
+    });
+  });
+
+  describe('Loading state', () => {
+    it('shows a skeleton and suppresses the empty-value error while loading', async () => {
+      const errors: unknown[] = [];
+      fixture = await mountQrCode('', { loading: '' });
+      fixture.element.addEventListener('error', (event) => errors.push(event));
+
+      expect(fixture.element.shadowRoot?.querySelector('[part="skeleton"]')).toBeTruthy();
+      expect(fixture.element.shadowRoot?.querySelector('svg')).toBeFalsy();
+      await new Promise((r) => setTimeout(r));
+      expect(errors).toHaveLength(0);
+    });
+
+    it('settles into the rendered state when loading clears', async () => {
+      const renders: Event[] = [];
+      fixture = await mountQrCode('HELLO WORLD', { loading: '' });
+      fixture.element.addEventListener('render', (event) => renders.push(event));
+
+      fixture.element.removeAttribute('loading');
+      await new Promise((r) => setTimeout(r));
+
+      expect(fixture.element.shadowRoot?.querySelector('[part="skeleton"]')).toBeFalsy();
+      expect(fixture.element.shadowRoot?.querySelector('svg')).toBeTruthy();
+      expect(renders).toHaveLength(1);
+    });
+  });
+
+  describe('Export methods', () => {
+    it('toSvg returns the rendered SVG string', async () => {
+      fixture = await mountQrCode('HELLO WORLD');
+      const el = fixture.element as HTMLElement & { toSvg(): string };
+
+      expect(el.toSvg()).toContain('<svg');
+    });
+
+    it('toSvg is empty while there is no value', async () => {
+      fixture = await mountQrCode('');
+      const el = fixture.element as HTMLElement & { toSvg(): string };
+
+      expect(el.toSvg()).toBe('');
+    });
+
+    it('toPng is exposed on the host', async () => {
+      fixture = await mountQrCode('HELLO WORLD');
+      const el = fixture.element as HTMLElement & { toPng(scale?: number): Promise<Blob> };
+
+      expect(typeof el.toPng).toBe('function');
+    });
+  });
+
   describe('Accessibility', () => {
     it('has no axe violations', async () => {
       fixture = await mountQrCode('https://example.com', { label: 'Example link' });

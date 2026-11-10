@@ -70,6 +70,59 @@ Higher levels tolerate more damage (logos, print wear) at the cost of a denser m
 | `Q`   | ~25%     | Print                            |
 | `H`   | ~30%     | Overlaid logos, harsh conditions |
 
+## Dot Styles
+
+`dot-style` rounds or dots the data modules. Finder patterns always stay square so the code remains scannable.
+
+<ComponentPreview center vertical>
+
+```html
+<ore-qr-code value="https://vielzeug.dev" dot-style="dots"></ore-qr-code>
+<ore-qr-code value="https://vielzeug.dev" dot-style="rounded"></ore-qr-code>
+```
+
+</ComponentPreview>
+
+## Gradient Modules
+
+Setting both `gradient-from` and `gradient-to` paints the modules with a vertical gradient instead of the solid module color.
+
+<ComponentPreview center vertical>
+
+```html
+<ore-qr-code value="https://vielzeug.dev" gradient-from="#0ea5e9" gradient-to="#7c3aed"></ore-qr-code>
+```
+
+</ComponentPreview>
+
+## Logo Overlay
+
+`image` embeds a centered logo; the modules it covers are left unpainted instead of blurred over. Keep the logo under a third of the code width and raise `error-correction` to `H`: carving modules out of the matrix destroys data, and level `H` recovers roughly 30%.
+
+<ComponentPreview center vertical>
+
+```html
+<ore-qr-code
+  value="https://vielzeug.dev"
+  error-correction="H"
+  image="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4IDgiPjxyZWN0IHdpZHRoPSI4IiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjMGVhNWU5Ii8+PGNpcmNsZSBjeD0iNCIgY3k9IjQiIHI9IjIuMiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg=="
+  image-size="0.22"></ore-qr-code>
+```
+
+</ComponentPreview>
+
+## Loading State
+
+While the payload is being generated (an async share link, a rotating token), `loading` shows a shimmer placeholder and suppresses the empty-value error. The `render` event fires when the code settles.
+
+<ComponentPreview center vertical>
+
+```html
+<ore-qr-code value="" loading></ore-qr-code>
+```
+
+</ComponentPreview>
+
 ## Caption Slot
 
 <ComponentPreview center vertical>
@@ -94,6 +147,21 @@ Higher levels tolerate more damage (logos, print wear) at the cost of a denser m
 </script>
 ```
 
+## Export
+
+`toSvg()` returns the rendered string for copy or embed. `toPng(scale)` rasterizes to a PNG blob at `scale` device pixels per module; theme colors (`currentColor`, custom properties, relative logo URLs) resolve against the live page before export. A cross-origin `image` logo must be CORS-enabled (or a `data:` URI) or the rasterized canvas is tainted and `toPng` rejects with a `SigilError`.
+
+```html
+<ore-qr-code value="https://vielzeug.dev" id="qr"></ore-qr-code>
+
+<script type="module">
+  const qr = document.getElementById('qr');
+  const blob = await qr.toPng(8); // 8 px per module
+  const url = URL.createObjectURL(blob);
+  // offer `url` as a download…
+</script>
+```
+
 ## Custom Styling
 
 ```html
@@ -103,19 +171,74 @@ Higher levels tolerate more damage (logos, print wear) at the cost of a denser m
 </ore-qr-code>
 ```
 
+### Scan-line flourish
+
+A scanner-style sweep needs an overlay element: `::part()` cannot reach pseudo-elements, so wrap the code in a positioned frame.
+
+```html
+<style>
+  .scan-frame {
+    position: relative;
+    display: inline-block;
+  }
+
+  .scan-frame::after {
+    position: absolute;
+    inset-inline: 8%;
+    height: 2px;
+    content: '';
+    background: var(--color-primary);
+    box-shadow: 0 0 12px var(--color-primary);
+    animation: qr-scan 2.4s ease-in-out infinite alternate;
+  }
+
+  @keyframes qr-scan {
+    from {
+      top: 6%;
+    }
+    to {
+      top: 94%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scan-frame::after {
+      animation: none;
+    }
+  }
+</style>
+
+<div class="scan-frame">
+  <ore-qr-code value="https://vielzeug.dev" variant="card"></ore-qr-code>
+</div>
+```
+
 ## API Reference
 
 ### Attributes
 
-| Attribute          | Type                                                                 | Default     | Description                 |
-| ------------------ | -------------------------------------------------------------------- | ----------- | --------------------------- |
-| `value`            | `string`                                                             | `''`        | The payload to encode       |
-| `error-correction` | `'L' \| 'M' \| 'Q' \| 'H'`                                           | `'M'`       | Error-correction level      |
-| `margin`           | `number`                                                             | `4`         | Quiet-zone width in modules |
-| `size`             | `'sm' \| 'md' \| 'lg' \| number`                                     | `'md'`      | Rendered edge length        |
-| `label`            | `string`                                                             | `'QR code'` | Accessible name of the SVG  |
-| `variant`          | `'flat' \| 'card'`                                                   | `'flat'`    | Surface variant             |
-| `rounded`          | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'` | `'md'`      | Border radius               |
+| Attribute          | Type                                                                 | Default     | Description                                       |
+| ------------------ | -------------------------------------------------------------------- | ----------- | ------------------------------------------------- |
+| `value`            | `string`                                                             | `''`        | The payload to encode                             |
+| `dot-style`        | `'dots' \| 'rounded' \| 'square'`                                    | `'square'`  | Data-module shape (finders stay square)           |
+| `error-correction` | `'L' \| 'M' \| 'Q' \| 'H'`                                           | `'M'`       | Error-correction level                            |
+| `gradient-from`    | `string`                                                             | `''`        | Gradient module paint start (needs `gradient-to`) |
+| `gradient-to`      | `string`                                                             | `''`        | Gradient module paint end (needs `gradient-from`) |
+| `image`            | `string`                                                             | `''`        | Logo overlay URL; modules under it are skipped    |
+| `image-size`       | `number`                                                             | `0.22`      | Logo size as a fraction of the code edge          |
+| `loading`          | `boolean`                                                            | `false`     | Shimmer placeholder instead of the code           |
+| `margin`           | `number`                                                             | `4`         | Quiet-zone width in modules                       |
+| `size`             | `'sm' \| 'md' \| 'lg' \| number`                                     | `'md'`      | Rendered edge length                              |
+| `label`            | `string`                                                             | `'QR code'` | Accessible name of the SVG                        |
+| `variant`          | `'flat' \| 'card'`                                                   | `'flat'`    | Surface variant                                   |
+| `rounded`          | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'` | `'md'`      | Border radius                                     |
+
+### Methods
+
+| Method       | Description                                                                 |
+| ------------ | --------------------------------------------------------------------------- |
+| `toPng(s=8)` | Rasterizes the code to a PNG `Blob` at `s` device px per module (default 8) |
+| `toSvg()`    | Returns the rendered SVG string: `''` while loading or in an error state    |
 
 ### Events
 
@@ -132,27 +255,32 @@ Higher levels tolerate more damage (logos, print wear) at the cost of a denser m
 
 ### CSS Parts
 
-| Part      | Element  | Description            |
-| --------- | -------- | ---------------------- |
-| `wrapper` | `<div>`  | Outer container        |
-| `svg`     | `<span>` | Rendered SVG container |
-| `caption` | `<span>` | Caption slot container |
-| `error`   | `<div>`  | Error-state container  |
+| Part       | Element  | Description            |
+| ---------- | -------- | ---------------------- |
+| `wrapper`  | `<div>`  | Outer container        |
+| `svg`      | `<span>` | Rendered SVG container |
+| `skeleton` | `<span>` | Loading placeholder    |
+| `caption`  | `<span>` | Caption slot container |
+| `error`    | `<div>`  | Error-state container  |
 
 ### CSS Custom Properties
 
-| Property                 | Description                          | Default                       |
-| ------------------------ | ------------------------------------ | ----------------------------- |
-| `--qr-code-dark`         | Module color                         | `currentColor`                |
-| `--qr-code-light`        | Module background                    | `transparent`                 |
-| `--qr-code-size`         | Rendered edge (overrides `size`)     | size-derived px               |
-| `--qr-code-radius`       | Border radius (overrides `rounded`)  | `var(--rounded-md)`           |
-| `--qr-code-padding`      | Inner padding around the matrix      | `var(--size-3)`               |
-| `--qr-code-bg`           | Card background (`variant="card"`)   | `var(--color-canvas)`         |
-| `--qr-code-border`       | Card border width (`variant="card"`) | `var(--border)`               |
-| `--qr-code-border-color` | Card border color (`variant="card"`) | `var(--color-divider)`        |
-| `--qr-code-shadow`       | Card box shadow (`variant="card"`)   | `var(--shadow-sm)`            |
-| `--qr-code-error-color`  | Error-state text color               | `var(--text-color-secondary)` |
+| Property                       | Description                          | Default                       |
+| ------------------------------ | ------------------------------------ | ----------------------------- |
+| `--qr-code-dark`               | Module color                         | `currentColor`                |
+| `--qr-code-light`              | Module background                    | `transparent`                 |
+| `--qr-code-size`               | Rendered edge (overrides `size`)     | size-derived px               |
+| `--qr-code-radius`             | Border radius (overrides `rounded`)  | `var(--rounded-md)`           |
+| `--qr-code-padding`            | Inner padding around the matrix      | `var(--size-3)`               |
+| `--qr-code-bg`                 | Card background (`variant="card"`)   | `var(--color-canvas)`         |
+| `--qr-code-border`             | Card border width (`variant="card"`) | `var(--border)`               |
+| `--qr-code-border-color`       | Card border color (`variant="card"`) | `var(--color-divider)`        |
+| `--qr-code-shadow`             | Card box shadow (`variant="card"`)   | `var(--shadow-sm)`            |
+| `--qr-code-error-color`        | Error-state text color               | `var(--text-color-secondary)` |
+| `--qr-code-skeleton-bg`        | Loading placeholder base color       | `var(--color-contrast-200)`   |
+| `--qr-code-skeleton-highlight` | Loading placeholder shimmer color    | `var(--color-contrast-100)`   |
+| `--qr-code-skeleton-radius`    | Loading placeholder corner radius    | `var(--rounded-md)`           |
+| `--qr-code-skeleton-duration`  | Shimmer cycle duration               | `1.6s`                        |
 
 ## Accessibility
 

@@ -14,6 +14,7 @@ export { toSvg } from './svg';
 export type {
   QrCanvasOptions,
   QrDetector,
+  QrDotStyle,
   QrEncodeOptions,
   QrErrorCorrection,
   QrMatrix,
@@ -22,6 +23,8 @@ export type {
   QrScannerOptions,
   QrScannerStatus,
   QrScanResult,
+  QrSvgGradientOptions,
+  QrSvgImageOptions,
   QrSvgOptions,
   SigilEvent,
 } from './types';

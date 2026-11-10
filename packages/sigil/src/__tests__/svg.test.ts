@@ -80,4 +80,97 @@ describe('toSvg', () => {
     const rects = toSvg(matrix, { optimizePath: false });
     expect(optimized.length).toBeLessThan(rects.length);
   });
+
+  it('dots style paints circles for data modules and square finders', () => {
+    const svg = toSvg(matrix, { dotStyle: 'dots' });
+    expect(svg).toContain('<circle');
+    expect(svg).toContain('shape-rendering="auto"');
+    // The three finder zones contain no circles: finders stay square.
+    const circles = [...svg.matchAll(/<circle cx="(\d+(?:\.\d+)?)" cy="(\d+(?:\.\d+)?)"/g)];
+    expect(circles.some((m) => Number(m[1]) < 11 && Number(m[2]) < 11)).toBe(false);
+  });
+
+  it('rounded style rounds data modules but not finder zones', () => {
+    const svg = toSvg(matrix, { dotStyle: 'rounded' });
+    expect(svg).toContain('rx="');
+    const zoneRects = [...svg.matchAll(/<rect x="(\d+(?:\.\d+)?)" y="(\d+(?:\.\d+)?)"[^>]*>/g)].filter(
+      (m) => Number(m[1]) < 11 && Number(m[2]) < 11,
+    );
+    expect(zoneRects.length).toBeGreaterThan(0);
+    expect(zoneRects.every((m) => !m[0].includes('rx='))).toBe(true);
+  });
+
+  it('non-square styles still cover exactly the dark modules', () => {
+    const svg = toSvg(matrix, { dotStyle: 'dots' });
+    // Default margin is 4: shapes are offset by it, modules are not.
+    const circles = [...svg.matchAll(/<circle cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/g)].map(
+      (m) => `${Number(m[1]) - Number(m[3]) - 4},${Number(m[2]) - Number(m[3]) - 4}`,
+    );
+    const rects = [...svg.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="1" height="1"/g)]
+      .map((m) => `${Number(m[1]) - 4},${Number(m[2]) - 4}`)
+      // Exclude the light background rect (width/height equal the full canvas).
+      .filter((key) => {
+        const [x, y] = key.split(',').map(Number);
+        return x >= 0 && y >= 0 && x < matrix.size && y < matrix.size;
+      });
+    const covered = new Set([...circles, ...rects]);
+    expect(covered).toEqual(darkModules(matrix));
+  });
+
+  it('gradient replaces the module paint with a two-stop linear gradient', () => {
+    const svg = toSvg(matrix, { gradient: { angle: 90, from: '#111111', id: 'g-fixed', to: '#eeeeee' } });
+    expect(svg).toContain('<linearGradient id="g-fixed"');
+    expect(svg).toContain('stop-color="#111111"');
+    expect(svg).toContain('rotate(90 .5 .5)');
+    expect(svg).toContain('fill="url(#g-fixed)"');
+  });
+
+  it('gradient without an explicit id uses a unique id per call', () => {
+    const first = toSvg(matrix, { gradient: { from: '#000000', to: '#ffffff' } });
+    const second = toSvg(matrix, { gradient: { from: '#000000', to: '#ffffff' } });
+    const idOf = (svg: string) => svg.match(/<linearGradient id="([^"]+)"/)?.[1];
+    expect(idOf(first)).toMatch(/^sigil-qr-gradient-\d+$/);
+    expect(idOf(first)).not.toBe(idOf(second));
+    expect(first).toContain(`fill="url(#${idOf(first)})"`);
+  });
+
+  it('image embeds a centered logo and carves the modules under it', () => {
+    const svg = toSvg(matrix, { image: { href: 'https://example.test/logo.png', size: 0.4, spacing: 2 } });
+    expect(svg).toContain('<image href="https://example.test/logo.png"');
+    // Carving: fewer dark modules are painted than the plain render.
+    const plain = darkModules(matrix);
+    const d = svg.match(/<path d="([^"]+)"/)?.[1] ?? '';
+    const carved = modulesFromPath(d, 1, 4);
+    expect(carved.size).toBeLessThan(plain.size);
+    for (const key of carved) expect(plain.has(key)).toBe(true);
+    // The carve region is empty: the very center module is never painted.
+    const center = Math.floor(matrix.size / 2);
+    expect(carved.has(`${center},${center}`)).toBe(false);
+  });
+
+  it('image background patch draws before the logo', () => {
+    const svg = toSvg(matrix, { image: { background: '#ffffff', href: 'logo.svg', radius: 2 } });
+    const patch = svg.indexOf('fill="#ffffff"');
+    const logo = svg.indexOf('<image');
+    expect(patch).toBeGreaterThan(-1);
+    expect(logo).toBeGreaterThan(patch);
+    expect(svg).toContain('rx="2"');
+  });
+
+  it('falls back for non-finite gradient angles and non-positive patch radii', () => {
+    const svg = toSvg(matrix, {
+      gradient: { angle: Number.NaN, from: '#000000', id: 'g0', to: '#ffffff' },
+      image: { background: '#ffffff', href: 'logo.svg', radius: -3 },
+    });
+    expect(svg).toContain('rotate(0 .5 .5)');
+    const patch = svg.match(/<rect[^>]*fill="#ffffff"[^>]*>/)?.[0];
+    expect(patch).toBeTruthy();
+    expect(patch).not.toContain('rx=');
+  });
+
+  it('escapes the image href', () => {
+    const svg = toSvg(matrix, { image: { href: 'x"onerror=alert(1)' } });
+    expect(svg).toContain('href="x&quot;onerror=alert(1)"');
+    expect(svg).not.toContain('x"onerror');
+  });
 });

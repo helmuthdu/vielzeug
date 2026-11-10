@@ -35,9 +35,41 @@ export interface QrMatrix {
 
 // ─── Rendering ───────────────────────────────────────────────────────────────
 
+/** Module shapes for the SVG renderer. `square` is the spec form. */
+export type QrDotStyle = 'dots' | 'rounded' | 'square';
+
+/** A vertical (by default) two-stop gradient painted over the dark modules. */
+export interface QrSvgGradientOptions {
+  readonly angle?: number;
+  readonly from: string;
+  /** Stable id override; the default is a fresh unique id per call. */
+  readonly id?: string;
+  readonly to: string;
+}
+
+/** A logo embedded over the code's center. */
+export interface QrSvgImageOptions {
+  /** Optional opaque patch drawn under the logo (e.g. `#ffffff`). */
+  readonly background?: string;
+  /** Logo URL (`data:` URIs work); embedded as an SVG `<image>`. */
+  readonly href: string;
+  /** Corner radius of the background patch in user units. Default 0. */
+  readonly radius?: number;
+  /** Logo edge as a fraction of the code side (excluding the quiet zone). Default 0.22. */
+  readonly size?: number;
+  /** Clearance around the logo in modules; modules it touches are skipped. Default 1. */
+  readonly spacing?: number;
+}
+
 export interface QrSvgOptions {
   /** Module colors; defaults `currentColor`/`transparent` so the SVG themes via CSS. */
   readonly dark?: string;
+  /** Dot shape for non-finder modules; finder patterns stay square. Default `'square'`. */
+  readonly dotStyle?: QrDotStyle;
+  /** Two-stop gradient over the dark modules; overrides `dark`. */
+  readonly gradient?: QrSvgGradientOptions;
+  /** Logo overlay; the modules it covers are left out for scanner reliability. */
+  readonly image?: QrSvgImageOptions;
   /** Accessible label → `<title>` + `role="img"`. */
   readonly label?: string;
   readonly light?: string;

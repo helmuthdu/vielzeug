@@ -80,17 +80,42 @@ function toSvg(matrix: QrMatrix, options?: QrSvgOptions): string;
 
 Returns a complete `<svg>` string. Runs in any environment: no DOM required.
 
-| Parameter              | Type      | Default          | Description                                    |
-| ---------------------- | --------- | ---------------- | ---------------------------------------------- |
-| `options.dark`         | `string`  | `'currentColor'` | Dark module color                              |
-| `options.light`        | `string`  | `'transparent'`  | Background color                               |
-| `options.margin`       | `number`  | `4`              | Quiet-zone modules                             |
-| `options.scale`        | `number`  | `1`              | User units per module                          |
-| `options.optimizePath` | `boolean` | `true`           | Merge dark runs into one `<path>`              |
-| `options.label`        | `string`  | N/A              | `<title>` + `aria-label`; enables `role="img"` |
+| Parameter              | Type                   | Default          | Description                                        |
+| ---------------------- | ---------------------- | ---------------- | -------------------------------------------------- |
+| `options.dark`         | `string`               | `'currentColor'` | Dark module color (ignored when `gradient` is set) |
+| `options.light`        | `string`               | `'transparent'`  | Background color                                   |
+| `options.margin`       | `number`               | `4`              | Quiet-zone modules                                 |
+| `options.scale`        | `number`               | `1`              | User units per module                              |
+| `options.optimizePath` | `boolean`              | `true`           | Merge dark runs into one `<path>`                  |
+| `options.label`        | `string`               | N/A              | `<title>` + `aria-label`; enables `role="img"`     |
+| `options.dotStyle`     | `QrDotStyle`           | `'square'`       | Data-module shape; finder zones stay square        |
+| `options.gradient`     | `QrSvgGradientOptions` | N/A              | Two-stop linear gradient replacing module paint    |
+| `options.image`        | `QrSvgImageOptions`    | N/A              | Centered logo; modules under it are not painted    |
+
+```ts
+type QrDotStyle = 'dots' | 'rounded' | 'square';
+
+type QrSvgGradientOptions = {
+  from: string; // first stop
+  to: string; // second stop
+  angle?: number; // degrees, 0 = top-to-bottom (default)
+  id?: string; // stable <defs> id; auto-unique otherwise
+};
+
+type QrSvgImageOptions = {
+  href: string; // logo URL (resolved by the consumer, embedded verbatim)
+  size?: number; // fraction of the code edge (default 0.22)
+  spacing?: number; // clear gap in modules around the logo (default 1)
+  background?: string; // optional patch behind the logo
+  radius?: number; // corner radius of the background patch
+};
+```
+
+Styling output stays scanner-friendly: finder patterns never lose their square shape, and the carve around a logo is a gap, not painted noise. Prefer `errorCorrection: 'H'` when overlaying a logo.
 
 ```ts
 const svg = toSvg(matrix, { label: 'Pairing code', dark: 'var(--qr-dark)' });
+const styled = toSvg(matrix, { dotStyle: 'rounded', gradient: { from: '#0ea5e9', to: '#7c3aed' } });
 ```
 
 ---
@@ -206,7 +231,7 @@ type SigilEvent =
   | { readonly type: 'dispose' };
 ```
 
-`QrEncodeOptions`, `QrSvgOptions`, `QrCanvasOptions`, `QrScannerOptions`, and `QrScanner` are documented under their factories above.
+`QrEncodeOptions`, `QrSvgOptions`, `QrCanvasOptions`, `QrScannerOptions`, and `QrScanner` are documented under their factories above. `QrDotStyle`, `QrSvgGradientOptions`, and `QrSvgImageOptions` are documented under `toSvg`.
 
 ## Errors
 

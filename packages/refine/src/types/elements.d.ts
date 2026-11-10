@@ -32,7 +32,7 @@ import type { OreKeyboardKeyProps, OreKeyboardShortcutProps } from '../content/k
 import type { OreListEvents, OreListProps } from '../content/list/list';
 import type { OreListItemEvents, OreListItemProps } from '../content/list/list-item';
 import type { OreMarqueeProps } from '../content/marquee/marquee';
-import type { OreQrCodeEvents, OreQrCodeProps } from '../content/qr-code/qr-code';
+import type { OreQrCodeElement, OreQrCodeEvents, OreQrCodeProps } from '../content/qr-code/qr-code';
 import type { OreRankItemProps } from '../content/rank-list/rank-item';
 import type { OreRankListProps } from '../content/rank-list/rank-list';
 import type { OreSpeechPlayerEvents, SpeechPlayerElement } from '../content/speech-player/speech-player';
@@ -204,7 +204,7 @@ export interface RefineElementMap {
   'ore-popover': HTMLElement & OrePopoverProps & AddEventListeners<OrePopoverEvents>;
   'ore-progress': HTMLElement & OreProgressProps;
   'ore-pull-to-refresh': PullToRefreshElement & OrePullToRefreshProps & AddEventListeners<OrePullToRefreshEvents>;
-  'ore-qr-code': HTMLElement & OreQrCodeProps & AddEventListeners<OreQrCodeEvents>;
+  'ore-qr-code': OreQrCodeElement & OreQrCodeProps & AddEventListeners<OreQrCodeEvents>;
   'ore-qr-scanner': HTMLElement & OreQrScannerProps & AddEventListeners<OreQrScannerEvents>;
   'ore-query-bar': HTMLElement & OreQueryBarProps & AddEventListeners<OreQueryBarEvents>;
   'ore-radio': HTMLElement & OreRadioProps & FormValidityMethods & AddEventListeners<OreRadioEvents>;
