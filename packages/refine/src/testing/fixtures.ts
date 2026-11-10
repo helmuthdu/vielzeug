@@ -154,6 +154,40 @@ export async function axeCheck(
   page: ConstructorParameters<typeof AxeBuilder>[0]['page'],
   selector = '.frame',
 ): ReturnType<AxeBuilder['analyze']> {
+  // Settle finite enter transitions before sampling: axe blends partial-opacity foregrounds
+  // into the background, so a scan mid-fade judges colors the surface never really shows.
+  // Two frames first give transitions time to be created (a scan would otherwise pass
+  // vacuously before the enter animation starts). Best-effort — infinite ambients
+  // (spinners) must not stall the scan.
+  await page
+    .evaluate(
+      () =>
+        new Promise<undefined>(
+          (resolve) => void requestAnimationFrame(() => void requestAnimationFrame(() => resolve(undefined))),
+        ),
+    )
+    .catch(() => undefined);
+  await page
+    .waitForFunction(
+      (scanSelector: string) =>
+        // Element.getAnimations({subtree}) reaches shadow trees reliably (Document's variant
+        // is not guaranteed to accept the option); the scanned subtree hangs off the selector.
+        (
+          (document.querySelector(scanSelector) ?? document) as unknown as {
+            getAnimations(o: { subtree: boolean }): Animation[];
+          }
+        )
+          .getAnimations({ subtree: true })
+          .filter((animation) => {
+            // Chrome has no Animation.duration/iterationCount shorthand; read effect timing.
+            const timing = animation.effect?.getTiming();
+            return typeof timing?.duration === 'number' && timing.duration > 0 && timing.iterations === 1;
+          })
+          .every((animation) => animation.playState === 'finished' || animation.playState === 'idle'),
+      selector,
+      { timeout: 5000 },
+    )
+    .catch(() => undefined);
   return new AxeBuilder({ page })
     .include(selector)
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])

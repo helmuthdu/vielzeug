@@ -970,6 +970,9 @@ test.describe('Icon card gallery', () => {
       ];
     });
     await page.getByRole('button', { exact: true, name: 'Filters' }).click();
+    // The drawer enters on a JS spring that exposes no Animation objects; wait for the
+    // settled opacity so axe samples final colors instead of mid-fade blends.
+    await expect(page.locator('#bar ore-drawer [part="panel"]')).toHaveCSS('opacity', '1');
     expect((await axeCheck(page)).violations).toEqual([]);
   });
 });

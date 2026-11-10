@@ -96,7 +96,7 @@ describe('ore-media-navigation', () => {
     expect(navigate.mock.calls[0]?.[0].detail).toEqual({ index: 11 });
     await fixture.attr('active-index', 11);
     await fixture.flush();
-    expect(fixture.element.shadowRoot?.activeElement?.dataset.index).toBe('11');
+    expect((fixture.element.shadowRoot?.activeElement as HTMLElement | null)?.dataset.index).toBe('11');
   });
 
   it('keeps keyboard focus on the indicator that becomes active', async () => {
@@ -112,7 +112,7 @@ describe('ore-media-navigation', () => {
     expect(navigate.mock.calls[0]?.[0].detail).toEqual({ index: 9 });
     await fixture.attr('active-index', 9);
     await fixture.flush();
-    expect(fixture.element.shadowRoot?.activeElement?.dataset.index).toBe('9');
+    expect((fixture.element.shadowRoot?.activeElement as HTMLElement | null)?.dataset.index).toBe('9');
   });
 
   it('stages backward moves for leftward travel', async () => {

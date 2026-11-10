@@ -61,18 +61,39 @@ test.describe('Interaction', () => {
     // the new pill widens first and its fill rises after the expansion.
     const choreography = await navigation.evaluate(async (el) => {
       el.setAttribute('active-index', '1');
-      const root = el.shadowRoot!;
+      const root = el.shadowRoot as unknown as Element & ShadowRoot;
       const previousDot = root.querySelector<HTMLElement>('.indicator[data-index="0"]')!;
       const currentDot = root.querySelector<HTMLElement>('.indicator[data-index="1"]')!;
-      for (let frame = 0; frame < 2; frame++) await new Promise<number>(requestAnimationFrame);
-      for (const animation of root.getAnimations({ subtree: true })) animation.pause();
+      // Deterministic sampling: pause every choreography animation the moment it appears
+      // (so it can never run or self-clean up mid-test), and seek it to a fixed virtual
+      // time once the set stops growing. CPU contention can no longer shift what we measure.
+      const animations = () => root.getAnimations({ subtree: true });
+      const seekAll = () => {
+        for (const animation of animations()) {
+          animation.pause();
+          const timing = animation.effect?.getTiming();
+          if (typeof timing?.duration === 'number' && timing.duration > 0) animation.currentTime = 50;
+        }
+      };
+      let seenAnimations = -1;
+      let stableFrames = 0;
+      for (let frame = 0; frame < 60; frame++) {
+        seekAll();
+        const count = animations().length;
+        stableFrames = count > 0 && count === seenAnimations ? stableFrames + 1 : 0;
+        if (stableFrames >= 2) break;
+        seenAnimations = count;
+        await new Promise<number>(requestAnimationFrame);
+      }
+      seekAll();
+      // offsetWidth ignores the entrance scale transform that a (re)mounted dot replays.
       const fillOf = (dot: HTMLElement) =>
-        dot.querySelector('ore-progress')!.shadowRoot!.querySelector('[part="fill"]')!;
+        dot.querySelector<HTMLElement>('ore-progress')!.shadowRoot!.querySelector<HTMLElement>('[part="fill"]')!;
       return {
-        current: currentDot.getBoundingClientRect().width,
-        currentFill: fillOf(currentDot).getBoundingClientRect().width,
-        previous: previousDot.getBoundingClientRect().width,
-        previousFill: fillOf(previousDot).getBoundingClientRect().width,
+        current: currentDot.offsetWidth,
+        currentFill: fillOf(currentDot).offsetWidth,
+        previous: previousDot.offsetWidth,
+        previousFill: fillOf(previousDot).offsetWidth,
       };
     });
     // Previous: still full width, fill mid-drain. Current: widening, fill not yet risen.
@@ -84,7 +105,7 @@ test.describe('Interaction', () => {
     expect(choreography.currentFill).toBeLessThan(1);
     const settled = await navigation.evaluate(async (el) => {
       await Promise.allSettled(
-        el.shadowRoot!.getAnimations({ subtree: true }).map((animation) => {
+        (el.shadowRoot as unknown as Element).getAnimations({ subtree: true }).map((animation) => {
           animation.play();
           return animation.finished;
         }),
@@ -104,17 +125,36 @@ test.describe('Interaction', () => {
     const navigation = page.locator('ore-media-navigation');
     await navigation.evaluate((el) => el.setAttribute('active-index', '0'));
     const choreography = await navigation.evaluate(async (el) => {
-      const root = el.shadowRoot!;
-      for (let frame = 0; frame < 2; frame++) await new Promise<number>(requestAnimationFrame);
-      for (const animation of root.getAnimations({ subtree: true })) animation.pause();
-      const dot = (index: string) =>
-        root.querySelector<HTMLElement>(`.indicator[data-index="${index}"]`)!.getBoundingClientRect().width;
+      const root = el.shadowRoot as unknown as Element & ShadowRoot;
+      // Deterministic sampling: pause every choreography animation the moment it appears
+      // (so it can never run or self-clean up mid-test), and seek it to a fixed virtual
+      // time once the set stops growing. CPU contention can no longer shift what we measure.
+      const animations = () => root.getAnimations({ subtree: true });
+      const seekAll = () => {
+        for (const animation of animations()) {
+          animation.pause();
+          const timing = animation.effect?.getTiming();
+          if (typeof timing?.duration === 'number' && timing.duration > 0) animation.currentTime = 50;
+        }
+      };
+      let seenAnimations = -1;
+      let stableFrames = 0;
+      for (let frame = 0; frame < 60; frame++) {
+        seekAll();
+        const count = animations().length;
+        stableFrames = count > 0 && count === seenAnimations ? stableFrames + 1 : 0;
+        if (stableFrames >= 2) break;
+        seenAnimations = count;
+        await new Promise<number>(requestAnimationFrame);
+      }
+      seekAll();
+      // offsetWidth ignores the entrance scale transform that a (re)mounted dot replays.
+      const dot = (index: string) => root.querySelector<HTMLElement>(`.indicator[data-index="${index}"]`)!.offsetWidth;
       const fill = (index: string) =>
         root
-          .querySelector(`.indicator[data-index="${index}"]`)!
-          .querySelector('ore-progress')!
-          .shadowRoot!.querySelector('[part="fill"]')!
-          .getBoundingClientRect().width;
+          .querySelector<HTMLElement>(`.indicator[data-index="${index}"]`)!
+          .querySelector<HTMLElement>('ore-progress')!
+          .shadowRoot!.querySelector<HTMLElement>('[part="fill"]')!.offsetWidth;
       return {
         current: dot('0'),
         movingBack: root.querySelector<HTMLElement>('[part="bar"]')!.className.includes('indicator-moving-back'),
@@ -122,7 +162,7 @@ test.describe('Interaction', () => {
         previousFill: fill('1'),
       };
     });
-    // Two frames in of a backward move: the old pill holds its width while the fill drains and the
+    // Frozen 50ms into a backward move: the old pill holds its width while the fill drains and the
     // new slot has not started widening, so no layout motion points rightward.
     expect(choreography.movingBack).toBe(true);
     expect(choreography.previous).toBeGreaterThan(31);
@@ -160,17 +200,36 @@ test.describe('Interaction', () => {
     const navigation = page.locator('ore-media-navigation');
     await navigation.evaluate((el) => el.setAttribute('active-index', '101'));
     const choreography = await navigation.evaluate(async (el) => {
-      const root = el.shadowRoot!;
-      for (let frame = 0; frame < 2; frame++) await new Promise<number>(requestAnimationFrame);
-      for (const animation of root.getAnimations({ subtree: true })) animation.pause();
+      const root = el.shadowRoot as unknown as Element & ShadowRoot;
+      // Deterministic sampling: pause every choreography animation the moment it appears
+      // (so it can never run or self-clean up mid-test), and seek it to a fixed virtual
+      // time once the set stops growing. CPU contention can no longer shift what we measure.
+      const animations = () => root.getAnimations({ subtree: true });
+      const seekAll = () => {
+        for (const animation of animations()) {
+          animation.pause();
+          const timing = animation.effect?.getTiming();
+          if (typeof timing?.duration === 'number' && timing.duration > 0) animation.currentTime = 50;
+        }
+      };
+      let seenAnimations = -1;
+      let stableFrames = 0;
+      for (let frame = 0; frame < 60; frame++) {
+        seekAll();
+        const count = animations().length;
+        stableFrames = count > 0 && count === seenAnimations ? stableFrames + 1 : 0;
+        if (stableFrames >= 2) break;
+        seenAnimations = count;
+        await new Promise<number>(requestAnimationFrame);
+      }
+      seekAll();
       // offsetWidth ignores the entrance scale transform that plays on remounted dots.
       const dot = (index: string) => root.querySelector<HTMLElement>(`.indicator[data-index="${index}"]`)!.offsetWidth;
       const fill = (index: string) =>
         root
-          .querySelector(`.indicator[data-index="${index}"]`)!
-          .querySelector('ore-progress')!
-          .shadowRoot!.querySelector('[part="fill"]')!
-          .getBoundingClientRect().width;
+          .querySelector<HTMLElement>(`.indicator[data-index="${index}"]`)!
+          .querySelector<HTMLElement>('ore-progress')!
+          .shadowRoot!.querySelector<HTMLElement>('[part="fill"]')!.offsetWidth;
       return { current: dot('101'), leaving: dot('102'), previousFill: fill('102') };
     });
     expect(choreography.leaving).toBe(32);

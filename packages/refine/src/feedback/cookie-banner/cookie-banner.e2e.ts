@@ -50,7 +50,8 @@ test.describe('Layout', () => {
     });
 
     expect(layout.oneRow).toBe(true);
-    expect(layout.justifyContent).toBe('flex-end');
+    // Chromium serializes the computed `flex-end` as its flow-relative `flow-end` alias.
+    expect(layout.justifyContent).toMatch(/^(flex|flow)-end$/);
   });
 
   test('category panel scrolls internally instead of growing the banner past the viewport', async ({
