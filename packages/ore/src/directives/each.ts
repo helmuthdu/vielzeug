@@ -2,6 +2,7 @@ import {
   batch,
   computed,
   createScope,
+  onCleanup,
   type Readable,
   effect as rawEffect,
   type Scope,
@@ -11,8 +12,8 @@ import {
 } from '@vielzeug/ripple';
 
 import { invariant, ORE_ERRORS, OreApiError, OreLifecycleError, reportRuntimeError } from '../errors';
-import { createDirectiveResult, type DirectiveResult, type HTMLResult } from '../template/result';
-import { type MaybeReactive, removeNodes, runAll } from '../utils/dom';
+import { asCompiled, createDirectiveResult, type DirectiveResult, type HTMLResult } from '../template/result';
+import { type MaybeReactive, removeNodes } from '../utils/dom';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,7 +31,6 @@ type ItemKey = number | string;
  * bare subset.
  */
 type ItemEntry<T> = {
-  cleanups: (() => void)[];
   data: Signal<T>;
   index: Signal<number>;
   nodes: Node[];
@@ -54,7 +54,6 @@ const createItem = <T>(
   const dataSignal: Signal<T> = signal(item);
   const indexSignal: Signal<number> = signal(index);
   const scope = createScope();
-  const cleanups: (() => void)[] = [];
   let nodes: Node[] = [];
 
   const rangeStart = document.createComment('each/item-start');
@@ -62,9 +61,9 @@ const createItem = <T>(
   staging.appendChild(rangeStart);
 
   scope.run(() => {
-    const result = render(dataSignal, indexSignal);
+    const result = asCompiled(render(dataSignal, indexSignal));
 
-    nodes = result.mount(staging, null, (fn) => cleanups.push(fn));
+    nodes = result.mount(staging, null);
   });
 
   const rangeEnd = document.createComment('each/item');
@@ -72,12 +71,11 @@ const createItem = <T>(
   staging.appendChild(rangeEnd);
   nodes = [rangeStart, ...nodes, rangeEnd];
 
-  return { cleanups, data: dataSignal, index: indexSignal, nodes, scope };
+  return { data: dataSignal, index: indexSignal, nodes, scope };
 };
 
 const removeItem = <T>(entry: ItemEntry<T>): void => {
   entry.scope.dispose();
-  runAll(entry.cleanups);
   removeNodes(entry.nodes);
 };
 
@@ -307,7 +305,7 @@ export function each<T>(
       ? computed(list as () => T[])
       : list;
 
-  return createDirectiveResult((anchor, registerCleanup) => {
+  return createDirectiveResult((anchor) => {
     const initialParent = anchor.parentNode;
 
     invariant(initialParent, 'each() anchor comment has no parent node');
@@ -324,8 +322,10 @@ export function each<T>(
     let itemsMap = new Map<ItemKey, ItemEntry<T>>();
     let itemsOrdered: ItemEntry<T>[] = [];
     let fallbackNodes: Node[] | null = null;
-    let fallbackCleanups: (() => void)[] = [];
+    let fallbackScope: Scope | null = null;
 
+    // The fallback outlives the effect run that mounts it (an empty -> empty update
+    // keeps it on screen), so it gets its own scope instead of the per-run owner.
     const mountFallback = (): void => {
       if (!fallback) return;
 
@@ -333,17 +333,30 @@ export function each<T>(
 
       if (!parent) return;
 
-      const result = fallback();
+      const scope = createScope();
 
-      fallbackNodes = result.mount(parent, endMarker, (fn) => fallbackCleanups.push(fn));
+      fallbackScope = scope;
+      try {
+        scope.run(() => {
+          const result = asCompiled(fallback());
+
+          fallbackNodes = result.mount(parent, endMarker);
+        });
+      } catch (error) {
+        // Never leave a failed fallback scope unowned: the next empty-list run
+        // would create another and overwrite the reference, leaking the first.
+        clearFallback();
+        throw error;
+      }
     };
 
     const clearFallback = (): void => {
+      fallbackScope?.dispose();
+      fallbackScope = null;
+
       if (fallbackNodes) {
-        runAll(fallbackCleanups);
         removeNodes(fallbackNodes);
         fallbackNodes = null;
-        fallbackCleanups = [];
       }
     };
 
@@ -389,8 +402,8 @@ export function each<T>(
       }
     });
 
-    registerCleanup(() => sub.dispose());
-    registerCleanup(() => {
+    onCleanup(() => {
+      sub.dispose();
       clearFallback();
       for (const entry of itemsOrdered) removeItem(entry);
       endMarker.remove();

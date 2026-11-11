@@ -122,9 +122,9 @@ elevation: prop.oneOf(ELEVATIONS),
 
 `prop.oneOf()`'s default is now optional: omit it for an optional prop that resolves to `undefined` when the attribute is absent.
 
-## Prefer model() for controlled inputs
+## Replace live() with model()
 
-`model(signal)` is the two-way form binding: it replaces the `live()` + manual `@input`/`@change` write-back pair. `live()` remains for one-way bindings that only need the stale-write guard. `model()` can only drive a plain `value`/`checked` attribute binding; the boolean (`?checked=`) form throws.
+`live()` and `LiveBinding` have been removed. `model(signal)` is the one form-control binding: it writes both ways and keeps `live()`'s stale-write guard. Pass `get` to transform the written-back value and `event` to choose the write-back event. `model()` can only drive a plain `value`/`checked` attribute binding; the boolean (`?checked=`) form throws, so `?checked=${live(x)}` becomes `checked=${model(x)}`.
 
 ```ts
 // Before
@@ -176,5 +176,53 @@ Tests that asserted synchronous teardown after `remove()`/`dispose()` need one m
 When surviving items keep their relative order (prepend, append, interleaved inserts, content replacement), `each()` relocates only the new items; reused nodes are never removed and re-inserted. New items are also built detached and inserted once, instead of connecting at the end of the list and connecting again at their final position.
 
 Code or tests that relied on reused items being re-inserted (mutation counters, disconnect/reconnect counts, or animations restarted by re-insertion) will see fewer mutations. Components inside list items now keep their state across list updates that do not reorder them.
+
+## Render each html result once
+
+`HTMLResult` is now an opaque, single-use value: its `mount()` method is no longer public, and rendering the same result twice throws `OreApiError`. Previously a second render silently showed nothing, and interpolating one result twice attached its listeners twice. Build a fresh result for each rendering.
+
+```ts
+// Before
+const icon = html`<svg>...</svg>`;
+html`${icon}${icon}`;
+html`${() => (open.value ? icon : null)}`;
+
+// After
+const icon = () => html`<svg>...</svg>`;
+html`${icon()}${icon()}`;
+html`${() => (open.value ? icon() : null)}`;
+```
+
+## Await teardown after renderHook dispose()
+
+`renderHook()` now runs its setup inside a real generated component instead of a simulated context, so hooks behave exactly as in `define()`, including `onFormReset()` and, with the new `{ formAssociated: true }` option, `useField()`. As with `mount().dispose()`, cleanups now run one microtask after `dispose()` or `cleanup()`.
+
+```ts
+// Before
+dispose();
+expect(cleanupSpy).toHaveBeenCalled();
+
+// After
+dispose();
+await Promise.resolve();
+expect(cleanupSpy).toHaveBeenCalled();
+```
+
+## Call watchEffect() only during setup
+
+`watchEffect()` now throws `OreApiError` outside setup. Previously it silently created an effect with no owner, which never stopped unless you kept and called its disposer. For reactive work outside a component, use `@vielzeug/ripple`'s `effect()` and dispose it yourself. `bind()` with an explicit `target` still works outside setup and returns its disposer.
+
+```ts
+// Before (outside setup)
+const stop = watchEffect(() => console.log(count.value));
+
+// After
+const handle = effect(() => console.log(count.value));
+const stop = () => handle.dispose();
+```
+
+## Omit the define() generic to infer props
+
+`define(tag, { props, setup })` now infers prop types from `props`; `setup(props)` was previously typed as an empty object without an explicit generic. Explicit `define<Props>()` still works and still requires a definition for every key in `Props`. No migration is required.
 
 Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for the current contracts.

@@ -5,11 +5,10 @@ export { define } from './define';
 // conditionals, and class/style maps. Kept in the main entry alongside
 // `html`/`define` rather than a separate sub-path: tree-shaking already means an unused export
 // costs nothing in a bundled consumer, so splitting these off only adds an extra import line
-// for functionality most components need on day one. `unsafeHtml()` and `live()` remain here
+// for functionality most components need on day one. `unsafeHtml()` and `model()` remain here
 // too: their explicit names make their specialized behavior clear without a second import path.
 export { classMap } from './directives/classMap';
 export { each } from './directives/each';
-export { type LiveBinding, live } from './directives/live';
 export { type ModelOptions, model } from './directives/model';
 export { styleMap } from './directives/styleMap';
 export { unsafeHtml } from './directives/unsafe-html';

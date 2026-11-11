@@ -98,6 +98,8 @@ export const ORE_ERRORS = {
   eachDuplicateKey: (key: string, index: number): string => `each() received duplicate key "${key}" at index ${index}`,
   eventModifierUnknown: (eventName: string, modifier: string): string =>
     `@${eventName}.${modifier}: unknown event modifier "${modifier}". Supported: .stop, .prevent, .once, .capture`,
+  htmlResultReused:
+    'html`...` result was already rendered: each result renders once. Call the template function again for another copy.',
   injectStrictFailed: (key: string, tag: string): string => `injectStrict() could not resolve key "${key}" in <${tag}>`,
   invariantViolated: (message: string): string => `invariant violated: ${message}`,
   lifecycleOutsideSetup: 'Lifecycle hooks must be called during component setup',
@@ -105,6 +107,7 @@ export const ORE_ERRORS = {
     `listen() called with a null/undefined target for event "${eventName}": listener not attached`,
   modelRequiresValueBinding: (name: string): string =>
     `model(): "${name}" must be a plain value/checked attribute binding, not a boolean attribute. Bind it as ${name}=\${model(sig)}, not ?${name}=\${model(sig)}.`,
+  notAnHtmlResult: 'expected an html`...` result',
   propBindingForbiddenName: (name: string): string =>
     `html\`...\`: ".${name}" is a forbidden property-binding name (prototype pollution guard)`,
   propBindingHtmlInjectionName: (name: string): string =>

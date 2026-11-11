@@ -1,20 +1,18 @@
 /**
  * renderHook: test composable hooks (lifecycle, reactive state, etc.) in isolation
- * without rendering a full component template.
+ * without writing a component template.
  */
 
-import { createScope } from '@vielzeug/ripple';
-
-import { OreLifecycleError, reportRuntimeError } from '../errors';
-import { createProps, type InferProps, type PropInputDefs } from '../props';
-import { createRuntimeContext, onCleanup, runWithContext } from '../runtime';
-import { flush } from './flush';
+import type { InferProps, PropInputDefs } from '../props';
+import { mount } from './mount';
 
 export interface HookFixture<T> {
-  /** Teardown the hook (runs cleanups). Idempotent. */
+  /** Remove the host component; its cleanups run one microtask later, like `mount().dispose()`. Idempotent. */
   dispose(): void;
   /** `true` after `dispose()` has been called. */
   readonly disposed: boolean;
+  /** The generated host component running the hook. */
+  readonly element: HTMLElement;
   /** Flush pending reactive updates */
   flush(): Promise<void>;
   /** The value returned by the setup function */
@@ -23,21 +21,19 @@ export interface HookFixture<T> {
   [Symbol.dispose](): void;
 }
 
-const hookDisposers = new Set<() => void>();
-
-/** @internal Dispose every active hook fixture for test isolation. */
-export const _disposeRenderHooks = (): void => {
-  for (const dispose of [...hookDisposers]) dispose();
-};
+export interface RenderHookOptions {
+  /** Register the host with `formAssociated: true`, for composables that call `useField()`. */
+  formAssociated?: boolean;
+}
 
 /**
- * Run a setup function in a component-like context and return the result.
- * `onMounted`/`onCleanup`/`bind`/... work exactly as they would inside a real
- * `setup()`, since they resolve the same implicit current-component context.
+ * Run a setup function inside a real, generated host component and return its result.
+ * Every lifecycle hook (`onMounted`, `onCleanup`, `onFormReset`, `useField`, ...) runs
+ * exactly as it does in `define()`: the host is an ordinary Ore component.
  *
  * @example No props
  * ```ts
- * const { result, flush } = await renderHook(() => {
+ * const { result } = await renderHook(() => {
  *   const count = signal(0);
  *   onMounted(() => { count.value = 1; });
  *   return count;
@@ -47,113 +43,52 @@ export const _disposeRenderHooks = (): void => {
  *
  * @example With props
  * ```ts
- * const { result } = await renderHook(
- *   { label: prop.string('hello') },
- *   (props) => props.label,
- * );
+ * const { result } = await renderHook({ label: prop.string('hello') }, (props) => props.label);
  * expect(result.value).toBe('hello');
  * ```
  */
-export async function renderHook<T>(setup: (_props: Record<never, never>) => T): Promise<HookFixture<T>>;
+export async function renderHook<T>(
+  setup: (_props: Record<never, never>) => T,
+  options?: RenderHookOptions,
+): Promise<HookFixture<T>>;
 export async function renderHook<D extends PropInputDefs, T>(
   propDefs: D,
   setup: (props: InferProps<D>) => T,
+  options?: RenderHookOptions,
 ): Promise<HookFixture<T>>;
 export async function renderHook<D extends PropInputDefs, T>(
   setupOrDefs: ((_props: Record<never, never>) => T) | D,
-  maybeSetup?: (props: InferProps<D>) => T,
+  setupOrOptions?: ((props: InferProps<D>) => T) | RenderHookOptions,
+  maybeOptions?: RenderHookOptions,
 ): Promise<HookFixture<T>> {
   const hasPropDefs = typeof setupOrDefs !== 'function';
-  const propDefs = hasPropDefs ? (setupOrDefs as D) : undefined;
-  const setup = hasPropDefs ? maybeSetup! : (setupOrDefs as (_props: Record<never, never>) => T);
-
-  const hostScope = createScope();
-  // Minimal host element so getHost() works inside setup
-  const hostEl = document.createElement('div');
-
-  document.body.appendChild(hostEl);
-
-  // Built via the runtime's own factory, so the harness can never desync from a
-  // new required RuntimeContext field. Note: `onFormReset()` registrations land
-  // in this context's formResetCallbacks but are never fired: renderHook has no
-  // ancestor <form>; test form-reset behaviour through mount() instead.
-  const ctx = createRuntimeContext(hostEl);
-  const { mountCallbacks } = ctx;
+  const setup = (hasPropDefs ? setupOrOptions : setupOrDefs) as (props: unknown) => T;
+  const options = (hasPropDefs ? maybeOptions : setupOrOptions) as RenderHookOptions | undefined;
 
   let result!: T;
 
-  try {
-    hostScope.run(() => {
-      runWithContext(ctx, () => {
-        const props = propDefs ? createProps(hostEl, propDefs as PropInputDefs) : ({} as Record<never, never>);
+  const fixture = await mount(
+    (props) => {
+      result = setup(props);
 
-        result = setup(props as InferProps<D>);
-      });
-    });
-
-    // Run mount callbacks (simulates connectedCallback → queueMicrotask)
-    for (const cb of mountCallbacks) {
-      try {
-        hostScope.run(() => {
-          runWithContext(ctx, () => {
-            const cleanup = cb();
-
-            if (typeof cleanup === 'function') onCleanup(cleanup);
-          });
-        });
-      } catch (error) {
-        // Mirror BaseElement's real onMounted error handling (see
-        // base-element.ts's `_scheduleMountCallbacks`): report the error
-        // (console + `ore:error` event on the host) and keep running the
-        // remaining callbacks, instead of hiding the failure entirely.
-        const err = error instanceof Error ? error : new Error(String(error));
-
-        reportRuntimeError(
-          new OreLifecycleError(`renderHook() mount callback failed`, {
-            cause: err,
-            component: 'renderHook',
-            phase: 'mounted',
-          }),
-          hostEl,
-        );
-      }
-    }
-  } catch (err) {
-    hostScope.dispose();
-    hostEl.remove();
-    throw err;
-  }
-
-  await flush();
-
-  let isDisposed = false;
-
-  function dispose() {
-    if (isDisposed) return;
-
-    isDisposed = true;
-    hostScope.dispose();
-    hostEl.remove();
-    hookDisposers.delete(dispose);
-  }
-
-  hookDisposers.add(dispose);
+      return null;
+    },
+    {
+      componentOptions: {
+        formAssociated: options?.formAssociated,
+        props: hasPropDefs ? (setupOrDefs as D) : undefined,
+      },
+    },
+  );
 
   return {
-    dispose,
-
-    get disposed(): boolean {
-      return isDisposed;
+    dispose: fixture.dispose,
+    get disposed() {
+      return fixture.disposed;
     },
-
-    async flush() {
-      await flush();
-    },
-
+    element: fixture.element,
+    flush: () => fixture.flush(),
     result,
-
-    [Symbol.dispose]() {
-      dispose();
-    },
+    [Symbol.dispose]: fixture.dispose,
   };
 }

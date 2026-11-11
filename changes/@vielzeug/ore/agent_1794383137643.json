@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "watchEffect() (and onElement()) now throw OreApiError outside setup instead of creating an unowned effect; bind() with an explicit target still works outside setup and returns its disposer.",
+      "packageName": "@vielzeug/ore",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

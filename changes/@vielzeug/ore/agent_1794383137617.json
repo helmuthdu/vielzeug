@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "renderHook() runs setup inside a generated define() host (exposed as element), so hooks behave exactly as in components; cleanups run one microtask after dispose(). New { formAssociated } option enables useField() and onFormReset().",
+      "packageName": "@vielzeug/ore",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

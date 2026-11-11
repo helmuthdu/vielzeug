@@ -32,11 +32,9 @@ const NODE_SLOT_NO_PARENT_MSG = 'html`...`: node-slot comment anchor has no pare
  * fragment children into place and chain its apply into the outer apply phase
  * (so embedded reactive wiring starts when the host template mounts, not now).
  */
-const embedStaticResult = (
-  result: CompiledHTMLResult,
-  anchor: Comment,
-  chainedApplies: Array<(rc: (fn: () => void) => void) => void>,
-): void => {
+const embedStaticResult = (result: CompiledHTMLResult, anchor: Comment, chainedApplies: Array<() => void>): void => {
+  result.claim();
+
   const parent = anchor.parentNode;
 
   invariant(parent, NODE_SLOT_NO_PARENT_MSG);
@@ -56,7 +54,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
   const fragment = compiled.element.content.cloneNode(true) as DocumentFragment;
   const bindings: Binding[] = [];
   // For static HTMLResult embeds: chain their apply calls
-  const chainedApplies: Array<(rc: (fn: () => void) => void) => void> = [];
+  const chainedApplies: Array<() => void> = [];
 
   // Phase 1: Resolve all binding targets BEFORE any DOM modifications
   type BoundSlot = { comment?: Comment; el?: HTMLElement; slot: (typeof compiled.slots)[number]; value: unknown };
@@ -201,9 +199,9 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
     bindings.push(createAttrBindingFromValue(el, slot.mode ?? 'attr', slot.name, value));
   }
 
-  return createHtmlResult(fragment, (registerCleanup) => {
-    for (const binding of bindings) applyBinding(binding, registerCleanup);
-    for (const chainedApply of chainedApplies) chainedApply(registerCleanup);
+  return createHtmlResult(fragment, () => {
+    for (const binding of bindings) applyBinding(binding);
+    for (const chainedApply of chainedApplies) chainedApply();
   });
 };
 

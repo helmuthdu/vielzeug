@@ -5,10 +5,12 @@
 import { signal } from '@vielzeug/ripple';
 
 import {
+  bind,
   createContext,
   getHost,
   html,
   inject,
+  OreApiError,
   onCleanup,
   onElement,
   onEvent,
@@ -16,6 +18,7 @@ import {
   onMounted,
   provide,
   ref,
+  watchEffect,
 } from '../index';
 import { flush, mount } from '../testing';
 
@@ -85,6 +88,30 @@ describe('runtime lifecycle: execution order', () => {
     dispose();
     await Promise.resolve();
     expect(order).toEqual(['setup', 'mount', 'unmount']);
+  });
+});
+
+describe('runtime lifecycle: ownership outside setup', () => {
+  it('watchEffect() throws outside setup instead of creating an unowned effect', () => {
+    expect(() => watchEffect(() => undefined)).toThrow(OreApiError);
+  });
+
+  it('onCleanup() throws outside setup', () => {
+    expect(() => onCleanup(() => undefined)).toThrow(OreApiError);
+  });
+
+  it('bind() with an explicit target works outside setup and returns its own disposer', () => {
+    const el = document.createElement('div');
+    const label = signal('a');
+    const stop = bind({ attr: { 'aria-label': label } }, { target: el });
+
+    expect(el.getAttribute('aria-label')).toBe('a');
+    label.value = 'b';
+    expect(el.getAttribute('aria-label')).toBe('b');
+
+    stop();
+    label.value = 'c';
+    expect(el.getAttribute('aria-label')).toBe('b');
   });
 });
 

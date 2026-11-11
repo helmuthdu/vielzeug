@@ -57,11 +57,35 @@ describe('component slots and emit', () => {
     expect(triggerAssigned).toBe(true);
   });
 
+  it('has() reflects rendered slots only: gating a slot on its own has() never shows it', async () => {
+    let gated: boolean | undefined;
+
+    const { flush, query } = await mount(
+      (_props) => {
+        const slots = useSlots<'header' | 'footer'>();
+
+        onMounted(() => {
+          gated = slots.has('footer').value;
+        });
+
+        return html`
+          <header ?hidden=${() => !slots.has('header').value}><slot name="header"></slot></header>
+          ${when(slots.has('footer'), () => html`<footer><slot name="footer"></slot></footer>`)}
+        `;
+      },
+      { html: '<b slot="header">H</b><i slot="footer">F</i>' },
+    );
+
+    await flush();
+
+    expect(query('header')?.hasAttribute('hidden')).toBe(false);
+    expect(gated).toBe(false);
+    expect(query('footer')).toBeNull();
+  });
+
   it('useSlots() called from setup() and from within onMounted() returns the same registry', async () => {
-    // Regression test: onMounted() callbacks each run with their own freshly-created
-    // RuntimeContext (see base-element.ts's _scheduleMountCallbacks), so the registry cache
-    // must key on the host element, not that ephemeral context, otherwise this pair of calls
-    // would silently create two independent MutationObservers over the same shadow root.
+    // Regression test: two registries would mean two independent MutationObservers
+    // over the same shadow root.
     let fromSetup: ReturnType<typeof useSlots> | undefined;
     let fromMounted: ReturnType<typeof useSlots> | undefined;
 

@@ -7,7 +7,7 @@
  * IIFE `window.Ore` runtime coexists with an npm import). Identity-based checks silently fail
  * across those copies: an object stamped by one graph is invisible to the other.
  * Every branded runtime object in ore (`HTMLResult`, `DirectiveResult`,
- * `LiveBinding`, `CSSResult`) goes through this helper: do not introduce a second mechanism.
+ * `ModelSource`, `CSSResult`) goes through this helper: do not introduce a second mechanism.
  */
 
 export type Brand<T extends object> = {

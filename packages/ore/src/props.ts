@@ -5,9 +5,10 @@ import { ORE_ERRORS, OreApiError } from './errors';
 import { watchEffect } from './runtime';
 import { isStructuredValue, setAttr, toKebab } from './utils/dom';
 
+// Homomorphic over `T` so `define()` can infer `T` back from a `props` object when its
+// generic is omitted; `-?` keeps "every declared key needs a definition" for explicit generics.
 export type PropsDef<T extends Record<string, unknown>> = {
-  // All props must be explicitly defined via prop.* helpers or PropDef objects
-  [K in keyof Required<T>]: PropDef<T[K & keyof T]>;
+  [K in keyof T]-?: PropDef<T[K]>;
 };
 
 export type PropDef<T> = { readonly default: T; readonly parse: (value: string | null) => T; reflect?: boolean };
@@ -166,14 +167,29 @@ export const prop: PropFactory = {
   string: _stringProp as PropFactory['string'],
 };
 
-const isPropDef = (value: unknown): value is PropDef<unknown> =>
-  typeof value === 'object' && value !== null && 'default' in value && 'parse' in value;
+const describeReceived = (value: unknown): string => (value === null ? 'null' : typeof value);
+
+/** Returns the problem with one prop definition, or `undefined` when it is valid. */
+const checkPropDef = (value: unknown, propName: string): string | undefined => {
+  if (typeof value !== 'object' || value === null || !('default' in value)) {
+    return `Prop "${propName}" must be a PropDef ({ default, parse, reflect? }), e.g. from a prop.* helper. Received: ${describeReceived(value)}`;
+  }
+
+  const { parse, reflect } = value as { parse?: unknown; reflect?: unknown };
+
+  if (typeof parse !== 'function') return `Prop "${propName}" must have a parse function.`;
+  if (reflect && isStructuredValue((value as PropDef<unknown>).default)) {
+    return `Prop "${propName}": ${ORE_ERRORS.propInvalidReflect}`;
+  }
+
+  return undefined;
+};
 
 /**
- * Validate and normalize a prop definition.
- * Throws if definition is invalid or incomplete.
+ * Validate and normalize every prop definition in one pass, reporting all invalid
+ * props together. `reflect` defaults to `false` for raw definitions.
  *
- * Accepts any object shaped like `PropDef`: not just `prop.*` helper output, so you can
+ * Accepts any object shaped like `PropDef`, not just `prop.*` helper output, so you can
  * define a custom prop with explicit parser and reflection behavior when the `prop.*` helpers
  * don't cover your type:
  *
@@ -185,51 +201,26 @@ const isPropDef = (value: unknown): value is PropDef<unknown> =>
  * });
  * ```
  */
-export function normalizePropDefinition<T>(value: unknown, propName: string): PropDef<T> {
-  if (!isPropDef(value)) {
-    throw new OreApiError(
-      `Prop "${propName}" must use a prop.* helper (string/number/bool/json/oneOf). Received: ${typeof value}`,
-    );
+export function normalizePropDefs(tag: string, defs: Record<string, unknown>): PropInputDefs {
+  const errors: string[] = [];
+  const normalized: PropInputDefs = {};
+
+  for (const [key, value] of Object.entries(defs)) {
+    const error = checkPropDef(value, key);
+
+    if (error) errors.push(error);
+    else normalized[key] = { ...(value as PropDef<unknown>), reflect: (value as PropDef<unknown>).reflect ?? false };
   }
 
-  const descriptor = value as PropDef<T>;
+  if (errors.length > 0) throw new OreApiError(ORE_ERRORS.validationFailed(tag, errors));
 
-  if (!descriptor.parse) {
-    throw new OreApiError(`Prop "${propName}" must have a parse function. Use prop.* helpers.`);
-  }
-
-  const reflect = descriptor.reflect ?? false;
-
-  // Validate: structured defaults with reflect:true are not allowed
-  if (reflect && isStructuredValue(descriptor.default)) {
-    throw new OreApiError(`Prop "${propName}": ${ORE_ERRORS.propInvalidReflect}`);
-  }
-
-  return {
-    ...descriptor,
-    reflect,
-  };
+  return normalized;
 }
 
 /**
- * Validate all prop definitions at define-time.
- * Returns validation error messages or empty array if valid.
+ * @internal Per-attribute prop metadata, created once per element and kept across
+ * connections. Consumed by `attributeChangedCallback` and the template binding layer.
  */
-export function validatePropDefs(defs: Record<string, unknown>): string[] {
-  const errors: string[] = [];
-
-  for (const [key, value] of Object.entries(defs)) {
-    try {
-      normalizePropDefinition(value, key);
-    } catch (error) {
-      errors.push(error instanceof Error ? error.message : String(error));
-    }
-  }
-
-  return errors;
-}
-
-/** @internal Per-attribute prop metadata. Consumed by the template binding layer (template/binding-types.ts). */
 export type PropMeta<T = unknown> = {
   parse: (value: string | null) => T;
   reflect: boolean;
@@ -258,46 +249,25 @@ export const getPropMeta = (el: HTMLElement, attrName: string): PropMeta<unknown
 const coerceIncoming = <T>(value: unknown, parse: PropDef<T>['parse']): T =>
   (typeof value === 'string' ? parse(value) : value) as T;
 
-/** @internal Runtime prop registration (called by createProps) */
-const registerProp = <T>(el: HTMLElement, propName: string, attrName: string, propDef: PropDef<T>): Signal<T> => {
-  let registry = propRegistry.get(el);
-
-  if (!registry) {
-    registry = new Map();
-    propRegistry.set(el, registry);
-  }
-
+/**
+ * Create an element's prop state on its first connection: the signal, its initial value
+ * (pre-upgrade property, then attribute, then default), and the host accessor. Prop state
+ * belongs to the element, not a connection, so values written between connections (by
+ * `attributeChangedCallback` or the accessor) survive a remount without being copied.
+ */
+const createPropMeta = <T>(el: HTMLElement, propName: string, attrName: string, propDef: PropDef<T>): PropMeta<T> => {
   const { default: defaultValue, parse, reflect = false } = propDef;
+  const host = el as unknown as Record<string, unknown>;
   const s = signal<T>(defaultValue);
 
-  // On reconnection, the prop registry still holds the previous connection's
-  // PropMeta. Its signal carries the correct prop value (updated by
-  // attributeChangedCallback between connections). We must read from it rather
-  // than from `el[propName]`, because setup() may have overwritten the host
-  // property with a different getter/setter (e.g. `defineFieldValue()` in
-  // refine's form-field components redefines `el.value` to expose the internal
-  // field string). Reading that getter would yield the wrong value and lose
-  // the prop's actual state across reconnections.
-  const existingMeta = registry.get(attrName);
-  const hasPreUpgradeProperty = Object.hasOwn(el as unknown as Record<string, unknown>, propName);
-  const preUpgradeValue = hasPreUpgradeProperty ? (el as unknown as Record<string, unknown>)[propName] : undefined;
+  if (Object.hasOwn(host, propName)) {
+    const preUpgradeValue = host[propName];
 
-  const meta: PropMeta<unknown> = {
-    parse,
-    reflect,
-    signal: s,
-  };
-
-  if (existingMeta) {
-    s.value = existingMeta.signal.peek() as T;
-  } else if (hasPreUpgradeProperty) {
-    delete (el as unknown as Record<string, unknown>)[propName];
+    delete host[propName];
     s.value = coerceIncoming(preUpgradeValue, parse);
   } else if (el.hasAttribute(attrName)) {
-    s.value = parse(el.getAttribute(attrName)) as T;
+    s.value = parse(el.getAttribute(attrName));
   }
-
-  registry.set(attrName, meta);
 
   Object.defineProperty(el, propName, {
     configurable: true,
@@ -308,21 +278,22 @@ const registerProp = <T>(el: HTMLElement, propName: string, attrName: string, pr
     },
   });
 
-  if (reflect) {
-    watchEffect(() => {
-      const v = s.value;
+  return { parse, reflect, signal: s };
+};
 
-      if (v == null) {
-        el.removeAttribute(attrName);
-      } else if (typeof v === 'boolean') {
-        el.toggleAttribute(attrName, v);
-      } else {
-        setAttr(el, attrName, v);
-      }
-    });
-  }
+/** Reflect a prop to its attribute for the current connection (owned by its scope). */
+const reflectProp = (el: HTMLElement, attrName: string, s: Signal<unknown>): void => {
+  watchEffect(() => {
+    const v = s.value;
 
-  return s;
+    if (v == null) {
+      el.removeAttribute(attrName);
+    } else if (typeof v === 'boolean') {
+      el.toggleAttribute(attrName, v);
+    } else {
+      setAttr(el, attrName, v);
+    }
+  });
 };
 
 export type InferPropValue<T> = T extends PropDef<infer U> ? U : T;
@@ -342,14 +313,29 @@ export type InferProps<D extends PropInputDefs> = {
   readonly [K in keyof D]-?: Readable<InferPropValue<D[K]>>;
 };
 
+/** Resolve the element's props for the current connection; `defs` are already normalized by `define()`. */
 export function createProps<D extends PropInputDefs>(el: HTMLElement, defs: D): InferProps<D> {
+  let registry = propRegistry.get(el);
+
+  if (!registry) {
+    registry = new Map();
+    propRegistry.set(el, registry);
+  }
+
   const props = {} as Record<string, Signal<unknown>>;
 
   for (const [name, def] of Object.entries(defs)) {
-    // defs passed here are already normalized by define(); skip re-normalization.
     const attrName = toKebab(name);
+    let meta = registry.get(attrName);
 
-    props[name] = registerProp(el, name, attrName, def as PropDef<unknown>);
+    if (!meta) {
+      meta = createPropMeta(el, name, attrName, def as PropDef<unknown>);
+      registry.set(attrName, meta);
+    }
+
+    if (meta.reflect) reflectProp(el, attrName, meta.signal);
+
+    props[name] = meta.signal;
   }
 
   return props as unknown as InferProps<D>;

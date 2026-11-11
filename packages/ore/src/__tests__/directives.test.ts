@@ -6,7 +6,7 @@
 import { fireChange, fireInput } from '@vielzeug/assay';
 import { computed, signal } from '@vielzeug/ripple';
 
-import { classMap, each, html, live, model, styleMap, unsafeHtml, when } from '../index';
+import { classMap, each, html, model, styleMap, unsafeHtml, when } from '../index';
 import { mount } from '../testing';
 import { register } from './test-utils';
 
@@ -101,6 +101,32 @@ describe('Directive: each()', () => {
     });
 
     expect(query('.empty')?.textContent).toBe('Empty');
+  });
+
+  it('keeps the fallback reactive across an empty-to-empty update', async () => {
+    const items = signal<string[]>([]);
+    const label = signal('a');
+    const { act, query } = await mount(
+      () => html`
+        <ul>
+          ${each(
+            items,
+            (s) => s,
+            (s) => html`<li>${s}</li>`,
+            () => html`<p class="empty">${label}</p>`,
+          )}
+        </ul>
+      `,
+    );
+
+    await act(() => {
+      items.value = [];
+    });
+    await act(() => {
+      label.value = 'b';
+    });
+
+    expect(query('.empty')?.textContent).toBe('b');
   });
 
   it('should clear fallback when list becomes non-empty', async () => {
@@ -1206,68 +1232,57 @@ describe('Directive: when()', () => {
   });
 });
 
-describe('Directive: live()', () => {
-  it('should not clobber user-typed input when app state is stale', async () => {
-    const model = signal('server');
+describe('Directive: model() stale-write guard', () => {
+  it('does not clobber an in-progress text edit with a stale app-state write', async () => {
+    const text = signal('server');
     const { query } = await mount(
       () => html`
-        <input class="field" value=${live(model)} @input=${() => undefined} />
+        <input class="field" value=${model(text)} />
       `,
     );
 
-    const input = query<HTMLInputElement>('.field');
+    const input = query<HTMLInputElement>('.field')!;
 
-    if (!input) throw new Error('Expected input to be rendered');
-
+    // The user edits, but the write-back event has not fired yet.
     input.value = 'user-typed';
-
-    model.value = 'server';
+    text.value = 'stale-server';
 
     expect(input.value).toBe('user-typed');
   });
 
-  it('should not clobber user-checked input when app state is stale', async () => {
-    const model = signal(true);
-    const { flush, query } = await mount(
-      () => html`
-        <input class="field" type="checkbox" ?checked=${live(model)} @change=${() => undefined} />
-      `,
-    );
-
-    const input = query<HTMLInputElement>('.field');
-
-    if (!input) throw new Error('Expected input to be rendered');
-
-    input.checked = false;
-
-    model.value = true;
-    await flush();
-
-    expect(input.checked).toBe(false);
-  });
-
-  it('is per-binding: other bindings of the same signal are unaffected', async () => {
-    const model = signal('server');
+  it('resumes writes once the signal catches up with the user edit', async () => {
+    const text = signal('server');
     const { query } = await mount(
       () => html`
-        <input class="live-field" value=${live(model)} />
-        <input class="plain-field" value=${model} />
+        <input class="field" value=${model(text)} />
       `,
     );
 
-    const liveInput = query<HTMLInputElement>('.live-field');
-    const plainInput = query<HTMLInputElement>('.plain-field');
+    const input = query<HTMLInputElement>('.field')!;
 
-    if (!liveInput || !plainInput) throw new Error('Expected inputs to be rendered');
+    input.value = 'user-typed';
+    text.value = 'user-typed';
+    text.value = 'reset';
 
-    // User diverges the live input's DOM value from the binding's last write.
-    liveInput.value = 'user-typed';
+    expect(input.value).toBe('reset');
+  });
 
-    model.value = 'new-server';
+  it('is per-binding: a plain binding of the same signal still receives writes', async () => {
+    const text = signal('server');
+    const { query } = await mount(
+      () => html`
+        <input class="model-field" value=${model(text)} />
+        <input class="plain-field" value=${text} />
+      `,
+    );
 
-    // The live binding skips the stale write; the plain binding of the same
-    // signal still receives it (live() marks the binding site, not the signal).
-    expect(liveInput.value).toBe('user-typed');
+    const modelInput = query<HTMLInputElement>('.model-field')!;
+    const plainInput = query<HTMLInputElement>('.plain-field')!;
+
+    modelInput.value = 'user-typed';
+    text.value = 'new-server';
+
+    expect(modelInput.value).toBe('user-typed');
     expect(plainInput.value).toBe('new-server');
   });
 });

@@ -83,7 +83,7 @@ export const provide = <T>(key: InjectionKey<T>, value: T): void => {
 
 const NOT_FOUND_SENTINEL = Symbol('inject.not_found');
 
-/** Per-setup-context cache: avoids repeated ancestor walks for the same key. */
+/** Per-connection cache: avoids repeated ancestor walks for the same key. */
 const resolvedCache = new WeakMap<object, Map<InjectionKey<unknown>, unknown>>();
 
 const walkAndFind = <T>(element: HTMLElement, key: InjectionKey<T>): T | typeof NOT_FOUND_SENTINEL => {

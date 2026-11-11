@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "each() fallback content stays reactive across an empty-to-empty list update; prop state survives a full disconnect/reconnect; component lifecycle reduced to one per-connection context.",
+      "packageName": "@vielzeug/ore",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

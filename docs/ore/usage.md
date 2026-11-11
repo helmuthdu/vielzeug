@@ -215,7 +215,7 @@ final position, so each item's custom elements connect a single time per render.
 
 Use `model(signal)` for a controlled input: it writes the signal to the control's `value`/`checked` property and
 writes user input back on the control's change event (`'change'` for checkboxes, radios, and selects; `'input'`
-otherwise). This replaces the `live()` + manual `@input` handler pair with one binding.
+otherwise).
 
 ```ts
 import { signal } from '@vielzeug/ripple';
@@ -246,26 +246,8 @@ html`
 `;
 ```
 
-## live: one-way bindings that preserve user edits
-
-Use `live(signal)` when a binding must skip a stale app-state write while the user is mid-edit, without writing
-user input back. `model()` covers the common controlled-input case; `live()` is for one-way bindings that only
-need the stale-write guard.
-
-```ts
-import { signal } from '@vielzeug/ripple';
-import { define, html, live } from '@vielzeug/ore';
-
-define('live-search', {
-  setup() {
-    const query = signal('');
-
-    return html`
-      <input value=${live(query)} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
-    `;
-  },
-});
-```
+`model()` also guards in-progress edits: while the control holds a value the signal has not received yet, a stale
+app-state write to the signal is skipped instead of clobbering what the user is typing.
 
 ## host bindings
 
@@ -380,7 +362,7 @@ define('button-wrapper', {
 ## slots and emits
 
 ```ts
-import { define, html, useEmit, useSlots, when } from '@vielzeug/ore';
+import { define, html, useEmit, useSlots } from '@vielzeug/ore';
 
 define('card-with-footer', {
   setup(_props) {
@@ -391,7 +373,7 @@ define('card-with-footer', {
       <div class="card">
         <slot name="header"></slot>
         <slot></slot>
-        ${when(slots.has('footer'), () => html`<footer><slot name="footer"></slot></footer>`)}
+        <footer ?hidden=${() => !slots.has('footer').value}><slot name="footer"></slot></footer>
       </div>
       <button @click=${() => emit('action')}>Go</button>
     `;
@@ -400,6 +382,8 @@ define('card-with-footer', {
 ```
 
 Pass a `SlotNames` type parameter to `useSlots<SlotNames>()` to get typed `slots.has()` and `slots.elements()` calls.
+
+Keep the `<slot>` rendered and toggle its wrapper with `slots.has()`: presence is read from rendered slots, so a `<slot>` inside `when(slots.has(...))` would never appear.
 
 ## context provide/inject
 
@@ -623,7 +607,7 @@ define('signup-form', {
 - Bind host attributes and classes via `bind()` rather than mutating the element directly.
 - Provide context at the nearest ancestor: avoid global context singletons.
 - Call `onCleanup()` for every resource allocated in `setup()` (WebSockets, intervals, external subscriptions).
-- Use `model(signal)` for two-way form inputs; use `live(signal)` for a one-way binding that must not clobber user-in-progress edits.
+- Use `model(signal)` for form inputs: it writes both ways and never clobbers an in-progress user edit.
 - Extract composable helper functions freely: `onMounted`/`onCleanup`/`bind`/... resolve the active component through implicit context, so they work from any function called (transitively) during `setup()`, with no need to pass them in as parameters.
 - Test component mounting and lifecycle with `@vielzeug/ore/testing`; import generic DOM events, queries, and waits
   from `@vielzeug/assay`.

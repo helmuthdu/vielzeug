@@ -9,7 +9,6 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^@vielzeug\/assay$/, replacement: path.resolve(__dirname, '../assay/src/index.ts') },
-      { find: /^@vielzeug\/ripple\/watch$/, replacement: path.resolve(__dirname, '../ripple/src/watch.ts') },
       { find: /^@vielzeug\/ripple$/, replacement: path.resolve(__dirname, '../ripple/src/index.ts') },
     ],
   },

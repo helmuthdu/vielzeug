@@ -2,11 +2,85 @@ import { fireClick } from '@vielzeug/assay';
 import { signal } from '@vielzeug/ripple';
 import { vi } from 'vitest';
 
-import { define, html, prop } from '../index';
+import { define, html, OreApiError, prop } from '../index';
 import { flush, mount } from '../testing';
 import { expectType, uniqueTag } from './test-utils';
 
+describe('component props: definition validation', () => {
+  it('reports every invalid prop definition in one error', () => {
+    const tag = uniqueTag('prop-invalid');
+    const define_ = define as (tag: string, def: unknown) => unknown;
+
+    let message = '';
+
+    try {
+      define_(tag, {
+        props: { a: 'nope', b: { default: 1 }, c: { default: { x: 1 }, parse: () => ({ x: 1 }), reflect: true } },
+        setup: () => null,
+      });
+    } catch (error) {
+      expect(error).toBeInstanceOf(OreApiError);
+      message = (error as Error).message;
+    }
+
+    expect(message).toContain('Prop "a" must be a PropDef');
+    expect(message).toContain('Prop "b" must have a parse function');
+    expect(message).toContain('Prop "c"');
+    expect(customElements.get(tag)).toBeUndefined();
+  });
+
+  it('accepts raw PropDef objects, defaulting reflect to false', async () => {
+    const tag = uniqueTag('prop-raw');
+
+    define(tag, {
+      props: { count: { default: 1, parse: (v: string | null) => (v == null ? 1 : Number(v)) } },
+      setup: (props) => html`<span>${props.count}</span>`,
+    });
+
+    const el = document.createElement(tag) as HTMLElement & { count: number };
+
+    document.body.append(el);
+    el.count = 5;
+    await flush();
+
+    expect(el.shadowRoot?.querySelector('span')?.textContent).toBe('5');
+    expect(el.hasAttribute('count')).toBe(false);
+    el.remove();
+  });
+});
+
 describe('component props', () => {
+  it('keeps prop state on the element across a full remount', async () => {
+    const tag = uniqueTag('prop-remount');
+    const seen: unknown[] = [];
+
+    define(tag, {
+      props: { count: prop.number(0) },
+      setup(props) {
+        seen.push(props.count);
+
+        return html`<span>${props.count}</span>`;
+      },
+    });
+
+    const el = document.createElement(tag) as HTMLElement & { count: number };
+
+    document.body.appendChild(el);
+    el.count = 5;
+    el.remove();
+    await flush();
+    el.count = 7;
+    document.body.appendChild(el);
+    await flush();
+
+    expect(seen).toHaveLength(2);
+    expect(seen[1]).toBe(seen[0]);
+    expect(el.shadowRoot?.textContent).toBe('7');
+    expect(el.getAttribute('count')).toBe('7');
+
+    el.remove();
+  });
+
   it('supports helper-based typed defaults and parsing', async () => {
     const { element, query } = await mount(
       (props) => {

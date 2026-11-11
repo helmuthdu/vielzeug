@@ -2,7 +2,7 @@
  * Low-level DOM utilities used throughout the runtime and binding layers.
  */
 
-import { isReactive, type Readable } from '@vielzeug/ripple';
+import { createScope, isReactive, type Readable, type Scope } from '@vielzeug/ripple';
 
 import { warn } from '../_dev';
 import { ORE_ERRORS } from '../errors';
@@ -30,10 +30,6 @@ export const UNSAFE_CSS_CHARS = /[;{}]/g;
 
 export const sanitizeCssToken = (value: string): string => value.replace(UNSAFE_CSS_CHARS, '');
 
-export const runAll = (fns: (() => void)[]): void => {
-  for (let i = fns.length - 1; i >= 0; i--) fns[i]?.();
-};
-
 export const removeNodes = (nodes: Node[]): void => {
   for (const node of nodes) {
     (node as ChildNode).remove();
@@ -42,44 +38,61 @@ export const removeNodes = (nodes: Node[]): void => {
 
 /**
  * Tracks "whatever is currently rendered in one spot": a list of live DOM nodes plus the
- * cleanup functions that were registered while mounting them. `clear()` tears both down and
- * resets to empty, ready for the next render.
+ * ripple scope that owns the effects and `onCleanup` callbacks registered while mounting
+ * them. `clear()` disposes that scope and removes the nodes.
  *
  * Every directive/binding that swaps its rendered content when a reactive source changes
- * (`when()`, `unsafeHtml()`, `each()`'s empty-list fallback, `applyHtmlBinding()`) needs exactly this
- * bookkeeping: this is the one shared implementation instead of four independently-maintained
- * `currentNodes`/`currentCleanups` variable pairs.
+ * (`when()`, `unsafeHtml()`, `applyHtmlBinding()`) mounts the next render inside `render()`,
+ * so nested effects belong to this slot rather than to whichever effect happens to be
+ * running. `scope.run()` clears the transient effect-run owner.
  */
 export type ReplaceableSlot = {
-  /** Tears down every registered cleanup and removes every tracked node, then resets to empty. */
+  /** Dispose the current render scope and remove every tracked node. */
   clear(): void;
-  /** Currently tracked nodes: read after mounting to know what's live. */
+  /** Currently tracked nodes. */
   readonly nodes: Node[];
-  /** Pass as the `registerCleanup` callback to whatever mounts the next render. */
-  registerCleanup(fn: () => void): void;
+  /**
+   * Dispose the previous render, then run `fn` inside a fresh scope. Call
+   * `setNodes` from `fn` once mounting finishes.
+   */
+  render<T>(fn: () => T): T;
   /** Replace the tracked node list (call once mounting the next render is complete). */
   setNodes(nodes: Node[]): void;
 };
 
 export const createReplaceableSlot = (): ReplaceableSlot => {
   let nodes: Node[] = [];
-  let cleanups: (() => void)[] = [];
+  let scope: Scope | null = null;
+
+  const clear = (): void => {
+    scope?.dispose();
+    scope = null;
+    removeNodes(nodes);
+    nodes = [];
+  };
 
   return {
-    clear() {
-      runAll(cleanups);
-      removeNodes(nodes);
-      cleanups = [];
-      nodes = [];
-    },
+    clear,
     get nodes() {
       return nodes;
     },
-    registerCleanup(fn) {
-      cleanups.push(fn);
+    render(fn) {
+      clear();
+
+      const next = createScope();
+
+      scope = next;
+
+      try {
+        return next.run(fn);
+      } catch (error) {
+        next.dispose();
+        scope = null;
+        throw error;
+      }
     },
-    setNodes(next) {
-      nodes = next;
+    setNodes(nextNodes) {
+      nodes = nextNodes;
     },
   };
 };

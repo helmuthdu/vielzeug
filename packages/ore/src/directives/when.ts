@@ -1,4 +1,4 @@
-import { computed, isReactive, type Readable, effect as rawEffect, untrack } from '@vielzeug/ripple';
+import { computed, isReactive, onCleanup, type Readable, effect as rawEffect, untrack } from '@vielzeug/ripple';
 
 import { invariant } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult, isHtmlResult } from '../template/result';
@@ -26,7 +26,7 @@ export function when(
   falsy?: () => WhenRenderable,
 ): DirectiveResult {
   if (typeof condition !== 'function' && !isReactive(condition)) {
-    return createDirectiveResult((anchor, registerCleanup) => {
+    return createDirectiveResult((anchor) => {
       const branch = condition ? truthy() : falsy ? falsy() : null;
 
       if (!branch || !isHtmlResult(branch)) return;
@@ -35,13 +35,13 @@ export function when(
 
       invariant(parent, NO_PARENT_MSG);
 
-      const nodes = branch.mount(parent, anchor, registerCleanup);
+      const nodes = branch.mount(parent, anchor);
 
-      registerCleanup(() => removeNodes(nodes));
+      onCleanup(() => removeNodes(nodes));
     });
   }
 
-  return createDirectiveResult((anchor, registerCleanup) => {
+  return createDirectiveResult((anchor) => {
     const ownedComputed = typeof condition === 'function' ? computed(condition as () => boolean) : null;
     const conditionSignal = ownedComputed ?? (condition as Readable<boolean>);
 
@@ -57,25 +57,34 @@ export function when(
 
     const sub = rawEffect(() => {
       const next = conditionSignal.value;
-
-      slot.clear();
-
       const branch = next ? truthy() : falsy ? falsy() : null;
 
-      if (!branch || !isHtmlResult(branch)) return;
+      if (!branch || !isHtmlResult(branch)) {
+        slot.clear();
+
+        return;
+      }
 
       // Resolved live: when a `when()` sits inside an each() item, a list
       // reorder moves the whole range (endMarker included) before this effect
       // next runs; the captured mount-time parent would be stale.
       const parent = endMarker.parentNode;
 
-      if (!parent) return;
+      if (!parent) {
+        slot.clear();
 
-      slot.setNodes(untrack(() => branch.mount(parent, endMarker, slot.registerCleanup)));
+        return;
+      }
+
+      untrack(() => {
+        slot.render(() => {
+          slot.setNodes(branch.mount(parent, endMarker));
+        });
+      });
     });
 
-    registerCleanup(() => sub.dispose());
-    registerCleanup(() => {
+    onCleanup(() => {
+      sub.dispose();
       slot.clear();
       endMarker.remove();
     });

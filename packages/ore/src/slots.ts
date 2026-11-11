@@ -219,13 +219,10 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
   };
 };
 
-// Keyed by the host element, not the ephemeral `RuntimeContext`: `onMounted()` callbacks each
-// run with their own freshly-created context object (see base-element.ts's
-// `_scheduleMountCallbacks`), so keying this on `RuntimeContext` would silently create a second,
-// independent registry (a second `MutationObserver`, a second signal set) every time `useSlots()`
-// was called from inside `onMounted()` rather than directly in `setup()`: a real bug the
-// "one registry per instance" doc comment below never actually held for that (common) case.
-/** One slot registry per component instance: reused across repeated `useSlots()` calls. */
+/**
+ * One slot registry per component instance: reused across repeated `useSlots()` calls in
+ * `setup()` and its `onMounted` callbacks, and dropped on cleanup so a remount builds a live one.
+ */
 const slotsByElement = new WeakMap<HTMLElement, ComponentSlots<string>>();
 
 /**

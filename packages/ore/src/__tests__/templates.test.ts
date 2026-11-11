@@ -6,7 +6,8 @@
 import { fireClick } from '@vielzeug/assay';
 import { computed, signal } from '@vielzeug/ripple';
 
-import { define, html, prop } from '../index';
+import { define, html, OreApiError, prop } from '../index';
+import { asCompiled } from '../template/result';
 import { mount } from '../testing';
 import { register } from './test-utils';
 
@@ -133,13 +134,35 @@ describe('Template: HTML System', () => {
       `;
       const firstHost = document.createElement('div');
       const secondHost = document.createElement('div');
-      const cleanup = () => undefined;
-
-      first.mount(firstHost, null, cleanup);
-      second.mount(secondHost, null, cleanup);
+      asCompiled(first).mount(firstHost, null);
+      asCompiled(second).mount(secondHost, null);
 
       expect(firstHost.querySelector('div')?.textContent).toBe('1');
       expect(secondHost.querySelector('div')?.textContent).toBe('2');
+    });
+
+    it('rejects mounting the same result twice', () => {
+      const result = asCompiled(html`
+        <div>once</div>
+      `);
+      const host = document.createElement('div');
+
+      result.mount(host, null);
+
+      expect(() => result.mount(host, null)).toThrow(OreApiError);
+      expect(host.querySelectorAll('div')).toHaveLength(1);
+    });
+
+    it('rejects interpolating the same result twice', () => {
+      const child = html`
+        <span>child</span>
+      `;
+
+      expect(
+        () => html`
+          <div>${child}${child}</div>
+        `,
+      ).toThrow(OreApiError);
     });
 
     it('should preserve adjacent tag whitespace in compiled output', async () => {
@@ -693,6 +716,59 @@ describe('Template: HTML System', () => {
           `,
         ),
       ).rejects.toThrow('unknown event modifier "self"');
+    });
+  });
+
+  describe('Attribute bindings to registered child props', () => {
+    type Child = HTMLElement & { count: number; label: string | undefined; onPick: unknown; rows: unknown };
+
+    beforeAll(() => {
+      define('ore-registered-child', {
+        props: {
+          count: prop.number(0),
+          label: prop.string('fallback'),
+          'on-pick': prop.data<(id: string) => void>(),
+          rows: prop.data<number[]>([]),
+        },
+        setup: () => null,
+      });
+    });
+
+    it('passes functions, objects, and primitives to the prop signal without stringifying', async () => {
+      const pick = (id: string): string => id;
+      const rows = [1, 2];
+      const { query } = await mount(
+        () => html`
+          <ore-registered-child class="child" count=${'4'} on-pick=${() => pick} rows=${rows}></ore-registered-child>
+        `,
+      );
+
+      const child = query<Child>('.child')!;
+
+      expect(child.count).toBe(4);
+      expect((child as unknown as Record<string, unknown>)['on-pick']).toBe(pick);
+      expect(child.rows).toBe(rows);
+      expect(child.hasAttribute('on-pick')).toBe(false);
+      expect(child.hasAttribute('rows')).toBe(false);
+    });
+
+    it('treats null and false like a removed attribute', async () => {
+      const label = signal<string | null>('set');
+      const { flush, query } = await mount(
+        () => html`
+          <ore-registered-child class="child" label=${label}></ore-registered-child>
+        `,
+      );
+
+      const child = query<Child>('.child')!;
+
+      expect(child.label).toBe('set');
+
+      label.value = null;
+      await flush();
+
+      expect(child.label).toBe('fallback');
+      expect(child.getAttribute('label')).toBe('fallback');
     });
   });
 

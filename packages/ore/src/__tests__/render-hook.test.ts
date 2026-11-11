@@ -1,6 +1,6 @@
 import { signal } from '@vielzeug/ripple';
 
-import { onCleanup, onMounted, prop, watchEffect } from '../index';
+import { onCleanup, onFormReset, onMounted, prop, useField, watchEffect } from '../index';
 import { cleanup, renderHook } from '../testing';
 
 describe('renderHook()', () => {
@@ -80,6 +80,7 @@ describe('renderHook()', () => {
     expect(cleanupSpy).not.toHaveBeenCalled();
 
     dispose();
+    await Promise.resolve();
 
     expect(cleanupSpy).toHaveBeenCalledOnce();
   });
@@ -92,8 +93,43 @@ describe('renderHook()', () => {
     });
 
     cleanup();
+    await Promise.resolve();
 
     expect(cleanupSpy).toHaveBeenCalledOnce();
+  });
+
+  it('formAssociated option: supports composables that call useField()', async () => {
+    const value = signal('initial');
+    const { element, result } = await renderHook(() => useField({ value }), { formAssociated: true });
+    const form = document.createElement('form');
+
+    element.setAttribute('name', 'field');
+    document.body.appendChild(form);
+    form.appendChild(element);
+
+    expect(new FormData(form).get('field')).toBe('initial');
+    expect(result.checkValidity()).toBe(true);
+
+    form.remove();
+  });
+
+  it('runs onFormReset callbacks when the host form resets', async () => {
+    const onReset = vi.fn();
+    const { element } = await renderHook(
+      () => {
+        onFormReset(onReset);
+      },
+      { formAssociated: true },
+    );
+    const form = document.createElement('form');
+
+    document.body.appendChild(form);
+    form.appendChild(element);
+    form.reset();
+
+    expect(onReset).toHaveBeenCalledOnce();
+
+    form.remove();
   });
 
   it('flush() resolves pending reactive updates', async () => {
@@ -146,6 +182,7 @@ describe('renderHook()', () => {
     const callsBefore = effectSpy.mock.calls.length;
 
     dispose();
+    await Promise.resolve();
 
     result.value = 1;
     await flush();

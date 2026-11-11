@@ -10,7 +10,6 @@ import { define } from '../define';
 import type { HTMLResult } from '../template/result';
 import { setAttr } from '../utils/dom';
 import { type FlushOptions, flush } from './flush';
-import { _disposeRenderHooks } from './render-hook';
 import { resetOreForTests } from './reset';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -246,7 +245,6 @@ export async function mount<T extends HTMLElement = HTMLElement>(
 export function cleanup(): void {
   for (const el of _mountedElements) el.remove();
   _mountedElements.length = 0;
-  _disposeRenderHooks();
   resetOreForTests();
 }
 

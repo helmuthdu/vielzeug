@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "attribute bindings to a child's registered prop now go through one write path: null/undefined/false reset to the prop's parsed default, strings are parsed, and other values (objects, functions, numbers) pass through unchanged.",
+      "packageName": "@vielzeug/ore",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

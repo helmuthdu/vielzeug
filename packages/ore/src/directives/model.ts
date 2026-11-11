@@ -22,8 +22,8 @@ export type ModelOptions<T = unknown> = {
 };
 
 /**
- * Per-binding marker produced by `model()`. Like `live()`, the two-way behavior
- * belongs to this one binding site, never to the signal itself.
+ * Per-binding marker produced by `model()`. The two-way behavior belongs to this
+ * one binding site, never to the signal itself.
  *
  * @internal Consumed by the template binding layer (see `template/instantiator.ts`).
  */
@@ -57,9 +57,8 @@ export const modelDefaultEvent = (el: HTMLElement): string =>
  *
  * Writes the signal to the control's `value`/`checked` property on every change,
  * and writes user input back into the signal on the control's change event
- * (`'change'` for checkboxes/radios/selects, `'input'` otherwise). This is the
- * complete controlled-input loop: the `live()` + manual `@input` handler pair it
- * replaces was easy to get half-wired.
+ * (`'change'` for checkboxes/radios/selects, `'input'` otherwise). Writes are skipped
+ * while the control holds an in-progress user edit the signal has not seen yet.
  *
  * The signal is written with whatever `get` reads back (a string by default for
  * text inputs), so declare the signal with the matching type or pass `get`.

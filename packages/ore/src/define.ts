@@ -1,7 +1,7 @@
 import { BaseElement } from './base-element';
 import type { ComponentDefinition } from './component-types';
 import { ORE_ERRORS, OreApiError } from './errors';
-import { normalizePropDefinition, type PropInputDefs, type PropsDef, validatePropDefs } from './props';
+import { normalizePropDefs, type PropsDef } from './props';
 import { toKebab } from './utils/dom';
 
 /**
@@ -44,21 +44,9 @@ export function define<Props extends Record<string, unknown> = Record<never, nev
 
   const { props: propDefs } = definition;
 
-  const normalizedPropDefs: PropsDef<Props> | undefined = (() => {
-    if (!propDefs) return undefined;
-
-    const errors = validatePropDefs(propDefs as Record<string, unknown>);
-
-    if (errors.length > 0) throw new OreApiError(ORE_ERRORS.validationFailed(tag, errors));
-
-    const normalized: PropInputDefs = {};
-
-    for (const [key, def] of Object.entries(propDefs)) {
-      normalized[key] = normalizePropDefinition(def, key);
-    }
-
-    return normalized as PropsDef<Props>;
-  })();
+  const normalizedPropDefs = propDefs
+    ? (normalizePropDefs(tag, propDefs as Record<string, unknown>) as PropsDef<Props>)
+    : undefined;
 
   const observedAttrs = normalizedPropDefs ? Object.keys(normalizedPropDefs).map(toKebab) : [];
 

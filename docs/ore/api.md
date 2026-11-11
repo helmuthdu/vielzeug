@@ -7,7 +7,7 @@ description: Complete API reference for @vielzeug/ore and @vielzeug/ore/testing.
 
 ## API Overview
 
-All browser-runtime symbols below are imported from `@vielzeug/ore`. Lifecycle/context/binding functions (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect`, `bind`, `provide`, `useEmit`, `useSlots`, `getHost`) resolve the active component through an implicit "current component" context: they work when called synchronously during `setup()`, or from any composable function `setup()` calls (transitively), but throw if called outside that window.
+All browser-runtime symbols below are imported from `@vielzeug/ore`. Lifecycle/context/binding functions (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect`, `bind`, `provide`, `useEmit`, `useSlots`, `getHost`) resolve the active component through an implicit "current component" context: they work when called synchronously during `setup()`, or from any composable function `setup()` calls (transitively), but throw if called outside that window. The one exception is `bind()` with an explicit `options.target`: it also works outside setup (for example from an event handler), where only its returned disposer stops it.
 
 > `watchEffect` is not named `watch`: `@vielzeug/ripple` already exports a `watch(source, callback)` with different semantics (explicit source + old/new value pair), and the two are frequently imported in the same file.
 
@@ -21,7 +21,6 @@ All browser-runtime symbols below are imported from `@vielzeug/ore`. Lifecycle/c
 | `createContext()`       | Create a unique typed injection key                       | Sync           | Context is scoped to the component tree                                                                      |
 | `each()`                | Keyed list rendering with DOM diffing                     | Sync           | Duplicate keys report `ore:error`; plain `T[]` is a one-time static render                                   |
 | `when()`                | Conditional branch rendering                              | Sync           | Getter-fn computed disposed on cleanup; static bool skips subscription                                       |
-| `live(signal)`          | One-way binding that skips stale writes during input      | Sync           | Use for controlled inputs alongside a manual `@input` handler                                                |
 | `model(signal)`         | Two-way form-control binding (value/checked + write-back) | Sync           | Plain `value`/`checked` attribute only; pass `get` to keep numeric signals numeric                           |
 | `onMounted(fn)`         | DOM-ready callback                                        | Setup only     | Must be called synchronously during `setup()`                                                                |
 | `onCleanup(fn)`         | Register teardown                                         | Setup only     | Called on disconnect, one microtask later, unless the element reconnects (a same-turn move)                  |
@@ -50,6 +49,9 @@ define<Props>(tag: string, definition: ComponentDefinition<Props>): CustomElemen
 
 Returns the registered class (for `instanceof` or subclassing); registration itself is the only global side effect.
 
+Omit `Props` to infer prop types from `props`. Pass it explicitly when a public props type already exists: every key it
+declares must then have a definition in `props`.
+
 The `setup()` function receives only typed prop signals:
 
 ```ts
@@ -73,7 +75,8 @@ define('my-card', {
     // emit() returns dispatchEvent's boolean: false if a listener called preventDefault()
     const notCancelled = emit('close');
 
-    return html`${when(slots.has('header'), () => html`<slot name="header"></slot>`)}`;
+    // Render the <slot> unconditionally: has() observes rendered slots, so gating the slot itself on has() never shows it.
+    return html`<header ?hidden=${() => !slots.has('header').value}><slot name="header"></slot></header>`;
   },
 });
 ```
@@ -147,7 +150,7 @@ setup(_props) {
 > - **`prop.json`**: value can be declared in HTML (`<my-el config='{"x":1}'>`); attribute string is `JSON.parse`d.
 > - **`prop.data`**: value is always set from JavaScript (objects, arrays, callbacks, class instances); the attribute is never read. Use this for both data and function props.
 
-When you need custom parsing or `reflect: false`, use a raw `PropDef` object:
+When you need custom parsing or `reflect: false`, use a raw `PropDef` object. Any `{ default, parse, reflect? }` object is a valid prop definition; `reflect` defaults to `false` for raw objects (the `prop.*` helpers reflect, except `prop.json` and `prop.data`). `define()` reports every invalid definition in one `OreApiError`:
 
 ```ts
 props: {
@@ -179,6 +182,10 @@ Tagged template literal that returns an `HTMLResult`. Supports text interpolatio
 boolean attributes (`?attr=`), explicit property bindings (`.prop=`), events (`@event=` with optional
 `.stop`/`.prevent`/`.once`/`.capture` modifiers), refs (`ref=`), and nested templates.
 
+An `HTMLResult` is opaque and single-use: each one owns the DOM nodes and bindings for one rendering. Rendering the
+same result twice (mounting it again, interpolating it twice, or returning a cached result from a reactive getter)
+throws `OreApiError`. Call the template function again when you need another copy.
+
 `.prop=${value}` always writes the element property (never an attribute): the explicit channel for structured
 values (arrays, objects, callbacks). Prototype-polluting names (`__proto__`, `constructor`, `prototype`) and
 raw-HTML-parsing names (`innerHTML`, `outerHTML`, `srcdoc`) are rejected at compile time: render sanitized
@@ -200,7 +207,6 @@ Tagged template literal that returns a `CSSResult` for use in `styles`.
 | `when(condition, truthy, falsy?)`      | Conditional rendering                                                                                                         |
 | `classMap(record)`                     | Reactive class string from object map                                                                                         |
 | `styleMap(record)`                     | Reactive inline style string from object map                                                                                  |
-| `live(signal)`                         | One-way binding that skips stale writes during active user input; use with `@input` handler                                   |
 | `model(signal, options?)`              | Two-way form-control binding: writes the signal to `value`/`checked` and writes user input back on the control's change event |
 | `unsafeHtml(value)`                    | HTML rendering sink; sanitize untrusted values before calling                                                                 |
 
@@ -208,7 +214,7 @@ Tagged template literal that returns a `CSSResult` for use in `styles`.
 
 ### `model(signal, options?)`
 
-Two-way binding for a form control: `value=${model(signal)}`. It writes the signal to the control's `value`/`checked` property on every change and writes user input back into the signal on the control's change event (`'change'` for checkboxes, radios, and `<select>`; `'input'` otherwise). This is the complete controlled-input loop that the `live()` + manual `@input` handler pair used to require.
+Two-way binding for a form control: `value=${model(signal)}`. It writes the signal to the control's `value`/`checked` property on every change and writes user input back into the signal on the control's change event (`'change'` for checkboxes, radios, and `<select>`; `'input'` otherwise). While the control holds an in-progress edit the signal has not received yet, stale writes to the signal are skipped.
 
 ```ts
 const text = signal('');
@@ -287,6 +293,8 @@ Static values are applied once. Getters and signals create reactive effects. Cal
 - `slots.elements(name?)`: `Readable<Element[]>`: the assigned elements for the slot
 
 Slot signals update reactively when assigned content changes, including when slots are inserted dynamically (via `when()` or `each()`) after mount.
+
+Presence is measured through the `<slot>` elements the component has rendered: content assigned to a slot that isn't rendered reports `false`. Always render the `<slot>` and use `has()` to hide or style its wrapper; ``when(slots.has('x'), () => html`<slot name="x">`)`` never shows the slot.
 
 ## Context API
 
@@ -375,14 +383,14 @@ useField({
 
 Import from `@vielzeug/ore/testing`.
 
-| API                      | Purpose                                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------------ |
-| `mount(setup, options?)` | Mount a component and return a test fixture                                                |
-| `cleanup()`              | Remove all mounted elements and reset test state                                           |
-| `install(afterEach)`     | Register auto-cleanup after each test                                                      |
-| `flush(options?)`        | Drain reactive updates and animation frames                                                |
-| `renderHook(setup)`      | Run lifecycle hooks in isolation; overload accepts `propDefs` as first arg for typed props |
-| `OreTimeoutError`        | Error thrown when `flush()` cannot settle tracked Ore work                                 |
+| API                           | Purpose                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------- |
+| `mount(setup, options?)`      | Mount a component and return a test fixture                                                       |
+| `cleanup()`                   | Remove all mounted elements and reset test state                                                  |
+| `install(afterEach)`          | Register auto-cleanup after each test                                                             |
+| `flush(options?)`             | Drain reactive updates and animation frames                                                       |
+| `renderHook(setup, options?)` | Run a composable in a generated host component; overload accepts `propDefs` first for typed props |
+| `OreTimeoutError`             | Error thrown when `flush()` cannot settle tracked Ore work                                        |
 
 > **Test isolation:** `cleanup()` removes mounted elements and resets Ore's cross-test caches and counters. Call it in `afterEach`, or use `install(afterEach)`.
 
@@ -427,7 +435,7 @@ interface Fixture<T extends HTMLElement = HTMLElement> {
 
 #### `renderHook`
 
-Useful for testing composable lifecycle hooks (`onMounted`, `watchEffect`, `inject`, etc.) without a template. `onMounted`/`onCleanup`/`watchEffect`/... work exactly as inside a real `setup()`, since they resolve the same implicit current-component context:
+Useful for testing composable lifecycle hooks (`onMounted`, `watchEffect`, `inject`, etc.) without a template. The setup runs inside a real, generated host component (exposed as `element`), so every hook behaves exactly as it does in `define()`. Pass `{ formAssociated: true }` for composables that call `useField()` or `onFormReset()`. Like `mount().dispose()`, `dispose()` removes the host and its cleanups run one microtask later:
 
 ```ts
 // Without props
@@ -471,7 +479,7 @@ type PropDef<T> = {
 };
 
 type PropsDef<T extends Record<string, unknown>> = {
-  [K in keyof Required<T>]: PropDef<T[K & keyof T]>;
+  [K in keyof T]-?: PropDef<T[K]>;
 };
 
 type PropInputDefs = Record<string, PropDef<unknown>>;
@@ -507,7 +515,7 @@ declare function onEvent(
   options?: AddEventListenerOptions,
 ): void;
 declare function onFormReset(fn: OnFormResetCallback): void; // Runs on every ancestor <form> reset; formAssociated only
-declare function watchEffect(fn: () => Cleanup | undefined): () => void; // Scoped reactive effect; auto-cleaned on disconnect
+declare function watchEffect(fn: () => Cleanup | undefined): () => void; // Component-owned reactive effect; disposed on disconnect, throws outside setup
 declare function bind(config: HostBindConfig, options?: BindOptions): () => void; // Bindings for host or any target element
 declare function provide<T>(key: InjectionKey<T>, value: T): void; // Register a context value on the host element
 declare function inject<T>(key: InjectionKey<T>): T | undefined;
@@ -552,16 +560,12 @@ type RefCallback<T extends Element> = (el: T | null) => void;
 
 type InjectionKey<T> = symbol & { readonly __ore_injection_key?: T };
 
-interface HTMLResult {
-  mount(parent: ParentNode, anchor: Node | null, registerCleanup: (fn: () => void) => void): Node[];
-}
+interface HTMLResult {} // Opaque, single-use: render it once (return, interpolate, or return from a directive callback)
 
 type CSSResult = {
   content: string;
   toString(): string;
 };
-
-type LiveBinding<T> = { readonly source: Readable<T> };
 
 type ModelOptions<T = unknown> = {
   /** Write-back event (default: 'change' for checkbox/radio/select, 'input' otherwise). */

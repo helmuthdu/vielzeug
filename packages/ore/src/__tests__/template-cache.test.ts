@@ -2,11 +2,12 @@ import { signal } from '@vielzeug/ripple';
 import { describe, expect, it } from 'vitest';
 
 import { html } from '../index';
+import { asCompiled } from '../template/result';
 
 const mountInto = (result: ReturnType<typeof html>): HTMLElement => {
   const container = document.createElement('div');
 
-  result.mount(container, null, () => {});
+  asCompiled(result).mount(container, null);
 
   return container;
 };

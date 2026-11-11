@@ -15,12 +15,6 @@ import type { DirectiveResult, HTMLResult, Ref, RefCallback } from './result';
 
 type AttrBaseFields = {
   el: HTMLElement;
-  /**
-   * When true the binding uses live-write semantics: stale app-state writes are
-   * skipped if the DOM value has diverged from the last programmatic write.
-   * Set when the bound value came through `live()` (see directives/live.ts).
-   */
-  live?: true;
   mode: 'attr' | 'bool';
   name: string;
   type: 'attr';
@@ -78,9 +72,9 @@ export type HtmlBinding = {
    * memo computed: a reactive value is usually a function that builds nested
    * `html` results, and building them allocates their per-node binding computeds.
    * Ripple attaches a computed to the scope active when it is created, so a memo
-   * computed would let any effect that happens to trigger its eager refresh become
-   * the owner - and dispose those bindings on its next run while this slot still
-   * shows the nodes they drive.
+   * computed would let whichever effect's read triggers its re-derive become the
+   * owner - and dispose those bindings on its next run while this slot still shows
+   * the nodes they drive.
    */
   source: (() => unknown) | Readable<unknown>;
   type: 'html';

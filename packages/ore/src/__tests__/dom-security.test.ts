@@ -1,4 +1,4 @@
-import { signal } from '@vielzeug/ripple';
+import { onCleanup, signal } from '@vielzeug/ripple';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OreLifecycleError as OreError } from '../errors';
@@ -62,16 +62,31 @@ describe('createReplaceableSlot()', () => {
     expect(slot.nodes).toEqual([]);
   });
 
-  it('clear() runs registered cleanups in reverse registration order', () => {
+  it('clear() disposes the render scope, newest cleanup first, and a second clear is a no-op', () => {
     const calls: number[] = [];
     const slot = createReplaceableSlot();
 
-    slot.registerCleanup(() => calls.push(1));
-    slot.registerCleanup(() => calls.push(2));
-    slot.registerCleanup(() => calls.push(3));
+    slot.render(() => {
+      onCleanup(() => calls.push(1));
+      onCleanup(() => calls.push(2));
+      onCleanup(() => calls.push(3));
+    });
+    slot.clear();
     slot.clear();
 
     expect(calls).toEqual([3, 2, 1]);
+  });
+
+  it('render() disposes the previous scope before starting the next one', () => {
+    const calls: string[] = [];
+    const slot = createReplaceableSlot();
+
+    slot.render(() => onCleanup(() => calls.push('first')));
+    slot.render(() => onCleanup(() => calls.push('second')));
+
+    expect(calls).toEqual(['first']);
+    slot.clear();
+    expect(calls).toEqual(['first', 'second']);
   });
 
   it('clear() is safe to call repeatedly with nothing tracked', () => {

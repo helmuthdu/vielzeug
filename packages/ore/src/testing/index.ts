@@ -16,7 +16,7 @@ import { cleanup } from './mount';
 // suites install directly from assay (`installFormInternalsPolyfill`).
 export { type FlushOptions, flush, OreTimeoutError } from './flush';
 export { cleanup, type Fixture, type MountOptions, type MountSetup, mount } from './mount';
-export { type HookFixture, renderHook } from './render-hook';
+export { type HookFixture, type RenderHookOptions, renderHook } from './render-hook';
 
 /**
  * Register auto-cleanup after each test. Call once in your test setup file.

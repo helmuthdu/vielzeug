@@ -1,4 +1,4 @@
-import { computed, isReactive, type Readable, effect as rawEffect, type Signal } from '@vielzeug/ripple';
+import { computed, isReactive, onCleanup, type Readable, effect as rawEffect, type Signal } from '@vielzeug/ripple';
 
 import { invariant } from '../errors';
 import { createDirectiveResult, type DirectiveResult } from '../template/result';
@@ -30,7 +30,7 @@ export function unsafeHtml(value: (() => string) | string | Signal<string> | Rea
   const isFn = typeof value === 'function';
   const src: Readable<string> | null = isFn ? computed(value as () => string) : isReactive(value) ? value : null;
 
-  return createDirectiveResult((anchor, registerCleanup) => {
+  return createDirectiveResult((anchor) => {
     const initialParent = anchor.parentNode;
 
     invariant(initialParent, 'unsafeHtml() anchor comment has no parent node');
@@ -43,26 +43,30 @@ export function unsafeHtml(value: (() => string) | string | Signal<string> | Rea
       const slot = createReplaceableSlot();
 
       const stop = rawEffect(() => {
-        slot.clear();
-
         // Resolved live: an unsafeHtml() inside an each() item moves with the
         // item's range; the mount-time parent would be stale after a reorder.
         const parent = endMarker.parentNode;
 
-        if (!parent) return;
+        if (!parent) {
+          slot.clear();
 
-        slot.setNodes(parseHtml(src.value, parent, endMarker));
+          return;
+        }
+
+        slot.render(() => {
+          slot.setNodes(parseHtml(src.value, parent, endMarker));
+        });
       });
 
-      registerCleanup(() => stop.dispose());
-      registerCleanup(() => {
+      onCleanup(() => {
+        stop.dispose();
         slot.clear();
         endMarker.remove();
       });
     } else {
       parseHtml(value as string, initialParent, endMarker);
 
-      registerCleanup(() => endMarker.remove());
+      onCleanup(() => endMarker.remove());
     }
   });
 }

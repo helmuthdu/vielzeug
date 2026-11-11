@@ -3,9 +3,9 @@
  * applied directly to the component's host element or any target element.
  */
 
-import { isReactive } from '@vielzeug/ripple';
+import { effect, isReactive, onCleanup } from '@vielzeug/ripple';
 
-import { getHost, tryRegisterCleanup, watchEffect } from './runtime';
+import { getHost, hasSetupContext } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
 import {
   cssDeclarationName,
@@ -42,8 +42,8 @@ export type BindOptions = AddEventListenerOptions & {
    * Target element to bind to. Defaults to the host element when called
    * via `bind()`. Pass an explicit element to bind to any other element
    * (e.g. a slotted trigger or an internally-referenced child element).
-   * When a target is provided, cleanup is always auto-registered with the
-   * component scope if one is active.
+   * With a target, `bind()` also works outside setup (e.g. from an event
+   * handler); there, only the returned disposer stops it.
    */
   target?: Element;
 };
@@ -95,30 +95,29 @@ export const bind = (config: HostBindConfig, options?: BindOptions): (() => void
     for (const dispose of disposers) dispose();
   };
 
-  tryRegisterCleanup(cleanup);
+  if (hasSetupContext()) onCleanup(cleanup);
 
   return cleanup;
 };
 
 const toHostAttr = normalizeHostAttrKey;
 
+/** Run `fn` reactively; the returned disposer is the only owner callers need to track. */
+const reactive = (fn: () => void): (() => void) => {
+  const sub = effect(() => {
+    fn();
+    return undefined;
+  });
+
+  return () => sub.dispose();
+};
+
 const applyReactiveBinding = (
   value: HostBindingValue,
   updater: (next: string | number | boolean | null | undefined) => void,
 ): (() => void) | undefined => {
-  if (typeof value === 'function') {
-    return watchEffect(() => {
-      updater(value());
-      return undefined;
-    });
-  }
-
-  if (isReactive(value)) {
-    return watchEffect(() => {
-      updater(value.value);
-      return undefined;
-    });
-  }
+  if (typeof value === 'function') return reactive(() => updater(value()));
+  if (isReactive(value)) return reactive(() => updater(value.value));
 
   updater(value);
 };
@@ -156,7 +155,7 @@ function applyClassMap(
 
   let prev = new Set<string>();
 
-  const sub = watchEffect(() => {
+  return reactive(() => {
     const next = new Set<string>();
 
     for (const [cls, active] of Object.entries(getMap())) {
@@ -171,6 +170,4 @@ function applyClassMap(
     }
     prev = next;
   });
-
-  return sub;
 }

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "template listeners and per-render teardown register on the active ripple scope instead of a separate cleanup list",
+      "packageName": "@vielzeug/ore",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

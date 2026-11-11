@@ -10,36 +10,44 @@
  * top-level `setup()` body) call `onMounted`/`onCleanup`/`bind`/... directly,
  * with no context object to thread through every layer of a composable.
  */
-import { effect as _effect, type Cleanup, type Readable } from '@vielzeug/ripple';
+import {
+  effect as _effect,
+  type Cleanup,
+  createScope,
+  type Readable,
+  onCleanup as rippleOnCleanup,
+  type Scope,
+} from '@vielzeug/ripple';
 
 import { ORE_ERRORS, OreApiError } from './errors';
 import { listen as listenInternal } from './utils/dom';
 
 // ─── Runtime context ──────────────────────────────────────────────────────────
-// A single context object carries both the host element and mount callbacks,
-// eliminating two parallel globals that were always set together.
 
 export type OnMountedCallback = () => Cleanup | undefined;
 export type OnFormResetCallback = () => void;
 
+/**
+ * One component connection: everything `setup()` and its `onMounted` callbacks
+ * register, owned by `scope`. The same object stays active for the connection's
+ * whole lifetime, so identity-keyed caches (e.g. `inject()`) are per connection.
+ */
 export type RuntimeContext = {
-  element: HTMLElement;
-  formResetCallbacks: OnFormResetCallback[];
-  mountCallbacks: OnMountedCallback[];
+  readonly element: HTMLElement;
+  readonly formResetCallbacks: OnFormResetCallback[];
+  /** Queue drained by the mount microtask; nested `onMounted` calls append to it. */
+  readonly mountCallbacks: OnMountedCallback[];
+  readonly scope: Scope;
 };
 
 let currentContext: RuntimeContext | null = null;
 
-/**
- * @internal Create a fresh runtime context for a component element. The single
- * construction site for `RuntimeContext`: used by `BaseElement` (setup and
- * per-callback mount contexts) and by `testing/render-hook.ts`, so the test
- * harness can never silently desync from a new required field.
- */
+/** @internal Create the context for one component connection. */
 export const createRuntimeContext = (element: HTMLElement): RuntimeContext => ({
   element,
   formResetCallbacks: [],
   mountCallbacks: [],
+  scope: createScope(),
 });
 
 // ─── Pending work tracking ──────────────────────────────────────────────────
@@ -75,14 +83,14 @@ export const beginPendingWork = (): (() => void) => {
 /** @internal True while any tracked component work is in flight. Polled by `testing/flush()`. */
 export const hasPendingWork = (): boolean => pendingWork > 0;
 
-/** @internal Execute fn with a given runtime context active. */
+/** @internal Execute fn inside the context's scope with the context active. */
 export const runWithContext = <T>(ctx: RuntimeContext, fn: () => T): T => {
   const prev = currentContext;
 
   currentContext = ctx;
 
   try {
-    return fn();
+    return ctx.scope.run(fn);
   } finally {
     currentContext = prev;
   }
@@ -109,17 +117,16 @@ export const requireSetupContext = (api: string): RuntimeContext => {
  */
 export const getHost = (): HTMLElement => requireSetupContext('getHost').element;
 
-export const tryRegisterCleanup = (fn: Cleanup): boolean => {
-  if (!currentContext) return false;
+/** True while a component's setup (or one of its `onMounted` callbacks) is running. */
+export const hasSetupContext = (): boolean => currentContext !== null;
 
-  _effect(() => fn);
-
-  return true;
-};
-
-/** Registers cleanup work for component disconnect. */
+/**
+ * Registers cleanup work for component disconnect. The callback is owned by the
+ * component's ripple scope, so it runs when that scope is disposed.
+ */
 export const onCleanup = (fn: Cleanup): void => {
-  if (!tryRegisterCleanup(fn)) throw new OreApiError(`onCleanup: ${ORE_ERRORS.lifecycleOutsideSetup}`);
+  requireSetupContext('onCleanup');
+  rippleOnCleanup(fn);
 };
 
 /**
@@ -141,21 +148,21 @@ export const onFormReset = (fn: OnFormResetCallback): void => {
 };
 
 /**
- * Create a reactive effect scoped to the component lifecycle.
- * Automatically cleaned up on component disconnect.
- * Returns a stop function that disposes the effect immediately.
+ * Create a reactive effect owned by the current component: disposed on disconnect.
+ * Returns a stop function that disposes the effect immediately. Throws outside
+ * setup, where the effect would have no owner and live forever; use ripple's
+ * `effect()` for an explicitly owned effect elsewhere.
  *
  * Named `watchEffect` (not `watch`) to avoid shadowing `@vielzeug/ripple`'s
  * `watch(source, callback)`, which has different semantics (explicit source,
  * old/new value pair): the two are commonly imported in the same file.
  */
 export const watchEffect = (fn: () => Cleanup | undefined): (() => void) => {
+  requireSetupContext('watchEffect');
+
   const sub = _effect(fn);
-  const stop = (): void => sub.dispose();
 
-  tryRegisterCleanup(stop);
-
-  return stop;
+  return () => sub.dispose();
 };
 
 /**
@@ -171,6 +178,12 @@ export function onEvent<K extends keyof HTMLElementEventMap>(
 export function onEvent(
   target: EventTarget | null | undefined,
   event: string,
+  listener: (e: Event) => void,
+  options?: AddEventListenerOptions,
+): void;
+export function onEvent(
+  target: EventTarget | null | undefined,
+  event: string,
   listener: EventListener,
   options?: AddEventListenerOptions,
 ): void {
@@ -178,9 +191,7 @@ export function onEvent(
 
   if (!target) return;
 
-  const cleanup = listenInternal(target, event, listener, options);
-
-  if (!tryRegisterCleanup(cleanup)) cleanup();
+  rippleOnCleanup(listenInternal(target, event, listener, options));
 }
 
 /**
