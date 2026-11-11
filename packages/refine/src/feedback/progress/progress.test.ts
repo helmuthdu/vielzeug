@@ -272,6 +272,100 @@ describe('ore-progress', () => {
     });
   });
 
+  describe('Range (min)', () => {
+    it('scales the fill and aria across the [min, max] range', async () => {
+      fixture = await mount('ore-progress', { attrs: { max: '30', min: '10', value: '20' } });
+
+      expect(fixture.element.style.getPropertyValue('--_percent')).toBe('50%');
+
+      const track = fixture.query('[role="progressbar"]');
+
+      expect(track?.getAttribute('aria-valuemin')).toBe('10');
+      expect(track?.getAttribute('aria-valuemax')).toBe('30');
+      expect(track?.getAttribute('aria-valuenow')).toBe('20');
+    });
+
+    it('clamps values below min to 0% and clamps aria-valuenow to min', async () => {
+      fixture = await mount('ore-progress', { attrs: { max: '30', min: '10', value: '0' } });
+
+      expect(fixture.element.style.getPropertyValue('--_percent')).toBe('0%');
+      expect(fixture.query('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('10');
+    });
+
+    it('fills segments by the [min, max] ratio', async () => {
+      fixture = await mount('ore-progress', { attrs: { max: '10', min: '5', segments: '5', value: '8' } });
+
+      expect(fixture.queryAll('[part="segment"][data-filled]')).toHaveLength(3);
+    });
+  });
+
+  describe('Gauge', () => {
+    it('renders a half-circle arc driven by the value', async () => {
+      fixture = await mount('ore-progress', { attrs: { type: 'gauge', value: '50' } });
+
+      const half = Math.PI * 45;
+      const fill = fixture.query<HTMLElement>('.circle-fill');
+
+      expect(fixture.query('.circular-track-gauge')).toBeTruthy();
+      expect(fill?.getAttribute('stroke-dasharray')).toBe(`${half}px`);
+      expect(fill?.getAttribute('stroke-dashoffset')).toBe(`${half - 0.5 * half}px`);
+    });
+
+    it('exposes progressbar semantics on the gauge track', async () => {
+      fixture = await mount('ore-progress', { attrs: { label: 'Battery', type: 'gauge', value: '25' } });
+
+      const track = fixture.query('[role="progressbar"]');
+
+      expect(track?.getAttribute('aria-label')).toBe('Battery');
+      expect(track?.getAttribute('aria-valuenow')).toBe('25');
+    });
+  });
+
+  describe('Show value', () => {
+    it('shows the rounded percentage as the trailing label', async () => {
+      fixture = await mount('ore-progress', { attrs: { 'show-value': '', value: '40' } });
+
+      expect(fixture.query('.row-label')?.textContent?.trim()).toBe('40%');
+    });
+
+    it('shows the percentage in the header row alongside a title', async () => {
+      fixture = await mount('ore-progress', { attrs: { 'show-value': '', title: 'Uploading', value: '25' } });
+
+      expect(fixture.query('.header-label')?.textContent?.trim()).toBe('25%');
+    });
+
+    it('prefers an explicit label over the percentage', async () => {
+      fixture = await mount('ore-progress', { attrs: { label: 'Files', 'show-value': '', value: '40' } });
+
+      expect(fixture.query('.row-label')?.textContent?.trim()).toBe('Files');
+    });
+
+    it('shows the percentage inside a circular ring', async () => {
+      fixture = await mount('ore-progress', { attrs: { 'show-value': '', type: 'circular', value: '75' } });
+
+      expect(fixture.query('.circular-label')?.textContent?.trim()).toBe('75%');
+    });
+
+    it('shows the percentage in the floating chip and prefers floating-label', async () => {
+      fixture = await mount('ore-progress', { attrs: { 'show-value': '', value: '60' } });
+
+      expect(fixture.query('.floating-label')?.textContent?.trim()).toBe('60%');
+
+      fixture.element.setAttribute('floating-label', '60 pts');
+      await fixture.flush();
+
+      expect(fixture.query('.floating-label')?.textContent?.trim()).toBe('60 pts');
+    });
+
+    it('reflects floating-label-position for CSS placement', async () => {
+      fixture = await mount('ore-progress', {
+        attrs: { 'floating-label': '40%', 'floating-label-position': 'bottom', value: '40' },
+      });
+
+      expect(fixture.element.getAttribute('floating-label-position')).toBe('bottom');
+    });
+  });
+
   describe('Accessibility (axe)', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-progress', { attrs: { label: 'Loading', value: '50' } });

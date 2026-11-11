@@ -1,6 +1,6 @@
 # Progress
 
-A progress indicator for conveying operation completion. Supports a classic linear bar and a circular spinner, both with determinate (known value) and indeterminate (unknown duration) modes.
+A progress indicator for conveying operation completion. Supports a classic linear bar, a circular ring, a half-circle gauge, and a vertical bar, all with determinate (known value) and indeterminate (unknown duration) modes.
 
 For loading placeholders before progress can be determined, see [Skeleton](./skeleton.md).
 
@@ -78,15 +78,30 @@ Use `title` + `label` together to build a self-contained progress widget: the ti
 
 </ComponentPreview>
 
+## Show Value
+
+The `show-value` attribute renders the rounded percentage wherever the `label` would appear: the end label, the header row, centered inside the ring, or the floating chip. An explicit `label` (or `floating-label` for the chip) still wins, so `show-value` is the zero-formatting default and `label` the override.
+
+<ComponentPreview vertical>
+
+```html
+<ore-progress show-value value="40"></ore-progress>
+<ore-progress show-value title="Uploading files…" value="62"></ore-progress>
+<ore-progress show-value type="circular" color="primary" value="75"></ore-progress>
+```
+
+</ComponentPreview>
+
 ## Floating Label
 
-The `floating-label` attribute renders a chip **above the fill endpoint**, centered on the current progress position. The chip tracks the fill value as it changes. It is automatically hidden when `indeterminate` is set.
+The `floating-label` attribute renders a chip **above the fill endpoint**, centered on the current progress position. The chip tracks the fill value as it changes. It is automatically hidden when `indeterminate` is set. With `show-value` and no `floating-label`, the chip shows the percentage. Set `floating-label-position="bottom"` to place the chip below the track instead. The chip's text uses the theme's designed contrast ink for the fill color in both themes; override it with `--progress-floating-label-color` if you repaint `--progress-fill`.
 
 <ComponentPreview vertical>
 
 ```html
 <ore-progress value="40" floating-label="40%"></ore-progress>
 <ore-progress value="65" color="primary" floating-label="65 pts"></ore-progress>
+<ore-progress value="80" color="success" show-value floating-label-position="bottom"></ore-progress>
 ```
 
 </ComponentPreview>
@@ -152,6 +167,20 @@ Use `label` for the primary value text centered inside the ring, and `title` for
 
 </ComponentPreview>
 
+## Gauge
+
+Set `type="gauge"` for a half-circle ring that sweeps from 9 o'clock over the top to 3 o'clock — the classic dashboard gauge. Everything from the circular variant applies: `label`/`title` inside the ring, `show-value`, colors, sizes, and indeterminate mode. The layout box stays square like the circular variant; the arc occupies its top half.
+
+<ComponentPreview center>
+
+```html
+<ore-progress type="gauge" value="25" label="25%" title="CPU"></ore-progress>
+<ore-progress type="gauge" color="primary" show-value value="60"></ore-progress>
+<ore-progress type="gauge" color="error" show-value value="90"></ore-progress>
+```
+
+</ComponentPreview>
+
 ## Colors
 
 Use semantic `color` to reinforce state: `color="success"` when complete, `color="error"` on failure.
@@ -197,14 +226,15 @@ Three sizes that affect bar height (linear) or ring diameter (circular). Default
 
 </ComponentPreview>
 
-## Custom Max Value
+## Custom Range
 
-The default `max` is 100. Use `max` to track different units (e.g. steps, bytes).
+The default range is `0` to `max` (100). Set `min` and `max` to track any range (e.g. bytes already transferred, temperatures). Values outside the range clamp, and `aria-valuemin`/`aria-valuemax` reflect the bounds.
 
 <ComponentPreview vertical>
 
 ```html
 <ore-progress value="3" max="10" color="primary" title="Step 3 of 10" label="3 / 10"></ore-progress>
+<ore-progress value="512" min="256" max="1024" color="primary" label="512 MB of 1 GB"></ore-progress>
 <ore-progress type="circular" value="750" max="1000" color="success" label="750 MB of 1 GB"></ore-progress>
 ```
 
@@ -231,37 +261,41 @@ const interval = setInterval(() => {
 
 ### Attributes
 
-| Attribute        | Type                                                                      | Default    | Description                                                                                                                                                                                                                                              |
-| ---------------- | ------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `value`          | `number`                                                                  | `0`        | Current progress value (0 to `max`). Ignored when `indeterminate`.                                                                                                                                                                                       |
-| `max`            | `number`                                                                  | `100`      | Maximum value                                                                                                                                                                                                                                            |
-| `indeterminate`  | `boolean`                                                                 | `false`    | Show infinite animation when duration is unknown                                                                                                                                                                                                         |
-| `type`           | `'linear' \| 'circular'`                                                  | `'linear'` | Bar style                                                                                                                                                                                                                                                |
-| `color`          | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A        | Theme color for the fill                                                                                                                                                                                                                                 |
-| `size`           | `'sm' \| 'md' \| 'lg'`                                                    | N/A        | Bar height (linear) or circle diameter (circular)                                                                                                                                                                                                        |
-| `label`          | `string`                                                                  | N/A        | Visible text label and accessible name. **Linear** without `title`: rendered at bar end. **Linear** with `title`: moved to the header row. **Circular**: large text centered inside the ring. Falls back to `title`, then `"Progress"` for `aria-label`. |
-| `title`          | `string`                                                                  | N/A        | **Linear**: header text above the bar; moves `label` to the header row when combined. **Circular**: smaller text below the `label` inside the ring.                                                                                                      |
-| `floating-label` | `string`                                                                  | N/A        | Text for the floating chip above the fill endpoint (linear only). Hidden when `indeterminate`.                                                                                                                                                           |
-| `segments`       | `number`                                                                  | `0`        | Split the linear bar into this many discrete blocks; blocks up to `value / max` are filled. Ignored when `indeterminate` or vertical.                                                                                                                    |
-| `value-text`     | `string`                                                                  | N/A        | Human-readable value for screen readers (e.g. `"Step 2 of 5"`). Overrides the raw `aria-valuenow`.                                                                                                                                                       |
+| Attribute                 | Type                                                                      | Default    | Description                                                                                                                                                                                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value`                   | `number`                                                                  | `0`        | Current progress value; clamped to [`min`, `max`]. Ignored when `indeterminate`.                                                                                                                                                                               |
+| `min`                     | `number`                                                                  | `0`        | Range start; drives the fill ratio and `aria-valuemin`.                                                                                                                                                                                                        |
+| `max`                     | `number`                                                                  | `100`      | Range end; drives the fill ratio and `aria-valuemax`.                                                                                                                                                                                                          |
+| `indeterminate`           | `boolean`                                                                 | `false`    | Show infinite animation when duration is unknown                                                                                                                                                                                                               |
+| `type`                    | `'linear' \| 'circular' \| 'gauge' \| 'vertical'`                         | `'linear'` | Indicator style; `'gauge'` is the half-circle ring                                                                                                                                                                                                             |
+| `color`                   | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A        | Theme color for the fill                                                                                                                                                                                                                                       |
+| `size`                    | `'sm' \| 'md' \| 'lg'`                                                    | N/A        | Bar height (linear) or ring diameter (circular/gauge)                                                                                                                                                                                                          |
+| `label`                   | `string`                                                                  | N/A        | Visible text label and accessible name. **Linear** without `title`: rendered at bar end. **Linear** with `title`: moved to the header row. **Circular/gauge**: large text centered inside the ring. Falls back to `title`, then `"Progress"` for `aria-label`. |
+| `title`                   | `string`                                                                  | N/A        | **Linear**: header text above the bar; moves `label` to the header row when combined. **Circular/gauge**: smaller text below the `label` inside the ring.                                                                                                      |
+| `show-value`              | `boolean`                                                                 | `false`    | Show the rounded percentage wherever the label renders (end label, header row, inside the ring, floating chip). An explicit `label`/`floating-label` wins.                                                                                                     |
+| `floating-label`          | `string`                                                                  | N/A        | Text for the floating chip above the fill endpoint (linear only). Hidden when `indeterminate`.                                                                                                                                                                 |
+| `floating-label-position` | `'top' \| 'bottom'`                                                       | `'top'`    | Side of the track the floating chip sits on.                                                                                                                                                                                                                   |
+| `segments`                | `number`                                                                  | `0`        | Split the linear bar into this many discrete blocks; blocks up to the `(value − min) / (max − min)` ratio are filled. Ignored when `indeterminate` or vertical.                                                                                                |
+| `value-text`              | `string`                                                                  | N/A        | Human-readable value for screen readers (e.g. `"Step 2 of 5"`). Overrides the raw `aria-valuenow`.                                                                                                                                                             |
 
 ### CSS Custom Properties
 
-| Property                         | Description                                                   | Default                      |
-| -------------------------------- | ------------------------------------------------------------- | ---------------------------- |
-| `--progress-height`              | Linear bar height override                                    | Size-dependent               |
-| `--progress-track-bg`            | Track (unfilled background) color                             | `--color-contrast-200`       |
-| `--progress-fill`                | Fill bar / stroke color                                       | Theme-dependent              |
-| `--progress-radius`              | Linear bar border radius                                      | `var(--rounded-full)`        |
-| `--progress-circle-size`         | Circular ring diameter                                        | `6rem` (size-dependent)      |
-| `--progress-stroke-width`        | Circular stroke width                                         | Height-dependent             |
-| `--progress-circular-label-size` | Font size of the label inside the ring                        | `--text-xl` (size-dependent) |
-| `--progress-circular-title-size` | Font size of the title inside the ring                        | `--text-xs` (size-dependent) |
-| `--progress-label-gap`           | Gap between header/bar row and between bar and trailing label | `0.25rem`                    |
-| `--progress-segment-gap`         | Gap between blocks when `segments` is set                     | `var(--size-1)`              |
-| `--progress-title-color`         | Title text color                                              | `currentColor`               |
-| `--progress-label-color`         | Label text color                                              | `currentColor`               |
+| Property                          | Description                                                   | Default                      |
+| --------------------------------- | ------------------------------------------------------------- | ---------------------------- |
+| `--progress-height`               | Linear bar height override                                    | Size-dependent               |
+| `--progress-track-bg`             | Track (unfilled background) color                             | `--color-contrast-200`       |
+| `--progress-fill`                 | Fill bar / stroke color                                       | Theme-dependent              |
+| `--progress-radius`               | Linear bar border radius                                      | `var(--rounded-full)`        |
+| `--progress-circle-size`          | Circular/gauge ring diameter                                  | `6rem` (size-dependent)      |
+| `--progress-stroke-width`         | Circular/gauge ring thickness                                 | Size-dependent               |
+| `--progress-floating-label-color` | Floating chip text color                                      | Theme contrast ink           |
+| `--progress-circular-label-size`  | Font size of the label inside the ring                        | `--text-xl` (size-dependent) |
+| `--progress-circular-title-size`  | Font size of the title inside the ring                        | `--text-xs` (size-dependent) |
+| `--progress-label-gap`            | Gap between header/bar row and between bar and trailing label | `0.25rem`                    |
+| `--progress-segment-gap`          | Gap between blocks when `segments` is set                     | `var(--size-1)`              |
+| `--progress-title-color`          | Title text color                                              | `currentColor`               |
+| `--progress-label-color`          | Label text color                                              | `currentColor`               |
 
 ## Accessibility
 
-The progress component follows WAI-ARIA best practices. `role="progressbar"` is applied to the track element. `aria-valuenow` reflects the current `value` and is omitted when `indeterminate`. `aria-valuemin` is always `0`; `aria-valuemax` reflects `max`. `aria-label` resolves in priority order: `label` → `title` → `"Progress"`. Use `value-text` via the `value-text` attribute to provide a human-readable override for screen readers (e.g. `"Step 3 of 10"`), which sets `aria-valuetext`. The inner `.circular-inner` overlay (label + title) is positioned with `position: absolute; inset: 0` so the SVG ring renders independently; text never spins even when `indeterminate` is active. Animations respect `prefers-reduced-motion`: the sliding/spinning animation is disabled and a static representation is shown.
+The progress component follows WAI-ARIA best practices. `role="progressbar"` is applied to the track element. `aria-valuenow` reflects the current `value` clamped to [`min`, `max`] and is omitted when `indeterminate`. `aria-valuemin` and `aria-valuemax` reflect `min` and `max`. `aria-label` resolves in priority order: `label` → `title` → `"Progress"`. Use `value-text` via the `value-text` attribute to provide a human-readable override for screen readers (e.g. `"Step 3 of 10"`), which sets `aria-valuetext`. The inner `.circular-inner` overlay (label + title) is positioned with `position: absolute; inset: 0` so the SVG ring renders independently; text never spins even when `indeterminate` is active. Animations respect `prefers-reduced-motion`: the sliding/spinning animation is disabled and a static representation is shown.

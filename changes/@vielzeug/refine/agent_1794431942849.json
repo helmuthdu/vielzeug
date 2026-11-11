@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "float progress chip in the theme contrast ink instead of hardcoded white",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -20,7 +20,9 @@ export type OreProgressProps = {
   label?: string;
   /** Maximum value. Defaults to 100. */
   max?: number;
-  /** Split the linear bar into this many discrete blocks; blocks up to `value / max` are filled. Ignored when `indeterminate` or circular. */
+  /** Range start used for the fill ratio and `aria-valuemin`. Defaults to 0. */
+  min?: number;
+  /** Split the linear bar into this many discrete blocks; blocks up to `(value − min) / (max − min)` are filled. Ignored when `indeterminate` or circular. */
   segments?: number;
   /** Size variant controlling bar height */
   size?: ComponentSize;
@@ -28,10 +30,14 @@ export type OreProgressProps = {
    * - Linear: displayed as a header above the bar; moves `label` into the header row.
    * - Circular: smaller text displayed below the `label` inside the ring. */
   title?: string;
-  /** 'linear' (default), 'circular', or 'vertical' */
-  type?: 'linear' | 'circular' | 'vertical';
-  /** Current progress value (0 to `max`). Ignored when `indeterminate`. */
+  /** 'linear' (default), 'circular', 'gauge' (half-circle ring), or 'vertical' */
+  type?: 'linear' | 'circular' | 'gauge' | 'vertical';
+  /** Current progress value; clamped to [`min`, `max`]. Ignored when `indeterminate`. */
   value?: number;
+  /** Show the rounded percentage (e.g. "40%") wherever the label renders: end label, header row, inside the ring, floating chip. An explicit `label` wins; the chip prefers `floating-label`. */
+  'show-value'?: boolean;
+  /** Side of the track the floating chip sits on. Defaults to 'top'. */
+  'floating-label-position'?: 'top' | 'bottom';
   /** Human-readable value text for screen readers (e.g. "Step 2 of 5", "75%"). Overrides the raw aria-valuenow when set. */
   'value-text'?: string;
 };
@@ -42,27 +48,31 @@ export type OreProgressProps = {
  *
  * @element ore-progress
  *
- * @attr {number} value   - Current value (0–max). Defaults to 0.
- * @attr {number} max     - Maximum value. Defaults to 100.
- * @attr {boolean} indeterminate - Show infinite animation (ignores value/max).
+ * @attr {number} value   - Current value; clamped to [min, max]. Defaults to 0.
+ * @attr {number} min     - Range start. Defaults to 0.
+ * @attr {number} max     - Range end. Defaults to 100.
+ * @attr {boolean} indeterminate - Show infinite animation (ignores value/min/max).
  * @attr {string} color   - Theme color: 'primary' | 'success' | 'warning' | 'error' | …
  * @attr {string} size    - Bar height/width: 'sm' | 'md' | 'lg'
- * @attr {string} type   - 'linear' (default) | 'circular' | 'vertical'
+ * @attr {string} type   - 'linear' (default) | 'circular' | 'gauge' (half-circle) | 'vertical'
  * @attr {number} segments - Split the linear bar into discrete blocks (tracks, steps, stages)
- *
- * @cssprop --progress-width  - Bar width override (vertical only)
- * @attr {string} label          - Visible text label + accessible name. Linear: at bar end (or header row with title). Circular: large text centered inside the ring.
- * @attr {string} title          - Title text. Linear: header above the bar (moves label to header row). Circular: smaller text below the label inside the ring.
+ * @attr {string} label          - Visible text label + accessible name. Linear: at bar end (or header row with title). Circular/gauge: large text centered inside the ring.
+ * @attr {string} title          - Title text. Linear: header above the bar (moves label to header row). Circular/gauge: smaller text below the label inside the ring.
+ * @attr {boolean} show-value    - Show the rounded percentage where the label renders (end label, header, inside the ring, floating chip). An explicit `label` (or `floating-label` for the chip) wins.
  * @attr {string} floating-label - Floating chip centered above the fill endpoint (linear only); hidden when indeterminate.
+ * @attr {string} floating-label-position - Chip side: 'top' (default) | 'bottom'.
  *
+ * @cssprop --progress-floating-label-color - Floating chip text color (default: the theme's contrast ink for the fill color)
  * @cssprop --progress-height               - Bar height override
+ * @cssprop --progress-width                - Bar width override (vertical only)
  * @cssprop --progress-track-bg             - Track background color
  * @cssprop --progress-fill                 - Fill bar color
  * @cssprop --progress-radius               - Border radius
  * @cssprop --progress-label-gap            - Gap between header/bar row and between bar and trailing label (default 0.25 rem)
  * @cssprop --progress-title-color          - Title text color (defaults to currentColor)
  * @cssprop --progress-label-color          - Label text color (defaults to currentColor)
- * @cssprop --progress-circle-size          - Circular indicator diameter (default 6rem)
+ * @cssprop --progress-circle-size          - Circular/gauge indicator diameter (default 6rem)
+ * @cssprop --progress-stroke-width         - Circular/gauge ring thickness (default scales with size)
  * @cssprop --progress-circular-label-size  - Font size of the label inside the ring (default --text-xl)
  * @cssprop --progress-circular-title-size  - Font size of the title inside the ring (default --text-xs)
  * @cssprop --progress-segment-gap           - Gap between blocks when `segments` is set (default --size-1)
@@ -83,12 +93,15 @@ define<OreProgressProps>(PROGRESS_TAG, {
     ...themableBundle,
     ...sizableBundle,
     'floating-label': prop.string(),
+    'floating-label-position': prop.oneOf(['top', 'bottom'] as const, 'top'),
     indeterminate: prop.bool(false),
     label: prop.string(),
     max: prop.number(100),
+    min: prop.number(0),
     segments: prop.number(0),
+    'show-value': prop.bool(false),
     title: prop.string(),
-    type: prop.oneOf(['linear', 'circular', 'vertical'] as const, 'linear'),
+    type: prop.oneOf(['linear', 'circular', 'vertical', 'gauge'] as const, 'linear'),
     value: prop.number(0),
     'value-text': prop.string(),
   },
@@ -101,34 +114,47 @@ define<OreProgressProps>(PROGRESS_TAG, {
     const RADIUS = 45;
     const CIRC = 2 * Math.PI * RADIUS; // ~282.7
 
-    const percent = computed(() => {
-      const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
-      const m = Math.max(1, Number(props.max.value));
+    /** Progress fraction 0..1 across the [min, max] range; out-of-range values clamp. */
+    const ratio = computed(() => {
+      const min = Number(props.min.value);
+      const max = Number(props.max.value);
+      const range = max - min;
+      if (!(range > 0)) return 0;
+      const v = Math.min(Math.max(Number(props.value.value), min), max);
 
-      return `${(v / m) * 100}%`;
+      return Number.isNaN(v) ? 0 : (v - min) / range;
     });
 
-    const dashoffset = computed(() => {
-      const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
-      const m = Math.max(1, Number(props.max.value));
+    const percent = computed(() => `${ratio.value * 100}%`);
 
-      return CIRC - (v / m) * CIRC;
-    });
+    /** Rounded percentage text (e.g. "40%") for [show-value]. */
+    const percentText = computed(() => `${Math.round(ratio.value * 100)}%`);
 
-    const ariaValueNow = () => (props.indeterminate.value ? null : String(props.value.value));
+    /** Label slot text: explicit label wins, else the percentage when [show-value]. */
+    const displayLabel = computed(() => props.label.value ?? (props['show-value'].value ? percentText.value : ''));
+
+    /** Floating chip text: explicit floating-label wins, else the percentage when [show-value]. */
+    const floatingText = computed(
+      () => props['floating-label'].value ?? (props['show-value'].value ? percentText.value : ''),
+    );
+
+    const isGauge = computed(() => props.type.value === 'gauge');
+    /** Half the circumference for the 180° gauge arc, full circumference otherwise. */
+    const dashTotal = computed(() => (isGauge.value ? Math.PI * RADIUS : CIRC));
+    const dashoffset = computed(() => dashTotal.value - ratio.value * dashTotal.value);
+
+    const ariaValueNow = () =>
+      props.indeterminate.value
+        ? null
+        : String(Math.min(Math.max(Number(props.value.value), Number(props.min.value)), Number(props.max.value)));
     const ariaLabel = () => props.label.value ?? props.title.value ?? 'Progress';
-    const circularStyle = styleMap({ '--_circ': `${CIRC}px` });
-    const strokeDasharray = () => (props.indeterminate.value ? undefined : `${CIRC}px`);
+    const circularStyle = styleMap({ '--_circ': () => `${dashTotal.value}px` });
+    const strokeDasharray = () => (props.indeterminate.value ? undefined : `${dashTotal.value}px`);
     const strokeDashoffset = () => (props.indeterminate.value ? undefined : `${dashoffset.value}px`);
     const isVertical = computed(() => props.type.value === 'vertical');
     const segmentCount = computed(() => Math.max(0, Math.floor(Number(props.segments.value) || 0)));
     const isSegmented = computed(() => segmentCount.value > 0 && !props.indeterminate.value && !isVertical.value);
-    const filledSegments = computed(() => {
-      const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
-      const m = Math.max(1, Number(props.max.value));
-
-      return Math.round((v / m) * segmentCount.value);
-    });
+    const filledSegments = computed(() => Math.round(ratio.value * segmentCount.value));
     const segmentStyle = styleMap({ '--_segments': () => String(segmentCount.value) });
     const linearFillStyle = styleMap({
       height: () => (!props.indeterminate.value && isVertical.value ? percent.value : null),
@@ -141,10 +167,10 @@ define<OreProgressProps>(PROGRESS_TAG, {
 
     const circularTemplate = () => html`
       <div
-        class="circular-track"
+        class=${() => `circular-track${isGauge.value ? ' circular-track-gauge' : ''}`}
         role="progressbar"
         aria-valuenow="${ariaValueNow}"
-        aria-valuemin="0"
+        aria-valuemin="${props.min}"
         aria-valuemax="${props.max}"
         aria-label="${ariaLabel}"
         aria-valuetext="${props['value-text']}"
@@ -160,7 +186,7 @@ define<OreProgressProps>(PROGRESS_TAG, {
             stroke-dashoffset="${strokeDashoffset}"></circle>
         </svg>
         <div class="circular-inner">
-          <span class="circular-label">${() => props.label.value ?? ''}</span>
+          <span class="circular-label">${() => displayLabel.value}</span>
           <span class="circular-title">${() => props.title.value ?? ''}</span>
         </div>
       </div>
@@ -170,7 +196,7 @@ define<OreProgressProps>(PROGRESS_TAG, {
       <div class="wrapper">
         <div class="header">
           <span class="progress-title">${() => props.title.value ?? ''}</span>
-          <span class="end-label header-label">${() => props.label.value ?? ''}</span>
+          <span class="end-label header-label">${() => displayLabel.value}</span>
         </div>
         <div class=${() => `bar-row${isVertical.value ? ' bar-row-vertical' : ''}`}>
           <div class="track-outer">
@@ -178,7 +204,7 @@ define<OreProgressProps>(PROGRESS_TAG, {
               class=${() => `track${isSegmented.value ? ' track-segmented' : ''}`}
               role="progressbar"
               aria-valuenow="${ariaValueNow}"
-              aria-valuemin="0"
+              aria-valuemin="${props.min}"
               aria-valuemax="${props.max}"
               aria-label="${ariaLabel}"
               aria-valuetext="${props['value-text']}"
@@ -201,17 +227,17 @@ define<OreProgressProps>(PROGRESS_TAG, {
             ${() =>
               !isVertical.value
                 ? html`
-                    <span class="floating-label">${props['floating-label']}</span>
+                    <span class="floating-label">${() => floatingText.value}</span>
                   `
                 : null}
           </div>
-          <span class="end-label row-label">${() => props.label.value ?? ''}</span>
+          <span class="end-label row-label">${() => displayLabel.value}</span>
         </div>
       </div>
     `;
 
     return html`
-      ${() => (props.type.value === 'circular' ? circularTemplate() : barTemplate())}
+      ${() => (props.type.value === 'circular' || props.type.value === 'gauge' ? circularTemplate() : barTemplate())}
     `;
   },
 

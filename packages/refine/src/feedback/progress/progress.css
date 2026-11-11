@@ -212,12 +212,12 @@
     color: var(--progress-title-color, currentColor);
   }
 
-  /* Label inside the header ─ only when both [title] and [label] are set */
+  /* Label inside the header ─ only when [title] plus [label] or [show-value] are set */
   .header-label {
     display: none;
   }
 
-  :host([title][label]) .header-label {
+  :host([title]:is([label], [show-value])) .header-label {
     display: inline;
   }
 
@@ -227,7 +227,7 @@
     display: contents;
   }
 
-  :host([label]:not([title])) .bar-row {
+  :host(:is([label], [show-value]):not([title])) .bar-row {
     display: flex;
     gap: var(--progress-label-gap, var(--space-2, 0.5rem));
     align-items: center;
@@ -240,7 +240,7 @@
     width: 100%;
   }
 
-  :host([label]:not([title])) .track-outer {
+  :host(:is([label], [show-value]):not([title])) .track-outer {
     flex: 1 1 0%;
     width: auto;
     min-width: 0;
@@ -255,12 +255,12 @@
     white-space: nowrap;
   }
 
-  /* Trailing end label ─ shown only when [label] is present without [title] */
+  /* Trailing end label ─ shown when [label] or [show-value] is present without [title] */
   .row-label {
     display: none;
   }
 
-  :host([label]:not([title])) .row-label {
+  :host(:is([label], [show-value]):not([title])) .row-label {
     display: inline;
   }
 
@@ -277,7 +277,10 @@
     font-size: var(--text-xs, 0.75rem);
     font-weight: var(--font-weight-medium, 500);
     line-height: 1;
-    color: var(--color-white, #fff);
+    /* The designed contrast ink for the fill's base color, per theme —
+       white-on-base fails on the lighter dark-theme bases and on bright
+       colors like warning even in light theme. */
+    color: var(--progress-floating-label-color, var(--_theme-contrast, var(--color-white, #fff)));
     white-space: nowrap;
     pointer-events: none;
     user-select: none;
@@ -286,13 +289,23 @@
     transform: translateX(-50%);
   }
 
-  :host([floating-label]:not([indeterminate])) .floating-label {
+  :host([floating-label-position='bottom']) .floating-label {
+    top: calc(100% + var(--space-1, 0.25rem));
+    bottom: auto;
+  }
+
+  :host(:is([floating-label], [show-value]):not([indeterminate])) .floating-label {
     display: block;
   }
 
-  /* Reserve vertical space above the track so the chip does not clip */
-  :host([floating-label]:not([indeterminate])) .wrapper {
+  /* Reserve vertical space on the chip side so it does not clip */
+  :host(:is([floating-label], [show-value]):not([indeterminate])) .wrapper {
     padding-top: calc(var(--text-xs, 0.75rem) + var(--space-1, 0.25rem) * 3);
+  }
+
+  :host([floating-label-position='bottom']:is([floating-label], [show-value]):not([indeterminate])) .wrapper {
+    padding-top: 0;
+    padding-bottom: calc(var(--text-xs, 0.75rem) + var(--space-1, 0.25rem) * 3);
   }
 
   /* ========================================
@@ -313,6 +326,11 @@
     height: 100%;
     overflow: visible;
     transform: rotate(-90deg);
+  }
+
+  /* Gauge: the arc spans the top half only, starting at 9 o'clock */
+  .circular-track-gauge svg {
+    transform: rotate(-180deg);
   }
 
   /* Inner overlay: label + title stacked and centered inside the ring */
