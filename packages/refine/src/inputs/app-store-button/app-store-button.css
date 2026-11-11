@@ -1,0 +1,91 @@
+@layer refine.base {
+  :host {
+    --_filled-bg: var(--app-store-button-filled-bg, var(--color-contrast-900));
+    --_filled-color: var(--app-store-button-filled-color, var(--color-contrast-50));
+    --_filled-hover-bg: var(--app-store-button-filled-hover-bg, var(--color-contrast-800));
+    --_outline-color: var(--app-store-button-outline-color, var(--text-color-heading));
+    --_outline-border-color: var(--app-store-button-outline-border-color, var(--color-neutral-border));
+    --_outline-hover-bg: var(--app-store-button-outline-hover-bg, var(--color-neutral-backdrop));
+    --_radius: var(--app-store-button-radius, var(--rounded-lg));
+
+    /* The md tier of sizeVariantMixin emits these; re-declaring the defaults on the
+       host keeps them from inheriting a `--_` value an ancestor set for itself
+       (see ore-button's identical note). */
+    --_padding: var(--size-2) var(--size-4);
+    --_height: var(--size-10);
+    --_gap: var(--size-2);
+    --_icon-size: var(--size-6);
+    --_font-size: var(--text-base);
+    --_line-height: var(--leading-none);
+
+    display: inline-block;
+  }
+
+  .badge {
+    box-sizing: border-box;
+    display: inline-flex;
+    gap: var(--_gap);
+    align-items: center;
+    block-size: var(--_height);
+    padding: var(--_padding);
+    color: var(--_filled-color);
+    white-space: nowrap;
+    text-decoration: none;
+    user-select: none;
+    background: var(--_filled-bg);
+    border: var(--border) solid transparent;
+    border-radius: var(--_radius);
+  }
+
+  a.badge {
+    cursor: pointer;
+  }
+
+  :host([variant='outline']) .badge {
+    color: var(--_outline-color);
+    background: transparent;
+    border-color: var(--_outline-border-color);
+  }
+
+  .badge:hover {
+    background: var(--_filled-hover-bg);
+  }
+
+  :host([variant='outline']) .badge:hover {
+    background: var(--_outline-hover-bg);
+  }
+
+  .badge:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .logo svg {
+    display: block;
+    flex: none;
+    inline-size: var(--_icon-size);
+    block-size: var(--_icon-size);
+    fill: currentColor;
+  }
+
+  .labels {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .eyebrow {
+    font-size: var(--text-2xs);
+    line-height: var(--leading-none);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    opacity: var(--app-store-button-eyebrow-opacity, 0.85);
+  }
+
+  .store {
+    font-size: var(--_font-size);
+    font-weight: var(--font-semibold);
+    line-height: var(--_line-height);
+  }
+}

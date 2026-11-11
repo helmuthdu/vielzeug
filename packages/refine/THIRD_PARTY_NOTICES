@@ -114,3 +114,20 @@ licenses or are distributed under the Apache 2.0 license.
 
 # Code: MIT (https://opensource.org/licenses/MIT)
 The MIT license applies to all non-font and non-icon files.
+
+---
+
+Simple Icons (used for the `ore-app-store-button` store logos)
+
+CC0 1.0 Universal (CC0 1.0) - Public Domain Dedication
+
+https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+The Apple, Google Play, and AppGallery logo path data in
+src/inputs/app-store-button/app-store-button.ts is derived from the
+simple-icons project (https://github.com/simple-icons/simple-icons),
+released into the public domain under CC0 1.0. To the extent possible
+under law, simple-icons waives all copyright-related rights in the icon
+path data. Store names and marks remain trademarks of their respective
+owners; the badge renders them for the purpose of linking to the
+corresponding store listings.

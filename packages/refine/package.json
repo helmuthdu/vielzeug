@@ -136,6 +136,11 @@
       "require": "./dist/alert.cjs",
       "types": "./dist/feedback/alert/alert.d.ts"
     },
+    "./app-store-button": {
+      "import": "./dist/app-store-button.js",
+      "require": "./dist/app-store-button.cjs",
+      "types": "./dist/inputs/app-store-button/app-store-button.d.ts"
+    },
     "./avatar": {
       "import": "./dist/avatar.js",
       "require": "./dist/avatar.cjs",
@@ -591,6 +596,9 @@
       ],
       "alert": [
         "dist/feedback/alert/alert.d.ts"
+      ],
+      "app-store-button": [
+        "dist/inputs/app-store-button/app-store-button.d.ts"
       ],
       "avatar": [
         "dist/content/avatar/avatar.d.ts"

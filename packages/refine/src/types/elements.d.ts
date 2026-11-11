@@ -59,6 +59,7 @@ import type { OreSkeletonProps } from '../feedback/skeleton/skeleton';
 import type { OreStateEvents, OreStateProps } from '../feedback/state/state';
 import type { OreToastEvents, OreToastProps } from '../feedback/toast/toast';
 import type { OreTypingIndicatorProps } from '../feedback/typing-indicator/typing-indicator';
+import type { OreAppStoreButtonProps } from '../inputs/app-store-button/app-store-button';
 import type { OreButtonProps } from '../inputs/button/button';
 import type { OreButtonGroupEvents, OreButtonGroupProps } from '../inputs/button-group/button-group';
 import type { OreCalendarEvents, OreCalendarProps } from '../inputs/calendar/calendar';
@@ -133,6 +134,8 @@ export interface RefineElementMap {
   'ore-accordion-item': HTMLElement & OreAccordionItemProps & AddEventListeners<OreAccordionItemEvents>;
   // feedback
   'ore-alert': HTMLElement & OreAlertProps & AddEventListeners<OreAlertEvents>;
+  // inputs
+  'ore-app-store-button': HTMLElement & OreAppStoreButtonProps;
   // content
   'ore-avatar': HTMLElement & OreAvatarProps;
   'ore-avatar-group': HTMLElement & OreAvatarGroupProps;
@@ -141,7 +144,6 @@ export interface RefineElementMap {
   'ore-box': HTMLElement & OreBoxProps;
   'ore-breadcrumb': HTMLElement & OreBreadcrumbProps;
   'ore-breadcrumb-item': HTMLElement & OreBreadcrumbItemProps;
-  // inputs
   'ore-button': HTMLElement & OreButtonProps;
   'ore-button-group': HTMLElement & OreButtonGroupProps & AddEventListeners<OreButtonGroupEvents>;
   'ore-calendar': HTMLElement & OreCalendarProps & AddEventListeners<OreCalendarEvents>;

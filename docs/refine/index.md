@@ -10,6 +10,7 @@ exports:
     ore-accordion,
     ore-accordion-item,
     ore-alert,
+    ore-app-store-button,
     ore-avatar,
     ore-avatar-group,
     ore-badge,
@@ -237,7 +238,7 @@ Each entry below is a component with its own documentation page and registration
 
 **Feedback:** `ore-alert`, `ore-badge`, `ore-chip`, `ore-cookie-banner`, `ore-password-strength`, `ore-progress`, `ore-pull-to-refresh`, `ore-skeleton`, `ore-state`, `ore-toast`, `ore-typing-indicator`
 
-**Inputs:** `ore-button`, `ore-calendar`, `ore-checkbox`, `ore-color-picker`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-query-bar`, `ore-radio`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
+**Inputs:** `ore-app-store-button`, `ore-button`, `ore-calendar`, `ore-checkbox`, `ore-color-picker`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-query-bar`, `ore-radio`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
 
 **Layout:** `ore-box`, `ore-dock`, `ore-grid`, `ore-navbar`, `ore-separator`, `ore-sidebar`
 

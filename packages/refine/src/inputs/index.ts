@@ -1,4 +1,16 @@
 export type { BaseFormProps, SelectableFieldProps, TextFieldProps } from '../shared';
+export type {
+  AppStore,
+  AppStoreButtonSize,
+  AppStoreButtonVariant,
+  OreAppStoreButtonProps,
+} from './app-store-button/app-store-button';
+export {
+  APP_STORE_BUTTON_SIZES,
+  APP_STORE_BUTTON_TAG,
+  APP_STORE_BUTTON_VARIANTS,
+  APP_STORES,
+} from './app-store-button/app-store-button';
 export type { OreButtonProps } from './button/button';
 export { BUTTON_TAG } from './button/button';
 export type { ButtonGroupContext, OreButtonGroupEvents, OreButtonGroupProps } from './button-group/button-group';

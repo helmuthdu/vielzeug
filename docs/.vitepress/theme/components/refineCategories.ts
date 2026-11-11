@@ -76,6 +76,7 @@ export const REFINE_CATEGORIES: RefineCategory[] = [
   },
   {
     components: [
+      'app-store-button',
       'button',
       'calendar',
       'checkbox',
