@@ -1,7 +1,21 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 11 Nov 2026 18:02:30 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Nov 2026 21:47:10 GMT and should not be manually modified.
 
+## 26.11.12
+
+Wed, 11 Nov 2026 21:47:10 GMT
+
+### Minor changes
+
+- add `gauge` type, `min` range, `show-value` percentage display, and `floating-label-position` to `ore-progress`
+- add ore-app-store-button app-store download badge
+- add `docked`, `slim`, and `--alert-max-width` to `ore-alert`: native site-banner modes with composed recipes
+
+### Patches
+
+- invert slotted ghost/text action ink on solid `ore-alert` surfaces so banner actions stay legible
+- float progress chip in the theme contrast ink instead of hardcoded white
 ## 26.11.11
 
 Wed, 11 Nov 2026 18:02:30 GMT

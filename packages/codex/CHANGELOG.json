@@ -5,6 +5,20 @@
         "patch": [
           {
             "author": "agent@vielzeug",
+            "comment": "chore(codex): refresh bundled docs data",
+            "commit": "55ebcfdeb6b3bf61066c3beb82c32a8f538c690f"
+          }
+        ]
+      },
+      "date": "Wed, 11 Nov 2026 21:47:10 GMT",
+      "tag": "@vielzeug/codex_v26.11.12",
+      "version": "26.11.12"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
             "comment": "refine-list-components now returns only tag names and descriptions; skill lookup guidance favors smallest-source lookups",
             "commit": "6c4b1d1b53e55781be987cb527d9ed7f8d94124d"
           }

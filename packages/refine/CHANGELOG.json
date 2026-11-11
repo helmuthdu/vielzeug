@@ -2,6 +2,42 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "add `gauge` type, `min` range, `show-value` percentage display, and `floating-label-position` to `ore-progress`",
+            "commit": "55ebcfdeb6b3bf61066c3beb82c32a8f538c690f"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "add ore-app-store-button app-store download badge",
+            "commit": "55ebcfdeb6b3bf61066c3beb82c32a8f538c690f"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "add `docked`, `slim`, and `--alert-max-width` to `ore-alert`: native site-banner modes with composed recipes",
+            "commit": "55ebcfdeb6b3bf61066c3beb82c32a8f538c690f"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "invert slotted ghost/text action ink on solid `ore-alert` surfaces so banner actions stay legible",
+            "commit": "55ebcfdeb6b3bf61066c3beb82c32a8f538c690f"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "float progress chip in the theme contrast ink instead of hardcoded white",
+            "commit": "55ebcfdeb6b3bf61066c3beb82c32a8f538c690f"
+          }
+        ]
+      },
+      "date": "Wed, 11 Nov 2026 21:47:10 GMT",
+      "tag": "@vielzeug/refine_v26.11.12",
+      "version": "26.11.12"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

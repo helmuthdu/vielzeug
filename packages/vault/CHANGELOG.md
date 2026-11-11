@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/vault
 
-This log was last generated on Wed, 11 Nov 2026 18:02:30 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Nov 2026 21:47:10 GMT and should not be manually modified.
 
+## 26.11.12
+
+Wed, 11 Nov 2026 21:47:10 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.11
 
 Wed, 11 Nov 2026 18:02:30 GMT
