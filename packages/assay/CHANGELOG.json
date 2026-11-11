@@ -6,6 +6,20 @@
           {
             "author": "release-train",
             "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "6c4b1d1b53e55781be987cb527d9ed7f8d94124d"
+          }
+        ]
+      },
+      "date": "Wed, 11 Nov 2026 18:02:30 GMT",
+      "tag": "@vielzeug/assay_v26.11.11",
+      "version": "26.11.11"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "59ac9fa200f4f98e22ebd18ce5b410a6f335b71e"
           }
         ]

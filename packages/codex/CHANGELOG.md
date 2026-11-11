@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Wed, 11 Nov 2026 13:20:56 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Nov 2026 18:02:30 GMT and should not be manually modified.
 
+## 26.11.11
+
+Wed, 11 Nov 2026 18:02:30 GMT
+
+### Patches
+
+- refine-list-components now returns only tag names and descriptions; skill lookup guidance favors smallest-source lookups
 ## 26.11.10
 
 Wed, 11 Nov 2026 13:20:56 GMT
