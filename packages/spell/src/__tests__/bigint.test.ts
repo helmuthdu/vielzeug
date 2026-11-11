@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
 import { s } from '../s';
 
@@ -58,6 +58,7 @@ describe('BigIntSchema', () => {
   test('multipleOf()', () => {
     expect(s.bigint().multipleOf(3n).parse(9n)).toBe(9n);
     expect(s.bigint().multipleOf(3n).safeParse(10n).success).toBe(false);
+    expect(s.bigint().multipleOf(0n).safeParse(5n).success).toBe(false);
   });
 
   test('optional() and nullable()', () => {
@@ -65,23 +66,14 @@ describe('BigIntSchema', () => {
     expect(s.bigint().nullable().parse(null)).toBeNull();
   });
 
-  describe('definition(): constraint warning', () => {
-    test('warns when bigint has constraints (they are not serializable)', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      s.bigint().min(1n).definition();
-
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('definition(): this bigint schema has constraints'));
-      warnSpy.mockRestore();
-    });
-
-    test('does not warn when bigint has no constraints', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      s.bigint().definition();
-
-      expect(warnSpy).not.toHaveBeenCalled();
-      warnSpy.mockRestore();
+  describe('definition()', () => {
+    test('includes bigint bounds', () => {
+      expect(s.bigint().min(1n).max(10n).multipleOf(2n).definition()).toEqual({
+        kind: 'bigint',
+        maximum: 10n,
+        minimum: 1n,
+        multipleOf: 2n,
+      });
     });
   });
 

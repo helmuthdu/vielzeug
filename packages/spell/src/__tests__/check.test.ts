@@ -37,7 +37,9 @@ describe('explicit checks', () => {
 
     const parseSync = schema.parse as unknown as (value: unknown) => unknown;
 
-    expect(() => parseSync.call(schema, 'value')).toThrow('cannot evaluate async checks');
+    expect(() => parseSync.call(schema, 'value')).toThrow(
+      'Schema contains async checks; use parseAsync() or safeParseAsync().',
+    );
   });
 
   it('checkAsync() awaits asynchronous domain rules', async () => {

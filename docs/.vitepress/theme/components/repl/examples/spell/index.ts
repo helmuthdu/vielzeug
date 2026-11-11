@@ -9,8 +9,8 @@ import { formatValidatorsExample } from './format-validators';
 import { messagesOverrideExample } from './locale-configure-reset';
 import { nestedObjectsExample } from './nested-objects';
 import { numberValidationExample } from './number-validation';
+import { objectCompositionExample } from './object-composition';
 import { objectDefaultsExample } from './object-defaults';
-import { objectMergeExample } from './object-merge';
 import { optionalNullableExample } from './optional-nullable';
 import { refinementsExample } from './refinements';
 import { stringValidationExample } from './string-validation';
@@ -28,8 +28,8 @@ export const spellExamples = {
   'messages-override': messagesOverrideExample,
   'nested-objects': nestedObjectsExample,
   'number-validation': numberValidationExample,
+  'object-composition': objectCompositionExample,
   'object-defaults': objectDefaultsExample,
-  'object-merge': objectMergeExample,
   'optional-nullable': optionalNullableExample,
   refinements: refinementsExample,
   'string-validation': stringValidationExample,

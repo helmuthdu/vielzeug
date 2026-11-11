@@ -48,7 +48,7 @@ describe('optional nullable nullish required', () => {
       .optional()
       .default('fallback')
       .check((value) => value !== 'bad' || 'Bad')
-      .label('Field')
+      .describe('Field')
       .nullable();
 
     expect(schema.description).toBe('Field');
@@ -62,18 +62,19 @@ describe('optional nullable nullish required', () => {
     if (!result.success) expect(result.error.issues[0]?.message).toBe('Bad');
   });
 
-  it('required() preserves wrapper defaults, labels, and checks across mode merges', () => {
+  it('required() drops optional and default but keeps description and checks', () => {
     const schema = s
       .number()
       .optional()
       .default(42)
       .check((value) => value !== 0 || 'Zero')
-      .label('Answer')
+      .describe('Answer')
       .required()
       .nullable();
 
     expect(schema.description).toBe('Answer');
-    expect(schema.parse(undefined)).toBe(42);
+    expect(schema.isOptional).toBe(false);
+    expect(schema.safeParse(undefined).success).toBe(false);
     expect(schema.parse(null)).toBeNull();
 
     const result = schema.safeParse(0);
@@ -184,7 +185,7 @@ describe('metadata and type-level helpers', () => {
   it('describe() stores and preserves description metadata through transform()', () => {
     const schema = s
       .string()
-      .label('raw input')
+      .describe('raw input')
       .transform((s) => s.toUpperCase());
 
     expect(schema.description).toBe('raw input');

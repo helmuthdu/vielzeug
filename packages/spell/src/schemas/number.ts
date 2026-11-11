@@ -1,244 +1,136 @@
-import type { MessageFn, SchemaDescriptor } from '../core';
+import {
+  atLeast,
+  atMost,
+  invalid,
+  issue,
+  type MaybePromise,
+  ok,
+  type ParseValue,
+  type RunContext,
+  resolveMessage,
+} from '../_parse';
+import { Schema } from '../schema';
+import { ErrorCode, type MessageFn, type SchemaDescriptor, type SchemaKind } from '../types';
 
-import { ErrorCode, fail, resolveMessage, Schema } from '../core';
+type NumberMeta = {
+  exclusiveMaximum: number;
+  exclusiveMinimum: number;
+  finite: true;
+  integer: true;
+  maximum: number;
+  minimum: number;
+  multipleOf: number;
+};
 
-/* -------------------- Typed annotations -------------------- */
-
-interface NumberAnnotations extends Record<string, unknown> {
-  exclusiveMaximum?: number;
-  exclusiveMinimum?: number;
-  maximum?: number;
-  minimum?: number;
-  multipleOf?: number;
-  typeHint?: 'integer';
-}
+type ValueMessage = MessageFn<{ value: number }>;
 
 export class NumberSchema<Input = number> extends Schema<number, Input> {
-  protected override get _kind(): string {
+  override get kind(): SchemaKind {
     return 'number';
   }
 
-  constructor() {
-    super((value, ctx) =>
-      typeof value === 'number' && !Number.isNaN(value)
-        ? null
-        : fail(ErrorCode.invalid_type, ctx!.messages.number.type()),
-    );
+  /** Accepts any `number` except `NaN`; `Infinity` passes unless `finite()` is added. */
+  protected override _parse(value: unknown, ctx: RunContext): MaybePromise<ParseValue> {
+    return typeof value === 'number' && !Number.isNaN(value)
+      ? ok(value)
+      : invalid(value, issue(ErrorCode.invalid_type, ctx.messages.number.type()));
   }
 
   min(minimum: number, message?: MessageFn<{ min: number; value: number }>): this {
-    return this._addConstraint(
-      (value, ctx) => {
-        if ((value as number) >= minimum) return null;
-
-        return fail(
-          ErrorCode.too_small,
-          resolveMessage(message ?? ctx!.messages.number.min, { min: minimum, value: value as number }),
-          {
-            min: minimum,
-          },
-        );
-      },
-      (current) => {
-        const ann = current as NumberAnnotations;
-
-        return {
-          ...ann,
-          minimum: ann.minimum === undefined ? minimum : Math.max(ann.minimum, minimum),
-        };
-      },
+    return this._refine<NumberMeta>(
+      (value) => value >= minimum,
+      (value, m) =>
+        issue(ErrorCode.too_small, resolveMessage(message ?? m.number.min, { min: minimum, value }), { min: minimum }),
+      (current) => ({ minimum: atLeast(current.minimum, minimum) }),
     );
   }
 
   max(maximum: number, message?: MessageFn<{ max: number; value: number }>): this {
-    return this._addConstraint(
-      (value, ctx) => {
-        if ((value as number) <= maximum) return null;
-
-        return fail(
-          ErrorCode.too_big,
-          resolveMessage(message ?? ctx!.messages.number.max, { max: maximum, value: value as number }),
-          {
-            max: maximum,
-          },
-        );
-      },
-      (current) => {
-        const ann = current as NumberAnnotations;
-
-        return {
-          ...ann,
-          maximum: ann.maximum === undefined ? maximum : Math.min(ann.maximum, maximum),
-        };
-      },
+    return this._refine<NumberMeta>(
+      (value) => value <= maximum,
+      (value, m) =>
+        issue(ErrorCode.too_big, resolveMessage(message ?? m.number.max, { max: maximum, value }), { max: maximum }),
+      (current) => ({ maximum: atMost(current.maximum, maximum) }),
     );
   }
 
-  int(message?: MessageFn<{ value: number }>): this {
-    return this._addConstraint(
-      (value, ctx) => {
-        if (Number.isInteger(value as number)) return null;
-
-        return fail(
-          ErrorCode.invalid_integer,
-          resolveMessage(message ?? ctx!.messages.number.int, { value: value as number }),
-        );
-      },
-      (ann) => ({ ...ann, typeHint: 'integer' as const }),
+  positive(message?: ValueMessage): this {
+    return this._refine<NumberMeta>(
+      (value) => value > 0,
+      (value, m) =>
+        issue(ErrorCode.too_small, resolveMessage(message ?? m.number.positive, { value }), {
+          exclusive: true,
+          min: 0,
+        }),
+      (current) => ({ exclusiveMinimum: atLeast(current.exclusiveMinimum, 0) }),
     );
   }
 
-  positive(message?: MessageFn<{ value: number }>): this {
-    return this._addConstraint(
-      (value, ctx) => {
-        if ((value as number) > 0) return null;
-
-        return fail(
-          ErrorCode.too_small,
-          resolveMessage(message ?? ctx!.messages.number.positive, { value: value as number }),
-          {
-            exclusive: true,
-            min: 0,
-          },
-        );
-      },
-      (current) => {
-        const ann = current as NumberAnnotations;
-
-        return {
-          ...ann,
-          exclusiveMinimum: ann.exclusiveMinimum === undefined ? 0 : Math.max(ann.exclusiveMinimum, 0),
-        };
-      },
+  negative(message?: ValueMessage): this {
+    return this._refine<NumberMeta>(
+      (value) => value < 0,
+      (value, m) =>
+        issue(ErrorCode.too_big, resolveMessage(message ?? m.number.negative, { value }), { exclusive: true, max: 0 }),
+      (current) => ({ exclusiveMaximum: atMost(current.exclusiveMaximum, 0) }),
     );
   }
 
-  negative(message?: MessageFn<{ value: number }>): this {
-    return this._addConstraint(
-      (value, ctx) => {
-        if ((value as number) < 0) return null;
-
-        return fail(
-          ErrorCode.too_big,
-          resolveMessage(message ?? ctx!.messages.number.negative, { value: value as number }),
-          {
-            exclusive: true,
-            max: 0,
-          },
-        );
-      },
-      (current) => {
-        const ann = current as NumberAnnotations;
-
-        return {
-          ...ann,
-          exclusiveMaximum: ann.exclusiveMaximum === undefined ? 0 : Math.min(ann.exclusiveMaximum, 0),
-        };
-      },
+  nonNegative(message?: ValueMessage): this {
+    return this._refine<NumberMeta>(
+      (value) => value >= 0,
+      (value, m) => issue(ErrorCode.too_small, resolveMessage(message ?? m.number.nonNegative, { value }), { min: 0 }),
+      (current) => ({ minimum: atLeast(current.minimum, 0) }),
     );
   }
 
-  nonNegative(message?: MessageFn<{ value: number }>): this {
-    return this._addConstraint(
-      (value, ctx) => {
-        if ((value as number) >= 0) return null;
-
-        return fail(
-          ErrorCode.too_small,
-          resolveMessage(message ?? ctx!.messages.number.nonNegative, { value: value as number }),
-          { min: 0 },
-        );
-      },
-      (current) => {
-        const ann = current as NumberAnnotations;
-
-        return { ...ann, minimum: ann.minimum === undefined ? 0 : Math.max(ann.minimum, 0) };
-      },
+  nonPositive(message?: ValueMessage): this {
+    return this._refine<NumberMeta>(
+      (value) => value <= 0,
+      (value, m) => issue(ErrorCode.too_big, resolveMessage(message ?? m.number.nonPositive, { value }), { max: 0 }),
+      (current) => ({ maximum: atMost(current.maximum, 0) }),
     );
   }
 
-  nonPositive(message?: MessageFn<{ value: number }>): this {
-    return this._addConstraint(
-      (value, ctx) => {
-        if ((value as number) <= 0) return null;
-
-        return fail(
-          ErrorCode.too_big,
-          resolveMessage(message ?? ctx!.messages.number.nonPositive, { value: value as number }),
-          { max: 0 },
-        );
-      },
-      (current) => {
-        const ann = current as NumberAnnotations;
-
-        return { ...ann, maximum: ann.maximum === undefined ? 0 : Math.min(ann.maximum, 0) };
-      },
+  int(message?: ValueMessage): this {
+    return this._refine<NumberMeta>(
+      Number.isInteger,
+      (value, m) => issue(ErrorCode.invalid_integer, resolveMessage(message ?? m.number.int, { value })),
+      () => ({ integer: true }),
     );
   }
 
+  /** Integer within ±`Number.MAX_SAFE_INTEGER`. */
+  safe(message?: ValueMessage): this {
+    return this._refine<NumberMeta>(
+      Number.isSafeInteger,
+      (value, m) => issue(ErrorCode.invalid_safe, resolveMessage(message ?? m.number.safe, { value })),
+      (current) => ({
+        integer: true,
+        maximum: atMost(current.maximum, Number.MAX_SAFE_INTEGER),
+        minimum: atLeast(current.minimum, Number.MIN_SAFE_INTEGER),
+      }),
+    );
+  }
+
+  finite(message?: ValueMessage): this {
+    return this._refine<NumberMeta>(
+      Number.isFinite,
+      (value, m) => issue(ErrorCode.invalid_finite, resolveMessage(message ?? m.number.finite, { value })),
+      () => ({ finite: true }),
+    );
+  }
+
+  /** Multiple of `step`, tolerant of binary floating-point error (e.g. `0.3` for step `0.1`). */
   multipleOf(step: number, message?: MessageFn<{ step: number; value: number }>): this {
-    return this._addConstraint(
-      (value, ctx) => {
-        if (Math.abs(Math.round((value as number) / step) - (value as number) / step) < 1e-9) return null;
-
-        return fail(
-          ErrorCode.invalid_multiple_of,
-          resolveMessage(message ?? ctx!.messages.number.multipleOf, { step, value: value as number }),
-          { step },
-        );
-      },
-      (ann) => ({ ...ann, multipleOf: step }),
+    return this._refine<NumberMeta>(
+      (value) => Math.abs(Math.round(value / step) - value / step) < 1e-9,
+      (value, m) =>
+        issue(ErrorCode.invalid_multiple_of, resolveMessage(message ?? m.number.multipleOf, { step, value }), { step }),
+      () => ({ multipleOf: step }),
     );
   }
 
-  safe(message?: MessageFn<{ value: number }>): this {
-    return this._addConstraint((value, ctx) => {
-      if (Number.isSafeInteger(value as number)) return null;
-
-      return fail(
-        ErrorCode.invalid_safe,
-        resolveMessage(message ?? ctx!.messages.number.safe, { value: value as number }),
-      );
-    });
-  }
-
-  finite(message?: MessageFn<{ value: number }>): this {
-    return this._addConstraint((value, ctx) => {
-      if (Number.isFinite(value as number)) return null;
-
-      return fail(
-        ErrorCode.invalid_finite,
-        resolveMessage(message ?? ctx!.messages.number.finite, { value: value as number }),
-      );
-    });
-  }
-
-  protected override _toDescriptorImpl(): SchemaDescriptor {
-    const ann = this._annotations as NumberAnnotations;
-
-    return {
-      ...this._describeBase(),
-      ...(ann.exclusiveMaximum !== undefined ? { exclusiveMaximum: ann.exclusiveMaximum } : {}),
-      ...(ann.exclusiveMinimum !== undefined ? { exclusiveMinimum: ann.exclusiveMinimum } : {}),
-      ...(ann.maximum !== undefined ? { maximum: ann.maximum } : {}),
-      ...(ann.minimum !== undefined ? { minimum: ann.minimum } : {}),
-      ...(ann.multipleOf !== undefined ? { multipleOf: ann.multipleOf } : {}),
-      ...(ann.typeHint !== undefined ? { typeHint: ann.typeHint } : {}),
-      kind: 'number',
-    };
-  }
-
-  static coerce(): NumberSchema<unknown> {
-    return new NumberSchema().preprocess((v: unknown) => {
-      if (typeof v === 'number') return v;
-
-      if (typeof v === 'string' || typeof v === 'boolean') {
-        const n = Number(v);
-
-        return Number.isNaN(n) ? v : n;
-      }
-
-      return v;
-    });
+  protected override _describe(): SchemaDescriptor {
+    return { ...this._describeBase(), ...(this.state.meta as Partial<NumberMeta>), kind: 'number' };
   }
 }

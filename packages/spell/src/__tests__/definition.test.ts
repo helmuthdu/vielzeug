@@ -4,28 +4,28 @@ import { s } from '../index';
 // description setter (fluent)
 // ---------------------------------------------------------------------------
 
-describe('describe(string): setter', () => {
+describe('describe(): description setter', () => {
   it('attaches a description to the schema', () => {
-    expect(s.string().label('A label').definition()).toMatchObject({ description: 'A label', kind: 'string' });
+    expect(s.string().describe('A label').definition()).toMatchObject({ description: 'A label', kind: 'string' });
   });
 
   it('is immutable: does not mutate the original', () => {
     const base = s.string();
 
-    base.label('side-effect label');
+    base.describe('side-effect label');
 
     expect(base.definition().description).toBeUndefined();
   });
 
   it('description is preserved through chained constraint calls', () => {
-    expect(s.string().label('My string').min(3).definition()).toMatchObject({
+    expect(s.string().describe('My string').min(3).definition()).toMatchObject({
       description: 'My string',
       kind: 'string',
     });
   });
 
   it('description is preserved through optional() wrapper', () => {
-    expect(s.string().label('opt field').optional().definition()).toMatchObject({
+    expect(s.string().describe('opt field').optional().definition()).toMatchObject({
       description: 'opt field',
       isOptional: true,
     });
@@ -36,7 +36,7 @@ describe('describe(string): setter', () => {
 // Primitive kinds
 // ---------------------------------------------------------------------------
 
-describe('describe(): primitive kinds', () => {
+describe('definition(): primitive kinds', () => {
   it('string', () => expect(s.string().definition()).toMatchObject({ kind: 'string' }));
   it('number', () => expect(s.number().definition()).toMatchObject({ kind: 'number' }));
   it('boolean', () => expect(s.boolean().definition()).toMatchObject({ kind: 'boolean' }));
@@ -56,7 +56,7 @@ describe('describe(): primitive kinds', () => {
 // String constraints
 // ---------------------------------------------------------------------------
 
-describe('describe(): string constraints', () => {
+describe('definition(): string constraints', () => {
   it('min sets minLength', () => {
     expect(s.string().min(3).definition()).toMatchObject({ kind: 'string', minLength: 3 });
   });
@@ -69,42 +69,56 @@ describe('describe(): string constraints', () => {
     expect(s.string().length(8).definition()).toMatchObject({ kind: 'string', maxLength: 8, minLength: 8 });
   });
 
-  it('email sets format', () => {
-    expect(s.string().email().definition()).toMatchObject({ format: 'email', kind: 'string' });
+  it('formats are listed by method name', () => {
+    expect(s.string().email().definition()).toMatchObject({ formats: ['email'], kind: 'string' });
+    expect(s.string().uuid().definition()).toMatchObject({ formats: ['uuid'] });
+    expect(s.string().isoDate().definition()).toMatchObject({ formats: ['isoDate'] });
+    expect(s.string().base64().definition()).toMatchObject({ formats: ['base64'] });
+    expect(s.string().ip().definition()).toMatchObject({ formats: ['ip'] });
   });
 
-  it('uuid sets format', () => {
-    expect(s.string().uuid().definition()).toMatchObject({ format: 'uuid', kind: 'string' });
+  it('url records its format and protocol pattern', () => {
+    expect(s.string().url().definition()).toMatchObject({
+      formats: ['url'],
+      patterns: [{ flags: 'i', source: '^(?:http|https):' }],
+    });
   });
 
-  it('isoDate sets format: date', () => {
-    expect(s.string().isoDate().definition()).toMatchObject({ format: 'date', kind: 'string' });
-  });
-
-  it('url sets format: uri', () => {
-    expect(s.string().url().definition()).toMatchObject({ format: 'uri', kind: 'string' });
-  });
-
-  it('regex sets pattern', () => {
+  it('regex records source and flags', () => {
     expect(
       s
         .string()
-        .regex(/^[a-z]+$/)
+        .regex(/^[a-z]+$/i)
         .definition(),
-    ).toMatchObject({ kind: 'string', pattern: '^[a-z]+$' });
+    ).toMatchObject({ kind: 'string', patterns: [{ flags: 'i', source: '^[a-z]+$' }] });
   });
 
-  it('conflicting regex chains set pattern to null (ambiguous)', () => {
-    expect(s.string().regex(/a/).regex(/b/).definition()).toMatchObject({ kind: 'string', pattern: null });
+  it('chained regexes accumulate every pattern', () => {
+    expect(s.string().regex(/a/).regex(/b/).definition()).toMatchObject({
+      patterns: [
+        { flags: '', source: 'a' },
+        { flags: '', source: 'b' },
+      ],
+    });
   });
 
-  it('base64 sets contentEncoding', () => {
-    expect(s.string().base64().definition()).toMatchObject({ contentEncoding: 'base64', kind: 'string' });
+  it('startsWith, endsWith, and includes become escaped patterns', () => {
+    expect(s.string().startsWith('a.').endsWith('$').includes('+').definition()).toMatchObject({
+      patterns: [
+        { flags: '', source: '^a\\.' },
+        { flags: '', source: '\\$$' },
+        { flags: '', source: '\\+' },
+      ],
+    });
+  });
+
+  it('nonEmpty sets minLength', () => {
+    expect(s.string().nonEmpty().definition()).toMatchObject({ minLength: 1 });
   });
 
   it('chained constraints accumulate', () => {
     expect(s.string().min(3).max(50).email().definition()).toMatchObject({
-      format: 'email',
+      formats: ['email'],
       kind: 'string',
       maxLength: 50,
       minLength: 3,
@@ -120,7 +134,7 @@ describe('describe(): string constraints', () => {
 // Number constraints
 // ---------------------------------------------------------------------------
 
-describe('describe(): number constraints', () => {
+describe('definition(): number constraints', () => {
   it('min sets minimum', () => {
     expect(s.number().min(0).definition()).toMatchObject({ kind: 'number', minimum: 0 });
   });
@@ -129,8 +143,8 @@ describe('describe(): number constraints', () => {
     expect(s.number().max(100).definition()).toMatchObject({ kind: 'number', maximum: 100 });
   });
 
-  it('int sets typeHint: integer', () => {
-    expect(s.number().int().definition()).toMatchObject({ kind: 'number', typeHint: 'integer' });
+  it('int sets integer', () => {
+    expect(s.number().int().definition()).toMatchObject({ integer: true, kind: 'number' });
   });
 
   it('positive sets exclusiveMinimum: 0', () => {
@@ -146,7 +160,7 @@ describe('describe(): number constraints', () => {
   });
 
   it('int + min accumulate both annotations', () => {
-    expect(s.number().int().min(1).definition()).toMatchObject({ kind: 'number', minimum: 1, typeHint: 'integer' });
+    expect(s.number().int().min(1).definition()).toMatchObject({ integer: true, kind: 'number', minimum: 1 });
   });
 
   it('repeated max keeps the tightest bound', () => {
@@ -158,7 +172,7 @@ describe('describe(): number constraints', () => {
 // Array constraints
 // ---------------------------------------------------------------------------
 
-describe('describe(): array', () => {
+describe('definition(): array', () => {
   it('includes item descriptor', () => {
     expect(s.array(s.string()).definition()).toMatchObject({ items: { kind: 'string' }, kind: 'array' });
   });
@@ -187,7 +201,7 @@ describe('describe(): array', () => {
 // Object
 // ---------------------------------------------------------------------------
 
-describe('describe(): object', () => {
+describe('definition(): object', () => {
   it('returns field descriptors with strict: true by default', () => {
     expect(s.object({ name: s.string() }).definition()).toMatchObject({
       fields: { name: { kind: 'string' } },
@@ -227,7 +241,7 @@ describe('describe(): object', () => {
 // Tuple
 // ---------------------------------------------------------------------------
 
-describe('describe(): tuple', () => {
+describe('definition(): tuple', () => {
   it('returns item descriptors and rest: null when no rest', () => {
     expect(s.tuple([s.string(), s.number()]).definition()).toMatchObject({
       items: [{ kind: 'string' }, { kind: 'number' }],
@@ -248,7 +262,7 @@ describe('describe(): tuple', () => {
 // Union / Intersect
 // ---------------------------------------------------------------------------
 
-describe('describe(): union', () => {
+describe('definition(): union', () => {
   it('returns branches', () => {
     expect(s.union(s.string(), s.number()).definition()).toMatchObject({
       branches: [{ kind: 'string' }, { kind: 'number' }],
@@ -256,15 +270,18 @@ describe('describe(): union', () => {
     });
   });
 
-  it('raw literal shorthand branches are normalized', () => {
-    const d = s.union('a', 'b').definition() as any;
-
-    expect(d.kind).toBe('union');
-    expect(d.branches).toHaveLength(2);
+  it('literal branches are described individually', () => {
+    expect(s.union(s.literal('a'), s.literal('b')).definition()).toMatchObject({
+      branches: [
+        { kind: 'literal', value: 'a' },
+        { kind: 'literal', value: 'b' },
+      ],
+      kind: 'union',
+    });
   });
 });
 
-describe('describe(): intersect', () => {
+describe('definition(): intersect', () => {
   it('returns branches', () => {
     expect(s.intersect(s.object({ a: s.string() }), s.object({ b: s.number() })).definition()).toMatchObject({
       branches: [{ kind: 'object' }, { kind: 'object' }],
@@ -277,7 +294,7 @@ describe('describe(): intersect', () => {
 // Variant
 // ---------------------------------------------------------------------------
 
-describe('describe(): variant', () => {
+describe('definition(): discriminatedUnion', () => {
   it('returns discriminator and branch descriptors keyed by value', () => {
     const schema = s.discriminatedUnion('type', {
       a: s.object({ type: s.literal('a'), x: s.string() }),
@@ -286,7 +303,7 @@ describe('describe(): variant', () => {
 
     const d = schema.definition() as any;
 
-    expect(d).toMatchObject({ discriminator: 'type', kind: 'variant' });
+    expect(d).toMatchObject({ discriminator: 'type', kind: 'discriminatedUnion' });
     expect(d.branches.a).toMatchObject({ kind: 'object' });
     expect(d.branches.b).toMatchObject({ kind: 'object' });
   });
@@ -296,7 +313,7 @@ describe('describe(): variant', () => {
 // Record / Set / Map
 // ---------------------------------------------------------------------------
 
-describe('describe(): record', () => {
+describe('definition(): record', () => {
   it('returns key and value descriptors', () => {
     expect(s.record(s.string(), s.number()).definition()).toMatchObject({
       key: { kind: 'string' },
@@ -306,13 +323,13 @@ describe('describe(): record', () => {
   });
 });
 
-describe('describe(): set', () => {
+describe('definition(): set', () => {
   it('returns item descriptor', () => {
     expect(s.set(s.string()).definition()).toMatchObject({ items: { kind: 'string' }, kind: 'set' });
   });
 });
 
-describe('describe(): map', () => {
+describe('definition(): map', () => {
   it('returns key and value descriptors', () => {
     expect(s.map(s.string(), s.number()).definition()).toMatchObject({
       key: { kind: 'string' },
@@ -326,7 +343,7 @@ describe('describe(): map', () => {
 // Pipe
 // ---------------------------------------------------------------------------
 
-describe('describe(): pipe', () => {
+describe('definition(): pipe', () => {
   it('returns from and to descriptors', () => {
     const schema = s.string().pipe(s.string().min(1));
 
@@ -338,7 +355,7 @@ describe('describe(): pipe', () => {
 // Wrapper schemas (optional / nullable / nullish)
 // ---------------------------------------------------------------------------
 
-describe('describe(): wrapper schemas', () => {
+describe('definition(): wrapper schemas', () => {
   it('optional() sets isOptional, preserves inner kind', () => {
     const d = s.string().optional().definition();
 
@@ -374,7 +391,7 @@ describe('describe(): wrapper schemas', () => {
   });
 
   it('description set on the wrapper propagates to the descriptor', () => {
-    expect(s.string().optional().label('opt field').definition()).toMatchObject({
+    expect(s.string().optional().describe('opt field').definition()).toMatchObject({
       description: 'opt field',
       isOptional: true,
     });
@@ -382,10 +399,10 @@ describe('describe(): wrapper schemas', () => {
 
   it('number constraints are preserved through nullable', () => {
     expect(s.number().int().min(0).nullable().definition()).toMatchObject({
+      integer: true,
       isNullable: true,
       kind: 'number',
       minimum: 0,
-      typeHint: 'integer',
     });
   });
 });

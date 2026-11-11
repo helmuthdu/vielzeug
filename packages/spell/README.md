@@ -19,7 +19,7 @@ const UserSchema = s.object({
   id: s.coerce.number().int().positive(),
   name: s.string().trim().min(1),
   email: s.string().trim().email(),
-  role: s.union('admin', 'editor', 'viewer').default('viewer'),
+  role: s.enum(['admin', 'editor', 'viewer']).default('viewer'),
   tags: s.array(s.string()).unique().default([]),
 });
 

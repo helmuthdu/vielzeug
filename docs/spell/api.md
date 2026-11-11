@@ -1,189 +1,312 @@
 ---
 title: 'Spell: API Reference'
-description: Reference for Spell schema builders, parsing, errors, context, and tooling exports.
+description: Reference for Spell schema builders, schema methods, parsing, errors, parse contexts, definitions, and JSON Schema export.
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol                 | Purpose                         | Execution mode                     | Common gotcha                               |
-| ---------------------- | ------------------------------- | ---------------------------------- | ------------------------------------------- |
-| `s`                    | Creates schemas                 | Sync or async, depending on checks | `checkAsync()` requires async parsing       |
-| `createParseContext()` | Creates request-local messages  | Sync                               | Pass the context to each parse call         |
-| `joinIssuePath()`      | Flattens issue paths to UI keys | Sync                               | Empty or undefined paths join to `''`       |
-| `SpellValidationError` | Provides validation issues      | Sync/async parse failures          | Use `safeParse()` for expected invalid data |
+| Symbol                 | Purpose                                     | Execution mode                       | Common gotcha                                                   |
+| ---------------------- | ------------------------------------------- | ------------------------------------ | --------------------------------------------------------------- |
+| `s`                    | Creates schemas                             | Sync, or async when checks are async | `checkAsync()` anywhere in the tree requires `parseAsync()`     |
+| `Schema`               | Base class of every schema                  | Sync or async                        | Modifiers return copies; schemas are never mutated              |
+| `createParseContext()` | Creates request-local messages              | Sync                                 | Pass the context to each parse call                             |
+| `joinIssuePath()`      | Flattens issue paths to UI keys             | Sync                                 | Empty or undefined paths join to `''`                           |
+| `SpellValidationError` | Carries validation issues                   | Sync/async parse failures            | Use `safeParse()` for expected invalid data                     |
+| `SpellDefinitionError` | Rejects non-portable or invalid definitions | Sync                                 | Thrown by `definition()` and object derivations, not by parsing |
+| `ErrorCode`            | Issue code constants                        | n/a                                  | Narrow `Issue` on `code` to read typed `params`                 |
+| `toJsonSchema()`       | Converts a definition to JSON Schema        | Sync                                 | Imported from `@vielzeug/spell/json`                            |
 
 ## Package Entry Point
 
-| Import                       | Purpose                                            |
-| ---------------------------- | -------------------------------------------------- |
-| `@vielzeug/spell`            | Schema builders, errors, types, and parse contexts |
-| `@vielzeug/spell/json`       | Convert portable definitions to JSON Schema        |
-| `@vielzeug/spell/predicates` | Standalone format and type predicates              |
+| Import                       | Purpose                                                 |
+| ---------------------------- | ------------------------------------------------------- |
+| `@vielzeug/spell`            | Schema builders, base class, errors, types, and context |
+| `@vielzeug/spell/json`       | `toJsonSchema()` and the `JsonSchema` type              |
+| `@vielzeug/spell/predicates` | Standalone string format predicates                     |
 
 ```ts
 import { createParseContext, s, type Infer } from '@vielzeug/spell';
-import { fromDefinition } from '@vielzeug/spell/json';
+import { toJsonSchema } from '@vielzeug/spell/json';
 import { isEmail } from '@vielzeug/spell/predicates';
 ```
 
-## `s`
+## Builders
 
 All builders live under `s`.
 
-| Builder                                                    | Purpose                    |
-| ---------------------------------------------------------- | -------------------------- |
-| `string`, `number`, `boolean`, `bigint`, `date`            | Primitive values           |
-| `literal`, `enum`, `null`, `undefined`, `unknown`, `never` | Exact and universal values |
-| `array`, `tuple`, `set`, `map`, `record`, `object`         | Collections                |
-| `union`, `intersect`, `discriminatedUnion`, `lazy`         | Composition                |
-| `coerce.*`                                                 | Coercing primitive schemas |
+| Builder                                        | Returns                               | Notes                                                 |
+| ---------------------------------------------- | ------------------------------------- | ----------------------------------------------------- |
+| `s.string()`                                   | `StringSchema`                        |                                                       |
+| `s.number()`                                   | `NumberSchema`                        | Rejects `NaN`                                         |
+| `s.bigint()`                                   | `BigIntSchema`                        |                                                       |
+| `s.boolean()`                                  | `BooleanSchema`                       |                                                       |
+| `s.date()`                                     | `DateSchema`                          | Rejects invalid dates with `invalid_date`             |
+| `s.literal(value)`                             | `LiteralSchema<T>`                    | `string`, `number`, `boolean`, `null`, or `undefined` |
+| `s.enum(values)`                               | `EnumSchema<T>`                       | Non-empty tuple of strings or numbers                 |
+| `s.null()`, `s.undefined()`                    | `LiteralSchema<null \| undefined>`    |                                                       |
+| `s.unknown()`                                  | `Schema<unknown>`                     | Accepts any value                                     |
+| `s.never()`                                    | `NeverSchema`                         | Rejects every value                                   |
+| `s.instanceof(cls)`                            | `InstanceOfSchema<T>`                 | Accepts abstract constructors                         |
+| `s.array(item)`                                | `ArraySchema<T>`                      |                                                       |
+| `s.tuple(items)`                               | `TupleSchema<T>`                      | Exact length unless `.rest()` is used                 |
+| `s.set(item)`                                  | `SetSchema<T>`                        |                                                       |
+| `s.map(key, value)`                            | `MapSchema<K, V>`                     |                                                       |
+| `s.record(key, value)`                         | `RecordSchema<K, V>`                  | Drops unsafe keys (`__proto__`, `constructor`, …)     |
+| `s.object(shape)`                              | `ObjectSchema<T>`                     | Strict by default                                     |
+| `s.union(...schemas)`                          | `UnionSchema<T>`                      | At least two schemas; first match wins                |
+| `s.intersect(...schemas)`                      | `IntersectSchema<T>`                  | At least two schemas; object outputs are deep-merged  |
+| `s.discriminatedUnion(key, branches)`          | `DiscriminatedUnionSchema<K, M>`      | Branches are object schemas keyed by tag              |
+| `s.lazy(getter)`                               | `LazySchema<Output, Input>`           | Recursive schemas                                     |
+| `s.coerce.string/number/boolean/bigint/date()` | Primitive schema with `unknown` input | Coercion runs before the type check                   |
+
+### `s.coerce`
+
+| Builder              | Converts                                                  |
+| -------------------- | --------------------------------------------------------- |
+| `s.coerce.string()`  | Any non-nullish value with `String()`                     |
+| `s.coerce.number()`  | Numeric strings and booleans with `Number()`              |
+| `s.coerce.boolean()` | `'true'`/`'1'`/`1` and `'false'`/`'0'`/`0`                |
+| `s.coerce.bigint()`  | Safe-integer numbers and integer strings up to 1000 chars |
+| `s.coerce.date()`    | Strings and epoch milliseconds with `new Date()`          |
+
+Values the coercer cannot convert reach the type check unchanged and fail with `invalid_type`.
+
+## Schema Methods
+
+Every schema extends `Schema<Output, Input>`.
+
+### Parsing
 
 ```ts
-const User = s.object({
-  email: s.string().email(),
-  id: s.string().uuid(),
-  role: s.enum(['admin', 'member'] as const),
-});
-
-type User = Infer<typeof User>;
+parse(value: unknown, context?: ParseContext): Output;
+safeParse(value: unknown, context?: ParseContext): ParseResult<Output>;
+parseAsync(value: unknown, context?: ParseContext): Promise<Output>;
+safeParseAsync(value: unknown, context?: ParseContext): Promise<ParseResult<Output>>;
+is(value: unknown): value is Output;
+assert(value: unknown, label?: string): asserts value is Output;
 ```
 
-Object schemas reject unknown keys. Use `.relaxed()` to retain extras.
+**Returns:** `parse()` returns the parsed output or throws `SpellValidationError`. `safeParse()` returns a `ParseResult`.
 
-## Standard Schema interoperability
+`parse()`, `safeParse()`, `is()`, and `assert()` are synchronous. If the schema or any nested schema has a `checkAsync()` step, they throw `SpellError` ("Schema contains async checks; use parseAsync() or safeParseAsync().") before running the async check. This is a usage error, not a validation issue, so `catch()` does not intercept it. `assert(value, label)` prefixes root-level messages with `label`.
 
-Every schema implements the dependency-free Standard Schema v1 structural protocol through `schema['~standard']`. Consumers that accept Standard Schema validators can use Spell schemas directly without an adapter.
+**Example:**
+
+```ts
+import { s } from '@vielzeug/spell';
+
+const result = s.string().email().safeParse('ada@example.com');
+
+if (result.success) console.log(result.data);
+```
+
+### Checks
+
+```ts
+check(fn: (value: Output, ctx: CheckContext) => ValidateResult): this;
+checkAsync(fn: (value: Output, ctx: CheckContext) => Promise<ValidateResult>): this;
+```
+
+**Returns:** A copy of the schema with the rule appended.
+
+A check runs only when the structural type check passed. It returns `true`, `null`, or `undefined` to pass, a string to fail with that message, or `false` to fail with the default message. `ctx.addIssue({ code, message, params?, path? })` reports issues at paths relative to the schema. Passing an async function to `check()` is a type error.
+
+**Example:**
+
+```ts
+const Signup = s.object({ confirm: s.string(), password: s.string() }).check((value, ctx) => {
+  if (value.password !== value.confirm)
+    ctx.addIssue({ code: 'custom', message: 'Passwords must match', path: ['confirm'] });
+});
+```
+
+### Modifiers
+
+| Method            | Returns                                           | Effect                                                                   |
+| ----------------- | ------------------------------------------------- | ------------------------------------------------------------------------ |
+| `optional()`      | `Schema<Output \| undefined, Input \| undefined>` | Accepts `undefined`                                                      |
+| `nullable()`      | `Schema<Output \| null, Input \| null>`           | Accepts `null`                                                           |
+| `nullish()`       | `Schema<Output \| null \| undefined, …>`          | Accepts `null` and `undefined`                                           |
+| `required()`      | `Schema<Exclude<Output, undefined>, …>`           | Rejects `undefined` again; clears `optional()` and `default()`           |
+| `default(value)`  | `this`                                            | Returns a fresh copy of `value` for `undefined`; a function is a factory |
+| `catch(fallback)` | `this`                                            | Returns a fresh copy of `fallback` when validation fails                 |
+| `transform(fn)`   | `Schema<Next, Input>`                             | Maps the value in chain order; skipped once an earlier step failed       |
+| `preprocess(fn)`  | `this`                                            | Maps raw input before the type check                                     |
+| `pipe(next)`      | `PipeSchema<this, Next>`                          | Parses with this schema, then feeds the output to `next`                 |
+| `describe(text)`  | `this`                                            | Sets `description`, which `definition()` includes                        |
+
+`optional()`, `nullable()`, `nullish()`, `required()`, and `transform()` change the value type, so they return a base `Schema`. Chain type-specific methods such as `.min()` or `.extend()` before them.
+
+### Properties and definitions
+
+| Member         | Type                                    | Description                                                      |
+| -------------- | --------------------------------------- | ---------------------------------------------------------------- |
+| `kind`         | `SchemaKind`                            | Schema kind, e.g. `'string'` or `'object'`                       |
+| `description`  | `string \| undefined`                   | Text set with `describe()`                                       |
+| `isOptional`   | `boolean`                               | `true` with `optional()`, `nullish()`, `default()`, or `catch()` |
+| `isNullable`   | `boolean`                               | `true` with `nullable()` or `nullish()`                          |
+| `'~standard'`  | `StandardSchemaV1.Props<Input, Output>` | Standard Schema v1 protocol                                      |
+| `definition()` | `SchemaDescriptor`                      | Frozen declarative descriptor                                    |
+
+`definition()` throws `SpellDefinitionError` when the schema, or a nested schema, has runtime-only behavior: `check()`, `checkAsync()`, `transform()`, `preprocess()` (including `s.coerce.*`, `trim()`, `lowercase()`, `uppercase()`), `default()`, `catch()`, or `array().unique({ by })`.
+
+### Standard Schema
+
+`schema['~standard'].validate(value)` returns a result synchronously unless the schema has async checks, in which case it returns a Promise. Successful results contain `value`; failures contain `{ message, path }` issues. A failed union stays one union issue.
 
 ```ts
 const User = s.object({ name: s.string() });
 const result = await User['~standard'].validate({ name: 'Ada' });
 ```
 
-Successful results contain `value`; failures contain portable `{ message, path }` issues. Failed unions remain one stable union issue instead of selecting a branch heuristically.
-
-The exported `StandardSchemaV1` interface mirrors the full v1 protocol, including `validate(value, options?)` and the `InferInput` and `InferOutput` namespace helpers.
-
-## Parsing
-
-Every schema provides:
+## String Schema
 
 ```ts
-schema.parse(value, context?);          // Output or SpellValidationError
-schema.safeParse(value, context?);      // ParseResult<Output>
-schema.parseAsync(value, context?);     // Promise<Output>
-schema.safeParseAsync(value, context?); // Promise<ParseResult<Output>>
-schema.is(value);                       // value is Output
-schema.assert(value, label?);           // assertion
+min(length: number, message?): this;
+max(length: number, message?): this;
+length(exact: number, message?): this;
+nonEmpty(message?): this;
+startsWith(prefix: string, message?): this;
+endsWith(suffix: string, message?): this;
+includes(substr: string, message?): this;
+regex(pattern: RegExp, message?): this;
+url(options?: { message?: MessageFn<{ value: string }>; protocols?: readonly string[] }): this;
+nanoid(length?: number, message?): this;
+trim(): this;
+lowercase(): this;
+uppercase(): this;
 ```
 
-`parse()`, `safeParse()`, `is()`, and `assert()` run synchronous parsing. When a schema, or any schema nested inside it: carries an async check added with `checkAsync()`, the synchronous methods throw at runtime with "cannot evaluate async checks"; use `parseAsync()` or `safeParseAsync()` instead. Async checks compose at any nesting depth, so `s.object({ tags: s.array(s.string().checkAsync(fn)) })` parses correctly through `parseAsync()`.
+Format methods take an optional `message`: `email`, `url`, `uuid`, `isoDate`, `isoDateTime`, `time`, `duration`, `ip`, `cuid`, `cuid2`, `ulid`, `nanoid`, `base64`, `base64url`, `hex`, `hexColor`, `emoji`, `jwt`, `semver`, `slug`, `numeric`.
 
-UI adapters that accept `AnySchema` cannot call `safeParse()` on it: the structural surface type omits it. Type adapter parameters against `SyncParsable` instead:
+Format and pattern failures use code `invalid_format` with `params.format` set to the method name, such as `'email'`, `'isoDate'`, `'startsWith'`, or `'regex'`. `url()` accepts `http` and `https` unless `protocols` is given. `regex()` drops the stateful `g` and `y` flags. `trim()`, `lowercase()`, and `uppercase()` are ordered transforms: constraints chained after them see the normalized value.
+
+## Number, BigInt, and Date Schemas
+
+| Schema         | Methods                                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------------------------- |
+| `NumberSchema` | `min`, `max`, `positive`, `negative`, `nonNegative`, `nonPositive`, `int`, `safe`, `finite`, `multipleOf` |
+| `BigIntSchema` | `min`, `max`, `positive`, `negative`, `nonNegative`, `nonPositive`, `multipleOf`                          |
+| `DateSchema`   | `min(date)`, `max(date)`                                                                                  |
+
+Each method takes an optional trailing `message`. `safe()` requires an integer within `Number.MIN_SAFE_INTEGER`…`Number.MAX_SAFE_INTEGER`.
+
+## Collection Schemas
+
+| Schema         | Methods and members                                    |
+| -------------- | ------------------------------------------------------ |
+| `ArraySchema`  | `min`, `max`, `length`, `nonEmpty`, `unique(options?)` |
+| `TupleSchema`  | `items`, `rest(schema)`                                |
+| `SetSchema`    | `min`, `max`, `size`, `nonEmpty`                       |
+| `MapSchema`    | `min`, `max`, `size`, `nonEmpty`                       |
+| `RecordSchema` | (none)                                                 |
 
 ```ts
-import type { SyncParsable } from '@vielzeug/spell';
-
-function spellValidator(schema: SyncParsable<unknown>) {
-  const result = schema.safeParse(value); // types cleanly, no shim or cast
-}
+unique(options?: { by?: (item: InferOutput<T>) => unknown; message?: MessageFn<{ value: unknown[] }> }): this;
 ```
 
-The shape is structural, so a schema with async checks is assignable to `SyncParsable`; calling `safeParse()` on one returns a failed result ("parse() cannot evaluate async checks"). When async checks may be present, use `safeParseAsync()` instead.
+`unique()` compares items with `Set` semantics, or compares the keys returned by `by`. A `by` selector makes `definition()` throw.
 
-## Custom Checks
-
-`check()` is synchronous. `checkAsync()` is asynchronous. Do not return a Promise from `check()`.
+## Object Schema
 
 ```ts
-const Signup = s.object({ confirm: s.string(), password: s.string() }).check((value, context) => {
-  if (value.password !== value.confirm) {
-    context.addIssue({ code: 'custom', message: 'Passwords must match', path: ['confirm'] });
-  }
-});
-
-const AvailableEmail = s
-  .string()
-  .email()
-  .checkAsync(async (value) => {
-    return (await emailAvailable(value)) || 'Email is already registered';
-  });
+readonly shape: T;
+relaxed(): this;
+strict(): this;
+tolerate(...keys: string[]): this;
+extend<U extends ObjectShape>(extra: U): ObjectSchema<Omit<T, keyof U> & U>;
+pick<K extends keyof T & string>(...keys: K[]): ObjectSchema<Pick<T, K>>;
+omit<K extends keyof T & string>(...keys: K[]): ObjectSchema<Omit<T, K>>;
+partial(): ObjectSchema<{ [K in keyof T]: Optional<T[K]> }>;
+partial<K extends keyof T & string>(...keys: K[]): ObjectSchema<Omit<T, K> & { [P in K]: Optional<T[P]> }>;
+keyof(): EnumSchema<[keyof T & string, ...(keyof T & string)[]]>;
 ```
 
-`CheckContext.addIssue()` takes `{ code, message, params?, path? }`. Paths are relative to current schema.
+| Method       | Description                                                                  |
+| ------------ | ---------------------------------------------------------------------------- |
+| `strict()`   | Rejects unknown keys with one `invalid_keys` issue (default)                 |
+| `relaxed()`  | Copies unknown keys to the output, skipping unsafe keys                      |
+| `tolerate()` | Accepts and drops the named keys; other unknown keys follow the current mode |
+| `extend()`   | Adds fields; same-named fields are replaced                                  |
+| `pick()`     | Keeps the named fields                                                       |
+| `omit()`     | Removes the named fields                                                     |
+| `partial()`  | Makes all or the named fields optional                                       |
+| `keyof()`    | Enum schema of the shape keys                                                |
 
-## Modifiers and Transforms
+`extend()`, `pick()`, `omit()`, and `partial()` keep the unknown-key mode, tolerated keys, description, and `optional`/`nullable` flags. They throw `SpellDefinitionError` when the object has checks, transforms, preprocessors, a default, or a catch, because those were written for the old shape.
 
-```ts
-s.string().optional();
-s.string().nullable();
-s.string().nullish();
-s.string().required();
-s.string().default('guest');
-s.string().catch('guest');
-s.string()
-  .trim()
-  .transform((value) => value.toLowerCase());
-s.string().pipe(s.string().slug());
-s.string().label('User name');
-```
+Absent keys whose field returns `undefined` are left out of the output. Field defaults are written for absent keys.
 
-`default()`, `catch()`, preprocessors, transforms, and checks are runtime behavior. They cannot become portable definitions.
+## Composition Schemas
 
-## `tolerate()`
+| Schema                     | Members                                     | Failure                                                               |
+| -------------------------- | ------------------------------------------- | --------------------------------------------------------------------- |
+| `UnionSchema`              | `schemas`                                   | One `invalid_union` issue; `params.errors` holds each branch's issues |
+| `IntersectSchema`          | `schemas`                                   | Issues from every failing branch                                      |
+| `DiscriminatedUnionSchema` | `discriminator`, `branches` (`ReadonlyMap`) | `invalid_discriminator` for an unknown tag; branch issues otherwise   |
+| `LazySchema`               | (none)                                      | Issues of the resolved schema                                         |
+| `PipeSchema`               | `from`, `to`                                | Issues of the first failing stage                                     |
 
-Wraps an object schema so records saved by older schema versions still parse: the named keys are accepted and stripped instead of failing `invalid_keys`. The parsed output never contains the tolerated keys.
+`s.discriminatedUnion(key, branches)` adds `key` as a literal of the branch tag when a branch omits it. It throws `SpellDefinitionError` when a branch is not an object schema or declares `key` with a different schema.
 
-```ts
-const Person = tolerate(s.object({ name: s.string() }), 'address');
-```
-
-The implementation is a preprocessor on the wrapped schema: non-object input reaches the wrapped schema untouched, declared fields keep their validation, and unknown keys outside the tolerated set still fail.
-
-## Definitions and JSON Schema
-
-`definition()` is only for schemas containing declarative structure. It returns frozen data and throws `SpellDefinitionError` when runtime behavior is present.
-
-```ts
-import { s } from '@vielzeug/spell';
-import { fromDefinition } from '@vielzeug/spell/json';
-
-const Product = s.object({
-  id: s.string().uuid(),
-  name: s.string().min(1),
-});
-
-const definition = Product.definition();
-const jsonSchema = fromDefinition(definition);
-```
-
-No implicit schema-to-JSON conversion exists. Make definition boundary explicit.
+Intersections of object schemas need `.relaxed()` branches, because each strict branch rejects the other branch's keys.
 
 ## Parse Contexts
-
-`createParseContext()` creates immutable request-local validation messages.
 
 ```ts
 function createParseContext(messages?: DeepPartial<Messages>): ParseContext;
 ```
 
-**Returns:** A parse context with built-in messages merged with the supplied overrides.
+**Returns:** A frozen parse context with the built-in messages merged with the supplied overrides. Unsafe override keys such as `__proto__` are ignored with a development warning.
+
+**Example:**
 
 ```ts
 import { createParseContext, s } from '@vielzeug/spell';
 
-const context = createParseContext({
-  object: { invalidKeys: () => 'Unsupported field' },
-});
-
+const context = createParseContext({ object: { invalidKeys: () => 'Unsupported field' } });
 const result = s.object({ email: s.string().email() }).safeParse({ email: 'ada@example.com', extra: true }, context);
 
-if (!result.success) {
-  const messages = result.error.messagesAt('email');
-  console.log(messages);
-}
+if (!result.success) console.log(result.error.issues[0].message); // 'Unsupported field'
 ```
+
+## JSON Schema
+
+```ts
+import { toJsonSchema, type JsonSchema } from '@vielzeug/spell/json';
+
+function toJsonSchema(definition: SchemaDescriptor): JsonSchema;
+```
+
+**Returns:** A JSON Schema 2020-12 object.
+
+| Definition                      | JSON Schema                                                         |
+| ------------------------------- | ------------------------------------------------------------------- |
+| `isoDate`, `isoDateTime`, `url` | `format: 'date'`, `'date-time'`, `'uri'`                            |
+| `base64`, `base64url`           | `contentEncoding`                                                   |
+| `ip`                            | `anyOf` of `ipv4` and `ipv6` formats                                |
+| Several formats or patterns     | `allOf`                                                             |
+| `bigint` bounds                 | Numeric bounds (may lose precision above `Number.MAX_SAFE_INTEGER`) |
+| `date`, `instanceof`            | `$comment` only                                                     |
+| `set`, `map`                    | Array with `uniqueItems`, object with `additionalProperties`        |
+| `isNullable`                    | `anyOf` with `{ type: 'null' }`                                     |
+
+**Example:**
+
+```ts
+import { s } from '@vielzeug/spell';
+import { toJsonSchema } from '@vielzeug/spell/json';
+
+const jsonSchema = toJsonSchema(s.object({ id: s.string().uuid() }).definition());
+```
+
+## Predicates
+
+`@vielzeug/spell/predicates` exports the format tests used by `StringSchema`. Each takes a string and returns `boolean`.
+
+`isBase64`, `isBase64url`, `isCuid`, `isCuid2`, `isDuration`, `isEmail`, `isEmoji`, `isHex`, `isHexColor`, `isIp`, `isIsoDate`, `isIsoDateTime`, `isJwt`, `isNanoid(value, length = 21)`, `isNumeric`, `isSemver`, `isSlug`, `isTime`, `isUlid`, `isUrl(value, protocols = ['http', 'https'])`, `isUuid`.
 
 ## Types
 
@@ -194,43 +317,9 @@ if (!result.success) {
 | `Infer<TSchema>`       | Parsed output; alias of `InferOutput<TSchema>`  |
 | `InferInput<TSchema>`  | Input accepted before parsing or transformation |
 | `InferOutput<TSchema>` | Value returned after parsing and transformation |
+| `AnySchema`            | `Schema<unknown, unknown>`; any schema          |
 
-Composite schemas preserve child input types. Object input types make fields optional when their field schema accepts `undefined`.
-
-### Standard Schema
-
-```ts
-interface StandardSchemaV1<Input = unknown, Output = Input> {
-  readonly '~standard': StandardSchemaV1.Props<Input, Output>;
-}
-
-namespace StandardSchemaV1 {
-  interface Props<Input = unknown, Output = Input> {
-    readonly version: 1;
-    readonly vendor: string;
-    readonly validate: (value: unknown, options?: Options) => Result<Output> | Promise<Result<Output>>;
-    readonly types?: Types<Input, Output>;
-  }
-
-  type Result<Output> = { readonly value: Output; readonly issues?: undefined } | { readonly issues: readonly Issue[] };
-  interface Options {
-    readonly libraryOptions?: Record<string, unknown>;
-  }
-  interface Issue {
-    readonly message: string;
-    readonly path?: readonly (PropertyKey | PathSegment)[];
-  }
-  interface PathSegment {
-    readonly key: PropertyKey;
-  }
-  interface Types<Input = unknown, Output = Input> {
-    readonly input: Input;
-    readonly output: Output;
-  }
-  type InferInput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['input'];
-  type InferOutput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['output'];
-}
-```
+Object input types make a field optional when its schema accepts a missing value (`optional()`, `nullish()`, `default()`, `catch()`). Use `AnySchema` as a generic constraint, and `Schema<T, unknown>` for a parameter that must parse to `T`.
 
 ### Parse result and issues
 
@@ -239,33 +328,30 @@ type ParseResult<T> = { data: T; success: true } | { error: SpellValidationError
 
 type Issue =
   | { code: 'custom'; message: string; params?: Record<string, unknown>; path: (string | number)[] }
-  | { code: 'invalid_base64'; message: string; params: { format: string }; path: (string | number)[] }
   | { code: 'invalid_date'; message: string; params?: undefined; path: (string | number)[] }
-  | { code: 'invalid_duration'; message: string; params: { format: string }; path: (string | number)[] }
+  | {
+      code: 'invalid_discriminator';
+      message: string;
+      params: { discriminator: string; expected: string[] };
+      path: (string | number)[];
+    }
   | { code: 'invalid_enum'; message: string; params: { values: readonly unknown[] }; path: (string | number)[] }
   | { code: 'invalid_finite'; message: string; params?: undefined; path: (string | number)[] }
+  | {
+      code: 'invalid_format';
+      message: string;
+      params: { format: string; includes?: string; pattern?: string; prefix?: string; suffix?: string };
+      path: (string | number)[];
+    }
   | { code: 'invalid_integer'; message: string; params?: undefined; path: (string | number)[] }
   | { code: 'invalid_keys'; message: string; params: { keys: string[] }; path: (string | number)[] }
   | { code: 'invalid_length'; message: string; params: { exact: number }; path: (string | number)[] }
   | { code: 'invalid_literal'; message: string; params: { expected: unknown }; path: (string | number)[] }
   | { code: 'invalid_multiple_of'; message: string; params: { step: number | bigint }; path: (string | number)[] }
   | { code: 'invalid_safe'; message: string; params?: undefined; path: (string | number)[] }
-  | {
-      code: 'invalid_string';
-      message: string;
-      params: { format?: string; includes?: string; pattern?: string; prefix?: string; suffix?: string };
-      path: (string | number)[];
-    }
   | { code: 'invalid_type'; message: string; params?: undefined; path: (string | number)[] }
   | { code: 'invalid_union'; message: string; params: { errors: Issue[][] }; path: (string | number)[] }
-  | { code: 'invalid_unique'; message: string; params: { unique: true }; path: (string | number)[] }
-  | { code: 'invalid_url'; message: string; params: { format: string }; path: (string | number)[] }
-  | {
-      code: 'invalid_variant';
-      message: string;
-      params: { discriminator: string; expected: string[] };
-      path: (string | number)[];
-    }
+  | { code: 'invalid_unique'; message: string; params?: undefined; path: (string | number)[] }
   | {
       code: 'too_big';
       message: string;
@@ -281,12 +367,12 @@ type Issue =
   | { code: string & {}; message: string; params?: Record<string, unknown>; path: (string | number)[] };
 ```
 
-`ErrorCode` is a const object mapping each issue code to its string literal.
+`ErrorCode` is a const object mapping each built-in code to its string literal.
 
 ### Validation contracts
 
 ```ts
-type ParseContext = { messages: Messages };
+type ParseContext = { readonly messages: Messages };
 
 type CheckContext = {
   addIssue: (issue: {
@@ -298,151 +384,162 @@ type CheckContext = {
 };
 
 type ValidateResult = boolean | null | undefined | string;
+
+type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> = string | ((ctx: Ctx) => string);
+
+type DeepPartial<T> = { [K in keyof T]?: T[K] extends Record<string, unknown> ? DeepPartial<T[K]> : T[K] };
 ```
 
 ### Messages
 
-```ts
-type MessageFn<Ctx extends Record<string, unknown> = Record<string, unknown>> = string | ((ctx: Ctx) => string);
+`Messages` has one group per schema type. Each entry is a function of the constraint context.
 
+```ts
 type Messages = {
-  array: {
-    length: (ctx: { exact: number; value: unknown[] }) => string;
-    max: (ctx: { max: number; value: unknown[] }) => string;
-    min: (ctx: { min: number; value: unknown[] }) => string;
-    nonEmpty: () => string;
-    type: () => string;
-    unique: () => string;
-  };
-  bigint: {
-    max: (ctx: { max: bigint; value: bigint }) => string;
-    min: (ctx: { min: bigint; value: bigint }) => string;
-    multipleOf: (ctx: { step: bigint; value: bigint }) => string;
-    negative: () => string;
-    nonNegative: () => string;
-    nonPositive: () => string;
-    positive: () => string;
-    type: () => string;
-  };
-  boolean: { type: () => string };
-  check: { default: () => string };
-  date: {
-    max: (ctx: { max: Date; value: Date }) => string;
-    min: (ctx: { min: Date; value: Date }) => string;
-    type: () => string;
-  };
+  array: { length; max; min; nonEmpty; type; unique };
+  bigint: { max; min; multipleOf; negative; nonNegative; nonPositive; positive; type };
+  boolean: { type };
+  check: { default };
+  date: { max; min; type };
+  discriminatedUnion: { invalidDiscriminator: (ctx: { discriminator: string; expected: string[] }) => string; type };
   enum: { invalid: (ctx: { values: readonly unknown[] }) => string };
   instanceof: { type: (ctx: { className: string }) => string };
   literal: { expected: (ctx: { expected: unknown }) => string };
-  map: {
-    max: (ctx: { max: number; value: Map<unknown, unknown> }) => string;
-    min: (ctx: { min: number; value: Map<unknown, unknown> }) => string;
-    nonEmpty: () => string;
-    size: (ctx: { exact: number; value: Map<unknown, unknown> }) => string;
-    type: () => string;
-  };
-  never: { invalid: () => string };
-  number: {
-    finite: () => string;
-    int: () => string;
-    max: (ctx: { max: number; value: number }) => string;
-    min: (ctx: { min: number; value: number }) => string;
-    multipleOf: (ctx: { step: number; value: number }) => string;
-    negative: () => string;
-    nonNegative: () => string;
-    nonPositive: () => string;
-    positive: () => string;
-    safe: () => string;
-    type: () => string;
-  };
-  object: { invalidKeys: (ctx: { keys: string[] }) => string; type: () => string };
-  set: {
-    max: (ctx: { max: number; value: Set<unknown> }) => string;
-    min: (ctx: { min: number; value: Set<unknown> }) => string;
-    nonEmpty: () => string;
-    size: (ctx: { exact: number; value: Set<unknown> }) => string;
-    type: () => string;
-  };
+  map: { max; min; nonEmpty; size; type };
+  never: { invalid };
+  number: { finite; int; max; min; multipleOf; negative; nonNegative; nonPositive; positive; safe; type };
+  object: { invalidKeys: (ctx: { keys: string[] }) => string; type };
+  set: { max; min; nonEmpty; size; type };
   string: {
-    base64: () => string;
-    base64url: () => string;
-    cuid: () => string;
-    cuid2: () => string;
-    date: () => string;
-    dateTime: () => string;
-    duration: () => string;
-    email: () => string;
-    emoji: () => string;
-    endsWith: (ctx: { suffix: string; value: string }) => string;
-    hex: () => string;
-    hexColor: () => string;
-    includes: (ctx: { substr: string; value: string }) => string;
-    ip: () => string;
-    jwt: () => string;
-    length: (ctx: { exact: number; value: string }) => string;
-    max: (ctx: { max: number; value: string }) => string;
-    min: (ctx: { min: number; value: string }) => string;
-    nanoid: () => string;
-    nonEmpty: () => string;
-    numeric: () => string;
-    regex: (ctx: { value: string }) => string;
-    semver: () => string;
-    slug: () => string;
-    startsWith: (ctx: { prefix: string; value: string }) => string;
-    time: () => string;
-    type: () => string;
-    ulid: () => string;
-    url: () => string;
-    uuid: () => string;
+    base64;
+    base64url;
+    cuid;
+    cuid2;
+    duration;
+    email;
+    emoji;
+    endsWith;
+    hex;
+    hexColor;
+    includes;
+    ip;
+    isoDate;
+    isoDateTime;
+    jwt;
+    length;
+    max;
+    min;
+    nanoid;
+    nonEmpty;
+    numeric;
+    regex;
+    semver;
+    slug;
+    startsWith;
+    time;
+    type;
+    ulid;
+    url;
+    uuid;
   };
-  tuple: { length: (ctx: { exact: number }) => string; min: (ctx: { min: number }) => string; type: () => string };
-  union: { invalid: () => string };
-  variant: { invalidDiscriminator: (ctx: { discriminator: string; expected: string[] }) => string; type: () => string };
-};
-
-type DeepPartial<T> = {
-  [K in keyof T]?: T[K] extends Record<string, unknown> ? DeepPartial<T[K]> : T[K];
+  tuple: { length: (ctx: { exact: number }) => string; min: (ctx: { min: number }) => string; type };
+  union: { invalid };
 };
 ```
 
-### Descriptor and JSON Schema
+Constraint messages receive `value` plus the constraint's parameters, e.g. `string.min` receives `{ min, value }` and `string.includes` receives `{ substr, value }`.
+
+### Descriptors
 
 ```ts
-type SchemaDescriptor = BaseDescriptor &
-  (
-    | { kind: 'unknown' | 'never' | 'boolean' | 'bigint' | 'date' | 'lazy' }
-    | { className: string; kind: 'instanceof' }
-    | {
-        contentEncoding?: string;
-        format?: string;
-        kind: 'string';
-        maxLength?: number;
-        minLength?: number;
-        pattern?: string | null;
-      }
-    | {
-        exclusiveMaximum?: number;
-        exclusiveMinimum?: number;
-        kind: 'number';
-        maximum?: number;
-        minimum?: number;
-        multipleOf?: number;
-        typeHint?: 'integer';
-      }
-    | { kind: 'literal'; value: string | number | boolean | null | undefined }
-    | { kind: 'enum'; values: readonly (string | number)[] }
-    | { items: SchemaDescriptor; kind: 'array'; maxItems?: number; minItems?: number }
-    | { items: SchemaDescriptor[]; kind: 'tuple'; rest: SchemaDescriptor | null }
-    | { fields: Record<string, SchemaDescriptor>; kind: 'object'; strict: boolean }
-    | { key: SchemaDescriptor; kind: 'record'; value: SchemaDescriptor }
-    | { items: SchemaDescriptor; kind: 'set' }
-    | { key: SchemaDescriptor; kind: 'map'; value: SchemaDescriptor }
-    | { branches: SchemaDescriptor[]; kind: 'union' | 'intersect' }
-    | { branches: Record<string, SchemaDescriptor>; discriminator: string; kind: 'variant' }
-    | { from: SchemaDescriptor; kind: 'pipe'; to: SchemaDescriptor }
-  );
+type PatternDescriptor = { readonly flags: string; readonly source: string };
 
-type JsonSchema = Record<string, unknown>;
+type SchemaDescriptor = { description?: string; isNullable?: true; isOptional?: true } & (
+  | { kind: 'unknown' | 'never' | 'boolean' | 'lazy' }
+  | {
+      kind: 'bigint';
+      exclusiveMaximum?: bigint;
+      exclusiveMinimum?: bigint;
+      maximum?: bigint;
+      minimum?: bigint;
+      multipleOf?: bigint;
+    }
+  | {
+      kind: 'number';
+      exclusiveMaximum?: number;
+      exclusiveMinimum?: number;
+      finite?: true;
+      integer?: true;
+      maximum?: number;
+      minimum?: number;
+      multipleOf?: number;
+    }
+  | {
+      kind: 'string';
+      formats?: readonly string[];
+      maxLength?: number;
+      minLength?: number;
+      patterns?: readonly PatternDescriptor[];
+    }
+  | { kind: 'date'; maximum?: string; minimum?: string }
+  | { className: string; kind: 'instanceof' }
+  | { kind: 'literal'; value: string | number | boolean | null | undefined }
+  | { kind: 'enum'; values: readonly (string | number)[] }
+  | { items: SchemaDescriptor; kind: 'array'; maxItems?: number; minItems?: number; uniqueItems?: true }
+  | { items: readonly SchemaDescriptor[]; kind: 'tuple'; rest: SchemaDescriptor | null }
+  | {
+      fields: Readonly<Record<string, SchemaDescriptor>>;
+      kind: 'object';
+      strict: boolean;
+      tolerated?: readonly string[];
+    }
+  | { key: SchemaDescriptor; kind: 'record'; value: SchemaDescriptor }
+  | { items: SchemaDescriptor; kind: 'set'; maxSize?: number; minSize?: number }
+  | { key: SchemaDescriptor; kind: 'map'; maxSize?: number; minSize?: number; value: SchemaDescriptor }
+  | { branches: readonly SchemaDescriptor[]; kind: 'union' | 'intersect' }
+  | { branches: Readonly<Record<string, SchemaDescriptor>>; discriminator: string; kind: 'discriminatedUnion' }
+  | { from: SchemaDescriptor; kind: 'pipe'; to: SchemaDescriptor }
+);
+
+type SchemaKind = SchemaDescriptor['kind'];
+
+type JsonSchema = Record<string, unknown>; // from '@vielzeug/spell/json'
+```
+
+Date bounds are ISO strings. `formats` lists format method names in chain order; `patterns` lists `regex()`, `startsWith()`, `endsWith()`, `includes()`, and `url()` protocol patterns.
+
+### Standard Schema
+
+```ts
+interface StandardSchemaV1<Input = unknown, Output = Input> {
+  readonly '~standard': StandardSchemaV1.Props<Input, Output>;
+}
+
+namespace StandardSchemaV1 {
+  interface Props<Input = unknown, Output = Input> {
+    readonly types?: Types<Input, Output> | undefined;
+    readonly validate: (value: unknown, options?: Options | undefined) => Result<Output> | Promise<Result<Output>>;
+    readonly vendor: string;
+    readonly version: 1;
+  }
+  type Result<Output> = { readonly issues: readonly Issue[] } | { readonly issues?: undefined; readonly value: Output };
+  interface Options {
+    readonly libraryOptions?: Record<string, unknown> | undefined;
+  }
+  interface Issue {
+    readonly message: string;
+    readonly path?: readonly (PropertyKey | PathSegment)[] | undefined;
+  }
+  interface PathSegment {
+    readonly key: PropertyKey;
+  }
+  interface Types<Input = unknown, Output = Input> {
+    readonly input: Input;
+    readonly output: Output;
+  }
+  type InferInput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['input'];
+  type InferOutput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['output'];
+}
 ```
 
 ### Error helpers
@@ -451,23 +548,23 @@ type JsonSchema = Record<string, unknown>;
 type FlatError = { messages: string[]; path: (string | number)[] };
 type FlatErrorFirst = { message: string; path: (string | number)[] };
 
-/** An issue path in either shape: spell-native segments or Standard Schema `{ key }` segments. */
 type IssuePathSegment = PropertyKey | { readonly key: PropertyKey };
 type IssuePath = readonly IssuePathSegment[];
-
-/** The synchronous parse surface; `AnySchema` omits `safeParse`, adapter parameters use this. */
-type SyncParsable<T = unknown> = { safeParse(value: unknown): ParseResult<T> };
 
 function joinIssuePath(path: IssuePath | undefined, separator?: string): string;
 ```
 
-`joinIssuePath()` flattens an issue path into a UI key such as `'permissions.0.slug'`. It accepts spell-native `(string | number)[]` paths and Standard Schema paths with `{ key }` segments, and returns `''` for empty or undefined paths.
+`joinIssuePath()` flattens a Spell or Standard Schema issue path into a UI key such as `'permissions.0.slug'`.
 
 ## Errors
 
-- `SpellError`: base class. Use `instanceof SpellError` for cross-boundary narrowing.
-- `SpellValidationError`: validation failure with `issues`, `messagesAt()`, `flatten()`, and `flattenFirst()`.
-- `SpellDefinitionError`: schema cannot create portable definition.
+| Class                  | Thrown when                                                                                | Members                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `SpellError`           | Base class; thrown directly when synchronous parsing meets an async check                  | `name`, `message`                                                       |
+| `SpellValidationError` | `parse()`, `parseAsync()`, or `assert()` receives invalid input                            | `issues` (frozen), `flatten()`, `flattenFirst()`, `messagesAt(...path)` |
+| `SpellDefinitionError` | `definition()` on a non-portable schema; invalid object derivation or discriminated branch | `name`, `message`                                                       |
+
+`SpellValidationError.message` lists one `path: message [code]` line per issue; root issues use `value` as the path.
 
 ```ts
 const result = s.object({ email: s.string().email() }).safeParse({ email: 'invalid' });

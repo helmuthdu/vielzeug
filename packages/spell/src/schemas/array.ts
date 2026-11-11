@@ -1,217 +1,119 @@
-import type {
-  AnySchema,
-  InferInput,
-  InferOutput,
-  Issue,
-  MessageFn,
-  ParseContext,
-  ParseValue,
-  SchemaDescriptor,
-} from '../core';
+import {
+  all,
+  atLeast,
+  atMost,
+  chain,
+  invalid,
+  issue,
+  type MaybePromise,
+  type ParseValue,
+  prefixIssues,
+  type RunContext,
+  resolveMessage,
+} from '../_parse';
+import { Schema } from '../schema';
+import {
+  type AnySchema,
+  ErrorCode,
+  type InferInput,
+  type InferOutput,
+  type Issue,
+  type MessageFn,
+  type SchemaDescriptor,
+  type SchemaKind,
+} from '../types';
 
-import { ErrorCode, fail, prependIssuePath, resolveMessage, Schema } from '../core';
+type ArrayMeta = { maxItems: number; minItems: number; uniqueItems: true };
 
-/* -------------------- Typed annotations -------------------- */
-
-interface ArrayAnnotations extends Record<string, unknown> {
-  maxItems?: number;
-  minItems?: number;
-}
+type ItemsMessage<Ctx = object> = MessageFn<Ctx & { value: unknown[] }>;
 
 export class ArraySchema<T extends AnySchema> extends Schema<InferOutput<T>[], InferInput<T>[]> {
   readonly itemSchema: T;
-
-  protected override get _kind(): string {
-    return 'array';
-  }
 
   constructor(itemSchema: T) {
     super();
     this.itemSchema = itemSchema;
   }
 
-  private _parseItemsSync(items: unknown[], ctx: ParseContext): { data: InferOutput<T>[]; issues: Issue[] } {
-    const issues: Issue[] = [];
-    const parsed: InferOutput<T>[] = [];
-
-    for (let i = 0; i < items.length; i++) {
-      const result = this.itemSchema._parseFullSync(items[i], ctx);
-
-      if (result.issues.length === 0) {
-        parsed.push(result.data as InferOutput<T>);
-      } else {
-        issues.push(...prependIssuePath(result.issues, i));
-        parsed.push(items[i] as InferOutput<T>);
-      }
-    }
-
-    return { data: parsed, issues };
+  override get kind(): SchemaKind {
+    return 'array';
   }
 
-  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
-    if (!Array.isArray(value)) {
-      return { data: value, issues: fail(ErrorCode.invalid_type, ctx.messages.array.type()), typeOk: false };
-    }
+  /** Item failures are reported per index; failed items keep their input value. */
+  protected override _parse(value: unknown, ctx: RunContext): MaybePromise<ParseValue> {
+    if (!Array.isArray(value)) return invalid(value, issue(ErrorCode.invalid_type, ctx.messages.array.type()));
 
-    const { data: items, issues } = this._parseItemsSync(value, ctx);
+    return chain(all(value.map((item) => this.itemSchema._run(item, ctx))), (results) => {
+      const issues: Issue[] = [];
+      const output = results.map((result, index) => {
+        if (result.issues.length === 0) return result.value;
 
-    return { data: items, issues, typeOk: true };
-  }
+        issues.push(...prefixIssues(result.issues, index));
 
-  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
-    if (!Array.isArray(value)) {
-      return { data: value, issues: fail(ErrorCode.invalid_type, ctx.messages.array.type()), typeOk: false };
-    }
+        return value[index];
+      });
 
-    const settled = await Promise.all(value.map((item) => this.itemSchema._parseFullAsync(item, ctx)));
-
-    const issues: Issue[] = [];
-    const parsed: InferOutput<T>[] = [];
-
-    for (let i = 0; i < settled.length; i++) {
-      const result = settled[i];
-
-      if (result.issues.length === 0) {
-        parsed.push(result.data as InferOutput<T>);
-      } else {
-        issues.push(...prependIssuePath(result.issues, i));
-        parsed.push(value[i] as InferOutput<T>);
-      }
-    }
-
-    return { data: parsed, issues, typeOk: true };
-  }
-
-  min(length: number, message?: MessageFn<{ min: number; value: unknown[] }>): this {
-    return this._addConstraint(
-      (value, ctx) => {
-        if ((value as unknown[]).length >= length) return null;
-
-        return fail(
-          ErrorCode.too_small,
-          resolveMessage(message ?? ctx!.messages.array.min, { min: length, value: value as unknown[] }),
-          {
-            min: length,
-          },
-        );
-      },
-      (current) => {
-        const ann = current as ArrayAnnotations;
-
-        return {
-          ...ann,
-          minItems: ann.minItems === undefined ? length : Math.max(ann.minItems, length),
-        };
-      },
-    );
-  }
-
-  max(length: number, message?: MessageFn<{ max: number; value: unknown[] }>): this {
-    return this._addConstraint(
-      (value, ctx) => {
-        if ((value as unknown[]).length <= length) return null;
-
-        return fail(
-          ErrorCode.too_big,
-          resolveMessage(message ?? ctx!.messages.array.max, { max: length, value: value as unknown[] }),
-          {
-            max: length,
-          },
-        );
-      },
-      (current) => {
-        const ann = current as ArrayAnnotations;
-
-        return {
-          ...ann,
-          maxItems: ann.maxItems === undefined ? length : Math.min(ann.maxItems, length),
-        };
-      },
-    );
-  }
-
-  length(exact: number, message?: MessageFn<{ exact: number; value: unknown[] }>): this {
-    return this._addConstraint(
-      (value, ctx) => {
-        if ((value as unknown[]).length === exact) return null;
-
-        return fail(
-          ErrorCode.invalid_length,
-          resolveMessage(message ?? ctx!.messages.array.length, { exact, value: value as unknown[] }),
-          { exact },
-        );
-      },
-      (ann) => ({ ...ann, maxItems: exact, minItems: exact }),
-    );
-  }
-
-  nonEmpty(message?: MessageFn<{ min: number; value: unknown[] }>): this {
-    return this._addConstraint((value, ctx) => {
-      const typed = value as unknown[];
-
-      return typed.length > 0
-        ? null
-        : fail(ErrorCode.too_small, resolveMessage(message ?? ctx!.messages.array.nonEmpty, { min: 1, value: typed }), {
-            min: 1,
-          });
+      return { issues, typeOk: true, value: output };
     });
+  }
+
+  min(length: number, message?: ItemsMessage<{ min: number }>): this {
+    return this._refine<ArrayMeta>(
+      (value) => value.length >= length,
+      (value, m) =>
+        issue(ErrorCode.too_small, resolveMessage(message ?? m.array.min, { min: length, value }), { min: length }),
+      (current) => ({ minItems: atLeast(current.minItems, length) }),
+    );
+  }
+
+  max(length: number, message?: ItemsMessage<{ max: number }>): this {
+    return this._refine<ArrayMeta>(
+      (value) => value.length <= length,
+      (value, m) =>
+        issue(ErrorCode.too_big, resolveMessage(message ?? m.array.max, { max: length, value }), { max: length }),
+      (current) => ({ maxItems: atMost(current.maxItems, length) }),
+    );
+  }
+
+  length(exact: number, message?: ItemsMessage<{ exact: number }>): this {
+    return this._refine<ArrayMeta>(
+      (value) => value.length === exact,
+      (value, m) =>
+        issue(ErrorCode.invalid_length, resolveMessage(message ?? m.array.length, { exact, value }), { exact }),
+      (current) => ({ maxItems: atMost(current.maxItems, exact), minItems: atLeast(current.minItems, exact) }),
+    );
+  }
+
+  nonEmpty(message?: ItemsMessage): this {
+    return this._refine<ArrayMeta>(
+      (value) => value.length > 0,
+      (value, m) => issue(ErrorCode.too_small, resolveMessage(message ?? m.array.nonEmpty, { value }), { min: 1 }),
+      (current) => ({ minItems: atLeast(current.minItems, 1) }),
+    );
   }
 
   /**
-   * Validates that all array elements are unique.
-   *
-   * **Default behaviour:** Uniqueness is checked using JavaScript `Set` semantics, which means
-   * **referential equality** for objects. Two structurally identical objects such as
-   * `{ id: 1 }` and `{ id: 1 }` are considered different values and will not be
-   * flagged as duplicates.
-   *
-   * **Custom equality:** Pass an `equalsFn` to use structural or domain-specific comparison
-   * logic (e.g. compare by a specific field, or use deep equality).
+   * Requires distinct items under `SameValueZero` (reference equality for objects), or distinct
+   * `by(item)` keys. A `by` selector is runtime behavior, so `definition()` then throws.
    *
    * @example
-   * s.array(s.object({ id: s.number() })).unique((a, b) => a.id === b.id)
+   * s.array(s.object({ id: s.number() })).unique({ by: (item) => item.id })
    */
-  unique(
-    equalsFnOrMessage?: ((a: InferOutput<T>, b: InferOutput<T>) => boolean) | MessageFn<{ value: unknown[] }>,
-    message?: MessageFn<{ value: unknown[] }>,
-  ): this {
-    const isCustomEqualsFn = typeof equalsFnOrMessage === 'function' && equalsFnOrMessage.length === 2;
-    const equalsFn = isCustomEqualsFn ? (equalsFnOrMessage as (a: InferOutput<T>, b: InferOutput<T>) => boolean) : null;
-    const resolvedMessage = isCustomEqualsFn
-      ? message
-      : typeof equalsFnOrMessage === 'function'
-        ? (equalsFnOrMessage as MessageFn<{ value: unknown[] }>)
-        : undefined;
+  unique(options: { by?: (item: InferOutput<T>) => unknown; message?: ItemsMessage } = {}): this {
+    const { by, message } = options;
+    const next = this._refine<ArrayMeta>(
+      (value) => new Set(by ? value.map(by) : value).size === value.length,
+      (value, m) => issue(ErrorCode.invalid_unique, resolveMessage(message ?? m.array.unique, { value })),
+      by ? undefined : () => ({ uniqueItems: true }),
+    );
 
-    return this._addConstraint((value, ctx) => {
-      const typed = value as InferOutput<T>[];
-      let isUnique: boolean;
-
-      if (equalsFn) {
-        isUnique = typed.every((a, i) => typed.slice(0, i).every((b) => !equalsFn(a, b)));
-      } else {
-        isUnique = new Set(typed).size === typed.length;
-      }
-
-      if (isUnique) return null;
-
-      return fail(
-        ErrorCode.invalid_unique,
-        resolveMessage(resolvedMessage ?? ctx!.messages.array.unique, { value: typed as unknown[] }),
-        {
-          unique: true,
-        },
-      );
-    });
+    return by ? next._with({ portable: false }) : next;
   }
 
-  protected override _toDescriptorImpl(): SchemaDescriptor {
-    const ann = this._annotations as ArrayAnnotations;
-
+  protected override _describe(): SchemaDescriptor {
     return {
       ...this._describeBase(),
-      ...(ann.maxItems !== undefined ? { maxItems: ann.maxItems } : {}),
-      ...(ann.minItems !== undefined ? { minItems: ann.minItems } : {}),
+      ...(this.state.meta as Partial<ArrayMeta>),
       items: this.itemSchema.definition(),
       kind: 'array',
     };

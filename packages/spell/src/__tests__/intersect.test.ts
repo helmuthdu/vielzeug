@@ -55,8 +55,8 @@ describe('s.intersect()', () => {
     expect(Object.getOwnPropertyDescriptor(result, 'constructor')?.value).toEqual({ left: true, right: true });
   });
 
-  it('accepts raw literal values as shorthand for s.literal()', () => {
-    const schema = s.intersect('hello', 'hello');
+  it('intersects literal schemas', () => {
+    const schema = s.intersect(s.literal('hello'), s.string().min(3));
 
     expect(schema.parse('hello')).toBe('hello');
     expect(() => schema.parse('world')).toThrow();

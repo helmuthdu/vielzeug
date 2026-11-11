@@ -69,7 +69,7 @@ await Slug.parseAsync('changelog'); // 'changelog'
 
 ### Pitfalls
 
-- `checkAsync()` marks a schema asynchronous: runtime guards reject synchronous parsing, so use `parseAsync()` when any rule performs I/O. Async checks compose at any nesting depth.
+- `checkAsync()` at any nesting depth makes `parse()` and `safeParse()` throw `SpellError` before the check runs; use `parseAsync()` or `safeParseAsync()`.
 - Keep I/O inside `checkAsync()`, not inside `transform()`. Validation failures must go through the issue model.
 - Call `ctx.addIssue()` more than once to emit multiple issues from a single async rule.
 

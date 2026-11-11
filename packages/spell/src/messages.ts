@@ -1,5 +1,7 @@
+import { isPlainObject } from '@vielzeug/arsenal';
+
 import { warn } from './_dev';
-import { cloneRecord, defineOwnProperty, isUnsafeObjectKey } from './safe-object';
+import { deepFreeze, defineOwnProperty, isUnsafeObjectKey, objectFromEntries } from './_object';
 import type { ParseContext } from './types';
 
 export type Messages = {
@@ -80,8 +82,8 @@ export type Messages = {
     base64url: () => string;
     cuid: () => string;
     cuid2: () => string;
-    date: () => string;
-    dateTime: () => string;
+    isoDate: () => string;
+    isoDateTime: () => string;
     duration: () => string;
     email: () => string;
     emoji: () => string;
@@ -115,7 +117,7 @@ export type Messages = {
   union: {
     invalid: () => string;
   };
-  variant: {
+  discriminatedUnion: {
     invalidDiscriminator: (ctx: { discriminator: string; expected: string[] }) => string;
     type: () => string;
   };
@@ -125,7 +127,7 @@ export type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends Record<string, unknown> ? DeepPartial<T[K]> : T[K];
 };
 
-const _builtinMessages: Messages = {
+const builtinMessages: Messages = {
   array: {
     length: ({ exact }) => `Must have exactly ${exact} items`,
     max: ({ max }) => `Must have at most ${max} items`,
@@ -154,6 +156,11 @@ const _builtinMessages: Messages = {
     max: ({ max }) => `Must be before ${max.toISOString()}`,
     min: ({ min }) => `Must be after ${min.toISOString()}`,
     type: () => 'Expected valid date',
+  },
+  discriminatedUnion: {
+    invalidDiscriminator: ({ discriminator, expected }) =>
+      `Invalid discriminator value at "${discriminator}": expected ${expected.map((k) => JSON.stringify(k)).join(' | ')}`,
+    type: () => 'Expected object',
   },
   enum: {
     invalid: ({ values }) => `Expected one of: ${values.map((v) => JSON.stringify(v)).join(', ')}`,
@@ -203,8 +210,6 @@ const _builtinMessages: Messages = {
     base64url: () => 'Invalid base64url',
     cuid: () => 'Invalid CUID',
     cuid2: () => 'Invalid CUID2',
-    date: () => 'Invalid date',
-    dateTime: () => 'Invalid datetime',
     duration: () => 'Invalid ISO 8601 duration',
     email: () => 'Invalid email address',
     emoji: () => 'Invalid emoji sequence',
@@ -213,6 +218,8 @@ const _builtinMessages: Messages = {
     hexColor: () => 'Invalid hex color',
     includes: ({ substr }) => `Must include "${substr}"`,
     ip: () => 'Invalid IP address',
+    isoDate: () => 'Invalid date',
+    isoDateTime: () => 'Invalid datetime',
     jwt: () => 'Invalid JWT',
     length: ({ exact }) => `Must be exactly ${exact} characters`,
     max: ({ max }) => `Must be at most ${max} characters`,
@@ -238,46 +245,40 @@ const _builtinMessages: Messages = {
   union: {
     invalid: () => 'Does not match any of the expected types',
   },
-  variant: {
-    invalidDiscriminator: ({ discriminator, expected }) =>
-      `Invalid discriminator value at "${discriminator}": expected ${expected.map((k) => JSON.stringify(k)).join(' | ')}`,
-    type: () => 'Expected object',
-  },
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 function mergeMessages<T extends Record<string, unknown>>(base: T, patch: DeepPartial<T>): T {
-  const out = cloneRecord(base) as Record<string, unknown>;
+  const out = objectFromEntries(Object.entries(base));
 
   for (const [key, value] of Object.entries(patch)) {
     if (value === undefined) continue;
 
     if (isUnsafeObjectKey(key)) {
-      warn(`[spell] Ignoring unsafe message override key "${key}" to prevent prototype mutation.`);
+      warn(`Ignoring unsafe message override key "${key}" to prevent prototype mutation.`);
       continue;
     }
 
     const baseValue = out[key];
 
-    if (isRecord(baseValue) && isRecord(value)) {
-      defineOwnProperty(out, key, mergeMessages(baseValue, value as DeepPartial<typeof baseValue>));
-    } else {
-      defineOwnProperty(out, key, value);
-    }
+    defineOwnProperty(
+      out,
+      key,
+      isPlainObject(baseValue) && isPlainObject(value)
+        ? mergeMessages(baseValue, value as DeepPartial<typeof baseValue>)
+        : value,
+    );
   }
 
   return out as T;
 }
 
 /**
- * Creates an immutable parse context. Pass this context to parse methods when
- * validation messages vary by request, locale, or form. Spell never stores it globally.
+ * Creates a frozen parse context with the built-in messages merged with `messages`. Pass it to
+ * parse methods when validation messages vary by request, locale, or form. Spell never stores it globally.
  */
 export function createParseContext(messages: DeepPartial<Messages> = {}): ParseContext {
-  return { messages: mergeMessages(_builtinMessages, messages) };
+  return deepFreeze({ messages: mergeMessages(builtinMessages, messages) });
 }
 
-/** @internal */
+/** The context used when a parse method receives none. */
+export const defaultContext: ParseContext = createParseContext();

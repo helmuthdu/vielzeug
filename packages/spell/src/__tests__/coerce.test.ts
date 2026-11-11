@@ -96,3 +96,13 @@ describe('s.coerce.date()', () => {
     expect(s.coerce.date().parse(d)).toBeInstanceOf(Date);
   });
 });
+
+describe('InferInput type utility', () => {
+  test('coerce schemas accept unknown input at runtime', () => {
+    // Type test: coerce.number() should accept string input at runtime
+    expect(s.coerce.number().parse('42')).toBe(42);
+    expect(s.coerce.boolean().parse('true')).toBe(true);
+    expect(s.coerce.date().parse('2024-01-01')).toBeInstanceOf(Date);
+    expect(s.coerce.bigint().parse('10')).toBe(10n);
+  });
+});

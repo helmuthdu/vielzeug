@@ -1,93 +1,51 @@
 import { isPlainObject } from '@vielzeug/arsenal';
 
-import type { AnySchema, InferInput, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import { defineOwnProperty, objectFromEntries } from '../_object';
+import { all, chain, invalid, type MaybePromise, ok, type ParseValue, type RunContext } from '../_parse';
+import { Schema } from '../schema';
+import type { InferInput, InferOutput, SchemaDescriptor, SchemaKind } from '../types';
+import type { UnionMembers } from './union';
 
-import { Schema } from '../core';
-import { cloneRecord, defineOwnProperty } from '../safe-object';
+type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
 
-type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
-
-/**
- * Recursively merges `source` into `target`.
- * Plain objects are merged key-by-key; all other values take the `source` value.
- */
+/** Plain objects merge key by key; any other value is replaced by `source`. */
 function deepMerge(target: unknown, source: unknown): unknown {
-  if (isPlainObject(target) && isPlainObject(source)) {
-    const result = cloneRecord(target);
+  if (!isPlainObject(target) || !isPlainObject(source)) return source;
 
-    for (const [key, val] of Object.entries(source)) {
-      defineOwnProperty(result, key, deepMerge(target[key], val));
-    }
+  const merged = objectFromEntries(Object.entries(target));
 
-    return result;
-  }
+  for (const [key, entry] of Object.entries(source)) defineOwnProperty(merged, key, deepMerge(target[key], entry));
 
-  return source;
+  return merged;
 }
 
-/** All schemas must pass: intersection semantics. */
-export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
+/** Every branch must parse; plain-object outputs are deep-merged. */
+export class IntersectSchema<T extends UnionMembers> extends Schema<
   UnionToIntersection<InferOutput<T[number]>>,
   UnionToIntersection<InferInput<T[number]>>
 > {
   readonly schemas: T;
 
-  protected override get _kind(): string {
+  constructor(schemas: T) {
+    super();
+    this.schemas = Object.freeze([...schemas]) as unknown as T;
+  }
+
+  override get kind(): SchemaKind {
     return 'intersect';
   }
 
-  constructor(schemas: T) {
-    super();
-    this.schemas = Object.freeze([...schemas]) as T;
+  protected override _parse(value: unknown, ctx: RunContext): MaybePromise<ParseValue> {
+    return chain(all(this.schemas.map((schema) => schema._run(value, ctx))), (results) => {
+      const issues = results.flatMap((result) => result.issues);
+
+      if (issues.length > 0) return invalid(value, ...issues);
+
+      return ok(results.map((result) => result.value).reduce(deepMerge));
+    });
   }
 
-  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
-    const state: { hasOutput: boolean; issues: Issue[]; output: unknown } = {
-      hasOutput: false,
-      issues: [],
-      output: value,
-    };
-
-    for (let i = 0; i < this.schemas.length; i++) {
-      const result = this.schemas[i]._parseFullSync(value, ctx);
-
-      if (result.issues.length > 0) {
-        state.issues.push(...result.issues);
-      } else if (!state.hasOutput) {
-        state.hasOutput = true;
-        state.output = result.data;
-      } else {
-        state.output = deepMerge(state.output, result.data);
-      }
-    }
-
-    return { data: state.output, issues: state.issues, typeOk: state.issues.length === 0 };
-  }
-
-  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
-    const state: { hasOutput: boolean; issues: Issue[]; output: unknown } = {
-      hasOutput: false,
-      issues: [],
-      output: value,
-    };
-
-    for (let i = 0; i < this.schemas.length; i++) {
-      const result = await this.schemas[i]._parseFullAsync(value, ctx);
-
-      if (result.issues.length > 0) {
-        state.issues.push(...result.issues);
-      } else if (!state.hasOutput) {
-        state.hasOutput = true;
-        state.output = result.data;
-      } else {
-        state.output = deepMerge(state.output, result.data);
-      }
-    }
-
-    return { data: state.output, issues: state.issues, typeOk: state.issues.length === 0 };
-  }
-
-  protected override _toDescriptorImpl(): SchemaDescriptor {
-    return { ...this._describeBase(), branches: this.schemas.map((s) => s.definition()), kind: 'intersect' };
+  protected override _describe(): SchemaDescriptor {
+    return { ...this._describeBase(), branches: this.schemas.map((schema) => schema.definition()), kind: 'intersect' };
   }
 }

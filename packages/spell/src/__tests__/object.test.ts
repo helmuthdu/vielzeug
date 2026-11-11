@@ -1,4 +1,4 @@
-import { s } from '../index';
+import { SpellDefinitionError, s } from '../index';
 
 describe('s.object()', () => {
   const User = s.object({ id: s.number(), name: s.string() });
@@ -75,25 +75,19 @@ describe('s.object()', () => {
       expect(() => partial.parse({ name: 'Alice' })).toThrow();
     });
 
-    it('partial() preserves refinements', () => {
+    it('partial() rejects schemas with checks', () => {
       const base = User.check((d) => d.name !== 'admin' || 'Reserved name');
 
-      expect(() => base.partial().parse({ name: 'admin' })).toThrow('Reserved name');
+      expect(() => base.partial()).toThrow(SpellDefinitionError);
     });
   });
 
   describe('required()', () => {
-    it('makes all optional fields required again', () => {
-      const schema = User.partial().required();
+    it('rejects undefined again after optional()', () => {
+      const schema = User.optional().required();
 
+      expect(schema.safeParse(undefined).success).toBe(false);
       expect(schema.parse({ id: 1, name: 'Alice' })).toEqual({ id: 1, name: 'Alice' });
-      expect(() => schema.parse({ name: 'Alice' })).toThrow();
-    });
-
-    it('required() preserves refinements', () => {
-      const base = User.partial().check((d) => d.name !== 'admin' || 'Reserved name');
-
-      expect(() => base.required().parse({ id: 1, name: 'admin' })).toThrow('Reserved name');
     });
   });
 
@@ -115,12 +109,10 @@ describe('s.object()', () => {
       expect(schema.parse({ id: 1, name: 'Alice' })).toEqual({ id: 1, name: 'Alice' });
     });
 
-    it('preserves refinements', () => {
-      const refined = User.check((d) => d.name !== 'admin' || 'Reserved name');
-
-      expect(() => refined.extend({ role: s.string() }).parse({ id: 1, name: 'admin', role: 'x' })).toThrow(
-        'Reserved name',
-      );
+    it('rejects schemas with checks, defaults, or catches', () => {
+      expect(() => User.check(() => true).extend({ role: s.string() })).toThrow(SpellDefinitionError);
+      expect(() => User.default({ id: 1, name: 'A' }).extend({ role: s.string() })).toThrow(SpellDefinitionError);
+      expect(() => User.catch({ id: 1, name: 'A' }).extend({ role: s.string() })).toThrow(SpellDefinitionError);
     });
   });
 
@@ -145,11 +137,11 @@ describe('s.object()', () => {
       });
     });
 
-    it('pick() and omit() preserve refinements', () => {
+    it('pick() and omit() reject schemas with checks that may read removed fields', () => {
       const refined = Full.check((d) => d.email.includes('@') || 'Invalid email format');
 
-      expect(() => refined.pick('email').parse({ email: 'bad' })).toThrow('Invalid email format');
-      expect(() => refined.omit('id').parse({ email: 'bad', name: 'Alice' })).toThrow('Invalid email format');
+      expect(() => refined.pick('email')).toThrow(SpellDefinitionError);
+      expect(() => refined.omit('id')).toThrow(SpellDefinitionError);
     });
   });
 
@@ -252,10 +244,11 @@ describe('ObjectSchema.keyof()', () => {
     expect(() => keys.parse('d')).toThrow();
   });
 
-  it('keyof() kind is union', () => {
-    const schema = s.object({ x: s.string() });
+  it('keyof() is an enum of the shape keys', () => {
+    const schema = s.object({ x: s.string(), y: s.number() });
 
-    expect(schema.keyof().kind).toBe('union');
+    expect(schema.keyof().kind).toBe('enum');
+    expect(schema.keyof().values).toEqual(['x', 'y']);
   });
 });
 
@@ -297,61 +290,6 @@ describe('ObjectSchema.relaxed() preserves fluent chain', () => {
   });
 });
 
-describe('ObjectSchema.merge()', () => {
-  it('merges two object schemas into one', () => {
-    const a = s.object({ x: s.string() });
-    const b = s.object({ y: s.number() });
-    const merged = a.merge(b);
-
-    expect(merged.parse({ x: 'hello', y: 42 })).toEqual({ x: 'hello', y: 42 });
-  });
-
-  it('later schema keys override earlier ones', () => {
-    const a = s.object({ x: s.string() });
-    const b = s.object({ x: s.number() });
-    const merged = a.merge(b);
-
-    expect(merged.parse({ x: 1 })).toEqual({ x: 1 });
-    expect(() => merged.parse({ x: 'str' })).toThrow();
-  });
-
-  it('merged schema rejects unknown keys (strict by default)', () => {
-    const merged = s.object({ a: s.string() }).merge(s.object({ b: s.number() }));
-
-    expect(merged.safeParse({ a: 'hi', b: 1, extra: true }).success).toBe(false);
-  });
-
-  it('merge() inherits relaxed mode from the right-hand schema', () => {
-    const a = s.object({ x: s.string() });
-    const b = s.object({ y: s.number() }).relaxed();
-    const merged = a.merge(b);
-
-    expect(merged.safeParse({ extra: true, x: 'hi', y: 1 }).success).toBe(true);
-  });
-
-  it('merge() is strict when right-hand schema is strict', () => {
-    const a = s.object({ x: s.string() }).relaxed();
-    const b = s.object({ y: s.number() });
-    const merged = a.merge(b);
-
-    expect(merged.safeParse({ extra: true, x: 'hi', y: 1 }).success).toBe(false);
-  });
-
-  it('merge() preserves refinements from the receiver', () => {
-    const a = s.object({ x: s.string() }).check((d) => d.x !== 'admin' || 'Reserved name');
-    const b = s.object({ y: s.number() });
-
-    expect(() => a.merge(b).parse({ x: 'admin', y: 1 })).toThrow('Reserved name');
-  });
-
-  it('merge() preserves default() and catch() from the receiver', () => {
-    const a = s.object({ x: s.string() }).catch({ x: 'fallback' });
-    const b = s.object({ y: s.number() });
-
-    expect(a.merge(b).parse('not-an-object' as any)).toEqual({ x: 'fallback' });
-  });
-});
-
 describe('ObjectSchema.strict() after relaxed()', () => {
   it('strict() after relaxed() reverts to rejecting unknown keys', () => {
     const schema = s.object({ a: s.string() }).relaxed().strict();
@@ -361,111 +299,15 @@ describe('ObjectSchema.strict() after relaxed()', () => {
   });
 });
 
-describe('ObjectSchema.defaults()', () => {
-  it('returns default-filled object when all fields have defaults', () => {
-    const schema = s.object({
-      host: s.string().default('localhost'),
-      port: s.number().default(3000),
-    });
-
-    expect(schema.defaults()).toEqual({ host: 'localhost', port: 3000 });
-  });
-
-  it('throws when required fields lack defaults', () => {
-    const schema = s.object({ name: s.string() });
-
-    expect(() => schema.defaults()).toThrow();
-  });
-
-  it('partial() fields default to undefined', () => {
-    const schema = s.object({ name: s.string() }).partial();
-
-    expect(schema.defaults()).toEqual({});
-  });
-});
-
-describe('ObjectSchema.partialDefaults()', () => {
-  it('returns only fields that have defaults', () => {
-    const schema = s.object({
-      name: s.string(),
-      role: s.string().default('viewer'),
-    });
-
-    expect(schema.partialDefaults()).toEqual({ role: 'viewer' });
-  });
-
-  it('returns empty object when no fields have defaults', () => {
-    const schema = s.object({ id: s.number(), name: s.string() });
-
-    expect(schema.partialDefaults()).toEqual({});
-  });
-
-  it('returns all fields when all have defaults', () => {
-    const schema = s.object({
-      host: s.string().default('localhost'),
-      port: s.number().default(3000),
-    });
-
-    expect(schema.partialDefaults()).toEqual({ host: 'localhost', port: 3000 });
-  });
-
-  it('includes optional fields (they default to undefined)', () => {
-    const schema = s.object({ name: s.string().optional() });
-
-    expect(schema.partialDefaults()).toEqual({ name: undefined });
-  });
-});
-
-describe('ObjectSchema.requiredFields() / optionalFields()', () => {
-  const schema = s.object({
-    id: s.number(),
-    name: s.string(),
-    note: s.string().nullish(),
-    role: s.string().optional(),
-  });
-
-  it('requiredFields() returns only non-optional field keys', () => {
-    expect(schema.requiredFields()).toEqual(expect.arrayContaining(['id', 'name']));
-    expect(schema.requiredFields()).not.toContain('role');
-    expect(schema.requiredFields()).not.toContain('note');
-  });
-
-  it('optionalFields() returns only optional field keys', () => {
-    expect(schema.optionalFields()).toEqual(expect.arrayContaining(['role', 'note']));
-    expect(schema.optionalFields()).not.toContain('id');
-    expect(schema.optionalFields()).not.toContain('name');
-  });
-
-  it('requiredFields() returns all keys for a fully required schema', () => {
-    const all = s.object({ a: s.string(), b: s.number() });
-
-    expect(all.requiredFields()).toEqual(expect.arrayContaining(['a', 'b']));
-    expect(all.requiredFields()).toHaveLength(2);
-  });
-
-  it('optionalFields() returns all keys for a full partial schema', () => {
-    const all = s.object({ a: s.string(), b: s.number() }).partial();
-
-    expect(all.optionalFields()).toEqual(expect.arrayContaining(['a', 'b']));
-    expect(all.optionalFields()).toHaveLength(2);
-  });
-});
-
-describe('ObjectSchema shape-transform methods preserve metadata', () => {
-  it('pick() preserves check() validators', () => {
-    const schema = s.object({ a: s.string(), b: s.number() }).check(() => 'always fails');
-
-    expect(schema.pick('a').safeParse({ a: 'hello' }).success).toBe(false);
-  });
-
+describe('ObjectSchema derivations keep slot metadata', () => {
   it('partial() preserves description', () => {
-    const schema = s.object({ a: s.string() }).label('My object');
+    const schema = s.object({ a: s.string() }).describe('My object');
 
     expect(schema.partial().description).toBe('My object');
   });
 
   it('extend() preserves description', () => {
-    const schema = s.object({ a: s.string() }).label('My object');
+    const schema = s.object({ a: s.string() }).describe('My object');
 
     expect(schema.extend({ b: s.number() }).description).toBe('My object');
   });
@@ -525,5 +367,86 @@ describe('ObjectSchema.parseAsync() concurrent field parsing', () => {
 
     await expect(schema.parseAsync({ confirm: 'a', pass: 'b' })).rejects.toThrow('Passwords must match');
     await expect(schema.parseAsync({ confirm: 'x', pass: 'x' })).resolves.toEqual({ confirm: 'x', pass: 'x' });
+  });
+});
+
+describe('ObjectSchema.tolerate()', () => {
+  const Hunter = s.object({ name: s.string() });
+
+  it('accepts and drops the named keys', () => {
+    expect(Hunter.tolerate('woundCount').parse({ name: 'Ada', woundCount: 3 })).toEqual({ name: 'Ada' });
+  });
+
+  it('still rejects other unknown keys', () => {
+    const result = Hunter.tolerate('woundCount').safeParse({ extra: true, name: 'Ada', woundCount: 3 });
+
+    expect(result.success).toBe(false);
+
+    if (!result.success)
+      expect(result.error.issues[0]).toMatchObject({ code: 'invalid_keys', params: { keys: ['extra'] } });
+  });
+
+  it('keeps declared field validation and the object type', () => {
+    const schema = Hunter.tolerate('woundCount').pick('name');
+
+    expect(schema.safeParse({ name: 1, woundCount: 3 }).success).toBe(false);
+  });
+
+  it('drops tolerated keys even in relaxed mode', () => {
+    expect(Hunter.relaxed().tolerate('legacy').parse({ extra: 1, legacy: 2, name: 'Ada' })).toEqual({
+      extra: 1,
+      name: 'Ada',
+    });
+  });
+
+  it('is part of the definition', () => {
+    expect(Hunter.tolerate('legacy').definition()).toMatchObject({
+      kind: 'object',
+      strict: true,
+      tolerated: ['legacy'],
+    });
+  });
+});
+
+describe('ObjectSchema output keys', () => {
+  it('omits optional keys absent from the input', () => {
+    const output = s.object({ a: s.string(), b: s.string().optional() }).parse({ a: 'x' });
+
+    expect(Object.keys(output)).toEqual(['a']);
+  });
+
+  it('keeps optional keys present as undefined in the input', () => {
+    const output = s.object({ b: s.string().optional() }).parse({ b: undefined });
+
+    expect(Object.hasOwn(output, 'b')).toBe(true);
+  });
+
+  it('writes defaults for absent keys', () => {
+    expect(s.object({ role: s.string().default('viewer') }).parse({})).toEqual({ role: 'viewer' });
+  });
+});
+
+describe('ObjectSchema unknown-key modes', () => {
+  test('strict (default) rejects unknown keys', () => {
+    const schema = s.object({ id: s.number() });
+
+    expect(schema.safeParse({ extra: true, id: 1 }).success).toBe(false);
+  });
+
+  test('relaxed mode preserves unknown keys', () => {
+    const result = s.object({ id: s.number() }).relaxed().parse({ extra: 'kept', id: 1 });
+
+    expect((result as any).extra).toBe('kept');
+  });
+
+  test('relaxed mode survives extend/pick/omit', () => {
+    const base = s.object({ a: s.string(), b: s.number() }).relaxed();
+    const extended = (base as any).extend({ c: s.boolean() });
+    const result = extended.parse({ a: 'x', b: 1, c: true, unknown: 99 });
+
+    expect(result.a).toBe('x');
+    expect(result.b).toBe(1);
+    expect(result.c).toBe(true);
+    expect((result as any).unknown).toBe(99);
   });
 });

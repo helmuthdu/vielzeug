@@ -1,5 +1,5 @@
 import * as spell from '../index';
-import { fromDefinition } from '../json';
+import { toJsonSchema } from '../json';
 import { isEmail } from '../predicates';
 
 describe('public API surface', () => {
@@ -17,7 +17,7 @@ describe('public API surface', () => {
   });
 
   it('puts optional tooling behind explicit subpaths', () => {
-    expect(typeof fromDefinition).toBe('function');
+    expect(typeof toJsonSchema).toBe('function');
     expect(typeof isEmail).toBe('function');
   });
 

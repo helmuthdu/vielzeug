@@ -1,79 +1,71 @@
-import { type AnySchema, type InferInput, type InferOutput, Schema } from './core';
+import { Schema } from './schema';
 import { ArraySchema } from './schemas/array';
 import { BigIntSchema } from './schemas/bigint';
-import { BooleanSchema } from './schemas/boolean';
 import { DateSchema } from './schemas/date';
-import { EnumSchema, type EnumValues } from './schemas/enum';
-import { InstanceOfSchema } from './schemas/instanceof';
+import { type DiscriminatedBranches, DiscriminatedUnionSchema } from './schemas/discriminated-union';
 import { IntersectSchema } from './schemas/intersect';
 import { LazySchema } from './schemas/lazy';
-import { LiteralSchema } from './schemas/literal';
 import { MapSchema } from './schemas/map';
-import { NeverSchema } from './schemas/never';
 import { NumberSchema } from './schemas/number';
 import { ObjectSchema, type ObjectShape } from './schemas/object';
-import { type NormalizeItems, normalizeToSchemas, type RawOrSchema } from './schemas/raw-or';
+import {
+  BooleanSchema,
+  EnumSchema,
+  type EnumValues,
+  InstanceOfSchema,
+  LiteralSchema,
+  type LiteralValue,
+  NeverSchema,
+} from './schemas/primitives';
 import { RecordSchema } from './schemas/record';
 import { SetSchema } from './schemas/set';
 import { StringSchema } from './schemas/string';
 import { TupleSchema, type TupleSchemas } from './schemas/tuple';
-import { UnionSchema } from './schemas/union';
-import { VariantSchema } from './schemas/variant';
+import { type UnionMembers, UnionSchema } from './schemas/union';
+import type { AnySchema, InferInput, InferOutput } from './types';
 
-/* -------------------- Internal factory functions -------------------- */
+const coerceNumber = (value: unknown): unknown => {
+  if (typeof value !== 'string' && typeof value !== 'boolean') return value;
 
-const sArray = <T extends AnySchema>(schema: T): ArraySchema<T> => new ArraySchema(schema);
-const sBigint = (): BigIntSchema => new BigIntSchema();
-const sBoolean = (): BooleanSchema => new BooleanSchema();
-const sDate = (): DateSchema => new DateSchema();
-const sEnum = <const T extends EnumValues>(values: T): EnumSchema<T> => new EnumSchema(values);
-const sInstanceof = <T>(cls: new (...args: never[]) => T): InstanceOfSchema<T> => new InstanceOfSchema(cls);
-const sIntersect = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
-  ...items: T
-): IntersectSchema<NormalizeItems<T> & readonly AnySchema[]> =>
-  new IntersectSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]);
-const sLazy = <T extends AnySchema>(getter: () => T): LazySchema<InferOutput<T>, InferInput<T>> =>
-  new LazySchema(getter as unknown as () => Schema<InferOutput<T>, InferInput<T>>);
-const sLiteral = <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
-  new LiteralSchema(value);
-const sMap = <K extends AnySchema, V extends AnySchema>(keySchema: K, valueSchema: V): MapSchema<K, V> =>
-  new MapSchema(keySchema, valueSchema);
-const sNever = (): NeverSchema => new NeverSchema();
-const sNull = (): LiteralSchema<null> => new LiteralSchema(null);
-const sNumber = (): NumberSchema => new NumberSchema();
-const sObject = <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape);
-const sRecord = <K extends AnySchema, V extends AnySchema>(keySchema: K, valueSchema: V): RecordSchema<K, V> =>
-  new RecordSchema(keySchema, valueSchema);
-const sSet = <T extends AnySchema>(schema: T): SetSchema<T> => new SetSchema(schema);
-const sString = (): StringSchema => new StringSchema();
-const sTuple = <const T extends TupleSchemas>(items: T): TupleSchema<T> => new TupleSchema(items);
-const sUndefined = (): LiteralSchema<undefined> => new LiteralSchema(undefined);
-// Schema-only tuples keep their concrete branch types; the second overload normalizes raw
-// literals, where intersecting with AnySchema[] costs nothing.
-function sUnion<T extends readonly [AnySchema, AnySchema, ...AnySchema[]]>(...items: T): UnionSchema<T>;
-function sUnion<T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
-  ...items: T
-): UnionSchema<NormalizeItems<T> & readonly AnySchema[]>;
-function sUnion(this: unknown, ...items: readonly RawOrSchema[]): UnionSchema<readonly AnySchema[]> {
-  return new UnionSchema(normalizeToSchemas(items) as AnySchema[]);
-}
-const sUnknown = (): Schema<unknown> => new Schema();
-const sVariant = <K extends string, M extends Record<string, ObjectSchema<any>>>(
-  discriminator: K,
-  map: M,
-): VariantSchema<K, M> => new VariantSchema(discriminator, map);
-const sCoerce = {
-  bigint: (): BigIntSchema<unknown> => BigIntSchema.coerce(),
-  boolean: (): BooleanSchema<unknown> => BooleanSchema.coerce(),
-  date: (): DateSchema<unknown> => DateSchema.coerce(),
-  number: (): NumberSchema<unknown> => NumberSchema.coerce(),
-  string: (): StringSchema<unknown> => StringSchema.coerce(),
+  const parsed = Number(value);
+
+  return Number.isNaN(parsed) ? value : parsed;
 };
 
-/* -------------------- `s` namespace: the public API -------------------- */
+const coerceBoolean = (value: unknown): unknown => {
+  if (value === 'true' || value === '1' || value === 1) return true;
+
+  if (value === 'false' || value === '0' || value === 0) return false;
+
+  return value;
+};
+
+const coerceBigInt = (value: unknown): unknown => {
+  if (typeof value === 'number' && !Number.isSafeInteger(value)) return value;
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+
+    // BigInt() parsing is superlinear in digit count; bound untrusted input.
+    if (trimmed.length === 0 || trimmed.length > 1000) return value;
+
+    try {
+      return BigInt(trimmed);
+    } catch {
+      return value;
+    }
+  }
+
+  return typeof value === 'number' ? BigInt(value) : value;
+};
+
+const coerceDate = (value: unknown): unknown =>
+  typeof value === 'string' || typeof value === 'number' ? new Date(value) : value;
+
+const coerceString = (value: unknown): unknown => (value == null ? value : String(value));
 
 /**
- * Namespace of all schema factories. Use `s.string()`, `s.object()`, etc.
+ * Namespace of all schema builders.
  *
  * @example
  * import { s, type Infer } from '@vielzeug/spell';
@@ -82,27 +74,43 @@ const sCoerce = {
  * type User = Infer<typeof User>;
  */
 export const s = {
-  array: sArray,
-  bigint: sBigint,
-  boolean: sBoolean,
-  coerce: sCoerce,
-  date: sDate,
-  discriminatedUnion: sVariant,
-  enum: sEnum,
-  instanceof: sInstanceof,
-  intersect: sIntersect,
-  lazy: sLazy,
-  literal: sLiteral,
-  map: sMap,
-  never: sNever,
-  null: sNull,
-  number: sNumber,
-  object: sObject,
-  record: sRecord,
-  set: sSet,
-  string: sString,
-  tuple: sTuple,
-  undefined: sUndefined,
-  union: sUnion,
-  unknown: sUnknown,
+  array: <T extends AnySchema>(item: T): ArraySchema<T> => new ArraySchema(item),
+  bigint: (): BigIntSchema => new BigIntSchema(),
+  boolean: (): BooleanSchema => new BooleanSchema(),
+  /** Primitive schemas that convert their raw input before validating it. */
+  coerce: {
+    /** Converts safe-integer numbers and integer strings (up to 1000 characters). */
+    bigint: (): BigIntSchema<unknown> => new BigIntSchema<unknown>().preprocess(coerceBigInt),
+    /** Converts `'true'`/`'1'`/`1` and `'false'`/`'0'`/`0`. */
+    boolean: (): BooleanSchema<unknown> => new BooleanSchema<unknown>().preprocess(coerceBoolean),
+    /** Converts strings and epoch milliseconds with `new Date()`. */
+    date: (): DateSchema<unknown> => new DateSchema<unknown>().preprocess(coerceDate),
+    /** Converts numeric strings and booleans with `Number()`. */
+    number: (): NumberSchema<unknown> => new NumberSchema<unknown>().preprocess(coerceNumber),
+    /** Converts any non-nullish value with `String()`. */
+    string: (): StringSchema<unknown> => new StringSchema<unknown>().preprocess(coerceString),
+  },
+  date: (): DateSchema => new DateSchema(),
+  discriminatedUnion: <K extends string, M extends DiscriminatedBranches>(
+    discriminator: K,
+    branches: M,
+  ): DiscriminatedUnionSchema<K, M> => new DiscriminatedUnionSchema(discriminator, branches),
+  enum: <const T extends EnumValues>(values: T): EnumSchema<T> => new EnumSchema(values),
+  instanceof: <T>(cls: abstract new (...args: never[]) => T): InstanceOfSchema<T> => new InstanceOfSchema(cls),
+  intersect: <const T extends UnionMembers>(...schemas: T): IntersectSchema<T> => new IntersectSchema(schemas),
+  lazy: <T extends AnySchema>(getter: () => T): LazySchema<InferOutput<T>, InferInput<T>> => new LazySchema(getter),
+  literal: <const T extends LiteralValue>(value: T): LiteralSchema<T> => new LiteralSchema(value),
+  map: <K extends AnySchema, V extends AnySchema>(key: K, value: V): MapSchema<K, V> => new MapSchema(key, value),
+  never: (): NeverSchema => new NeverSchema(),
+  null: (): LiteralSchema<null> => new LiteralSchema(null),
+  number: (): NumberSchema => new NumberSchema(),
+  object: <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape),
+  record: <K extends AnySchema, V extends AnySchema>(key: K, value: V): RecordSchema<K, V> =>
+    new RecordSchema(key, value),
+  set: <T extends AnySchema>(item: T): SetSchema<T> => new SetSchema(item),
+  string: (): StringSchema => new StringSchema(),
+  tuple: <const T extends TupleSchemas>(items: T): TupleSchema<T> => new TupleSchema(items),
+  undefined: (): LiteralSchema<undefined> => new LiteralSchema(undefined),
+  union: <const T extends UnionMembers>(...schemas: T): UnionSchema<T> => new UnionSchema(schemas),
+  unknown: (): Schema<unknown> => new Schema(),
 };

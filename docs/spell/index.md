@@ -3,7 +3,7 @@ title: 'Spell: Schema validation for TypeScript'
 description: Zero-dependency schema validation with explicit async checks, Standard Schema interoperability, and JSON Schema export.
 package: spell
 category: validation
-keywords: [schema, validation, parsing, standard-schema, json-schema, locale, typescript, descriptors]
+keywords: [schema, validation, parsing, standard-schema, json-schema, locale, typescript, definitions]
 related: [forge, courier, vault]
 exports:
   [
@@ -12,6 +12,7 @@ exports:
     joinIssuePath,
     SpellValidationError,
     SpellDefinitionError,
+    Schema,
     StandardSchemaV1,
     ErrorCode,
     './json',
@@ -26,7 +27,7 @@ environments: [browser, node, ssr, deno]
 
 ## Why Spell?
 
-Spell keeps runtime validation, static inference, and portable definitions in one API. Use `s` for schema construction; import JSON conversion and predicates from dedicated subpaths.
+Spell keeps runtime validation, static inference, and portable definitions in one API. Checks and transforms run in the order you chain them, and every built-in constraint appears in the exported definition.
 
 This example shows the difference between manual branching and a single reusable schema.
 
@@ -133,16 +134,16 @@ const user = result.data;
 
 <div class="features-grid">
 
-- Namespace and tree-shakeable schema builders.
-- Sync and async parsing with `parse()`, `safeParse()`, `parseAsync()`, and `safeParseAsync()`.
-- Dependency-free Standard Schema v1 interoperability through `schema['~standard']`.
-- Explicit `check()` and `checkAsync()` rules; sync parsing never skips an async check.
-- Wrapper modes for `optional`, `nullable`, `nullish`, `default`, `catch`, and `required`.
-- Frozen declarative definitions through `definition()` and JSON Schema export via `fromDefinition()` from `@vielzeug/spell/json`.
-- Request-local message customization through `createParseContext()`.
-- Ordered union parsing produces the same selected branch in sync and async modes.
-- Structured errors with direct path lookup and flattened views.
-- Object parsing is hardened against prototype-pollution-style keys.
+- `s` builders for primitives, collections, objects, unions, and recursive schemas.
+- `parse()`, `safeParse()`, `parseAsync()`, and `safeParseAsync()`; parsing stays synchronous unless a check is async.
+- `check()` and `checkAsync()` run in chain order with transforms; sync parsing never skips an async check.
+- `optional`, `nullable`, `nullish`, `default`, `catch`, and `required` modifiers; defaults are copied per parse.
+- `extend()`, `pick()`, `omit()`, `partial()`, and `tolerate()` for object composition and schema evolution.
+- `definition()` returns frozen data; `toJsonSchema()` from `@vielzeug/spell/json` converts it to JSON Schema.
+- `schema['~standard']` implements Standard Schema v1 without an adapter.
+- `createParseContext()` customizes messages per request, locale, or form.
+- `SpellValidationError` offers `flatten()`, `flattenFirst()`, and `messagesAt()` for UI errors.
+- Object and record parsing is hardened against prototype-pollution keys.
 
 </div>
 

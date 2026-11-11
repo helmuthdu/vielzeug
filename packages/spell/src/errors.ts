@@ -1,45 +1,4 @@
-import type { ErrorCode, Issue, IssuePath, MessageFn } from './types';
-
-/* -------------------- Helpers -------------------- */
-
-type IssueParams<C extends string> = Extract<Issue, { code: C }> extends { params: infer P } ? P : undefined;
-
-/**
- * Creates a single-error failure array. Use in validator functions instead of building the array manually.
- * Typed overloads ensure params match the given error code.
- */
-export function fail<C extends ErrorCode>(code: C, message: string, params: IssueParams<C>): Issue[];
-export function fail(code: string, message: string, params?: Record<string, unknown>): Issue[];
-export function fail(code: string, message: string, params?: Record<string, unknown>): Issue[] {
-  return [{ code, message, params, path: [] } as Issue];
-}
-
-/** Resolve a message value or factory against a context. Re-exported by `core` for schema modules. */
-export function resolveMessage<Ctx extends Record<string, unknown>>(msg: MessageFn<Ctx>, ctx: Ctx): string {
-  return typeof msg === 'function' ? msg(ctx) : msg;
-}
-
-export function prependIssuePath(issues: Issue[], prefix: string | number): Issue[] {
-  return issues.map((issue) => ({ ...issue, path: [prefix, ...issue.path] }));
-}
-
-/**
- * Flattens an issue path into a UI key such as `'permissions.0.slug'`. Handles spell-native
- * `(string | number)[]` paths and Standard Schema paths with `{ key }` segments; empty or
- * undefined paths join to `''`.
- */
-export function joinIssuePath(path: IssuePath | undefined, separator = '.'): string {
-  if (!path || path.length === 0) return '';
-
-  return path
-    .map((segment) => {
-      if (typeof segment === 'object' && segment !== null && 'key' in segment) return String(segment.key);
-      return String(segment);
-    })
-    .join(separator);
-}
-
-/* -------------------- SpellError -------------------- */
+import type { Issue, IssuePath } from './types';
 
 /** Base class for all spell errors. Use `instanceof SpellError` to catch any spell-originated error. */
 export class SpellError extends Error {
@@ -50,66 +9,74 @@ export class SpellError extends Error {
   }
 }
 
-/* -------------------- SpellValidationError -------------------- */
+/** The schema cannot perform the requested operation: a non-portable `definition()` or an invalid derivation. */
+export class SpellDefinitionError extends SpellError {}
 
-function formatIssues(issues: Issue[]): string {
-  return issues
-    .map(({ code, message, path }) => {
-      const pathStr = path.length ? path.join('.') : 'value';
+export type FlatError = { messages: string[]; path: (string | number)[] };
+export type FlatErrorFirst = { message: string; path: (string | number)[] };
 
-      return `${pathStr}: ${message} [${code}]`;
-    })
-    .join('\n');
+/**
+ * Flattens an issue path into a UI key such as `'permissions.0.slug'`. Handles spell-native
+ * `(string | number)[]` paths and Standard Schema paths with `{ key }` segments; empty or
+ * undefined paths join to `''`.
+ */
+export function joinIssuePath(path: IssuePath | undefined, separator = '.'): string {
+  if (!path) return '';
+
+  return path
+    .map((segment) => String(typeof segment === 'object' && segment !== null ? segment.key : segment))
+    .join(separator);
 }
 
 function pathsEqual(left: readonly (string | number)[], right: readonly (string | number)[]): boolean {
   return left.length === right.length && left.every((segment, index) => segment === right[index]);
 }
 
-export type FlatError = { messages: string[]; path: (string | number)[] };
-export type FlatErrorFirst = { message: string; path: (string | number)[] };
-
-export class SpellDefinitionError extends SpellError {}
-
+/** Validation failure carrying every issue found during the parse. */
 export class SpellValidationError extends SpellError {
-  readonly issues: Issue[];
+  readonly issues: readonly Issue[];
 
-  constructor(issues: Issue[], cause?: unknown) {
-    super(formatIssues(issues), { cause });
-    this.issues = Object.freeze([...issues]) as Issue[];
+  constructor(issues: readonly Issue[], opts?: ErrorOptions) {
+    super(
+      issues.map(({ code, message, path }) => `${joinIssuePath(path) || 'value'}: ${message} [${code}]`).join('\n'),
+      opts,
+    );
+    this.issues = Object.freeze([...issues]);
   }
 
+  /** Groups messages by exact path; root-level messages become `formErrors`. */
   flatten(): { fieldErrors: FlatError[]; formErrors: string[] } {
     const fieldErrors: FlatError[] = [];
     const formErrors: string[] = [];
-    const pathMap = new Map<string, number>();
+    const byPath = new Map<string, FlatError>();
 
     for (const issue of this.issues) {
       if (issue.path.length === 0) {
         formErrors.push(issue.message);
-      } else {
-        const key = JSON.stringify(issue.path);
-        const existing = pathMap.get(key);
+        continue;
+      }
 
-        if (existing !== undefined) {
-          fieldErrors[existing]?.messages.push(issue.message);
-        } else {
-          pathMap.set(key, fieldErrors.length);
-          fieldErrors.push({ messages: [issue.message], path: [...issue.path] });
-        }
+      const key = JSON.stringify(issue.path);
+      const existing = byPath.get(key);
+
+      if (existing) {
+        existing.messages.push(issue.message);
+      } else {
+        const entry = { messages: [issue.message], path: [...issue.path] };
+
+        byPath.set(key, entry);
+        fieldErrors.push(entry);
       }
     }
 
     return { fieldErrors, formErrors };
   }
 
+  /** Like `flatten()`, keeping only the first message per path. */
   flattenFirst(): { fieldErrors: FlatErrorFirst[]; formErrors: string[] } {
     const { fieldErrors, formErrors } = this.flatten();
 
-    return {
-      fieldErrors: fieldErrors.map((fe) => ({ message: fe.messages[0]!, path: fe.path })),
-      formErrors,
-    };
+    return { fieldErrors: fieldErrors.map(({ messages, path }) => ({ message: messages[0]!, path })), formErrors };
   }
 
   /** Returns every message attached to exactly `path`, in issue order. */

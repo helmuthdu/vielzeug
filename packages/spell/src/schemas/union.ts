@@ -1,70 +1,45 @@
-import type { AnySchema, InferInput, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import { chain, invalid, issue, type MaybePromise, ok, type ParseValue, type RunContext } from '../_parse';
+import { Schema } from '../schema';
+import {
+  type AnySchema,
+  ErrorCode,
+  type InferInput,
+  type InferOutput,
+  type Issue,
+  type SchemaDescriptor,
+  type SchemaKind,
+} from '../types';
 
-import { ErrorCode, Schema } from '../core';
+export type UnionMembers = readonly [AnySchema, AnySchema, ...AnySchema[]];
 
-export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOutput<T[number]>, InferInput<T[number]>> {
+/** The first branch that parses wins; when none does, one `invalid_union` issue carries every branch's issues. */
+export class UnionSchema<T extends UnionMembers> extends Schema<InferOutput<T[number]>, InferInput<T[number]>> {
   readonly schemas: T;
-
-  protected override get _kind(): string {
-    return 'union';
-  }
 
   constructor(schemas: T) {
     super();
-    this.schemas = Object.freeze([...schemas]) as T;
+    this.schemas = Object.freeze([...schemas]) as unknown as T;
   }
 
-  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
-    const branchErrors: Issue[][] = [];
+  override get kind(): SchemaKind {
+    return 'union';
+  }
 
-    for (const schema of this.schemas) {
-      const result = schema._parseFullSync(value, ctx);
+  protected override _parse(value: unknown, ctx: RunContext): MaybePromise<ParseValue> {
+    const attempt = (index: number, errors: Issue[][]): MaybePromise<ParseValue> => {
+      if (index === this.schemas.length) {
+        return invalid(value, issue(ErrorCode.invalid_union, ctx.messages.union.invalid(), { errors }));
+      }
 
-      if (result.issues.length === 0) return { data: result.data, issues: [], typeOk: true };
-
-      branchErrors.push(result.issues);
-    }
-
-    return {
-      data: value,
-      issues: [
-        {
-          code: ErrorCode.invalid_union,
-          message: ctx.messages.union.invalid(),
-          params: { errors: branchErrors },
-          path: [],
-        },
-      ],
-      typeOk: false,
+      return chain(this.schemas[index]!._run(value, ctx), (result) =>
+        result.issues.length === 0 ? ok(result.value) : attempt(index + 1, [...errors, result.issues]),
+      );
     };
+
+    return attempt(0, []);
   }
 
-  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
-    const branchErrors: Issue[][] = [];
-
-    for (const schema of this.schemas) {
-      const result = await schema._parseFullAsync(value, ctx);
-
-      if (result.issues.length === 0) return { data: result.data, issues: [], typeOk: true };
-
-      branchErrors.push(result.issues);
-    }
-
-    return {
-      data: value,
-      issues: [
-        {
-          code: ErrorCode.invalid_union,
-          message: ctx.messages.union.invalid(),
-          params: { errors: branchErrors },
-          path: [],
-        },
-      ],
-      typeOk: false,
-    };
-  }
-
-  protected override _toDescriptorImpl(): SchemaDescriptor {
-    return { ...this._describeBase(), branches: this.schemas.map((s) => s.definition()), kind: 'union' };
+  protected override _describe(): SchemaDescriptor {
+    return { ...this._describeBase(), branches: this.schemas.map((schema) => schema.definition()), kind: 'union' };
   }
 }

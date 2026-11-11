@@ -1,133 +1,98 @@
-import type {
-  AnySchema,
-  InferInput,
-  InferOutput,
-  Issue,
-  MessageFn,
-  ParseContext,
-  ParseValue,
-  SchemaDescriptor,
-} from '../core';
+import {
+  all,
+  atLeast,
+  atMost,
+  chain,
+  invalid,
+  issue,
+  type MaybePromise,
+  type ParseValue,
+  prefixIssues,
+  type RunContext,
+  resolveMessage,
+} from '../_parse';
+import { Schema } from '../schema';
+import {
+  type AnySchema,
+  ErrorCode,
+  type InferInput,
+  type InferOutput,
+  type Issue,
+  type MessageFn,
+  type SchemaDescriptor,
+  type SchemaKind,
+} from '../types';
 
-import { ErrorCode, fail, prependIssuePath, resolveMessage, Schema } from '../core';
+type SizeMeta = { maxSize: number; minSize: number };
 
 export class SetSchema<T extends AnySchema> extends Schema<Set<InferOutput<T>>, Set<InferInput<T>>> {
   readonly itemSchema: T;
-
-  protected override get _kind(): string {
-    return 'set';
-  }
 
   constructor(itemSchema: T) {
     super();
     this.itemSchema = itemSchema;
   }
 
-  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
-    if (!(value instanceof Set)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.set.type(), path: [] }],
-        typeOk: false,
-      };
-    }
-
-    const issues: Issue[] = [];
-    const parsed = new Set<InferOutput<T>>();
-    let i = 0;
-
-    for (const item of value) {
-      const result = this.itemSchema._parseFullSync(item, ctx);
-
-      if (result.issues.length === 0) {
-        parsed.add(result.data as InferOutput<T>);
-      } else {
-        issues.push(...prependIssuePath(result.issues, i));
-      }
-
-      i += 1;
-    }
-
-    return { data: parsed, issues, typeOk: true };
+  override get kind(): SchemaKind {
+    return 'set';
   }
 
-  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
-    if (!(value instanceof Set)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.set.type(), path: [] }],
-        typeOk: false,
-      };
-    }
+  /** Item failures are reported by iteration index; failed items are left out of the parsed set. */
+  protected override _parse(value: unknown, ctx: RunContext): MaybePromise<ParseValue> {
+    if (!(value instanceof Set)) return invalid(value, issue(ErrorCode.invalid_type, ctx.messages.set.type()));
 
-    const items = [...value];
-    const settled = await Promise.all(items.map((item) => this.itemSchema._parseFullAsync(item, ctx)));
+    return chain(all([...value].map((item) => this.itemSchema._run(item, ctx))), (results) => {
+      const issues: Issue[] = [];
+      const output = new Set<unknown>();
 
-    const issues: Issue[] = [];
-    const parsed = new Set<InferOutput<T>>();
+      results.forEach((result, index) => {
+        if (result.issues.length === 0) output.add(result.value);
+        else issues.push(...prefixIssues(result.issues, index));
+      });
 
-    for (let i = 0; i < settled.length; i++) {
-      const result = settled[i];
-
-      if (result.issues.length === 0) {
-        parsed.add(result.data as InferOutput<T>);
-      } else {
-        issues.push(...prependIssuePath(result.issues, i));
-      }
-    }
-
-    return { data: parsed, issues, typeOk: true };
+      return { issues, typeOk: true, value: output };
+    });
   }
 
   min(size: number, message?: MessageFn<{ min: number; value: Set<unknown> }>): this {
-    return this._addConstraint((value, ctx) => {
-      const typed = value as Set<unknown>;
-
-      if (typed.size >= size) return null;
-
-      return fail(ErrorCode.too_small, resolveMessage(message ?? ctx!.messages.set.min, { min: size, value: typed }), {
-        min: size,
-      });
-    });
+    return this._refine<SizeMeta>(
+      (value) => value.size >= size,
+      (value, m) =>
+        issue(ErrorCode.too_small, resolveMessage(message ?? m.set.min, { min: size, value }), { min: size }),
+      (current) => ({ minSize: atLeast(current.minSize, size) }),
+    );
   }
 
   max(size: number, message?: MessageFn<{ max: number; value: Set<unknown> }>): this {
-    return this._addConstraint((value, ctx) => {
-      const typed = value as Set<unknown>;
-
-      if (typed.size <= size) return null;
-
-      return fail(ErrorCode.too_big, resolveMessage(message ?? ctx!.messages.set.max, { max: size, value: typed }), {
-        max: size,
-      });
-    });
+    return this._refine<SizeMeta>(
+      (value) => value.size <= size,
+      (value, m) => issue(ErrorCode.too_big, resolveMessage(message ?? m.set.max, { max: size, value }), { max: size }),
+      (current) => ({ maxSize: atMost(current.maxSize, size) }),
+    );
   }
 
   size(exact: number, message?: MessageFn<{ exact: number; value: Set<unknown> }>): this {
-    return this._addConstraint((value, ctx) => {
-      const typed = value as Set<unknown>;
-
-      if (typed.size === exact) return null;
-
-      return fail(
-        ErrorCode.invalid_length,
-        resolveMessage(message ?? ctx!.messages.set.size, { exact, value: typed }),
-        { exact },
-      );
-    });
+    return this._refine<SizeMeta>(
+      (value) => value.size === exact,
+      (value, m) => issue(ErrorCode.invalid_length, resolveMessage(message ?? m.set.size, { exact, value }), { exact }),
+      (current) => ({ maxSize: atMost(current.maxSize, exact), minSize: atLeast(current.minSize, exact) }),
+    );
   }
 
-  nonEmpty(message?: MessageFn<{ min: number }>): this {
-    return this._addConstraint((value, ctx) => {
-      const typed = value as Set<unknown>;
-
-      if (typed.size > 0) return null;
-
-      return fail(ErrorCode.too_small, resolveMessage(message ?? ctx!.messages.set.nonEmpty, { min: 1 }), { min: 1 });
-    });
+  nonEmpty(message?: MessageFn<{ value: Set<unknown> }>): this {
+    return this._refine<SizeMeta>(
+      (value) => value.size > 0,
+      (value, m) => issue(ErrorCode.too_small, resolveMessage(message ?? m.set.nonEmpty, { value }), { min: 1 }),
+      (current) => ({ minSize: atLeast(current.minSize, 1) }),
+    );
   }
 
-  protected override _toDescriptorImpl(): SchemaDescriptor {
-    return { ...this._describeBase(), items: this.itemSchema.definition(), kind: 'set' };
+  protected override _describe(): SchemaDescriptor {
+    return {
+      ...this._describeBase(),
+      ...(this.state.meta as Partial<SizeMeta>),
+      items: this.itemSchema.definition(),
+      kind: 'set',
+    };
   }
 }

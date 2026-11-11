@@ -19,7 +19,7 @@ interface Preference {
   theme: 'dark' | 'light';
 }
 
-const PreferenceSchema = s.object({ id: s.string(), theme: s.union('dark', 'light') });
+const PreferenceSchema = s.object({ id: s.string(), theme: s.enum(['dark', 'light']) });
 const store = createLocalStorage({
   name: 'app-v2',
   schema: { preferences: table<Preference>('id') },

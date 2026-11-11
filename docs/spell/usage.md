@@ -1,6 +1,6 @@
 ---
 title: 'Spell: Usage Guide'
-description: Learn how to build schemas, compose wrappers, customize locales, and integrate spell with other Vielzeug packages.
+description: Build schemas, order checks and transforms, compose objects, customize messages, and integrate Spell with other Vielzeug packages.
 ---
 
 [[toc]]
@@ -30,42 +30,27 @@ if (!result.success) {
 }
 ```
 
-Use `parse()` when invalid input should throw immediately. Use `safeParse()` when invalid input is part of normal control flow.
+Use `parse()` when invalid input should throw. Use `safeParse()` when invalid input is part of normal control flow.
 
 ## Building Schemas
 
-Use the namespace form when readability matters more than bundle trimming.
+Compose schemas from the `s` builders. Every method returns a new schema, so you can share and extend base schemas safely.
 
 ```ts
 import { s } from '@vielzeug/spell';
 
 const Article = s.object({
   id: s.string().uuid(),
-  title: s.string().trim().min(1).max(120),
+  meta: s.object({ published: s.boolean(), publishedAt: s.date().nullable() }).relaxed(),
   slug: s.string().slug(),
-  tags: s.array(s.string().min(1)).default(() => []),
-  meta: s
-    .object({
-      published: s.boolean(),
-      publishedAt: s.date().nullable(),
-    })
-    .relaxed(),
+  tags: s.array(s.string().min(1)).default([]),
+  title: s.string().trim().min(1).max(120),
 });
 ```
 
-```ts
-import { s } from '@vielzeug/spell';
+Object schemas reject unknown keys by default. Call `.relaxed()` to keep extra properties in the output.
 
-const Todo = s.object({
-  done: s.boolean(),
-  tags: s.array(s.string().min(1)).default(() => []),
-  title: s.string().min(1),
-});
-```
-
-Object schemas reject unknown keys by default. Call `.relaxed()` when you need to preserve extra properties.
-
-Call `.defaults()` to get a fully default-filled object without providing any input. Every required field must have a `.default()` set, or a `SpellValidationError` is thrown. Call `.partialDefaults()` when only some fields have defaults: fields without a default are silently omitted instead of throwing.
+Fields with a `default()` are filled in when their key is absent, so `parse({})` returns a fully default-filled object.
 
 ```ts
 const Config = s.object({
@@ -73,27 +58,47 @@ const Config = s.object({
   port: s.number().default(3000),
 });
 
-Config.defaults(); // { host: 'localhost', port: 3000 }
-
-const Form = s.object({ name: s.string(), role: s.string().default('viewer') });
-Form.partialDefaults(); // { role: 'viewer' }
+Config.parse({}); // { host: 'localhost', port: 3000 }
 ```
 
-## Wrapper Modes, Defaults, and Fallbacks
+`default()` and `catch()` return a fresh copy of object, array, `Map`, `Set`, and `Date` values on every parse, so callers cannot mutate a shared default.
 
-Chain wrappers to describe missing values and recovery rules without losing schema metadata.
+## Ordering Checks and Transforms
+
+Checks, built-in constraints, and transforms run in the order you chain them. A constraint after a transform sees the transformed value.
 
 ```ts
 import { s } from '@vielzeug/spell';
 
-const DisplayName = s.string().trim().min(2).label('Display name').optional().default('Guest').nullable();
+// trim() runs first, so '   ' fails min(1)
+const Title = s.string().trim().min(1);
+
+// The check receives the length, not the string
+const ShortCode = s
+  .string()
+  .transform((value) => value.length)
+  .check((length) => length <= 8 || 'At most 8 characters');
+```
+
+Transforms are skipped once an earlier step reported an issue, so a transform never receives a value that failed validation. Use `preprocess()` to change raw input before the type check.
+
+## Optional, Nullable, and Fallback Values
+
+Use modifiers to describe missing values and recovery rules.
+
+```ts
+import { s } from '@vielzeug/spell';
+
+const DisplayName = s.string().trim().min(2).describe('Display name').optional().default('Guest').nullable();
 
 DisplayName.parse(undefined); // 'Guest'
 DisplayName.parse(null); // null
 DisplayName.description; // 'Display name'
 ```
 
-Call `.required()` to remove `undefined` without removing `null`.
+`optional()`, `nullable()`, `nullish()`, `required()`, and `transform()` change the value type and return a base `Schema`. Chain type-specific methods such as `.min()` or `.extend()` before them.
+
+Call `.required()` to make `undefined` invalid again. It clears `optional()` and `default()` and keeps `null` and checks.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -102,7 +107,7 @@ const NullableButRequired = s.string().optional().nullable().required();
 
 NullableButRequired.parse('Ada');
 NullableButRequired.parse(null);
-// NullableButRequired.parse(undefined); // throws
+NullableButRequired.safeParse(undefined).success; // false
 ```
 
 Use `.catch()` when you want a fallback output after validation fails.
@@ -115,50 +120,63 @@ const Port = s.number().int().min(1).max(65535).catch(3000);
 Port.parse('not-a-number'); // 3000
 ```
 
-## Tolerating Removed Fields
+## Composing Object Schemas
 
-When a persisted record shape evolves, records saved by older versions carry keys the current schema no longer declares. `tolerate` accepts and drops exactly the named keys, so one call documents one removed field: no optional placeholder in the schema and no strip step after parsing.
-
-```ts
-import { s, tolerate } from '@vielzeug/spell';
-
-const Person = tolerate(s.object({ name: s.string(), email: s.number() }), 'address');
-
-const parsed = Person.parse({
-  name: 'John Doe',
-  address: 'p sherman 42 wallaby way sydney',
-  email: 'johndoe@mail.com',
-});
-// { name: 'John Doe', email: 'johndoe@mail.com' }: the tolerated key never reaches the output
-```
-
-Fields added to later schema versions do not need `tolerate`: give them `default()` and older records repair on parse.
-
-## Custom Validation
-
-Use `check()` for synchronous domain rules and `checkAsync()` for asynchronous rules. Sync parsing rejects schemas with asynchronous checks.
+Derive new object schemas with `extend()`, `pick()`, `omit()`, and `partial()`. Derive the shape first, then add checks, transforms, defaults, or catches to the final schema.
 
 ```ts
 import { s } from '@vielzeug/spell';
 
-// Boolean shorthand: return false to fail with default message
+const User = s.object({ email: s.string().email(), id: s.string().uuid(), name: s.string() });
+
+const Admin = User.extend({ role: s.enum(['owner', 'editor']) });
+const UserPatch = User.omit('id').partial();
+
+const Signup = User.pick('email')
+  .extend({ confirm: s.string(), password: s.string().min(12) })
+  .check((value) => value.password === value.confirm || 'Passwords must match');
+```
+
+Deriving from an object with checks, transforms, preprocessors, a default, or a catch throws `SpellDefinitionError`. A check written for the old shape could read a field that `omit()` removed, so Spell refuses instead of guessing.
+
+## Tolerating Removed Fields
+
+Records saved by older schema versions can carry keys the current schema no longer declares. `tolerate()` accepts and drops exactly the named keys, and other unknown keys still fail.
+
+```ts
+import { s } from '@vielzeug/spell';
+
+const Person = s.object({ email: s.string(), name: s.string() }).tolerate('address');
+
+Person.parse({ address: '42 Wallaby Way', email: 'johndoe@mail.com', name: 'John Doe' });
+// { email: 'johndoe@mail.com', name: 'John Doe' }
+```
+
+Fields added in later schema versions do not need `tolerate()`: give them a `default()` and older records are repaired on parse.
+
+## Custom Validation
+
+Use `check()` for synchronous domain rules and `checkAsync()` for asynchronous rules.
+
+```ts
+import { s } from '@vielzeug/spell';
+
+// Return false to fail with the default message
 const EvenNumber = s.number().check((n) => n % 2 === 0);
 
-// String shorthand: return the message as a string
+// Return a string to fail with that message
 const Username = s
   .string()
   .min(3)
   .check((v) => !v.startsWith('_') || 'Cannot start with underscore');
 
-// Multiple issues via ctx.addIssue()
+// Report issues at specific paths with ctx.addIssue()
 const Signup = s.object({ confirm: s.string(), password: s.string() }).check((v, ctx) => {
-  if (v.password !== v.confirm) {
-    ctx.addIssue({ code: 'custom', message: 'Passwords must match', path: ['confirm'] });
-  }
+  if (v.password !== v.confirm) ctx.addIssue({ code: 'custom', message: 'Passwords must match', path: ['confirm'] });
 });
 ```
 
-`checkAsync()` marks a schema as asynchronous: synchronous parsing throws at runtime instead of accepting an unchecked value, so async checks require `parseAsync()` or `safeParseAsync()`. Async checks compose at any nesting depth: arrays, objects, unions, intersections, tuples, maps, records, sets, lazy schemas, pipelines, and `s.discriminatedUnion(...)` branches all evaluate nested async checks correctly through `parseAsync()`.
+A schema containing `checkAsync()` at any depth needs `parseAsync()` or `safeParseAsync()`. The synchronous methods throw `SpellError` before running the async check, because accepting an unchecked value would be unsafe.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -168,28 +186,14 @@ const takenEmails = new Set(['ada@example.com']);
 const AccountEmail = s
   .string()
   .email()
-  .checkAsync(async (value, ctx) => {
-    if (takenEmails.has(value)) {
-      ctx.addIssue({ code: 'custom', message: 'Email is already taken', path: [] });
-    }
-  });
+  .checkAsync(async (value) => !takenEmails.has(value) || 'Email is already taken');
 
-// Async checks require parseAsync
 await AccountEmail.parseAsync('grace@example.com');
 ```
 
-Use `check()` for predicate-only rules too. Return `true` on success or message on failure.
+## Strings, Numbers, and Regex Safety
 
-```ts
-import { s } from '@vielzeug/spell';
-
-const PositivePrice = s.number().check((value) => value > 0 || 'Must be positive');
-PositivePrice.parse(9.99);
-```
-
-## Strings, Numbers, and Safe Regex Usage
-
-Use schema helpers for common string and number constraints instead of hand-written predicates.
+Use the built-in constraints instead of hand-written predicates.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -197,13 +201,14 @@ import { s } from '@vielzeug/spell';
 const Password = s.string().min(12).regex(/[A-Z]/).regex(/[0-9]/);
 const Price = s.number().nonNegative().multipleOf(0.01);
 const LaunchWindow = s.date().min(new Date('2025-01-01T00:00:00.000Z'));
+const Website = s.string().url({ protocols: ['https'] });
 ```
 
-Spell strips stateful `/g` and `/y` flags from `regex()` patterns before validation. Repeated parses stay deterministic even when the original regular expression is reused.
+Format failures use the `invalid_format` code with `params.format` set to the method name. `regex()` drops the stateful `g` and `y` flags, so repeated parses agree even when you reuse a global regular expression.
 
-## Coercion and Transforms
+## Coercion and Pipelines
 
-Use coercion when input arrives as strings, query parameters, or form values.
+Use `s.coerce.*` when input arrives as strings, such as query parameters or form values.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -215,30 +220,25 @@ const Query = s.object({
   search: s.coerce.string().trim().min(1).optional(),
 });
 
-const parsed = Query.parse({
-  draft: 'true',
-  limit: '50',
-  publishedAt: '2025-04-01T12:00:00.000Z',
-  search: '  vielzeug  ',
-});
+Query.parse({ draft: 'true', limit: '50', publishedAt: '2025-04-01T12:00:00.000Z', search: '  vielzeug  ' });
 ```
 
-Use `transform()` or `pipe()` after validation when downstream code needs a different output shape.
+Use `transform()` or `pipe()` when downstream code needs a different output.
 
 ```ts
 import { s } from '@vielzeug/spell';
 
-const TrimmedTags = s.array(s.string().trim().min(1)).transform((tags) => tags.map((tag) => tag.toLowerCase()));
-const Slug = s.string().trim().min(1).pipe(s.string().slug());
+const LowercaseTags = s.array(s.string().trim().min(1)).transform((tags) => tags.map((tag) => tag.toLowerCase()));
+const Slug = s.string().trim().pipe(s.string().slug());
 ```
 
-## Introspection, Round-Trips, and JSON Schema
+## Definitions and JSON Schema
 
-Use declarative definitions when schemas need to cross process boundaries or feed tooling.
+Use declarative definitions when schemas feed external tooling.
 
 ```ts
 import { s } from '@vielzeug/spell';
-import { fromDefinition } from '@vielzeug/spell/json';
+import { toJsonSchema } from '@vielzeug/spell/json';
 
 const Product = s
   .object({
@@ -246,93 +246,69 @@ const Product = s
     name: s.string().min(1),
     price: s.number().positive().multipleOf(0.01),
   })
-  .label('Product');
+  .describe('Product');
 
-const definition = Product.definition();
-const jsonSchema = fromDefinition(definition);
-
-Product.parse({ id: '550e8400-e29b-41d4-a716-446655440000', name: 'Keyboard', price: 129.99 });
-console.log(jsonSchema.title);
+const jsonSchema = toJsonSchema(Product.definition());
+console.log(jsonSchema.description); // 'Product'
 ```
 
-Definitions are frozen serializable snapshots of declarative schema structure. Use `definition()` and `fromDefinition()` for external tooling. Schemas with runtime checks, transforms, defaults, catches, or preprocessors intentionally have no definition.
+Definitions are frozen, serializable data. Schemas with checks, transforms, preprocessors (including `s.coerce.*` and `trim()`), defaults, or catches have no definition, and `definition()` throws `SpellDefinitionError`.
 
 ## Messages
 
-Spell has no mutable process-wide configuration. Build one parse context per request, locale, or form, then pass it explicitly.
+Spell has no process-wide configuration. Build one parse context per request, locale, or form, and pass it explicitly.
 
 ```ts
 import { createParseContext, s } from '@vielzeug/spell';
 
 const User = s.object({ email: s.string().email() });
-const german = createParseContext({
-  object: { invalidKeys: () => 'Keine unbekannten Felder erlaubt' },
-});
+const german = createParseContext({ object: { invalidKeys: () => 'Keine unbekannten Felder erlaubt' } });
 
 User.safeParse({ email: 'ada@example.com', extra: true }, german);
 ```
 
-Internal development warnings always use `console.warn` in development builds. Route application diagnostics in application code instead of mutating library-wide logger state.
+Development builds warn through `console.warn` when a message override uses an unsafe key such as `__proto__`.
 
 ## Working with Validation Errors
 
-Use `SpellValidationError` helpers when you need UI-ready error structures.
+Use `SpellValidationError` helpers to build UI-ready error structures.
 
 ```ts
-import { s, SpellValidationError } from '@vielzeug/spell';
+import { joinIssuePath, s } from '@vielzeug/spell';
 
-const User = s.object({
-  email: s.string().email(),
-  profile: s.object({
-    name: s.string().min(2),
-  }),
-});
-
+const User = s.object({ email: s.string().email(), profile: s.object({ name: s.string().min(2) }) });
 const result = User.safeParse({ email: 'nope', profile: { name: '' } });
 
-if (!result.success && result.error instanceof SpellValidationError) {
-  const profileErrors = result.error.messagesAt('profile', 'name');
-  console.log(profileErrors);
+if (!result.success) {
+  console.log(result.error.messagesAt('profile', 'name'));
+
+  for (const issue of result.error.issues) console.log(joinIssuePath(issue.path), issue.message);
 }
 ```
 
-Key inline errors by dot-path with `joinIssuePath()`, which also unwraps Standard Schema `{ key }` segments:
+Union failures produce one `invalid_union` issue. Use `s.discriminatedUnion()` when a tag field identifies the intended branch, so errors point at that branch's fields.
+
+## Typing Schema Parameters
+
+Type a function that accepts any schema with `AnySchema`, or with `Schema<T, unknown>` when it needs the parsed type.
 
 ```ts
-import { joinIssuePath } from '@vielzeug/spell';
+import { type AnySchema, type ParseResult, type Schema, s } from '@vielzeug/spell';
 
-for (const issue of result.error.issues) {
-  console.log(joinIssuePath(issue.path), issue.message); // 'profile.name: ...'
-}
-```
-
-Union failures produce one stable `invalid_union` issue. Use `s.discriminatedUnion()` when a discriminator can identify the intended object branch and provide field-specific errors.
-
-## Validating synchronously in React
-
-Adapters that validate inside a render or `validate` callback need the sync parse surface. `AnySchema` does not expose `safeParse`; type the adapter parameter against `SyncParsable` instead:
-
-```ts
-import { type SyncParsable } from '@vielzeug/spell';
-
-function spellValidator(schema: SyncParsable<unknown>) {
-  return (values: unknown) => {
-    const result = schema.safeParse(values);
-    if (result.success) return undefined;
-
-    return result.error.issues.map((issue) => ({
-      message: issue.message,
-      path: issue.path,
-    }));
-  };
+function isValid(schema: AnySchema, value: unknown): boolean {
+  return schema.safeParse(value).success;
 }
 
-spellValidator(s.object({ email: s.string() })); // no shim or cast
+function parseWith<T>(schema: Schema<T, unknown>, value: unknown): ParseResult<T> {
+  return schema.safeParse(value);
+}
+
+parseWith(s.object({ email: s.string() }), { email: 'ada@example.com' });
 ```
 
 ## Framework Integration
 
-Spell works anywhere you can call a function before state enters your app.
+Spell works anywhere you can call a function before data enters your app.
 
 ::: code-group
 
@@ -362,38 +338,43 @@ import { computed, ref } from 'vue';
 import { s } from '@vielzeug/spell';
 
 const Settings = s.object({
-  locale: s.string().min(2),
   compact: s.coerce.boolean().default(false),
+  locale: s.string().min(2),
 });
 
-const raw = ref<unknown>({ locale: 'en', compact: 'true' });
+const raw = ref<unknown>({ compact: 'true', locale: 'en' });
 const settings = computed(() => Settings.parse(raw.value));
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { s } from '@vielzeug/spell';
+
+  const Email = s.string().email();
+  let value = '';
+  $: error = Email.safeParse(value).success ? '' : 'Enter a valid email';
+</script>
+
+<input bind:value />
+{#if error}<p>{error}</p>{/if}
 ```
 
 :::
 
-Use `safeParse()` at event boundaries and `parse()` inside trusted data flows.
-
 ## Working with Other Vielzeug Libraries
 
-Use Spell as the validation layer and let other packages focus on transport, forms, or storage.
+Spell schemas implement Standard Schema, so packages that accept Standard Schema validators use them directly.
 
 ```ts
+import { createCourier } from '@vielzeug/courier';
 import { createForm } from '@vielzeug/forge';
 import { schemaValidator } from '@vielzeug/forge/schema';
-import { createCourier } from '@vielzeug/courier';
 import { s } from '@vielzeug/spell';
 
-const Profile = s.object({
-  displayName: s.string().min(2),
-  newsletter: s.boolean(),
-});
+const Profile = s.object({ displayName: s.string().min(2), newsletter: s.boolean() });
 
 const form = createForm({
-  initialValues: {
-    displayName: '',
-    newsletter: false,
-  },
+  initialValues: { displayName: '', newsletter: false },
   validate: schemaValidator(Profile),
 });
 
@@ -401,15 +382,13 @@ const courier = createCourier({ baseUrl: '/api' });
 const profile = Profile.parse(await courier.get('/profile'));
 ```
 
-Use Spell definitions with `@vielzeug/codex` or other tooling when you need generated docs or external schema consumers.
-
 ## Best Practices
 
 - Keep schemas close to the boundary where unknown data enters your app.
-- Use `s` consistently for construction; use explicit `/json` and `/predicates` subpaths for tooling.
-- Use `.default(() => value)` for mutable defaults such as arrays, objects, `Map`, and `Set`.
-- Call `.required()` when you want to remove `undefined` but keep `null` semantics intact.
-- Use `check()` with a `ctx` argument when you need `ctx.addIssue()`; return a message for simple predicate failures.
-- Use `checkAsync()` and `parseAsync()` for every asynchronous domain rule.
-- Build a parse context per request or test; never rely on mutable process-wide configuration.
-- Use `definition()` with `fromDefinition()` from `@vielzeug/spell/json` for external tooling.
+- Chain constraints in the order they should apply; put `trim()` before length checks.
+- Derive object shapes with `extend()`, `pick()`, `omit()`, or `partial()` before adding checks.
+- Chain type-specific methods before `optional()`, `nullable()`, `transform()`, or `required()`.
+- Use `check()` with `ctx.addIssue()` for multi-field rules; return a message for single predicates.
+- Use `checkAsync()` with `parseAsync()` for every asynchronous domain rule.
+- Build a parse context per request, locale, or test instead of relying on global state.
+- Use `definition()` with `toJsonSchema()` for external tooling, and keep runtime-only schemas separate.

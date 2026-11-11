@@ -57,3 +57,16 @@ describe('coerce.number()', () => {
     expect(s.coerce.number().positive().parse(3)).toBe(3);
   });
 });
+
+describe('NumberSchema.finite()', () => {
+  test('accepts finite numbers', () => {
+    expect(s.number().finite().parse(42)).toBe(42);
+    expect(s.number().finite().parse(-1.5)).toBe(-1.5);
+    expect(s.number().finite().parse(0)).toBe(0);
+  });
+
+  test('rejects Infinity and -Infinity', () => {
+    expect(s.number().finite().safeParse(Infinity).success).toBe(false);
+    expect(s.number().finite().safeParse(-Infinity).success).toBe(false);
+  });
+});

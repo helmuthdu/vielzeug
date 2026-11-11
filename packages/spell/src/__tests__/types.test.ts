@@ -1,11 +1,12 @@
 import { expectTypeOf } from 'vitest';
 
 import {
+  type AnySchema,
   type InferInput,
   type InferOutput,
   type IssuePath,
+  type Schema,
   type StandardSchemaV1,
-  type SyncParsable,
   s,
 } from '../index';
 
@@ -55,17 +56,17 @@ describe('public type contracts', () => {
     const asyncString = s.string().checkAsync(async () => true);
 
     expect(() => asyncString.parse('value')).toThrow('async checks');
-    expect(asyncString.safeParse('value').success).toBe(false);
+    expect(() => asyncString.safeParse('value')).toThrow('async checks');
     await expect(asyncString.parseAsync('value')).resolves.toBe('value');
   });
 
-  it('preserves object methods after async modifiers', () => {
-    const asyncObject = s.object({ value: s.string() }).checkAsync(async () => true);
-    const requiredObject = asyncObject.required().extend({ count: s.number() });
-    const optionalObject = asyncObject.optional().extend({ count: s.number() });
+  it('keeps subclass methods through state-only modifiers', () => {
+    const object = s.object({ value: s.string() });
 
-    expectTypeOf(requiredObject.pick).toBeFunction();
-    expectTypeOf(optionalObject.omit).toBeFunction();
+    expectTypeOf(object.describe('x').extend).toBeFunction();
+    expectTypeOf(object.relaxed().tolerate('legacy').pick).toBeFunction();
+    expectTypeOf(object.default({ value: 'a' }).shape).toEqualTypeOf<{ value: ReturnType<typeof s.string> }>();
+    expectTypeOf<InferOutput<ReturnType<typeof object.optional>>>().toEqualTypeOf<{ value: string } | undefined>();
   });
 
   it('infers output and input through every composite schema', async () => {
@@ -144,7 +145,8 @@ describe('public type contracts', () => {
   it('accepts built schemas where a synchronous parse surface is required', () => {
     const schema = s.object({ email: s.string() });
 
-    expectTypeOf(schema).toMatchTypeOf<SyncParsable<{ email: string }>>();
+    expectTypeOf(schema).toMatchTypeOf<Schema<{ email: string }, unknown>>();
+    expectTypeOf(schema).toMatchTypeOf<AnySchema>();
     expectTypeOf<StandardSchemaV1.Issue['path']>().toMatchTypeOf<IssuePath | undefined>();
   });
 });

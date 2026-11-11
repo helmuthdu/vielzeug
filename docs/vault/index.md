@@ -73,7 +73,7 @@ import { s } from '@vielzeug/spell';
 import { table } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
 
-const PreferenceSchema = s.object({ id: s.string(), theme: s.union('dark', 'light') });
+const PreferenceSchema = s.object({ id: s.string(), theme: s.enum(['dark', 'light']) });
 const store = createLocalStorage({
   name: 'app-v2',
   schema: { preferences: table<{ id: string; theme: 'dark' | 'light' }>('id') },

@@ -1,4 +1,4 @@
-import { joinIssuePath, type ParseResult, type SyncParsable, s } from '../index';
+import { type AnySchema, joinIssuePath, type ParseResult, type Schema, s } from '../index';
 
 describe('joinIssuePath', () => {
   test('joins spell-native string and number segments with the default separator', () => {
@@ -36,9 +36,9 @@ describe('joinIssuePath', () => {
   });
 });
 
-describe('SyncParsable', () => {
+describe('schema parameter types', () => {
   test('accepts schemas built with s in argument position without a cast', () => {
-    function validateWith(schema: SyncParsable<unknown>, value: unknown): boolean {
+    function validateWith(schema: AnySchema, value: unknown): boolean {
       return schema.safeParse(value).success;
     }
 
@@ -49,7 +49,7 @@ describe('SyncParsable', () => {
   });
 
   test('carries the parsed output type', () => {
-    function parseWith<T>(schema: SyncParsable<T>, value: unknown): ParseResult<T> {
+    function parseWith<T>(schema: Schema<T, unknown>, value: unknown): ParseResult<T> {
       return schema.safeParse(value);
     }
 

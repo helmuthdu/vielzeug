@@ -1,339 +1,198 @@
-import type {
-  AcceptsMissing,
-  AnySchema,
-  InferInput,
-  InferOutput,
-  Issue,
-  ParseContext,
-  ParseValue,
-  SchemaDescriptor,
-} from '../core';
-
-import { ErrorCode, prependIssuePath, Schema } from '../core';
-import { defineOwnProperty, isUnsafeObjectKey, objectFromEntries } from '../safe-object';
-import { LiteralSchema } from './literal';
-import { UnionSchema } from './union';
+import { defineOwnProperty, isUnsafeObjectKey, objectFromEntries } from '../_object';
+import {
+  all,
+  chain,
+  invalid,
+  issue,
+  type MaybePromise,
+  type ParseValue,
+  prefixIssues,
+  type RunContext,
+} from '../_parse';
+import { SpellDefinitionError } from '../errors';
+import { Schema } from '../schema';
+import {
+  type AcceptsMissing,
+  type AnySchema,
+  ErrorCode,
+  type InferInput,
+  type InferOutput,
+  type Issue,
+  type SchemaDescriptor,
+  type SchemaKind,
+} from '../types';
+import { EnumSchema } from './primitives';
 
 export type ObjectShape = Record<string, AnySchema>;
-export type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T[K]> };
-type OptionalInputKeys<T extends ObjectShape> = {
-  [K in keyof T]: T[K] extends AcceptsMissing ? K : never;
-}[keyof T];
+
 type Simplify<T> = { [K in keyof T]: T[K] };
+type OptionalInputKeys<T extends ObjectShape> = { [K in keyof T]: T[K] extends AcceptsMissing ? K : never }[keyof T];
+
+export type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T[K]> };
 export type InferObjectInput<T extends ObjectShape> = Simplify<
   { [K in Exclude<keyof T, OptionalInputKeys<T>>]: InferInput<T[K]> } & {
     [K in OptionalInputKeys<T>]?: InferInput<T[K]>;
   }
 >;
 
+type Optional<S extends AnySchema> = Schema<InferOutput<S> | undefined, InferInput<S> | undefined> & AcceptsMissing;
+
+/** How keys outside the shape are handled: `strict` rejects them, `relaxed` keeps them. */
+type UnknownKeys = 'relaxed' | 'strict';
+
 export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, InferObjectInput<T>> {
   readonly shape: T;
-  private readonly _isRelaxed: boolean;
+  private readonly _unknownKeys: UnknownKeys;
+  private readonly _tolerated: readonly string[];
 
-  protected override get _kind(): string {
+  constructor(shape: T, unknownKeys: UnknownKeys = 'strict', tolerated: readonly string[] = []) {
+    super();
+    this.shape = Object.freeze(objectFromEntries(Object.entries(shape))) as T;
+    this._unknownKeys = unknownKeys;
+    this._tolerated = Object.freeze([...new Set(tolerated)]);
+  }
+
+  override get kind(): SchemaKind {
     return 'object';
   }
 
-  constructor(shape: T, isRelaxed = false) {
-    super();
-    this.shape = Object.freeze(objectFromEntries(Object.entries(shape))) as T;
-    this._isRelaxed = isRelaxed;
-  }
-
-  private _unknownKeys(obj: Record<string, unknown>): string[] {
-    return Object.keys(obj).filter((k) => !Object.hasOwn(this.shape, k));
-  }
-
-  private _strictUnknownKeyIssues(obj: Record<string, unknown>, ctx: ParseContext): Issue[] {
-    if (this._isRelaxed) return [];
-
-    const unknownKeys = this._unknownKeys(obj);
-
-    if (unknownKeys.length === 0) return [];
-
-    return [
-      {
-        code: ErrorCode.invalid_keys,
-        message: ctx.messages.object.invalidKeys({ keys: unknownKeys }),
-        params: { keys: unknownKeys },
-        path: [],
-      },
-    ];
-  }
-
-  private _copyRelaxedUnknownKeys(obj: Record<string, unknown>, output: Record<string, unknown>): void {
-    if (!this._isRelaxed) return;
-
-    for (const key of this._unknownKeys(obj)) {
-      // Skip keys that trigger inherited setters (e.g. __proto__) to prevent
-      // prototype mutation on the output object.
-      if (isUnsafeObjectKey(key)) continue;
-
-      defineOwnProperty(output, key, obj[key]);
-    }
-  }
-
-  private _guardObjectInput(
-    value: unknown,
-    ctx: ParseContext,
-  ): { obj: Record<string, unknown>; ok: true } | { issues: Issue[]; ok: false } {
-    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-      return {
-        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.object.type(), path: [] }],
-        ok: false,
-      };
+  /**
+   * Field failures are reported per key and the failed keys are left out of the output, so
+   * object-level checks still run and can branch on key presence.
+   */
+  protected override _parse(value: unknown, ctx: RunContext): MaybePromise<ParseValue> {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      return invalid(value, issue(ErrorCode.invalid_type, ctx.messages.object.type()));
     }
 
-    return { obj: value as Record<string, unknown>, ok: true };
-  }
-
-  private _createObjectParseContext(
-    obj: Record<string, unknown>,
-    ctx: ParseContext,
-  ): {
-    issues: Issue[];
-    output: Record<string, unknown>;
-  } {
-    return {
-      issues: [...this._strictUnknownKeyIssues(obj, ctx)],
-      output: {},
-    };
-  }
-
-  private _rebuildWith<U extends ObjectShape>(shape: U, isRelaxed = this._isRelaxed): ObjectSchema<U> {
-    return this._copyStateTo(new ObjectSchema(shape, isRelaxed)) as unknown as ObjectSchema<U>;
-  }
-
-  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
-    const guarded = this._guardObjectInput(value, ctx);
-
-    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
-
-    const { obj } = guarded;
-    const { issues, output } = this._createObjectParseContext(obj, ctx);
-
-    for (const key of Object.keys(this.shape)) {
-      const fieldSchema = this.shape[key];
-      const result = fieldSchema._parseFullSync(obj[key], ctx);
-
-      if (result.issues.length === 0) {
-        defineOwnProperty(output, key, result.data);
-      } else {
-        // Failed field keys are intentionally omitted from parsed output so
-        // object-level checks can branch on key presence.
-        issues.push(...prependIssuePath(result.issues, key));
-      }
-    }
-
-    this._copyRelaxedUnknownKeys(obj, output);
-
-    return { data: output, issues, typeOk: true };
-  }
-
-  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
-    const guarded = this._guardObjectInput(value, ctx);
-
-    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
-
-    const { obj } = guarded;
-    const { issues, output } = this._createObjectParseContext(obj, ctx);
-
+    const input = value as Record<string, unknown>;
     const keys = Object.keys(this.shape);
-    const results = await Promise.all(keys.map((key) => this.shape[key]._parseFullAsync(obj[key], ctx)));
+    const unknownKeys = Object.keys(input).filter(
+      (key) => !Object.hasOwn(this.shape, key) && !this._tolerated.includes(key),
+    );
 
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      const result = results[i];
+    return chain(all(keys.map((key) => this.shape[key]!._run(input[key], ctx))), (results) => {
+      const issues: Issue[] = [];
+      const output: Record<string, unknown> = {};
 
-      if (result.issues.length === 0) {
-        defineOwnProperty(output, key, result.data);
-      } else {
-        issues.push(...prependIssuePath(result.issues, key));
+      if (unknownKeys.length > 0 && this._unknownKeys === 'strict') {
+        issues.push(
+          issue(ErrorCode.invalid_keys, ctx.messages.object.invalidKeys({ keys: unknownKeys }), { keys: unknownKeys }),
+        );
       }
-    }
 
-    this._copyRelaxedUnknownKeys(obj, output);
+      results.forEach((result, index) => {
+        const key = keys[index]!;
 
-    return { data: output, issues, typeOk: true };
+        if (result.issues.length > 0) issues.push(...prefixIssues(result.issues, key));
+        else if (result.value !== undefined || Object.hasOwn(input, key)) defineOwnProperty(output, key, result.value);
+      });
+
+      if (this._unknownKeys === 'relaxed') {
+        for (const key of unknownKeys) if (!isUnsafeObjectKey(key)) defineOwnProperty(output, key, input[key]);
+      }
+
+      return { issues, typeOk: true, value: output };
+    });
   }
 
-  partial(): ObjectSchema<{
-    [K in keyof T]: Schema<InferOutput<T[K]> | undefined, InferInput<T[K]> | undefined> & AcceptsMissing;
-  }>;
-  partial<K extends keyof T>(
-    ...keys: K[]
-  ): ObjectSchema<
-    Omit<T, K> & {
-      [P in K]: Schema<InferOutput<T[P]> | undefined, InferInput<T[P]> | undefined> & AcceptsMissing;
-    }
-  >;
-  partial<K extends keyof T>(...keys: K[]): ObjectSchema<any> {
-    const targetKeys = keys.length > 0 ? new Set(keys as string[]) : null;
+  /* -------------------- Unknown keys -------------------- */
 
-    return this._rebuildWith(
+  /** Keeps keys outside the shape in the output instead of rejecting them. */
+  relaxed(): this {
+    return this._withShape(this.shape, 'relaxed') as unknown as this;
+  }
+
+  /** Rejects keys outside the shape with `invalid_keys` (the default). */
+  strict(): this {
+    return this._withShape(this.shape, 'strict') as unknown as this;
+  }
+
+  /**
+   * Accepts and drops the named keys, e.g. fields that records saved by an older schema version
+   * still carry. Other unknown keys are handled as before.
+   */
+  tolerate(...keys: string[]): this {
+    return this._withShape(this.shape, this._unknownKeys, [...this._tolerated, ...keys]) as unknown as this;
+  }
+
+  /* -------------------- Shape derivation -------------------- */
+
+  extend<U extends ObjectShape>(extra: U): ObjectSchema<Simplify<Omit<T, keyof U> & U>> {
+    return this._derive({ ...this.shape, ...extra }) as unknown as ObjectSchema<Simplify<Omit<T, keyof U> & U>>;
+  }
+
+  pick<K extends keyof T & string>(...keys: K[]): ObjectSchema<Pick<T, K>> {
+    const shape = objectFromEntries(Object.entries(this.shape).filter(([key]) => keys.includes(key as K)));
+
+    return this._derive(shape as Pick<T, K>);
+  }
+
+  omit<K extends keyof T & string>(...keys: K[]): ObjectSchema<Omit<T, K>> {
+    const shape = objectFromEntries(Object.entries(this.shape).filter(([key]) => !keys.includes(key as K)));
+
+    return this._derive(shape as Omit<T, K>);
+  }
+
+  /** Makes the named fields (or all fields) optional. */
+  partial(): ObjectSchema<{ [K in keyof T]: Optional<T[K]> }>;
+  partial<K extends keyof T & string>(...keys: K[]): ObjectSchema<Simplify<Omit<T, K> & { [P in K]: Optional<T[P]> }>>;
+  partial(...keys: string[]): unknown {
+    return this._derive(
       objectFromEntries(
-        Object.entries(this.shape).map(([k, s]) => [k, targetKeys === null || targetKeys.has(k) ? s.optional() : s]),
-      ) as any,
-      this._isRelaxed,
+        Object.entries(this.shape).map(([key, schema]) => [
+          key,
+          keys.length === 0 || keys.includes(key) ? schema.optional() : schema,
+        ]),
+      ),
     );
   }
 
-  override optional(): ObjectSchema<T> &
-    Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined> &
-    AcceptsMissing {
-    return super.optional() as ObjectSchema<T> &
-      Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined> &
-      AcceptsMissing;
-  }
-
-  override nullable(): ObjectSchema<T> & Schema<InferObject<T> | null, InferObjectInput<T> | null> {
-    return super.nullable() as ObjectSchema<T> & Schema<InferObject<T> | null, InferObjectInput<T> | null>;
-  }
-
-  override nullish(): ObjectSchema<T> &
-    Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined> &
-    AcceptsMissing {
-    return super.nullish() as ObjectSchema<T> &
-      Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined> &
-      AcceptsMissing;
-  }
-
-  override required(): ObjectSchema<T> &
-    Schema<Exclude<InferObject<T>, undefined>, Exclude<InferObjectInput<T>, undefined>> {
-    return this._rebuildWith(
-      objectFromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any,
-      this._isRelaxed,
-    ) as ObjectSchema<T> & Schema<Exclude<InferObject<T>, undefined>, Exclude<InferObjectInput<T>, undefined>>;
-  }
-
-  extend<U extends ObjectShape>(extra: U): ObjectSchema<Omit<T, keyof U> & U> {
-    return this._rebuildWith(
-      objectFromEntries([...Object.entries(this.shape), ...Object.entries(extra)]) as any,
-      this._isRelaxed,
-    );
-  }
-
-  pick<K extends keyof T>(...keys: K[]): ObjectSchema<Pick<T, K>> {
-    const keySet = new Set(keys as string[]);
-
-    return this._rebuildWith(objectFromEntries(Object.entries(this.shape).filter(([k]) => keySet.has(k))) as any);
-  }
-
-  omit<K extends keyof T>(...keys: K[]): ObjectSchema<Omit<T, K>> {
-    const keySet = new Set(keys as string[]);
-
-    return this._rebuildWith(objectFromEntries(Object.entries(this.shape).filter(([k]) => !keySet.has(k))) as any);
+  /** An enum schema of this object's keys. */
+  keyof(): EnumSchema<[keyof T & string, ...(keyof T & string)[]]> {
+    return new EnumSchema(Object.keys(this.shape) as [keyof T & string, ...(keyof T & string)[]]);
   }
 
   /**
-   * Returns a fully default-filled object by parsing `{}` against this schema.
-   * Every required field must have a `.default()` value set; if any required
-   * field is missing a default, this method throws a `SpellValidationError`.
-   *
-   * @example
-   * const Config = s.object({ host: s.string().default('localhost'), port: s.number().default(3000) });
-   * Config.defaults(); // { host: 'localhost', port: 3000 }
+   * Same unknown-key policy and state on a new shape.
+   * @internal Also used by `discriminatedUnion()` to add the discriminator literal to a branch.
    */
-  defaults(): InferObject<T> {
-    return this.parse({});
+  _withShape<U extends ObjectShape>(
+    shape: U,
+    unknownKeys: UnknownKeys = this._unknownKeys,
+    tolerated: readonly string[] = this._tolerated,
+  ): ObjectSchema<U> {
+    const next = new ObjectSchema(shape, unknownKeys, tolerated);
+
+    next.state = this.state;
+
+    return next;
   }
 
-  /**
-   * Returns a partial object containing only the fields that have a default value set.
-   * Fields without a `.default()` or `.catch()` are silently omitted rather than throwing.
-   *
-   * Useful for pre-filling forms where only some fields have defaults.
-   *
-   * @example
-   * const Form = s.object({ name: s.string(), role: s.string().default('viewer') });
-   * Form.partialDefaults(); // { role: 'viewer' }; name is omitted
-   */
-  partialDefaults(): Partial<InferObject<T>> {
-    const result: Record<string, unknown> = {};
+  /** Derivations change the value type, so runtime behavior written for the old shape cannot carry over. */
+  private _derive<U extends ObjectShape>(shape: U): ObjectSchema<U> {
+    const { catch: fallback, default: defaultValue, preprocess, steps } = this.state;
 
-    for (const key of Object.keys(this.shape)) {
-      const parsed = this.shape[key]._parseFullSync(undefined);
-
-      if (parsed.issues.length === 0) {
-        defineOwnProperty(result, key, parsed.data);
-      }
+    if (steps.length > 0 || preprocess.length > 0 || fallback || defaultValue) {
+      throw new SpellDefinitionError(
+        'Cannot derive a new shape from an object schema with checks, transforms, preprocessors, defaults, or catches. Derive the shape first, then add them.',
+      );
     }
 
-    return result as Partial<InferObject<T>>;
+    return this._withShape(shape);
   }
 
-  /**
-   * Returns an array of field keys that are **required** (not optional and not nullish).
-   *
-   * @example
-   * const User = s.object({ id: s.number(), name: s.string().optional() });
-   * User.requiredFields(); // ['id']
-   */
-  requiredFields(): (keyof T & string)[] {
-    return Object.keys(this.shape).filter((k) => !this.shape[k].isOptional) as (keyof T & string)[];
-  }
-
-  /**
-   * Returns an array of field keys that are **optional** (accept `undefined`).
-   *
-   * @example
-   * const User = s.object({ id: s.number(), name: s.string().optional() });
-   * User.optionalFields(); // ['name']
-   */
-  optionalFields(): (keyof T & string)[] {
-    return Object.keys(this.shape).filter((k) => this.shape[k].isOptional) as (keyof T & string)[];
-  }
-
-  /**
-   * Allow additional unknown properties (relaxed mode).
-   * Default is strict mode (rejects unknown keys).
-   *
-   * Returns `ObjectSchema<T>` so fluent methods like `.pick()`, `.omit()`,
-   * `.extend()`, and `.partial()` remain usable after calling `.relaxed()`.
-   */
-  relaxed(): ObjectSchema<T> {
-    return this._rebuildWith(this.shape, true);
-  }
-
-  /**
-   * Alias for the default strict mode: rejects unknown keys.
-   * Useful after calling `.relaxed()` to return a new strict schema.
-   */
-  strict(): ObjectSchema<T> {
-    return this._rebuildWith(this.shape, false);
-  }
-
-  /**
-   * Returns a union schema of the object's key names as literal schemas.
-   *
-   * @example
-   * const User = s.object({ id: s.number(), name: s.string() });
-   * User.keyof(); // UnionSchema: validates 'id' | 'name'
-   */
-  keyof(): UnionSchema<readonly [LiteralSchema<keyof T & string>, ...LiteralSchema<keyof T & string>[]]> {
-    const keys = Object.keys(this.shape) as (keyof T & string)[];
-    const schemas = keys.map((k) => new LiteralSchema(k)) as unknown as readonly [
-      LiteralSchema<keyof T & string>,
-      ...LiteralSchema<keyof T & string>[],
-    ];
-
-    return new UnionSchema(schemas);
-  }
-
-  protected override _toDescriptorImpl(): SchemaDescriptor {
+  protected override _describe(): SchemaDescriptor {
     const fields: Record<string, SchemaDescriptor> = {};
 
-    for (const [key, schema] of Object.entries(this.shape)) {
-      defineOwnProperty(fields, key, schema.definition());
-    }
+    for (const [key, schema] of Object.entries(this.shape)) defineOwnProperty(fields, key, schema.definition());
 
-    return { ...this._describeBase(), fields, kind: 'object', strict: !this._isRelaxed };
-  }
-
-  merge<U extends ObjectShape>(other: ObjectSchema<U>): ObjectSchema<T & U> {
-    return this._rebuildWith(
-      objectFromEntries([...Object.entries(this.shape), ...Object.entries(other.shape)]) as any,
-      other._isRelaxed,
-    );
+    return {
+      ...this._describeBase(),
+      fields,
+      kind: 'object',
+      strict: this._unknownKeys === 'strict',
+      ...(this._tolerated.length > 0 && { tolerated: this._tolerated }),
+    };
   }
 }

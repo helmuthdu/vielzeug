@@ -1,4 +1,3 @@
-import { prependIssuePath } from '../core';
 import { createParseContext, type ParseResult, SpellValidationError, s } from '../index';
 
 describe('SpellValidationError', () => {
@@ -34,14 +33,7 @@ describe('SpellValidationError', () => {
   });
 });
 
-describe('parse context and path helpers', () => {
-  it('keeps issue paths immutable', () => {
-    const original = [{ code: 'custom', message: 'Bad', path: ['name'] }];
-
-    expect(prependIssuePath(original, 'user')).toEqual([{ code: 'custom', message: 'Bad', path: ['user', 'name'] }]);
-    expect(original).toEqual([{ code: 'custom', message: 'Bad', path: ['name'] }]);
-  });
-
+describe('parse contexts', () => {
   it('uses request-local messages for structural and check failures', () => {
     const check = s.string().check(() => false);
     const context = createParseContext({ check: { default: () => 'Localized check failure' } });

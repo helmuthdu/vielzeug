@@ -1,5 +1,5 @@
 import { s } from '../index';
-import { fromDefinition } from '../json';
+import { toJsonSchema } from '../json';
 
 describe('s.instanceof()', () => {
   it('accepts instances of the given class', () => {
@@ -23,7 +23,7 @@ describe('s.instanceof()', () => {
     });
 
     it('converts through the JSON subpath', () => {
-      const jsonSchema = fromDefinition(s.instanceof(Date).definition());
+      const jsonSchema = toJsonSchema(s.instanceof(Date).definition());
 
       expect(jsonSchema.$comment).toBe('Instances of "Date" are not representable in JSON Schema.');
     });

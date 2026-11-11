@@ -1,8 +1,8 @@
 import { type AnySchema, s } from '../index';
-import { fromDefinition } from '../json';
+import { toJsonSchema } from '../json';
 
 function toJson(schema: AnySchema): Record<string, unknown> {
-  return fromDefinition(schema.definition());
+  return toJsonSchema(schema.definition());
 }
 
 describe('@vielzeug/spell/json', () => {
@@ -69,8 +69,9 @@ describe('@vielzeug/spell/json', () => {
       prefixItems: [{ type: 'string' }],
       type: 'array',
     });
-    expect(toJson(s.record(s.string(), s.number()))).toEqual({
+    expect(toJson(s.record(s.string().min(2), s.number()))).toEqual({
       additionalProperties: { type: 'number' },
+      propertyNames: { minLength: 2, type: 'string' },
       type: 'object',
     });
     expect(toJson(s.set(s.string()))).toEqual({
@@ -80,7 +81,7 @@ describe('@vielzeug/spell/json', () => {
       uniqueItems: true,
     });
     expect(toJson(s.map(s.string(), s.number()))).toEqual({
-      $comment: 'Map type: represented as an object with arbitrary string keys.',
+      $comment: 'Map: represented as an object; key constraints are not representable.',
       additionalProperties: { type: 'number' },
       type: 'object',
     });
@@ -119,7 +120,7 @@ describe('@vielzeug/spell/json', () => {
   });
 
   it('converts modifiers and annotations', () => {
-    expect(toJson(s.string().nullable().label('A label'))).toEqual({
+    expect(toJson(s.string().nullable().describe('A label'))).toEqual({
       anyOf: [{ type: 'string' }, { type: 'null' }],
       description: 'A label',
     });
@@ -129,7 +130,14 @@ describe('@vielzeug/spell/json', () => {
       minLength: 3,
       type: 'string',
     });
-    expect(toJson(s.string().regex(/foo/).regex(/bar/))).toEqual({ type: 'string' });
+    expect(toJson(s.string().regex(/foo/).regex(/bar/))).toEqual({
+      allOf: [{ pattern: 'foo' }, { pattern: 'bar' }],
+      type: 'string',
+    });
+    expect(toJson(s.string().isoDateTime())).toEqual({ format: 'date-time', type: 'string' });
+    expect(toJson(s.string().base64())).toEqual({ contentEncoding: 'base64', type: 'string' });
+    expect(toJson(s.string().ip())).toEqual({ anyOf: [{ format: 'ipv4' }, { format: 'ipv6' }], type: 'string' });
+    expect(toJson(s.string().startsWith('ab'))).toEqual({ pattern: '^ab', type: 'string' });
     expect(toJson(s.number().int().min(1).positive().multipleOf(5))).toEqual({
       exclusiveMinimum: 0,
       minimum: 1,

@@ -53,30 +53,16 @@ describe('s.union()', () => {
     expect(schema.parse(b)).toBe(42);
   });
 
-  it('accepts raw literal values as shorthand for s.literal()', () => {
-    const schema = s.union('a', 'b', 'c');
-
-    expect(schema.parse('a')).toBe('a');
-    expect(schema.parse('b')).toBe('b');
-    expect(() => schema.parse('d')).toThrow();
-  });
-
-  it('mixes raw values and schemas', () => {
-    const schema = s.union('yes', 'no', s.number());
-
-    expect(schema.parse('yes')).toBe('yes');
-    expect(schema.parse(42)).toBe(42);
-    expect(() => schema.parse(true)).toThrow();
-  });
-
-  it('infers correct type for raw value shorthand', () => {
-    const schema = s.union('light', 'dark');
+  it('unions literal schemas into a literal type', () => {
+    const schema = s.union(s.literal('light'), s.literal('dark'), s.number());
 
     type T = Infer<typeof schema>;
 
     const t: T = 'light';
 
     expect(schema.parse(t)).toBe('light');
+    expect(schema.parse(42)).toBe(42);
+    expect(() => schema.parse('dim')).toThrow();
   });
 });
 

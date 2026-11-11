@@ -1,4 +1,4 @@
-import { SpellValidationError, s } from '../index';
+import { SpellDefinitionError, SpellValidationError, s } from '../index';
 
 describe('s.array()', () => {
   it('accepts arrays, rejects non-arrays', () => {
@@ -95,23 +95,34 @@ describe('ArraySchema.unique()', () => {
     expect(result.success).toBe(true);
   });
 
-  it('custom equalsFn detects structural duplicates in object arrays', () => {
-    type Item = { id: number };
-
-    const schema = s.array(s.object({ id: s.number() })).unique((a: Item, b: Item) => a.id === b.id);
+  it('by selector detects duplicates by key', () => {
+    const schema = s.array(s.object({ id: s.number() })).unique({ by: (item) => item.id });
 
     expect(() => schema.parse([{ id: 1 }, { id: 1 }])).toThrow();
     expect(schema.parse([{ id: 1 }, { id: 2 }])).toEqual([{ id: 1 }, { id: 2 }]);
   });
 
-  it('custom equalsFn: empty array passes', () => {
-    const schema = s.array(s.string()).unique((a, b) => a === b);
+  it('by selector: empty array passes', () => {
+    expect(
+      s
+        .array(s.string())
+        .unique({ by: (item) => item.toLowerCase() })
+        .parse([]),
+    ).toEqual([]);
+  });
 
-    expect(schema.parse([])).toEqual([]);
+  it('by selector makes the schema non-portable', () => {
+    expect(s.array(s.number()).unique().definition()).toMatchObject({ uniqueItems: true });
+    expect(() =>
+      s
+        .array(s.number())
+        .unique({ by: (n) => n })
+        .definition(),
+    ).toThrow(SpellDefinitionError);
   });
 
   it('accepts custom message', () => {
-    const schema = s.array(s.number()).unique(() => 'No dupes allowed');
+    const schema = s.array(s.number()).unique({ message: 'No dupes allowed' });
 
     const result = schema.safeParse([1, 1]);
 

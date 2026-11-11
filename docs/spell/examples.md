@@ -9,4 +9,4 @@ description: Practical examples and recipes for spell.
 - [Form-Safe Parsing](./examples/forms.md)
 - [Async Business Rules](./examples/async.md)
 - [Schema Introspection and Round-Trips](./examples/introspection.md)
-- [Unions, Intersections, and Variants](./examples/unions.md)
+- [Unions, Intersections, and Discriminated Unions](./examples/unions.md)

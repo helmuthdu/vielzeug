@@ -1,32 +1,32 @@
 export const objectDefaultsExample = {
   code: `import { s } from '@vielzeug/spell';
 
-// Schema where all fields have defaults
 const ServerConfig = s.object({
   host: s.string().default('localhost'),
   port: s.number().int().positive().default(3000),
   tls: s.boolean().default(false),
 });
 
-// Get a fully filled config without providing any input
-const config = ServerConfig.defaults();
-console.log(config);
+// Absent keys take their field default
+console.log(ServerConfig.parse({}));
 // { host: 'localhost', port: 3000, tls: false }
 
-// Works with nested schemas too
+// default() on the object itself covers a missing object
 const AppConfig = s.object({
-  server: ServerConfig,
   debug: s.boolean().default(false),
+  server: ServerConfig.default({ host: 'localhost', port: 3000, tls: false }),
 });
 
-// Parse with partial input: missing fields use their defaults
-const parsed = AppConfig.parse({ server: { host: 'prod.example.com', port: 443, tls: true }, debug: true });
-console.log(parsed.server.host); // 'prod.example.com'
+console.log(AppConfig.parse({}).server.port); // 3000
 
-// Schema with required field (no default): throws if .defaults() called
-const Strict = s.object({ name: s.string() });
-const result = Strict.safeParse({});
-console.log(result.success); // false: name is required
+// Each parse returns a fresh copy of the default value
+const Tags = s.array(s.string()).default([]);
+const first = Tags.parse(undefined);
+first.push('mutated');
+console.log(Tags.parse(undefined)); // []
+
+// Fields without a default stay required
+console.log(s.object({ name: s.string() }).safeParse({}).success); // false
 `,
   name: 'Object Defaults',
 };

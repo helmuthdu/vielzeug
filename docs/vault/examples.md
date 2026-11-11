@@ -70,7 +70,7 @@ interface Job {
   status: 'queued' | 'running' | 'done';
 }
 
-const JobSchema = s.object({ id: s.string(), status: s.union('queued', 'running', 'done') });
+const JobSchema = s.object({ id: s.string(), status: s.enum(['queued', 'running', 'done']) });
 const database = new DatabaseSync(':memory:');
 const store = createSQLite({
   database,

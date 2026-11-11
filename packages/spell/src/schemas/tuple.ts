@@ -1,12 +1,31 @@
-import type { AnySchema, InferInput, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
-
-import { ErrorCode, prependIssuePath, Schema } from '../core';
+import {
+  all,
+  chain,
+  invalid,
+  issue,
+  type MaybePromise,
+  type ParseValue,
+  prefixIssues,
+  type RunContext,
+} from '../_parse';
+import { Schema } from '../schema';
+import {
+  type AnySchema,
+  ErrorCode,
+  type InferInput,
+  type InferOutput,
+  type Issue,
+  type SchemaDescriptor,
+  type SchemaKind,
+} from '../types';
 
 export type TupleSchemas = readonly [AnySchema, ...AnySchema[]];
-export type InferTuple<T extends TupleSchemas, R extends AnySchema | null = null> = R extends AnySchema
+
+type InferTuple<T extends TupleSchemas, R extends AnySchema | null> = R extends AnySchema
   ? readonly [...{ [K in keyof T]: InferOutput<T[K]> }, ...InferOutput<R>[]]
   : { readonly [K in keyof T]: InferOutput<T[K]> };
-type InferTupleInput<T extends TupleSchemas, R extends AnySchema | null = null> = R extends AnySchema
+
+type InferTupleInput<T extends TupleSchemas, R extends AnySchema | null> = R extends AnySchema
   ? readonly [...{ [K in keyof T]: InferInput<T[K]> }, ...InferInput<R>[]]
   : { readonly [K in keyof T]: InferInput<T[K]> };
 
@@ -17,157 +36,62 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
   readonly items: T;
   readonly restSchema: R;
 
-  protected override get _kind(): string {
-    return 'tuple';
-  }
-
   constructor(items: T, restSchema: R = null as R) {
     super();
-    this.items = items;
+    this.items = Object.freeze([...items]) as unknown as T;
     this.restSchema = restSchema;
   }
 
+  override get kind(): SchemaKind {
+    return 'tuple';
+  }
+
+  /** Accepts any number of trailing items matching `schema`. Keeps this tuple's checks and modifiers. */
   rest<U extends AnySchema>(schema: U): TupleSchema<T, U> {
-    return this._copyStateTo(new TupleSchema(this.items, schema)) as unknown as TupleSchema<T, U>;
+    const next = new TupleSchema(this.items, schema);
+
+    next.state = this.state;
+
+    return next;
   }
 
-  private _guardTupleInput(
-    value: unknown[],
-    ctx: ParseContext,
-  ): { ok: true; value: unknown[] } | { issues: Issue[]; ok: false } {
-    if (this.restSchema === null && value.length !== this.items.length) {
-      return {
-        issues: [
-          {
-            code: ErrorCode.invalid_length,
-            message: ctx.messages.tuple.length({ exact: this.items.length }),
-            params: { exact: this.items.length },
-            path: [],
-          },
-        ],
-        ok: false,
-      };
+  protected override _parse(value: unknown, ctx: RunContext): MaybePromise<ParseValue> {
+    const { messages } = ctx;
+    const fixed = this.items.length;
+
+    if (!Array.isArray(value)) return invalid(value, issue(ErrorCode.invalid_type, messages.tuple.type()));
+
+    if (this.restSchema === null && value.length !== fixed) {
+      return invalid(value, issue(ErrorCode.invalid_length, messages.tuple.length({ exact: fixed }), { exact: fixed }));
     }
 
-    if (this.restSchema !== null && value.length < this.items.length) {
-      return {
-        issues: [
-          {
-            code: ErrorCode.too_small,
-            message: ctx.messages.tuple.min({ min: this.items.length }),
-            params: { min: this.items.length },
-            path: [],
-          },
-        ],
-        ok: false,
-      };
-    }
-
-    return { ok: true, value };
-  }
-
-  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
-    if (!Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.tuple.type(), path: [] }],
-        typeOk: false,
-      };
-    }
-
-    const guarded = this._guardTupleInput(value, ctx);
-
-    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
-
-    const issues: Issue[] = [];
-    const output: unknown[] = [];
-    const tupleValue = guarded.value;
-
-    for (let i = 0; i < this.items.length; i++) {
-      const result = this.items[i]._parseFullSync(tupleValue[i], ctx);
-
-      if (result.issues.length === 0) {
-        output.push(result.data);
-      } else {
-        issues.push(...prependIssuePath(result.issues, i));
-        output.push(tupleValue[i]);
-      }
-    }
-
-    if (this.restSchema !== null) {
-      for (let i = this.items.length; i < tupleValue.length; i++) {
-        const result = this.restSchema._parseFullSync(tupleValue[i], ctx);
-
-        if (result.issues.length === 0) {
-          output.push(result.data);
-        } else {
-          issues.push(...prependIssuePath(result.issues, i));
-          output.push(tupleValue[i]);
-        }
-      }
-    }
-
-    return { data: output, issues, typeOk: true };
-  }
-
-  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
-    if (!Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.tuple.type(), path: [] }],
-        typeOk: false,
-      };
-    }
-
-    const guarded = this._guardTupleInput(value, ctx);
-
-    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
-
-    const tupleValue = guarded.value;
-    const issues: Issue[] = [];
-    const output: unknown[] = [];
-
-    const fixedResults = await Promise.all(this.items.map((schema, i) => schema._parseFullAsync(tupleValue[i], ctx)));
-
-    for (let i = 0; i < fixedResults.length; i++) {
-      const result = fixedResults[i];
-
-      if (result.issues.length === 0) {
-        output.push(result.data);
-      } else {
-        issues.push(...prependIssuePath(result.issues, i));
-        output.push(tupleValue[i]);
-      }
+    if (value.length < fixed) {
+      return invalid(value, issue(ErrorCode.too_small, messages.tuple.min({ min: fixed }), { min: fixed }));
     }
 
     const rest = this.restSchema;
+    const runs = value.map((item, index) => (index < fixed ? this.items[index]! : rest!)._run(item, ctx));
 
-    if (rest !== null) {
-      const restItems = tupleValue.slice(this.items.length);
-      const restResults = await Promise.all(restItems.map((item) => rest._parseFullAsync(item, ctx)));
+    return chain(all(runs), (results) => {
+      const issues: Issue[] = [];
+      const output = results.map((result, index) => {
+        if (result.issues.length === 0) return result.value;
 
-      for (let i = 0; i < restResults.length; i++) {
-        const result = restResults[i];
-        const idx = this.items.length + i;
+        issues.push(...prefixIssues(result.issues, index));
 
-        if (result.issues.length === 0) {
-          output.push(result.data);
-        } else {
-          issues.push(...prependIssuePath(result.issues, idx));
-          output.push(tupleValue[idx]);
-        }
-      }
-    }
+        return value[index];
+      });
 
-    return { data: output, issues, typeOk: true };
+      return { issues, typeOk: true, value: output };
+    });
   }
 
-  protected override _toDescriptorImpl(): SchemaDescriptor {
+  protected override _describe(): SchemaDescriptor {
     return {
       ...this._describeBase(),
-      items: this.items.map((s) => s.definition()),
+      items: this.items.map((schema) => schema.definition()),
       kind: 'tuple',
-      rest: this.restSchema !== null ? this.restSchema.definition() : null,
+      rest: this.restSchema?.definition() ?? null,
     };
   }
 }

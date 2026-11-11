@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { s } from '../index';
-import { fromDefinition } from '../json';
+import { toJsonSchema } from '../json';
 
 // ---------------------------------------------------------------------------
 // Prototype mutation: relaxed ObjectSchema
@@ -129,7 +129,7 @@ describe('prototype mutation: descriptor-driven object schemas', () => {
   });
 
   it('serializes descriptor fields named __proto__ without mutating schema output objects', () => {
-    const jsonSchema = fromDefinition(
+    const jsonSchema = toJsonSchema(
       JSON.parse('{"kind":"object","strict":true,"fields":{"__proto__":{"kind":"string"}}}'),
     ) as Record<string, unknown>;
     const properties = jsonSchema.properties as Record<string, unknown>;

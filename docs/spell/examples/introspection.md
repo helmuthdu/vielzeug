@@ -7,39 +7,41 @@ description: 'Export declarative spell definitions as JSON Schema.'
 
 ### Problem
 
-Tooling layers need a serializable schema format. Runtime schema instances cannot cross process boundaries or live in static metadata directly.
+Tooling layers need a serializable schema format. Runtime schema instances cannot cross process boundaries or live in static metadata.
 
 ### Solution
 
-Use `definition()` as canonical portable shape, then export it through `fromDefinition()` from `@vielzeug/spell/json`.
+Use `definition()` as the portable shape, then convert it with `toJsonSchema()` from `@vielzeug/spell/json`.
 
 ```ts
 import { s } from '@vielzeug/spell';
-import { fromDefinition } from '@vielzeug/spell/json';
+import { toJsonSchema } from '@vielzeug/spell/json';
 
 const Invoice = s
   .object({
     id: s.string().uuid(),
-    notes: s.string().max(500).optional().nullable(),
+    notes: s.string().max(500).nullish(),
+    reference: s.string().startsWith('INV-'),
     total: s.number().positive().multipleOf(0.01),
   })
-  .label('Invoice');
+  .describe('Invoice');
 
 const definition = Invoice.definition();
-const jsonSchema = fromDefinition(definition);
+const jsonSchema = toJsonSchema(definition);
 
-console.log(jsonSchema.title); // 'Invoice'
-console.log(jsonSchema.properties?.id);
+console.log(definition.fields.reference); // { kind: 'string', patterns: [{ flags: '', source: '^INV-' }] }
+console.log(jsonSchema.description); // 'Invoice'
+console.log(jsonSchema.required); // ['id', 'reference', 'total']
 ```
 
 ### Pitfalls
 
-- Definitions preserve declarative structure such as descriptions, optionality, nullability, and built-in annotations.
-- Use `fromDefinition()` for external consumers. Do not hand Spell definitions to tools that expect JSON Schema.
-- Runtime checks, transforms, defaults, catches, and preprocessors intentionally have no definition.
+- Definitions record descriptions, optionality, nullability, and every built-in constraint, including date bounds as ISO strings.
+- Pass `toJsonSchema()` output to external consumers; Spell definitions are not JSON Schema.
+- Checks, transforms, preprocessors (including `s.coerce.*` and `trim()`), defaults, and catches have no definition; keep a separate declarative schema for tooling.
 
 ### Related
 
 - [Usage Guide](../usage.md)
 - [API Reference](../api.md)
-- [Unions, Intersections, and Variants](./unions.md)
+- [Unions, Intersections, and Discriminated Unions](./unions.md)

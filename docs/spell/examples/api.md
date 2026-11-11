@@ -54,7 +54,7 @@ try {
 
 - Object schemas reject unknown keys unless you call `.relaxed()`. Keep strict mode at public API boundaries unless extra keys are part of the contract.
 - `parse()` throws on failure. Switch to `safeParse()` when the failure path is part of normal request handling.
-- Use `.default(() => [])` for arrays and `.default(() => new Map())` for mutable defaults.
+- `.default([])` returns a fresh copy per parse; use a factory such as `.default(() => crypto.randomUUID())` only for values that must be computed.
 
 ### Related
 

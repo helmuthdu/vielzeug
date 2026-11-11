@@ -1,5 +1,5 @@
 export const optionalNullableExample = {
-  code: `// Preserve defaults and validators while tightening undefined away with required().
+  code: `// required() makes undefined invalid again: it clears optional() and default(), keeping checks and null.
 import { s } from '@vielzeug/spell'
 
 const DisplayName = s.string().trim().min(2).optional().default('Guest').nullable()
