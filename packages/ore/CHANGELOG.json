@@ -2,6 +2,64 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "watchEffect() (and onElement()) now throw OreApiError outside setup instead of creating an unowned effect; bind() with an explicit target still works outside setup and returns its disposer.",
+            "commit": "59ac9fa200f4f98e22ebd18ce5b410a6f335b71e"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "attribute bindings to a child's registered prop now go through one write path: null/undefined/false reset to the prop's parsed default, strings are parsed, and other values (objects, functions, numbers) pass through unchanged.",
+            "commit": "59ac9fa200f4f98e22ebd18ce5b410a6f335b71e"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "renderHook() runs setup inside a generated define() host (exposed as element), so hooks behave exactly as in components; cleanups run one microtask after dispose(). New { formAssociated } option enables useField() and onFormReset().",
+            "commit": "59ac9fa200f4f98e22ebd18ce5b410a6f335b71e"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "html`` results are opaque and single-use: HTMLResult no longer exposes mount(), and rendering or interpolating the same result twice throws OreApiError. Call the template function again for another copy.",
+            "commit": "59ac9fa200f4f98e22ebd18ce5b410a6f335b71e"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "remove live() and LiveBinding: use model() for two-way form bindings, which keeps the stale-write guard; plain attribute bindings to form controls always write.",
+            "commit": "59ac9fa200f4f98e22ebd18ce5b410a6f335b71e"
+          }
+        ],
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "onEvent() accepts custom event names with a plain Event listener.",
+            "commit": "59ac9fa200f4f98e22ebd18ce5b410a6f335b71e"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "define() infers prop types from props without an explicit generic; raw PropDef objects are first-class and every invalid prop definition is reported in one OreApiError.",
+            "commit": "59ac9fa200f4f98e22ebd18ce5b410a6f335b71e"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "template listeners and per-render teardown register on the active ripple scope instead of a separate cleanup list",
+            "commit": "59ac9fa200f4f98e22ebd18ce5b410a6f335b71e"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "each() fallback content stays reactive across an empty-to-empty list update; prop state survives a full disconnect/reconnect; component lifecycle reduced to one per-connection context.",
+            "commit": "59ac9fa200f4f98e22ebd18ce5b410a6f335b71e"
+          }
+        ]
+      },
+      "date": "Wed, 11 Nov 2026 13:20:56 GMT",
+      "tag": "@vielzeug/ore_v26.11.10",
+      "version": "26.11.10"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",

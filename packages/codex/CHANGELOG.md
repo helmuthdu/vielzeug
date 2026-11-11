@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Tue, 10 Nov 2026 21:47:05 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Nov 2026 13:20:56 GMT and should not be manually modified.
 
+## 26.11.10
+
+Wed, 11 Nov 2026 13:20:56 GMT
+
+### Patches
+
+- chore(codex): refresh bundled docs data
 ## 26.11.9
 
 Tue, 10 Nov 2026 21:47:05 GMT

@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/spell
 
-This log was last generated on Tue, 10 Nov 2026 21:47:05 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Nov 2026 13:20:56 GMT and should not be manually modified.
 
+## 26.11.10
+
+Wed, 11 Nov 2026 13:20:56 GMT
+
+### Major changes
+
+- Rebuild Spell on one ordered engine: checks and transforms run in chain order, definitions record every built-in constraint, object derivations reject runtime behavior, and duplicate APIs are removed (merge, defaults, partialDefaults, requiredFields, optionalFields, label, tolerate(), SyncParsable, raw-literal unions, fromDefinition). Issue codes unify under invalid_format and invalid_discriminator. See docs/spell/migration.md.
 ## 26.11.9
 
 Tue, 10 Nov 2026 21:47:05 GMT

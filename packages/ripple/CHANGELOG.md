@@ -1,7 +1,18 @@
 # Change Log - @vielzeug/ripple
 
-This log was last generated on Tue, 10 Nov 2026 21:47:05 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Nov 2026 13:20:56 GMT and should not be manually modified.
 
+## 26.11.10
+
+Wed, 11 Nov 2026 13:20:56 GMT
+
+### Major changes
+
+- Computeds are now lazy and glitch-free: a write marks them stale and they derive on read, at most once per flush, never from a stale source. Derivation errors are cached and reported by the reading effect or listener; RippleErrorContext drops the 'computed' kind. An effect's returned cleanup runs before its onCleanup callbacks, and work created inside a cleanup is disposed immediately. Subscribing to a disposed fromSubscribable bridge throws RippleDisposedError. Effects depend on a source from the moment they read it (an effect that reads and writes one signal is reported as a runaway on its first run), parents rerun before the child effects they created, and reruns keep the effect's creation scope. Resource loaders and fromSubscribable sources are no longer tracked.
+
+### Minor changes
+
+- add onCleanup(fn): registers a callback on the active scope or effect run and runs it, newest first, when that owner is disposed.
 ## 26.11.9
 
 Tue, 10 Nov 2026 21:47:05 GMT

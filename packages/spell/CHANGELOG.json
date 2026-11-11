@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Rebuild Spell on one ordered engine: checks and transforms run in chain order, definitions record every built-in constraint, object derivations reject runtime behavior, and duplicate APIs are removed (merge, defaults, partialDefaults, requiredFields, optionalFields, label, tolerate(), SyncParsable, raw-literal unions, fromDefinition). Issue codes unify under invalid_format and invalid_discriminator. See docs/spell/migration.md.",
+            "commit": "59ac9fa200f4f98e22ebd18ce5b410a6f335b71e"
+          }
+        ]
+      },
+      "date": "Wed, 11 Nov 2026 13:20:56 GMT",
+      "tag": "@vielzeug/spell_v26.11.10",
+      "version": "26.11.10"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

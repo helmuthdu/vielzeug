@@ -1,7 +1,28 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Tue, 10 Nov 2026 21:47:05 GMT and should not be manually modified.
+This log was last generated on Wed, 11 Nov 2026 13:20:56 GMT and should not be manually modified.
 
+## 26.11.10
+
+Wed, 11 Nov 2026 13:20:56 GMT
+
+### Major changes
+
+- watchEffect() (and onElement()) now throw OreApiError outside setup instead of creating an unowned effect; bind() with an explicit target still works outside setup and returns its disposer.
+- attribute bindings to a child's registered prop now go through one write path: null/undefined/false reset to the prop's parsed default, strings are parsed, and other values (objects, functions, numbers) pass through unchanged.
+- renderHook() runs setup inside a generated define() host (exposed as element), so hooks behave exactly as in components; cleanups run one microtask after dispose(). New { formAssociated } option enables useField() and onFormReset().
+- html`` results are opaque and single-use: HTMLResult no longer exposes mount(), and rendering or interpolating the same result twice throws OreApiError. Call the template function again for another copy.
+- remove live() and LiveBinding: use model() for two-way form bindings, which keeps the stale-write guard; plain attribute bindings to form controls always write.
+
+### Minor changes
+
+- onEvent() accepts custom event names with a plain Event listener.
+- define() infers prop types from props without an explicit generic; raw PropDef objects are first-class and every invalid prop definition is reported in one OreApiError.
+
+### Patches
+
+- template listeners and per-render teardown register on the active ripple scope instead of a separate cleanup list
+- each() fallback content stays reactive across an empty-to-empty list update; prop state survives a full disconnect/reconnect; component lifecycle reduced to one per-connection context.
 ## 26.11.9
 
 Tue, 10 Nov 2026 21:47:05 GMT

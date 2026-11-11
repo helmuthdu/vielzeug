@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/scout",
-  "version": "26.11.9",
+  "version": "26.11.10",
   "description": "Trigram fuzzy-search index with highlighting and reactive layer",
   "repository": {
     "type": "git",
