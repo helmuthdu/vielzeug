@@ -6,6 +6,38 @@ description: Migrate removed runtime options, error classes, and entry points to
 Breaking changes ship in CalVer trains. The sections below describe removed contracts and their
 current replacements; no stored or serialized formats change.
 
+## Computeds are lazy; the computed error kind is removed
+
+Computeds no longer re-derive the moment a source is written. A write marks them stale, and they derive on the next read, at most once per flush, from up-to-date sources. That removes two old artifacts: a diamond could derive from a stale sibling, and a `batch()` re-derived a computed once per write.
+
+Derivation errors are cached and surface through the consumer that reads them. `RippleErrorContext.kind` drops `'computed'`: an effect reading a failing computed reports `'effect'`, and a subscription reports `'listener'`.
+
+```ts
+// Before
+onError: (error, context) => {
+  if (context.kind === 'computed') reportDerivation(error);
+};
+
+// After: the reading effect names the failure
+onError: (error, context) => {
+  if (context.kind === 'effect') reportEffect(context.name, error);
+};
+```
+
+Code that relied on a computed deriving with no reader (for example, a side effect inside `derive`) must move that work into `effect()`. Keep `derive` pure.
+
+## Effect scheduling is stricter
+
+An effect now depends on a source from the moment it reads it, not when its run ends. A write later in the same run therefore reaches it. An effect that reads and writes one signal (`count.value = count.value + 1`) is reported as a runaway flush on its first run, where it used to loop only once something else triggered a rerun. Read with `peek()` or use `update()` when the write must not be a dependency. Flushes also run a parent effect before the effects its runs created. A rerun creates scopes under the scope the effect was created in, not under whichever scope made the write.
+
+## Effect cleanup order and disposal-time work
+
+An effect's returned cleanup now runs before the `onCleanup()` callbacks registered during the same run, matching the newest-first order everywhere else (the returned cleanup is registered last). Effects, computeds, and `onCleanup()` callbacks created inside a cleanup belong to the owner being disposed and are torn down immediately instead of attaching to the parent.
+
+## Disposed bridges throw RippleDisposedError
+
+Subscribing to a disposed `fromSubscribable()` bridge throws `RippleDisposedError`, like a disposed resource, instead of a bare `RippleError`. `instanceof RippleError` checks keep working.
+
 ## Replace tap() and errorPolicy with one onError option
 
 The `tap()` event stream (`RippleEvent`), `RippleErrorPolicy`, `observer`, and `errorPolicy` are

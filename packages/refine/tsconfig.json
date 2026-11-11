@@ -2,9 +2,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "/ore": ["../ore/src/index.ts"],
-      "/ore/controls": ["../ore/src/controls/index.ts"],
-      "/ore/testing": ["../ore/src/testing/index.ts"]
+      "@vielzeug/ore": ["../ore/src/index.ts"],
+      "@vielzeug/ore/testing": ["../ore/src/testing/index.ts"]
     },
     "types": ["vitest/globals", "vite/client", "node"]
   },

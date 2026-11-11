@@ -53,7 +53,7 @@ export interface Subscribable<T> {
 }
 
 export type RippleErrorContext = {
-  readonly kind: 'cleanup' | 'computed' | 'effect' | 'flush' | 'listener';
+  readonly kind: 'cleanup' | 'effect' | 'flush' | 'listener';
   readonly name?: string;
 };
 

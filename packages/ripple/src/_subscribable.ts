@@ -1,72 +1,39 @@
-import { RippleError } from './errors';
-import { REACTIVE } from './runtime';
-import type { Disposable, EffectHandle, Readable, Signal, Subscribable } from './types';
-
-type BridgeRuntime = {
-  effect(callback: () => undefined | (() => void), options?: { name?: string }): EffectHandle;
-  signal<T>(initial: T, options?: { name?: string }): Signal<T>;
-};
+import { EffectReadable } from './_handle';
+import type { ReactiveRuntime } from './runtime';
+import type { Disposable, Readable, Subscribable } from './types';
 
 export type BridgedReadable<T> = Readable<T> & Disposable;
 export type FromSubscribableOptions = { name?: string; signal?: AbortSignal };
 
 export const createFromSubscribable =
-  (runtime: BridgeRuntime) =>
+  (runtime: ReactiveRuntime) =>
   <T>(source: Subscribable<T>, options?: FromSubscribableOptions): BridgedReadable<T> => {
-    const node = runtime.signal<T>(source.getSnapshot(), { name: options?.name });
-    const stop = runtime.effect(
-      () => {
-        const sync = () => {
-          node.value = source.getSnapshot();
-        };
-        let unsubscribe: (() => void) | undefined;
+    const state = runtime.signal<T>(source.getSnapshot(), { name: options?.name });
+    // Untracked: the subscription is set up once and lives until disposal, whatever the source reads.
+    const effect = runtime.effect(
+      () =>
+        runtime.untrack(() => {
+          const sync = () => {
+            state.value = source.getSnapshot();
+          };
+          const unsubscribe = source.subscribe(sync);
 
-        try {
-          unsubscribe = source.subscribe(sync);
-          sync();
-        } catch (error) {
-          unsubscribe?.();
-          throw error;
-        }
+          try {
+            // Catch a change made between the initial snapshot and the subscription.
+            sync();
+          } catch (error) {
+            unsubscribe();
+            throw error;
+          }
 
-        return unsubscribe;
-      },
+          return unsubscribe;
+        }),
       { name: options?.name },
     );
-    const abort = () => stop.dispose();
 
-    options?.signal?.addEventListener('abort', abort, { once: true });
-    if (options?.signal?.aborted) stop.dispose();
+    if (options?.signal?.aborted) effect.dispose();
+    else
+      options?.signal?.addEventListener('abort', () => effect.dispose(), { once: true, signal: effect.disposalSignal });
 
-    const assertActive = (): void => {
-      if (stop.disposed) throw new RippleError('Cannot subscribe to a disposed bridge.');
-    };
-    const dispose = (): void => {
-      options?.signal?.removeEventListener('abort', abort);
-      stop.dispose();
-    };
-    const readable: BridgedReadable<T> = {
-      get disposalSignal() {
-        return stop.disposalSignal;
-      },
-      dispose,
-      get disposed() {
-        return stop.disposed;
-      },
-      get name() {
-        return node.name;
-      },
-      peek: () => node.peek(),
-      subscribe(listener) {
-        assertActive();
-        return node.subscribe(listener);
-      },
-      [Symbol.dispose]: dispose,
-      get value() {
-        return node.value;
-      },
-    };
-
-    Object.defineProperty(readable, REACTIVE, { value: true });
-    return readable;
+    return new EffectReadable('bridge', state, effect);
   };

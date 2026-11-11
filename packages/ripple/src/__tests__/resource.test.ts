@@ -82,6 +82,25 @@ describe('resource', () => {
     ripple.dispose();
   });
 
+  it('does not reload when a signal read by the loader changes', () => {
+    const ripple = createRipple();
+    const token = ripple.signal('a');
+    let calls = 0;
+    const value = ripple.resource(
+      () => 'key',
+      async () => {
+        calls++;
+        return token.value;
+      },
+    );
+
+    token.value = 'b';
+
+    expect(calls).toBe(1);
+    value.dispose();
+    ripple.dispose();
+  });
+
   it('aborts active work on disposal', () => {
     const ripple = createRipple();
     let signal: AbortSignal | undefined;

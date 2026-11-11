@@ -60,7 +60,7 @@ ripple.batch(() => {
 
 ## Scheduling and Subscriptions
 
-Ripple propagates every synchronous write before flushing effects. Each flush pass runs effects queued at its
+A synchronous write marks everything downstream stale before any effect runs. Each flush pass runs effects queued at its
 start before direct `subscribe()` listeners queued at its start. Work queued by either runs in a later pass.
 Effects coalesce writes made inside the same synchronous flush: a `batch()` (or any writes during a flush) produces a single effect run.
 Each `subscribe()` registration fires once per flush, even when several subscriptions share one callback function.
@@ -96,7 +96,9 @@ count.value = 1;
 scope.dispose();
 ```
 
-Effects and computeds created directly during an effect run belong to that run and are disposed before rerun. Explicit scopes intentionally attach to the enclosing scope and survive effect reruns; create them outside rerunning effects or retain and dispose each scope yourself.
+Effects and computeds created directly during an effect run belong to that run and are disposed before rerun. `onCleanup(fn)` registers on that same owner: inside an effect it runs before the next run, and inside `scope.run()` it runs when the scope is disposed, after the scope's effects. Explicit scopes intentionally attach to the enclosing scope and survive effect reruns; create them outside rerunning effects or retain and dispose each scope yourself. A call with no scope or effect active registers on the graph root.
+
+Cleanups run with their disposed owner still active, so an `onCleanup()`, `effect()`, or `computed()` called from inside a cleanup is torn down immediately instead of leaking to the parent.
 
 Disposed owned nodes detach from their parent immediately, so long-lived graphs do not retain released effects or scopes.
 
@@ -116,12 +118,12 @@ stopWatch.dispose();
 
 ## Error Handling
 
-Failures inside effect callbacks, computed derivations, cleanups, and listeners never corrupt the graph: the failing node is reported and siblings keep propagating. The `onError` option decides what reporting means. By default failures rethrow asynchronously (via `queueMicrotask`), surfacing as unhandled errors; pass a handler to route them to a logger or error boundary instead:
+Failures inside effect callbacks, computed derivations, cleanups, and listeners never corrupt the graph: the failing node is reported and siblings keep updating. The `onError` option decides what reporting means. By default failures rethrow asynchronously (via `queueMicrotask`), surfacing as unhandled errors; pass a handler to route them to a logger or error boundary instead:
 
 ```ts
 const ripple = createRipple({
   onError: (error, context) => {
-    // context.kind: 'cleanup' | 'computed' | 'effect' | 'flush' | 'listener'
+    // context.kind: 'cleanup' | 'effect' | 'flush' | 'listener'
     console.error(`${context.kind}:`, error);
   },
 });
@@ -130,8 +132,9 @@ const ripple = createRipple({
 `onError` is the only runtime option. Effect options accept only a `name`; effects do not have a
 microtask scheduler. Use `batch()` to coalesce related writes.
 
-A direct computed read can throw its derivation error to the caller. `onError` handles computed
-refresh failures during propagation, not every possible synchronous exception. The exported
+A computed caches a derivation error like a value: every read rethrows it until a source changes.
+The failure therefore reaches `onError` through whatever reads it (context kind `effect` for an
+effect, `listener` for a subscription), and a direct read throws it to the caller. The exported
 hierarchy is `RippleError`, `RippleCycleError`, and `RippleDisposedError`; callback failures retain
 their original values.
 
@@ -312,17 +315,17 @@ ripple.dispose();
 
 `Readable.subscribe(listener)` never calls the listener on subscribe: it fires only after a tracked source changes. Read the current value at the call site when you need an initial state.
 
-### `subscribe()` forces computed evaluation
+### `subscribe()` evaluates a computed once
 
-`Readable.subscribe()` calls `peek()` before registering the listener. For signals this is a no-op, but for computeds it forces `refresh()`: the derivation runs immediately even if no one reads `.value`. This ensures `equals` comparison works on the first dependency change. Avoid subscribing to expensive computeds unless you need their value.
+Subscribing to a computed derives it immediately so the computed knows its sources, even if no one reads `.value`. A derivation error is cached, not thrown from `subscribe()`. After that, the listener fires only when the derived value actually changes under its `equals`. Avoid subscribing to expensive computeds unless you need their value.
 
-### Diamonds recompute each path once per write
+### Computeds are lazy and glitch-free
 
-A computed with dependents refreshes eagerly during propagation, so effects never re-run for unchanged derived values. The tradeoff: in a diamond (`a → b, c → d`), one write to `a` recomputes both `b` and `c` and then `d` once per changed path. Values a consumer observes are always consistent: a dependent reading a stale intermediate pulls the fresh value on read, so no glitched state is ever visible. Prefer keeping diamond depth shallow when a derivation is expensive.
+A write only marks downstream computeds stale; nothing re-derives until something reads it. When an effect or subscription might be affected, the flush first re-derives the computeds it depends on, in the order they were read, and reruns it only if one of them actually changed. In a diamond (`a → b, c → d`), one write to `a` derives `b`, `c`, and `d` once each, and `d` never sees a fresh `b` next to a stale `c`. Inside `batch()`, a computed derives at most once however many of its sources were written. A computed no one reads costs nothing after a write.
 
-### Computed first-run failure is recoverable
+### Computed failures are recoverable
 
-If a computed's `derive` throws on its first run (e.g., a source is `null`), the computed commits the partial dependencies it tracked before the throw. When a dependency changes and the derivation can succeed, the computed refreshes and notifies its dependents. Effects that read a failing computed report the error through `onError` and re-run when the computed recovers.
+If a computed's `derive` throws (e.g., a source is `null`), the computed keeps the sources it read before the throw and caches the error. When one of those sources changes, the next read derives again; effects that read the failing computed report the error through `onError` and rerun once it recovers.
 
 ## Best Practices
 

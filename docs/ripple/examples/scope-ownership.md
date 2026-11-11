@@ -22,6 +22,7 @@ const count = ripple.signal(0);
 
 scope.run(() => {
   ripple.effect(() => console.log(`Panel count: ${count.value}`));
+  ripple.onCleanup(() => console.log('panel closed'));
 });
 
 count.value = 1;

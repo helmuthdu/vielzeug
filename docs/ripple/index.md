@@ -101,8 +101,9 @@ ripple.dispose();
 
 - `createRipple({ onError })` creates an isolated graph with one runtime failure callback.
 - `signal()` stores writable values with configurable equality.
-- `computed()` derives lazy read-only values.
+- `computed()` derives lazy, glitch-free read-only values: at most once per flush, never from a stale source.
 - `effect()` reacts to dependency changes with cleanup support.
+- `onCleanup()` runs a callback when the active scope or effect run is disposed.
 - `batch()` coalesces synchronous writes and notifications.
 - `createScope()` groups owned reactive work.
 - `watch()` observes one selected source transition.

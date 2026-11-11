@@ -1,5 +1,5 @@
-import { RippleDisposedError } from './errors';
-import { REACTIVE } from './runtime';
+import { EffectReadable } from './_handle';
+import type { ReactiveRuntime } from './runtime';
 import type { Disposable, EffectHandle, Readable, Signal } from './types';
 
 export type AsyncState<T> =
@@ -15,113 +15,78 @@ export type ResourceOptions = {
   name?: string;
 };
 
-type AsyncRuntime = {
-  effect(callback: () => undefined | (() => void), options?: { name?: string }): EffectHandle;
-  signal<T>(initial: T, options?: { name?: string }): Signal<T>;
-};
+class ResourceHandle<T> extends EffectReadable<AsyncState<T>> implements Resource<T> {
+  private readonly reloads: Signal<number>;
 
-/** Resource only depends on primitive runtime methods; graph binding stays private. */
+  constructor(state: Signal<AsyncState<T>>, effect: EffectHandle, reloads: Signal<number>) {
+    super('resource', state, effect);
+    this.reloads = reloads;
+  }
+
+  reload(): void {
+    this.assertActive();
+    this.reloads.update((count) => count + 1);
+  }
+}
+
 export const createResource =
-  (runtime: AsyncRuntime) =>
+  (runtime: ReactiveRuntime) =>
   <Source, Value>(
     source: () => Source,
     loader: (source: Source, context: { readonly signal: AbortSignal }) => Promise<Value>,
     options?: ResourceOptions,
   ): Resource<Value> => {
     const state = runtime.signal<AsyncState<Value>>({ status: 'pending' }, { name: options?.name });
-    const reloadEpoch = runtime.signal(0);
-    let active: AbortController | undefined;
-    let hasPrevious = false;
-    let previousValue: Value | undefined;
+    const reloads = runtime.signal(0);
+    let last: { value: Value } | undefined;
 
-    const run = (): void => {
-      void reloadEpoch.value;
-      active?.abort();
+    const pending = (): AsyncState<Value> =>
+      last ? { previous: last.value, status: 'pending' } : { status: 'pending' };
+    const failed = (error: unknown): AsyncState<Value> =>
+      last ? { error, previous: last.value, status: 'error' } : { error, status: 'error' };
 
-      let input: Source;
-
-      try {
-        input = source();
-      } catch (error) {
-        state.value = hasPrevious
-          ? { error, previous: previousValue as Value, status: 'error' }
-          : { error, status: 'error' };
-
-        return;
-      }
-
-      const next = new AbortController();
-
-      active = next;
-      state.value = hasPrevious ? { previous: previousValue as Value, status: 'pending' } : { status: 'pending' };
-
-      let request: Promise<Value>;
-
-      try {
-        request = Promise.resolve(loader(input, { signal: next.signal }));
-      } catch (error) {
-        request = Promise.reject(error);
-      }
-
-      void request.then(
-        (value) => {
-          if (!stop.disposed && !next.signal.aborted) {
-            hasPrevious = true;
-            previousValue = value;
-            state.value = { status: 'success', value };
-          }
-        },
-        (error: unknown) => {
-          if (!stop.disposed && !next.signal.aborted) {
-            state.value = hasPrevious
-              ? { error, previous: previousValue as Value, status: 'error' }
-              : { error, status: 'error' };
-          }
-        },
-      );
-    };
-
-    const stop = runtime.effect(
+    const effect = runtime.effect(
       () => {
-        run();
+        void reloads.value;
 
-        return () => active?.abort();
+        let input: Source;
+
+        try {
+          input = source();
+        } catch (error) {
+          state.value = failed(error);
+
+          return;
+        }
+
+        // Aborted by the effect cleanup: on the next run, a reload, or disposal.
+        const controller = new AbortController();
+
+        let request: Promise<Value>;
+
+        try {
+          // Only `source()` is tracked: reads in the loader must not trigger reloads.
+          request = Promise.resolve(runtime.untrack(() => loader(input, { signal: controller.signal })));
+        } catch (error) {
+          request = Promise.reject(error);
+        }
+
+        state.value = pending();
+        void request.then(
+          (value) => {
+            if (controller.signal.aborted) return;
+            last = { value };
+            state.value = { status: 'success', value };
+          },
+          (error: unknown) => {
+            if (!controller.signal.aborted) state.value = failed(error);
+          },
+        );
+
+        return () => controller.abort();
       },
       { name: options?.name },
     );
 
-    const assertActive = (): void => {
-      if (stop.disposed) throw new RippleDisposedError('Cannot use a disposed resource.');
-    };
-    const resource: Resource<Value> = {
-      get disposalSignal() {
-        return stop.disposalSignal;
-      },
-      dispose: () => stop.dispose(),
-      get disposed() {
-        return stop.disposed;
-      },
-      get name() {
-        return state.name;
-      },
-      peek: () => state.peek(),
-      reload: () => {
-        assertActive();
-        reloadEpoch.value = reloadEpoch.peek() + 1;
-      },
-      subscribe: (listener) => {
-        assertActive();
-        return state.subscribe(listener);
-      },
-      [Symbol.dispose]() {
-        this.dispose();
-      },
-      get value() {
-        return state.value;
-      },
-    };
-
-    Object.defineProperty(resource, REACTIVE, { value: true });
-
-    return resource;
+    return new ResourceHandle(state, effect, reloads);
   };

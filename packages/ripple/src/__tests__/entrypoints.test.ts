@@ -1,9 +1,9 @@
 import { vi } from 'vitest';
-import { computed, createRipple, effect, fromSubscribable, isReactive, signal, watch } from '../index';
+import { computed, createRipple, effect, fromSubscribable, isReactive, onCleanup, signal, watch } from '../index';
 
 describe('default graph exports', () => {
   it('exports all primitives from root', () => {
-    const exports = { computed, createRipple, effect, fromSubscribable, signal, watch };
+    const exports = { computed, createRipple, effect, fromSubscribable, onCleanup, signal, watch };
     for (const [name, fn] of Object.entries(exports)) {
       expect(typeof fn).toBe('function');
       expect(name).toBeTruthy();

@@ -17,24 +17,38 @@ export const REACTIVE = Symbol.for('@vielzeug/ripple/reactive');
 const MAX_FLUSH_ITERATIONS = 100;
 const UNSET = Symbol('ripple.unset');
 
-type Dependency = ReactiveNode<unknown>;
+/**
+ * Freshness of an observer. A write marks direct observers `DIRTY` and everything further
+ * downstream `CHECK` ("a source may have changed"). Observers resolve `CHECK` lazily by
+ * refreshing their sources in read order, so every derive sees a consistent graph and
+ * a computed re-derives at most once per flush however many of its sources changed.
+ */
+const CLEAN = 0;
+const CHECK = 1;
+const DIRTY = 2;
 
-/** Anything that wants to hear that a dependency changed: the only member a producer may call. */
-type Dependent = {
-  onDependencyChanged(): void;
+type Freshness = typeof CLEAN | typeof CHECK | typeof DIRTY;
+type Staleness = typeof CHECK | typeof DIRTY;
+
+type Source = ReactiveNode<unknown>;
+
+/** Anything a source can mark stale. Marking never runs user code. */
+type Observer = {
+  /** A source was written (or may have changed): schedule this observer. */
+  mark(staleness: Staleness): void;
+  /**
+   * A computed source re-derived to a new value: upgrade a pending `CHECK` to `DIRTY`.
+   * Never schedules: a `CLEAN` observer is the one currently reading the fresh value.
+   */
+  confirm(): void;
 };
 
-/** A subscribe() listener sink: enqueued as a unit so two subscriptions sharing one
- *  callback each fire per flush, while one subscription never fires twice. */
-type ListenerSink = Dependent & {
-  readonly listener: () => void;
-};
-
-/** A dependency-collecting observer (computed or effect). Plain listener sinks need less.
- *  `dependencies` is reassigned (not rebuilt) when a run commits its collected set. */
-type ObserverNode = Dependent & {
-  collecting?: Set<Dependency>;
-  dependencies: Set<Dependency>;
+/** An observer that collects the sources it reads while it runs. */
+type Collector = Observer & {
+  collecting: Set<Source> | undefined;
+  readonly disposed: boolean;
+  readonly freshness: Freshness;
+  sources: Set<Source>;
 };
 
 type Owned = {
@@ -44,7 +58,7 @@ type Owned = {
 
 abstract class ReactiveNode<T> {
   readonly [REACTIVE] = true;
-  readonly dependents = new Set<Dependent>();
+  readonly observers = new Set<Observer>();
   readonly name: string | undefined;
   protected readonly runtime: ReactiveRuntime;
 
@@ -56,26 +70,29 @@ abstract class ReactiveNode<T> {
   abstract peek(): T;
   abstract get value(): T;
 
+  /** Bring the cached value up to date. Never throws a derive error: those are cached. */
+  abstract refresh(): void;
+
   subscribe(listener: () => void): Unsubscribe {
     this.runtime.assertActive();
-    this.peek();
+    this.refresh();
 
-    // A listener sink never collects dependencies, so it is a bare dependent :
-    // no dependency bookkeeping is allocated per subscription.
-    const sink: ListenerSink = {
-      listener,
-      onDependencyChanged: () => this.runtime.enqueueListener(sink),
-    };
+    const sink = new ListenerSink(this.runtime, this, listener);
 
-    this.dependents.add(sink);
+    this.observers.add(sink);
 
-    return () => this.dependents.delete(sink);
+    return () => this.observers.delete(sink);
   }
 
-  protected notify(): void {
-    for (const dependent of [...this.dependents]) dependent.onDependencyChanged();
+  protected markObservers(staleness: Staleness): void {
+    for (const observer of this.observers) observer.mark(staleness);
   }
 }
+
+/** Shared `confirm` for every observer kind. */
+const confirm = (observer: { freshness: Freshness }): void => {
+  if (observer.freshness === CHECK) observer.freshness = DIRTY;
+};
 
 class SignalNode<T> extends ReactiveNode<T> implements Signal<T> {
   private current: T;
@@ -99,24 +116,36 @@ class SignalNode<T> extends ReactiveNode<T> implements Signal<T> {
     if (this.equals(this.current, next)) return;
 
     this.current = next;
-    this.runtime.propagate(() => this.notify());
+    this.runtime.batch(() => this.markObservers(DIRTY));
   }
 
   peek(): T {
     return this.current;
   }
 
+  refresh(): void {}
+
   update(updater: (prev: T) => T): void {
     this.value = updater(this.current);
   }
 }
 
-class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
-  dependencies = new Set<Dependency>();
+class ComputedNode<T> extends ReactiveNode<T> implements Collector, Owned {
+  collecting: Set<Source> | undefined;
+  freshness: Freshness = DIRTY;
+  sources = new Set<Source>();
+  disposed = false;
   private computing = false;
-  private disposed = false;
-  private dirty = true;
+  /**
+   * True when a source write reached this node mid-derive. The write lands on an
+   * already non-CLEAN node, so `mark()` alone cannot carry the invalidation past
+   * `recompute()`'s settle; without this flag the cached value would survive a
+   * source it already read moving underneath it.
+   */
+  private invalidatedMidDerive = false;
+  /** The last derived value, or the error the last derive threw. */
   private current: T | typeof UNSET = UNSET;
+  private failure: { error: unknown } | undefined;
   private readonly derive: () => T;
   private readonly equals: (previous: T, next: T) => boolean;
   private owner: ScopeNode | undefined;
@@ -128,10 +157,8 @@ class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
   }
 
   get value(): T {
-    // Track before refresh: if refresh throws, the consumer still depends on
-    // this computed and must be notified when a dependency change might let it
-    // succeed. Without this, a first-run failure permanently severs the
-    // consumer from the computed.
+    // Track before refreshing: a consumer of a failing computed must still be
+    // marked when a source changes and the derive might succeed.
     this.runtime.track(this);
     this.refresh();
 
@@ -144,28 +171,42 @@ class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
     return this.evaluated();
   }
 
-  private evaluated(): T {
-    if (this.current === UNSET) {
-      const label = this.name === undefined ? '' : ` "${this.name}"`;
-
-      throw new RippleDisposedError(`computed${label} was disposed before it was ever evaluated`);
-    }
-
-    return this.current as T;
-  }
-
-  onDependencyChanged(): void {
+  mark(staleness: Staleness): void {
     if (this.disposed) return;
 
-    if (!this.dirty) this.dirty = true;
+    // A write during the derive marks a node that is already DIRTY/CHECK, so it
+    // must be remembered before the early return: `recompute()` keeps the node
+    // DIRTY instead of settling CLEAN, and the next read re-derives.
+    if (this.computing) this.invalidatedMidDerive = true;
 
-    if (this.dependents.size > 0) {
-      try {
-        if (this.refresh()) this.notify();
-      } catch (error) {
-        this.runtime.report(error, { kind: 'computed', name: this.name });
-      }
+    if (this.freshness >= staleness) return;
+
+    const wasClean = this.freshness === CLEAN;
+
+    this.freshness = staleness;
+    if (wasClean) this.markObservers(CHECK);
+  }
+
+  refresh(): void {
+    if (this.computing) throw new RippleCycleError(`computed cycle detected${label(this.name)}`);
+    if (this.disposed || this.freshness === CLEAN) return;
+
+    // Guard the source check too: a cycle through other computeds must surface, not recurse.
+    this.computing = true;
+
+    let stale: boolean;
+
+    try {
+      stale = this.freshness === DIRTY || this.runtime.sourceChanged(this);
+    } finally {
+      this.computing = false;
     }
+
+    if (stale) this.recompute();
+    else if (this.invalidatedMidDerive) {
+      this.invalidatedMidDerive = false;
+      this.freshness = DIRTY;
+    } else this.freshness = CLEAN;
   }
 
   setOwner(owner: ScopeNode | undefined): void {
@@ -178,31 +219,102 @@ class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
     this.disposed = true;
     this.owner?.release(this);
     this.owner = undefined;
-    this.runtime.clearDependencies(this);
-    this.dependents.clear();
+    this.runtime.clearSources(this);
+    this.observers.clear();
   }
 
-  private refresh(): boolean {
-    if (!this.dirty || this.disposed) return false;
-
-    if (this.computing) {
-      const label = this.name === undefined ? '' : ` "${this.name}"`;
-
-      throw new RippleCycleError(`computed cycle detected${label}`);
+  private evaluated(): T {
+    if (this.failure) throw this.failure.error;
+    if (this.current === UNSET) {
+      throw new RippleDisposedError(`computed${label(this.name)} was disposed before it was ever evaluated`);
     }
+
+    return this.current;
+  }
+
+  private recompute(): void {
+    const previous = this.current;
+    const previousFailure = this.failure;
+    let changed = true;
 
     this.computing = true;
 
     try {
       const next = this.runtime.collect(this, this.derive);
-      const changed = this.current === UNSET || !this.equals(this.current as T, next);
 
+      // A throwing `equals` is a derive failure too: `refresh()` must not throw.
+      changed = previousFailure !== undefined || previous === UNSET || !this.equals(previous, next);
       this.current = next;
-      this.dirty = false;
-
-      return changed;
+      this.failure = undefined;
+    } catch (error) {
+      // Repeating the previous failure with the same error changes nothing an
+      // observer could observe: keep `changed` false so queued listeners stay
+      // CHECK instead of firing on every source write.
+      changed = previousFailure?.error !== error;
+      this.failure = { error };
     } finally {
       this.computing = false;
+      if (this.invalidatedMidDerive) {
+        this.invalidatedMidDerive = false;
+        this.freshness = DIRTY;
+        // The derived value mixed sources that moved during the derive:
+        // observers must re-evaluate, not trust this run's `equals`.
+        changed = true;
+      } else {
+        this.freshness = CLEAN;
+      }
+    }
+
+    if (changed) for (const observer of this.observers) observer.confirm();
+  }
+
+  confirm(): void {
+    confirm(this);
+  }
+}
+
+/** A `subscribe()` listener: fires once per flush, and only when its node actually changed. */
+class ListenerSink implements Observer {
+  freshness: Freshness = CLEAN;
+  private readonly listener: () => void;
+  private readonly node: Source;
+  private readonly runtime: ReactiveRuntime;
+
+  constructor(runtime: ReactiveRuntime, node: Source, listener: () => void) {
+    this.runtime = runtime;
+    this.node = node;
+    this.listener = listener;
+  }
+
+  mark(staleness: Staleness): void {
+    if (this.freshness === CLEAN) this.runtime.enqueueListener(this);
+    if (staleness > this.freshness) this.freshness = staleness;
+  }
+
+  confirm(): void {
+    confirm(this);
+  }
+
+  notify(): void {
+    // Unsubscribed after it was queued.
+    if (!this.node.observers.has(this)) return;
+    if (this.freshness === CHECK) {
+      try {
+        this.node.refresh();
+      } catch {
+        this.freshness = DIRTY;
+      }
+    }
+
+    const changed = this.freshness === DIRTY;
+
+    this.freshness = CLEAN;
+    if (!changed) return;
+
+    try {
+      this.listener();
+    } catch (error) {
+      this.runtime.report(error, { kind: 'listener', name: this.node.name });
     }
   }
 }
@@ -213,6 +325,8 @@ class ScopeNode implements Scope, Owned {
   // Created lazily: scopes without a `disposalSignal` reader (the common case
   // for per-run effect scopes) never pay for an AbortController.
   private controller: AbortController | undefined;
+  /** Plain callbacks from `onCleanup`. Absent until the first registration. */
+  private cleanups: Cleanup[] | undefined;
   private isDisposed = false;
   private owner: ScopeNode | undefined;
   private readonly runtime: ReactiveRuntime;
@@ -230,9 +344,27 @@ class ScopeNode implements Scope, Owned {
     return (this.controller ??= new AbortController()).signal;
   }
 
+  /** Adopt `value`. A disposed scope disposes it immediately. */
   own(value: Owned): void {
+    if (this.isDisposed) {
+      value.dispose();
+
+      return;
+    }
+
     value.setOwner(this);
     this.owned.add(value);
+  }
+
+  /** Run `fn` when this scope is disposed. A disposed scope runs `fn` immediately. */
+  addCleanup(fn: Cleanup): void {
+    if (this.isDisposed) {
+      this.runtime.withScope(this, () => this.invokeCleanup(fn));
+
+      return;
+    }
+
+    (this.cleanups ??= []).push(fn);
   }
 
   release(value: Owned): void {
@@ -257,29 +389,71 @@ class ScopeNode implements Scope, Owned {
     this.owner = undefined;
     for (const owned of [...this.owned].reverse()) owned.dispose();
     this.owned.clear();
+    this.runCleanups();
     this.controller?.abort();
   }
 
   [Symbol.dispose](): void {
     this.dispose();
   }
+
+  private invokeCleanup(fn: Cleanup): void {
+    try {
+      fn();
+    } catch (error) {
+      this.runtime.report(error, { kind: 'cleanup', name: this.name });
+    }
+  }
+
+  private runCleanups(): void {
+    const cleanups = this.cleanups;
+
+    if (!cleanups) return;
+
+    this.cleanups = undefined;
+    // Cleanups run with this (now disposed) scope active, so anything they
+    // register or create is torn down immediately instead of leaking upward.
+    this.runtime.withScope(this, () => {
+      for (let i = cleanups.length - 1; i >= 0; i--) this.invokeCleanup(cleanups[i] as Cleanup);
+    });
+  }
 }
 
-class EffectNode implements ObserverNode, EffectHandle {
-  dependencies = new Set<Dependency>();
+/** The per-run owner of an effect, allocated only if the run owns something. */
+type RunOwner = {
+  readonly name: string | undefined;
+  scope?: ScopeNode;
+};
+
+class EffectNode implements Collector, Owned, EffectHandle {
+  /** Defined only while the callback runs. */
+  collecting: Set<Source> | undefined;
+  freshness: Freshness = CLEAN;
+  sources = new Set<Source>();
+  /** Creation order: a parent always precedes the effects its runs create. */
+  readonly id: number;
   private controller: AbortController | undefined;
-  private cleanup: Cleanup | undefined;
   private isDisposed = false;
-  private ownershipScope: ScopeNode | undefined;
+  private owner: ScopeNode | undefined;
   private runScope: ScopeNode | undefined;
   private readonly callback: () => Cleanup | undefined;
-  private readonly options: EffectOptions | undefined;
+  private readonly name: string | undefined;
   private readonly runtime: ReactiveRuntime;
+  /** The scope active at creation: every run sees it, whichever write triggered the run. */
+  private readonly scope: ScopeNode;
 
-  constructor(runtime: ReactiveRuntime, callback: () => Cleanup | undefined, options?: EffectOptions) {
+  constructor(
+    runtime: ReactiveRuntime,
+    id: number,
+    scope: ScopeNode,
+    callback: () => Cleanup | undefined,
+    options?: EffectOptions,
+  ) {
     this.runtime = runtime;
+    this.id = id;
+    this.scope = scope;
     this.callback = callback;
-    this.options = options;
+    this.name = options?.name;
   }
 
   get disposed(): boolean {
@@ -291,13 +465,29 @@ class EffectNode implements ObserverNode, EffectHandle {
   }
 
   setOwner(owner: ScopeNode | undefined): void {
-    this.ownershipScope = owner;
+    this.owner = owner;
   }
 
-  onDependencyChanged(): void {
+  mark(staleness: Staleness): void {
     if (this.isDisposed) return;
+    if (this.freshness === CLEAN) this.runtime.enqueue(this);
+    if (staleness > this.freshness) this.freshness = staleness;
+  }
 
-    this.runtime.enqueue(this);
+  confirm(): void {
+    if (!this.isDisposed) confirm(this);
+  }
+
+  /** Flush entry point: rerun only if a source actually changed. */
+  update(): void {
+    // A write made by this effect's own run flushed synchronously: stay stale; `run()`
+    // reschedules once it ends and its sources are committed.
+    if (this.isDisposed || this.collecting !== undefined) return;
+    if (this.freshness === DIRTY || (this.freshness === CHECK && this.runtime.sourceChanged(this))) {
+      this.run();
+    } else {
+      this.freshness = CLEAN;
+    }
   }
 
   run(): void {
@@ -305,26 +495,27 @@ class EffectNode implements ObserverNode, EffectHandle {
 
     this.runScope?.dispose();
     this.runScope = undefined;
-    this.runCleanup();
+    // Clean after the previous run's cleanups (their writes are read fresh by this run) and
+    // before the callback, so a write the callback makes to its own sources reschedules it.
+    this.freshness = CLEAN;
 
-    // The per-run ownership scope is materialized on demand: most bindings'
-    // effects own nothing (they read a signal and write the DOM), so the
-    // overwhelming majority of runs should not allocate a ScopeNode at all.
-    const holder: { scope?: ScopeNode } = {};
+    const owner: RunOwner = { name: this.name };
 
     try {
-      const cleanup = this.runtime.withPendingOwner(holder, () => this.runtime.collectEffect(this, this.callback));
+      const cleanup = this.runtime.withRunOwner(owner, this.scope, () => this.runtime.collect(this, this.callback));
 
-      this.runScope = holder.scope;
-      this.cleanup = typeof cleanup === 'function' ? cleanup : undefined;
-      if (this.isDisposed) {
-        this.runScope?.dispose();
-        this.runScope = undefined;
-        this.runCleanup();
-      }
+      if (typeof cleanup === 'function') (owner.scope ??= new ScopeNode(this.runtime, this.name)).addCleanup(cleanup);
+      this.runScope = owner.scope;
     } catch (error) {
-      holder.scope?.dispose();
-      this.runtime.report(error, { kind: 'effect', name: this.options?.name });
+      owner.scope?.dispose();
+      this.runtime.report(error, { kind: 'effect', name: this.name });
+    }
+
+    if (this.isDisposed) {
+      this.runScope?.dispose();
+      this.runScope = undefined;
+    } else if (this.freshness !== CLEAN) {
+      this.runtime.schedule(this);
     }
   }
 
@@ -332,47 +523,34 @@ class EffectNode implements ObserverNode, EffectHandle {
     if (this.isDisposed) return;
 
     this.isDisposed = true;
-    this.ownershipScope?.release(this);
-    this.ownershipScope = undefined;
+    this.owner?.release(this);
+    this.owner = undefined;
+    this.runtime.clearSources(this);
     this.runScope?.dispose();
     this.runScope = undefined;
-    this.runtime.clearDependencies(this);
-    this.runCleanup();
     this.controller?.abort();
   }
 
   [Symbol.dispose](): void {
     this.dispose();
   }
-
-  private runCleanup(): void {
-    const cleanup = this.cleanup;
-
-    this.cleanup = undefined;
-
-    if (cleanup === undefined) return;
-
-    try {
-      cleanup();
-    } catch (error) {
-      this.runtime.report(error, { kind: 'cleanup', name: this.options?.name });
-    }
-  }
 }
+
+const label = (name: string | undefined): string => (name === undefined ? '' : ` "${name}"`);
 
 /**
  * A runtime owns reactive graph state and lifetime. Separate instances isolate
  * applications and SSR requests without process-wide mutable hooks.
  */
 export class ReactiveRuntime {
-  private activeEffectScope: ScopeNode | undefined;
-  private activeObserver: ObserverNode | undefined;
+  private activeCollector: Collector | undefined;
   private activeScope: ScopeNode;
-  /** Set while an effect runs: the per-run scope is only allocated if the run owns something. */
-  private pendingOwner: { scope?: ScopeNode } | undefined;
+  /** Set while an effect runs: nodes created during the run belong to it. */
+  private runOwner: RunOwner | undefined;
   private isDisposed = false;
-  private flushDepth = 0;
+  private batchDepth = 0;
   private flushing = false;
+  private nextEffectId = 0;
   private readonly pending = new Set<EffectNode>();
   private readonly listeners = new Set<ListenerSink>();
   private readonly rootScope: ScopeNode;
@@ -409,7 +587,7 @@ export class ReactiveRuntime {
 
     const node = new ComputedNode(this, derive, options);
 
-    this.captureOwner().own(node);
+    this.currentOwner().own(node);
 
     return node;
   };
@@ -417,22 +595,24 @@ export class ReactiveRuntime {
   readonly effect = (callback: () => Cleanup | undefined, options?: EffectOptions): EffectHandle => {
     this.assertActive();
 
-    const node = new EffectNode(this, callback, options);
+    const node = new EffectNode(this, this.nextEffectId++, this.activeScope, callback, options);
 
-    this.captureOwner().own(node);
+    this.currentOwner().own(node);
     node.run();
 
     return node;
   };
 
-  /** The owner a newly created node belongs to, materializing a lazy effect-run scope if needed. */
-  private captureOwner(): ScopeNode {
-    const pending = this.pendingOwner;
-
-    if (pending) return (pending.scope ??= new ScopeNode(this));
-
-    return this.activeEffectScope ?? this.activeScope;
-  }
+  /**
+   * Register `fn` on the active owner: the current effect run when one is
+   * executing, otherwise the active scope. The callback runs, newest first,
+   * after that owner's effects and computeds are disposed. One throwing
+   * callback is reported and does not skip the rest.
+   */
+  readonly onCleanup = (fn: Cleanup): void => {
+    this.assertActive();
+    this.currentOwner().addCleanup(fn);
+  };
 
   readonly createScope = (name?: string): Scope => {
     this.assertActive();
@@ -450,14 +630,28 @@ export class ReactiveRuntime {
 
   readonly batch = <T>(fn: () => T): T => {
     this.assertActive();
+    this.batchDepth++;
 
-    return this.propagate(fn);
+    try {
+      return fn();
+    } finally {
+      this.batchDepth--;
+      if (this.batchDepth === 0) this.flush();
+    }
   };
 
   readonly untrack = <T>(fn: () => T): T => {
     this.assertActive();
 
-    return this.withObserver(undefined, fn);
+    const previous = this.activeCollector;
+
+    this.activeCollector = undefined;
+
+    try {
+      return fn();
+    } finally {
+      this.activeCollector = previous;
+    }
   };
 
   dispose(): void {
@@ -467,103 +661,103 @@ export class ReactiveRuntime {
     this.rootScope.dispose();
   }
 
-  /** Internal node guard: disposed runtimes allow inert reads but reject graph work and mutation. */
+  /** Disposed runtimes allow inert reads but reject graph work and mutation. */
   assertActive(): void {
     if (this.isDisposed) throw new RippleDisposedError('Cannot use a disposed Ripple runtime.');
   }
 
-  track(node: Dependency): void {
-    const observer = this.activeObserver;
+  track(node: Source): void {
+    const collector = this.activeCollector;
+    const collecting = collector?.collecting;
 
-    if (observer?.collecting === undefined) return;
+    // A computed reading itself is a cycle error, not an edge.
+    if (collecting === undefined || collector === (node as unknown) || collecting.has(node)) return;
 
-    observer.collecting.add(node);
+    collecting.add(node);
+    // Link immediately, not when the run ends: a write to this source later in the same run
+    // (or in a flush it triggers) must still reach the observer.
+    node.observers.add(collector as Collector);
   }
 
-  clearDependencies(observer: ObserverNode): void {
-    for (const dependency of observer.dependencies) dependency.dependents.delete(observer);
-    observer.dependencies.clear();
+  /** Resolve `CHECK`: refresh sources in read order until one marks `observer` dirty. */
+  sourceChanged(observer: Collector): boolean {
+    try {
+      for (const source of observer.sources) {
+        source.refresh();
+        if (observer.freshness === DIRTY) return true;
+      }
+    } catch {
+      // A cycle surfaced while refreshing: rerun so the observer reports it.
+      return true;
+    }
+
+    return false;
   }
 
-  collect<T>(observer: ObserverNode, fn: () => T): T {
-    // On first run (no prior dependencies), commit partial dependencies even if
-    // derive throws, otherwise the computed would have zero dependencies and never
-    // be notified when its source changes, permanently stuck until a manual read.
-    // On subsequent runs, keep previous dependencies (tested behavior).
-    return this.collectWith(observer, fn, observer.dependencies.size === 0);
+  clearSources(observer: Collector): void {
+    for (const source of observer.sources) source.observers.delete(observer);
+    observer.sources.clear();
   }
 
-  collectEffect<T>(observer: ObserverNode, fn: () => T): T {
-    return this.collectWith(observer, fn, true);
-  }
+  /** Run `fn` as `observer`, replacing its sources with the ones it reads, even if it throws. */
+  collect<T>(observer: Collector, fn: () => T): T {
+    const previousCollector = this.activeCollector;
+    const next = new Set<Source>();
 
-  withPendingOwner<T>(holder: { scope?: ScopeNode }, fn: () => T): T {
-    const previousPending = this.pendingOwner;
-    const previousEffectScope = this.activeEffectScope;
-
-    this.pendingOwner = holder;
-    this.activeEffectScope = undefined;
+    observer.collecting = next;
+    this.activeCollector = observer;
 
     try {
       return fn();
     } finally {
-      this.pendingOwner = previousPending;
-      this.activeEffectScope = previousEffectScope;
+      observer.collecting = undefined;
+      this.activeCollector = previousCollector;
+      this.commitSources(observer, next);
     }
   }
 
-  withObserver<T>(observer: ObserverNode | undefined, fn: () => T): T {
-    const previous = this.activeObserver;
-
-    this.activeObserver = observer;
-
-    try {
-      return fn();
-    } finally {
-      this.activeObserver = previous;
-    }
-  }
-
-  withScope<T>(scope: ScopeNode, fn: () => T): T {
-    const previousEffectScope = this.activeEffectScope;
-    const previousPending = this.pendingOwner;
+  withRunOwner<T>(owner: RunOwner, scope: ScopeNode, fn: () => T): T {
+    const previousRunOwner = this.runOwner;
     const previousScope = this.activeScope;
 
-    this.activeEffectScope = undefined;
-    this.pendingOwner = undefined;
+    this.runOwner = owner;
     this.activeScope = scope;
 
     try {
       return fn();
     } finally {
-      this.activeEffectScope = previousEffectScope;
-      this.pendingOwner = previousPending;
+      this.runOwner = previousRunOwner;
+      this.activeScope = previousScope;
+    }
+  }
+
+  withScope<T>(scope: ScopeNode, fn: () => T): T {
+    const previousRunOwner = this.runOwner;
+    const previousScope = this.activeScope;
+
+    this.runOwner = undefined;
+    this.activeScope = scope;
+
+    try {
+      return fn();
+    } finally {
+      this.runOwner = previousRunOwner;
       this.activeScope = previousScope;
     }
   }
 
   enqueue(effect: EffectNode): void {
     this.pending.add(effect);
+  }
 
-    if (this.flushDepth === 0) this.flush();
+  /** Queue an effect that went stale during its own run and flush unless a batch is open. */
+  schedule(effect: EffectNode): void {
+    this.pending.add(effect);
+    if (this.batchDepth === 0) this.flush();
   }
 
   enqueueListener(sink: ListenerSink): void {
     this.listeners.add(sink);
-
-    if (this.flushDepth === 0) this.flush();
-  }
-
-  propagate<T>(fn: () => T): T {
-    this.flushDepth++;
-
-    try {
-      return fn();
-    } finally {
-      this.flushDepth--;
-
-      if (this.flushDepth === 0) this.flush();
-    }
   }
 
   report(error: unknown, context: RippleErrorContext): void {
@@ -575,49 +769,45 @@ export class ReactiveRuntime {
     }
   }
 
-  private collectWith<T>(observer: ObserverNode, fn: () => T, commitOnError: boolean): T {
-    const previousObserver = this.activeObserver;
-    const dependencies = new Set<Dependency>();
+  /** The owner a newly created node belongs to, materializing a lazy effect-run scope if needed. */
+  private currentOwner(): ScopeNode {
+    const owner = this.runOwner;
 
-    observer.collecting = dependencies;
-    this.activeObserver = observer;
+    if (owner) return (owner.scope ??= new ScopeNode(this, owner.name));
 
-    try {
-      const result = fn();
-
-      this.commitDependencies(observer, dependencies);
-
-      return result;
-    } catch (error) {
-      if (commitOnError) this.commitDependencies(observer, dependencies);
-
-      throw error;
-    } finally {
-      observer.collecting = undefined;
-      this.activeObserver = previousObserver;
-    }
+    return this.activeScope;
   }
 
-  private commitDependencies(observer: ObserverNode, next: Set<Dependency>): void {
-    const previous = observer.dependencies;
+  /** `track()` already linked every source in `next`; unlink the ones this run no longer read. */
+  private commitSources(observer: Collector, next: Set<Source>): void {
+    // Disposed during its own run: drop the edges this run added too.
+    if (observer.disposed) {
+      for (const source of next) source.observers.delete(observer);
+      observer.sources = new Set();
 
-    for (const dependency of previous) {
-      if (!next.has(dependency)) dependency.dependents.delete(observer);
+      return;
     }
 
-    for (const dependency of next) {
-      if (!previous.has(dependency)) dependency.dependents.add(observer);
+    for (const source of observer.sources) {
+      if (!next.has(source)) source.observers.delete(observer);
     }
 
-    // The collected `next` set becomes the stored set: no second allocation
-    // and no copy loop per run.
-    observer.dependencies = next;
+    observer.sources = next;
   }
 
   private flush(): void {
     if (this.flushing) return;
 
+    // A write inside an effect run or scope flushes synchronously: queued work must not
+    // inherit that caller's tracking or ownership.
+    const previousCollector = this.activeCollector;
+    const previousRunOwner = this.runOwner;
+    const previousScope = this.activeScope;
+
     this.flushing = true;
+    this.activeCollector = undefined;
+    this.runOwner = undefined;
+    this.activeScope = this.rootScope;
 
     let iterations = 0;
 
@@ -631,29 +821,29 @@ export class ReactiveRuntime {
           this.report(new RippleCycleError(`infinite reactive flush (>${MAX_FLUSH_ITERATIONS} iterations)`), {
             kind: 'flush',
           });
+          // Dropped work goes back to CLEAN so a later write can schedule it again.
+          for (const effect of this.pending) effect.freshness = CLEAN;
+          for (const sink of this.listeners) sink.freshness = CLEAN;
           this.pending.clear();
           this.listeners.clear();
           break;
         }
 
-        const effects = [...this.pending];
+        // Creation order: a parent reruns (and disposes stale children) before they update.
+        const effects = [...this.pending].sort((left, right) => left.id - right.id);
         const listeners = [...this.listeners];
 
         this.pending.clear();
         this.listeners.clear();
 
-        for (const effect of effects) effect.run();
-
-        for (const sink of listeners) {
-          try {
-            sink.listener();
-          } catch (error) {
-            this.report(error, { kind: 'listener' });
-          }
-        }
+        for (const effect of effects) effect.update();
+        for (const sink of listeners) sink.notify();
       }
     } finally {
       this.flushing = false;
+      this.activeCollector = previousCollector;
+      this.runOwner = previousRunOwner;
+      this.activeScope = previousScope;
     }
   }
 }

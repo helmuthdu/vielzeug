@@ -26,6 +26,7 @@ import { defaultRipple } from './_default';
 export const signal = defaultRipple.signal;
 export const computed = defaultRipple.computed;
 export const effect = defaultRipple.effect;
+export const onCleanup = defaultRipple.onCleanup;
 export const batch = defaultRipple.batch;
 export const createScope = defaultRipple.createScope;
 export const untrack = defaultRipple.untrack;

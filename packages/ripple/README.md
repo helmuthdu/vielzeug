@@ -33,7 +33,8 @@ ripple.dispose();
 ```
 
 `onError` handles runtime callback failures; async resource failures are state values. Effects
-flush synchronously, so use `batch()` to coalesce writes. Package errors use `RippleError`,
+flush synchronously, so use `batch()` to coalesce writes. `onCleanup(fn)` runs `fn` when the
+active scope or effect run is disposed. Package errors use `RippleError`,
 `RippleCycleError`, and `RippleDisposedError`.
 
 ## Documentation

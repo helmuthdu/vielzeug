@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Computeds are now lazy and glitch-free: a write marks them stale and they derive on read, at most once per flush, never from a stale source. Derivation errors are cached and reported by the reading effect or listener; RippleErrorContext drops the 'computed' kind. An effect's returned cleanup runs before its onCleanup callbacks, and work created inside a cleanup is disposed immediately. Subscribing to a disposed fromSubscribable bridge throws RippleDisposedError. Effects depend on a source from the moment they read it (an effect that reads and writes one signal is reported as a runaway on its first run), parents rerun before the child effects they created, and reruns keep the effect's creation scope. Resource loaders and fromSubscribable sources are no longer tracked.",
+      "packageName": "@vielzeug/ripple",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

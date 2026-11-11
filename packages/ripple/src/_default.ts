@@ -22,6 +22,7 @@ export interface Ripple extends Disposable {
   createScope(name?: string): Scope;
   effect(callback: () => Cleanup | undefined, options?: EffectOptions): EffectHandle;
   fromSubscribable<T>(source: Subscribable<T>, options?: FromSubscribableOptions): BridgedReadable<T>;
+  onCleanup(fn: Cleanup): void;
   resource<Source, Value>(
     source: () => Source,
     loader: (source: Source, context: { readonly signal: AbortSignal }) => Promise<Value>,
@@ -60,6 +61,7 @@ export const createRipple = (options?: RippleOptions): Ripple => {
     },
     effect: runtime.effect,
     fromSubscribable,
+    onCleanup: runtime.onCleanup,
     resource,
     signal: runtime.signal,
     untrack: runtime.untrack,
@@ -70,7 +72,7 @@ export const createRipple = (options?: RippleOptions): Ripple => {
 
 /**
  * The shared default reactive graph: process-lifetime. Root helpers
- * (`signal`, `computed`, `effect`, `batch`, `createScope`, `untrack`, `watch`, `resource`, `fromSubscribable`)
+ * (`signal`, `computed`, `effect`, `onCleanup`, `batch`, `createScope`, `untrack`, `watch`, `resource`, `fromSubscribable`)
  * are re-exported from the package root as bound methods on this single graph
  * instance. Use these only when the application has one graph for its entire
  * lifetime; they are never disposed. For isolated, disposable graphs (tests,

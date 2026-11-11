@@ -1,3 +1,4 @@
+import type { ReactiveRuntime } from './runtime';
 import type { EffectHandle, Equality, Readable } from './types';
 
 export type WatchOptions<T> = {
@@ -7,13 +8,8 @@ export type WatchOptions<T> = {
   name?: string;
 };
 
-type WatchRuntime = {
-  effect(callback: () => undefined | (() => void), options?: { name?: string }): EffectHandle;
-  untrack<T>(fn: () => T): T;
-};
-
 export const createWatch =
-  (runtime: WatchRuntime) =>
+  (runtime: ReactiveRuntime) =>
   <T>(
     source: Readable<T> | (() => T),
     callback: (value: T, previous: T | undefined) => void,
