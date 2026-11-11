@@ -127,3 +127,65 @@ test.describe('Auto icon', () => {
     await expect.poll(() => page.locator('.sr-announce').first().textContent()).toBe('Melding gesloten');
   });
 });
+
+test.describe('Docked and slim banner modes', () => {
+  test('docked alert pins to the viewport top', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-alert id="alert" docked="top">Scheduled maintenance tonight.</ore-alert>');
+
+    const style = await page.locator('#alert').evaluate((el) => {
+      const s = getComputedStyle(el);
+
+      return { position: s.position, top: Number.parseFloat(s.top) };
+    });
+
+    expect(style.position).toBe('fixed');
+    expect(style.top).toBeLessThanOrEqual(20);
+  });
+
+  test('slim alert lays text and actions on one row', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-alert id="alert" slim color="primary" variant="solid" dismissible>' +
+        'New: dark mode is live.' +
+        '<div slot="actions"><button>Try it</button></div>' +
+        '</ore-alert>',
+    );
+
+    const row = await page.locator('#alert').evaluate((alert) => {
+      const root = alert.shadowRoot!;
+      const center = (sel: string) => {
+        const r = root.querySelector<HTMLElement>(sel)!.getBoundingClientRect();
+
+        return (r.top + r.bottom) / 2;
+      };
+
+      return {
+        actionsCenter: center('.actions'),
+        bodyCenter: center('.body'),
+        display: getComputedStyle(root.querySelector('.alert')!).display,
+      };
+    });
+
+    expect(row.display).toBe('flex');
+    expect(Math.abs(row.bodyCenter - row.actionsCenter)).toBeLessThan(4);
+  });
+});
+
+test.describe('Solid surface actions', () => {
+  test('ghost actions on a solid alert take the contrast ink', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-alert id="alert" slim color="primary" variant="solid">New: dark mode.<div slot="actions"><button id="try">Try it</button></div></ore-alert>',
+    );
+
+    const colors = await page.evaluate(() => {
+      const alert = document.querySelector('#alert')!;
+      const button = alert.querySelector('#try')!;
+
+      return {
+        button: getComputedStyle(button).color,
+        text: getComputedStyle(alert.shadowRoot!.querySelector('.content')!).color,
+      };
+    });
+
+    expect(colors.button).toBe(colors.text);
+  });
+});

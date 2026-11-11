@@ -60,6 +60,11 @@ export type OreAlertProps = {
   /** Show a dismissible (×) button */
   dismissible?: boolean;
   /**
+   * Pin the alert to a viewport edge as a site banner: 'top' | 'bottom'.
+   * Stays full-bleed by default; set `--alert-max-width` for a boxed card.
+   */
+  docked?: 'top' | 'bottom';
+  /**
    * Render as a passive surface inside a host that owns lifecycle and
    * announcements (for example `ore-toast`): no live-region role, and the
    * close button only emits `dismiss` instead of hiding the alert.
@@ -76,6 +81,8 @@ export type OreAlertProps = {
   horizontal?: boolean;
   /** Localized accessible strings (JS property only). */
   labels?: Partial<AlertLabels>;
+  /** Single-line density: tighter padding and icon, text, and actions on one wrapping row. */
+  slim?: boolean;
   /** Border radius */
   rounded?: RoundedSize | '';
   /** Alert size */
@@ -86,6 +93,8 @@ export type OreAlertProps = {
 
 /**
  * A status/feedback banner with optional heading, icon slot, and dismiss button.
+ * With `docked` it becomes a slim site banner pinned to a viewport edge, and
+ * `slim` packs icon, text, and actions onto one wrapping row.
  *
  * @element ore-alert
  *
@@ -93,6 +102,8 @@ export type OreAlertProps = {
  * @attr {string} variant - Visual style: 'flat' | 'solid' | 'bordered'
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
+ * @attr {boolean} slim - Single-line density: tighter padding; icon, text, and actions share one wrapping row
+ * @attr {string} docked - Pin to a viewport edge as a site banner: 'top' | 'bottom' (full-bleed; box it with --alert-max-width)
  * @attr {string} heading - Bold heading text above the content
  * @attr {string} icon - Leading icon name; overrides the glyph derived from `color`, "none" disables it
  * @attr {boolean} dismissible - Show a close (×) button
@@ -118,6 +129,9 @@ export type OreAlertProps = {
  * @cssprop --alert-gap - Gap between icon, body, and close button
  * @cssprop --alert-font-size - Font size
  * @cssprop --alert-icon-size - Size of the automatic leading icon (default --size-5)
+ * @cssprop --alert-max-width - Content width for a boxed look (default full width)
+ * @cssprop --alert-dock-inset - Distance from the viewport edges when docked (default --size-4, plus safe-area insets)
+ * @cssprop --alert-dock-z-index - Stacking order when docked (default --z-fixed)
  *
  * @part alert - Alert root container.
  * @part icon - Icon container.
@@ -134,6 +148,10 @@ export type OreAlertProps = {
  * <ore-alert color="error" variant="solid" dismissible heading="Something went wrong">
  *   Please try again later.
  * </ore-alert>
+ * <ore-alert docked="bottom" slim color="primary" variant="solid" dismissible>
+ *   New: dark mode is live.
+ *   <ore-button slot="actions" variant="ghost" size="sm">Try it</ore-button>
+ * </ore-alert>
  * ```
  */
 export const ALERT_TAG = 'ore-alert' as const;
@@ -144,11 +162,13 @@ define<OreAlertProps>(ALERT_TAG, {
     ...roundableBundle,
     accented: prop.bool(false),
     dismissible: prop.bool(false),
+    docked: prop.oneOf(['top', 'bottom'] as const),
     embedded: prop.bool(false),
     heading: prop.string(),
     horizontal: prop.bool(false),
     icon: prop.string(),
     labels: prop.data<Partial<AlertLabels>>(),
+    slim: prop.bool(false),
     variant: prop.oneOf(ALERT_VARIANTS),
   },
   setup(props) {

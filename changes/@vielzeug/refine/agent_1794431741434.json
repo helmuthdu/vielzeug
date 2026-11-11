@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "invert slotted ghost/text action ink on solid `ore-alert` surfaces so banner actions stay legible",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -11,6 +11,28 @@
     display: block;
   }
 
+  /* ── Docked site banner ──────────────────────────
+       Fixed to a viewport edge, full-bleed by default (box it with
+       --alert-max-width). Safe-area aware like ore-cookie-banner; effective
+       when the page opts into viewport-fit=cover. Declared before
+       :host([dismissed]) so dismissal still wins. */
+  :host([docked]) {
+    position: fixed;
+    right: calc(var(--alert-dock-inset, var(--size-4)) + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--alert-dock-inset, var(--size-4)) + env(safe-area-inset-bottom, 0px));
+    left: calc(var(--alert-dock-inset, var(--size-4)) + env(safe-area-inset-left, 0px));
+    z-index: var(--alert-dock-z-index, var(--z-fixed));
+  }
+
+  :host([docked='top']) {
+    top: calc(var(--alert-dock-inset, var(--size-4)) + env(safe-area-inset-top, 0px));
+    bottom: auto;
+  }
+
+  :host([docked='bottom']) {
+    top: auto;
+  }
+
   .sr-announce {
     position: absolute;
     width: 1px;
@@ -61,7 +83,11 @@
     display: grid;
     grid-template-columns: auto 1fr auto;
     row-gap: var(--size-1);
+
+    /* Boxed look: center the card when --alert-max-width caps the width */
+    max-width: var(--alert-max-width, 100%);
     padding: var(--_padding);
+    margin-inline: auto;
     overflow: hidden;
     /* The public hook is consulted here, not through --_font-size: the size-variant
        mixin emits --_font-size unlayered on :host, which would outrank a layered
@@ -315,6 +341,35 @@
   :host([variant='bordered'][accented]) .alert {
     border-inline-start-width: var(--border-4, 4px);
   }
+
+  /* ── Slim (banner density) ───────────────────────
+       One wrapping row: icon, heading, body, actions, close flow side by side.
+       All grid placement above is inert in flex, so the row composition is
+       just the DOM order. */
+  :host([slim]) {
+    --_padding: var(--alert-padding, var(--size-2-5, 0.625rem));
+    --_gap: var(--alert-gap, var(--size-2));
+  }
+
+  :host([slim]) .alert {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-1) var(--_gap);
+    align-items: center;
+  }
+
+  :host([slim]) .icon {
+    margin-inline-end: 0;
+  }
+
+  :host([slim]) .body,
+  :host([slim]) .actions {
+    margin-top: 0;
+  }
+
+  :host([slim]) .actions:not([hidden]) {
+    margin-inline-start: auto;
+  }
 }
 
 @layer refine.variants {
@@ -337,6 +392,14 @@
     --_color: var(--alert-color, var(--_theme-contrast));
     --_border-color: var(--alert-border-color, var(--_theme-base));
     --_shadow: var(--alert-shadow, var(--shadow-xs));
+  }
+
+  /* Solid inverts the surface, but slotted ghost/text actions resolve their
+     default ink against their own inherited --_theme-base — the very color
+     they sit on. Route the button's public color hook to the alert's contrast
+     ink so banner actions stay legible on the filled surface. */
+  :host([variant='solid']) .actions:not([hidden]) {
+    --button-color: var(--_color);
   }
 
   /* Bordered: the theme's designed tinted backdrop with its matching border

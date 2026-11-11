@@ -362,3 +362,49 @@ describe('ore-alert labels', () => {
     expect(fixture.query('.sr-announce')?.textContent).toBe('Hinweis geschlossen');
   });
 });
+
+describe('Docked and slim banner modes', () => {
+  let fixture: Fixture<HTMLElement>;
+
+  beforeAll(async () => {
+    await import('./alert');
+  });
+
+  afterEach(() => {
+    fixture?.dispose();
+  });
+
+  it('accepts and reflects the docked edge', async () => {
+    fixture = await mount('ore-alert', { attrs: { docked: 'bottom' } });
+
+    expect(fixture.element.getAttribute('docked')).toBe('bottom');
+  });
+
+  it('drops an invalid docked value', async () => {
+    fixture = await mount('ore-alert', { attrs: { docked: 'left' } });
+    await fixture.flush();
+
+    expect(fixture.element.hasAttribute('docked')).toBe(false);
+  });
+
+  it('treats slim as a reflected boolean', async () => {
+    fixture = await mount('ore-alert', { attrs: { slim: '' } });
+
+    expect(fixture.element.hasAttribute('slim')).toBe(true);
+
+    fixture.element.removeAttribute('slim');
+    await fixture.flush();
+
+    expect(fixture.element.hasAttribute('slim')).toBe(false);
+  });
+
+  it('keeps docked and dismissible orthogonal: dismissal still hides the banner', async () => {
+    fixture = await mount('ore-alert', { attrs: { dismissible: '', docked: 'top' } });
+
+    fireClick(fixture.query<HTMLElement>('.close')!);
+    fixture.element.dispatchEvent(new Event('animationend'));
+    await fixture.flush();
+
+    expect(fixture.element.hasAttribute('dismissed')).toBe(true);
+  });
+});

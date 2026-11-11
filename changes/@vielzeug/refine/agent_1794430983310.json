@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "add `docked`, `slim`, and `--alert-max-width` to `ore-alert`: native site-banner modes with composed recipes",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}
