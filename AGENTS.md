@@ -18,7 +18,7 @@ Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeu
 | Consume `@vielzeug/*` packages (demos, Refine UI work) | `.agents/skills/vielzeug/SKILL.md` |
 
 3. When a task matches multiple rows, load each matching skill. In particular, code changes to demos that consume `@vielzeug/*` require both `build` and `vielzeug`.
-4. Load the files in each skill's `Load` section. Load `.agents/conventions.md` before editing package source.
+4. Load the files in each skill's `Load` section. Reuse instruction files already present in the task context instead of reading them again; load missing files and reread only when their content changes. This applies across all skills and subtree contracts. Load `.agents/conventions.md` before editing package source.
 5. Read the nearest subtree `AGENTS.md` before editing inside it (see the index at the end).
 
 ## Source of truth

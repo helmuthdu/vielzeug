@@ -11,7 +11,7 @@ You need to discover which `@vielzeug/refine` web components are available and i
 
 ### Solution
 
-Call `refine-list-components` to enumerate tags, then `refine-get-component` with the desired tag to retrieve the full CEM declaration. Use `refine-generate-template` and `refine-validate-usage` to close the generate → validate loop.
+Call `refine-list-components` to enumerate tags and descriptions, then `refine-get-component` with the desired tag to retrieve the full CEM declaration (attributes live only in that declaration, keeping the listing small). Use `refine-generate-template` and `refine-validate-usage` to close the generate → validate loop.
 
 #### List available component tags
 
@@ -23,13 +23,9 @@ Result excerpt:
 
 ```json
 [
-  {
-    "tagName": "ore-button",
-    "description": "A clickable button element.",
-    "attrs": [{ "name": "variant", "type": "string", "default": "primary" }]
-  },
-  { "tagName": "ore-input", "description": "A text input field.", "attrs": [] },
-  { "tagName": "ore-dialog", "description": "A modal dialog.", "attrs": [] }
+  { "tagName": "ore-button", "description": "A clickable button element." },
+  { "tagName": "ore-input", "description": "A text input field." },
+  { "tagName": "ore-dialog", "description": "A modal dialog." }
 ]
 ```
 

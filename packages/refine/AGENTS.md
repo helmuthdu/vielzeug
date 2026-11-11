@@ -114,7 +114,7 @@ Create it under the right category folder, then run `sync:exports` so its sub-pa
 
 ## Verification
 
-- **Unit/component tests** (jsdom): `bun x vitest run packages/refine/src/` or `bun run --filter @vielzeug/refine test`. Tests are **co-located** next to components (`src/<category>/<component>/<component>.test.ts`) plus shared suites under `src/core/__tests__/` and `src/inputs/__tests__/`. The `.../src/__tests__/` path used by other packages misses most refine tests.
-- **E2E tests** (Playwright/Chromium): `bun run --filter @vielzeug/refine test:e2e`. Requires a built dist (`bun run --filter @vielzeug/refine build` first). Co-located next to components as `src/<category>/<component>/<component>.e2e.ts`; shared harness lives in `src/testing/fixtures.ts`.
+- **Unit/component tests** (jsdom): while iterating run the component's own test file (`bun x vitest run packages/refine/src/<category>/<component>/<component>.test.ts`); the full-suite final gate is `bun x vitest run packages/refine/src/` or `bun run --filter @vielzeug/refine test`. Tests are **co-located** next to components (`src/<category>/<component>/<component>.test.ts`) plus shared suites under `src/core/__tests__/` and `src/inputs/__tests__/`. The `.../src/__tests__/` path used by other packages misses most refine tests.
+- **E2E tests** (Playwright/Chromium): scope `bun run --filter @vielzeug/refine test:e2e` to the affected `src/<category>/<component>/<component>.e2e.ts` files. Reuse fresh output from the required final package build; use `build:e2e` only when an earlier browser check needs artifacts. Follow Layer 2 above for artifact freshness and dependency changes; shared harness lives in `src/testing/fixtures.ts`.
 - Lint: `bun run --filter @vielzeug/refine lint` (`biome ci src`). This checks TypeScript and CSS in Refine source.
 - Build (includes `sync:exports` + `check:manifest` + manifest analyze): `bun run --filter @vielzeug/refine build`

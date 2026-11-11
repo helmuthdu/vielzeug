@@ -90,16 +90,12 @@ function usageIssues(component: CemDeclaration, html: string): Array<{ message: 
 
 export const refineTools: readonly ToolDefinition<RefineCatalog>[] = [
   {
-    description: 'List bundled Refine web components.',
+    description: 'List bundled Refine component tags and descriptions.',
     execute: (_args, catalog) =>
       catalog
         .listComponents()
         .filter((component) => component.tagName)
-        .map((component) => ({
-          attributes: component.attributes ?? [],
-          description: component.description ?? '',
-          tagName: component.tagName,
-        })),
+        .map((component) => ({ description: component.description ?? '', tagName: component.tagName })),
     inputSchema: EMPTY_SCHEMA,
     name: 'refine-list-components',
   },

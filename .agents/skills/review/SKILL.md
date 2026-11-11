@@ -7,21 +7,21 @@ description: 'Source-verified review of code, design, or a pull request: correct
 
 ## Load
 
-- root `AGENTS.md` (policy, safety, markers)
+- root `AGENTS.md` (policy, safety, markers, instruction reuse)
 - `.agents/conventions.md` when package source is in scope
 - `.agents/reference/security-checklist.md` for security review
 - relevant subtree `AGENTS.md`
 
 ## Preconditions
 
-Review does not change code unless explicitly requested. Use `[BLOCKED]` when requirements permit materially different designs or the review requires destructive or runtime-only evidence.
+Review does not change code unless explicitly requested. Use `[BLOCKED]` when requirements permit materially different designs or required evidence needs an unapproved destructive action. Obtain runtime evidence when authorized and available; otherwise mark the unverified claim `[VERIFY]`.
 
 State assumptions before analysis when required files, runtime behavior, consumer constraints, or external usage cannot be verified. Mark each `[VERIFY]`; do not treat it as design evidence.
 
 ## Flow
 
-1. Read relevant contracts, source, tests, docs, and metadata.
-2. Pick the mode below that matches the request. For public API, stateful, or cross-package work, review in two source-first passes: contract (API, types, errors, lifecycle, exports, docs, dependents), then implementation (correctness, boundaries, cleanup, tests, races, security).
+1. Start from the named behavior, file, symbol, or complete diff for a change review; read nearby controlling source and tests to establish its contract. Expand to docs, metadata, and dependents only where they can affect a concrete finding. Reuse evidence already in this task while its relevant inputs remain unchanged.
+2. Pick the mode below that matches the request. For public API, stateful, or cross-package work, cover contract (API, types, errors, lifecycle, exports, docs, dependents) and implementation (correctness, boundaries, cleanup, tests, races, security) in one source-first pass; open a dedicated second pass for one side only when the first pass surfaces a conflict between them that needs a focused look.
 3. Verify every claim against source or mark it `[VERIFY]`.
 4. Rank findings by expected user/developer impact relative to implementation, migration, and validation cost; use dependency order to break ties.
 
@@ -40,13 +40,13 @@ Default (no mode named): correctness, design, maintainability, types, and test c
 
 ### PR
 
-1. Read every changed file in full, then surrounding source needed to establish its contracts; do not review diff hunks in isolation.
+1. Read the complete diff first. Open the full file for a hunk whose correctness depends on surrounding state, or whose change is substantial enough that hunks misrepresent it; do not review diff hunks in isolation where file context decides correctness.
 2. Compare changed behavior against stated intent.
-3. Search real call sites for every changed public API, contract, or behavior.
+3. Search real call sites for every changed public API, contract, or behavior: report the total count and read in full only the sites that plausibly mismatch the new contract.
 4. Review change files, docs, types, exports, tests, and generated artifacts when the changed surface requires them.
-5. Run narrow relevant validation when execution access exists; report each command and result. Otherwise mark unavailable execution `[VERIFY]`.
+5. Run validation only when the request asks for checks or a finding needs runtime evidence; when run, report each command and result. Otherwise mark the validation the `build` skill should run `[VERIFY]`.
 
-For an independent pass (reviewing a PR fresh, not building on a prior review), read both new and prior implementations in full. Actively seek counterexamples, failure modes, changed-call-site regressions, and simpler alternatives. State tradeoffs in complexity, flexibility, performance, coupling, testability, and DX.
+For an independent pass (reviewing a PR fresh, not building on a prior review), read the prior implementation for the behavior the diff changes, and full files where the diff is not self-explanatory. Actively seek counterexamples, failure modes, changed-call-site regressions, and simpler alternatives. State tradeoffs in complexity, flexibility, performance, coupling, testability, and DX.
 
 ## Cross-cutting completeness inventory
 
@@ -76,7 +76,7 @@ Default and PR findings use one line each:
 
 Each proposal names the references, packages, and surfaces checked, and known versus unknown consumers. Report `[DEFERRED]`, `[VERIFY]`, and `[BLOCKED]` as needed. Close with `Summary: N High · N Medium · N Low · open: <list or none>`.
 
-For security reviews, finish only after every raised finding is fixed, `[DEFERRED]`, or explicitly open. When a finding is fixed in the same pass, annotate it inline rather than deleting the evidence.
+For security reviews, report every finding as fixed, `[DEFERRED]`, or explicitly open. Do not start fixes from a review-only request; when fixes are authorized, follow the `build` skill's focused implementation and validation procedure. Annotate fixed findings inline rather than deleting the evidence.
 
 ### Greenfield output
 
@@ -89,7 +89,7 @@ Finish with `## Top Priority Changes`, ranked by value-to-effort, long-term valu
 Explicitly report:
 
 - Intent: met, not met, or `[VERIFY]`.
-- Validation: commands run and results, or why execution was unavailable.
+- Validation: commands run and their results, or the validation left to the `build` skill.
 - Tests: adequate, or gaps with affected behavior.
 - Contracts: types, docs, exports, and change files aligned, or gaps.
 - Cleanup: dead, transitional, or redundant code removed, or findings.

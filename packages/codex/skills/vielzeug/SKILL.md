@@ -17,17 +17,22 @@ Vielzeug is a monorepo of independently published TypeScript packages. "Zero dep
 
 Never guess exports, attributes, events, slots, or token names. Look them up:
 
-| Question                                                    | MCP tool (`@vielzeug/codex`)                     | Offline fallback                                                                     |
-| ----------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| Which package solves X?                                     | `search-packages`, `list-packages`               | the package list below                                                               |
-| How do I use package X?                                     | `get-docs` (`index`, `usage`, `api`, `examples`) | `node_modules/@vielzeug/<pkg>/README.md`                                             |
-| Exact signature of an export                                | `get-type-signature`                             | `node_modules/@vielzeug/<pkg>/dist/*.d.ts`                                           |
-| Runnable example                                            | `list-examples`, `get-example`                   | package README; `docs/<pkg>/examples/` when the Vielzeug repository is checked out   |
-| Which Refine components exist?                              | `refine-list-components`                         | `node_modules/@vielzeug/refine/dist/custom-elements.json`                            |
-| Attributes, properties, events, slots, CSS parts of `ore-*` | `refine-get-component`                           | same manifest                                                                        |
-| Available design tokens                                     | `refine-get-tokens`                              | `node_modules/@vielzeug/refine/dist/styles/theme.css` (`tokens.css` only imports it) |
-| Are component attribute names recognized?                   | `refine-validate-usage`                          | compare against the manifest                                                         |
-| Blank component scaffold                                    | `refine-generate-template`                       | N/A                                                                                  |
+| Question                                                    | MCP tool (`@vielzeug/codex`)                     | Offline fallback                                                                                      |
+| ----------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Which package solves X?                                     | `search-packages`, `list-packages`               | the package list below                                                                                |
+| How do I use package X?                                     | `get-docs` (`index`, `usage`, `api`, `examples`) | `node_modules/@vielzeug/<pkg>/README.md`                                                              |
+| Exact signature of an export                                | `get-type-signature`                             | the declaration file named by the installed manifest's matching export                                |
+| Runnable example                                            | `list-examples`, `get-example`                   | package README; `docs/<pkg>/examples/` when the Vielzeug repository is checked out                    |
+| Which Refine components exist?                              | `refine-list-components` (tags + descriptions)   | `rg '"tagName"' node_modules/@vielzeug/refine/dist/custom-elements.json`                              |
+| Attributes, properties, events, slots, CSS parts of `ore-*` | `refine-get-component`                           | extract the matching `tagName` declaration from the manifest with a JSON parser                         |
+| Component CSS custom properties                             | `refine-get-tokens` (pass a prefix)              | extract the component's `cssProperties` from the manifest                                               |
+| Global design tokens                                        | targeted search in installed theme CSS         | `node_modules/@vielzeug/refine/dist/styles/theme.css` or checkout `packages/refine/src/styles/theme.css` |
+| Are component attribute names recognized?                   | `refine-validate-usage`                          | compare against the manifest                                                                          |
+| Blank component scaffold                                    | `refine-generate-template`                       | N/A                                                                                                   |
+
+Look each thing up once, from the smallest source that answers it: reuse a lookup already in this task while its version and relevant inputs remain unchanged; read one component with `refine-get-component` instead of listing the whole catalog; pass the narrowest known prefix (prefer an exact token name when known) to `refine-get-tokens`; fetch the one `get-docs` page that answers the question, not `index` + `usage` + `api` + `examples`. Verified installed declarations or checkout source are sufficient evidence without an additional docs fetch. Offline, use targeted searches to locate source or CSS; extract a component declaration from the JSON manifest with a structured parser rather than dumping the manifest.
+
+`refine-get-tokens` reads CEM component CSS properties, not the complete global theme. For global tokens such as `--size-*`, search the relevant prefix or exact name in theme CSS; an empty MCP result does not prove a global token is unavailable. `tokens.css` only imports the underlying stylesheets.
 
 Codex serves a versioned snapshot, which may not match the versions installed in the project or include the newest packages. Compare `get-package`'s `version` with the installed version before using its API docs or signatures. If they differ, treat the installed package's declarations, docs, and runtime as authoritative; do not use newer snapshot APIs unless the dependency is deliberately updated. Treat the generated package list as a discovery aid, not proof that no other package exists.
 
@@ -86,7 +91,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 
 <!-- GENERATED:skill-packages:END -->
 
-Common compositions (verify each API with `get-docs` before writing code):
+Common compositions (verify unfamiliar APIs from the smallest applicable source above before writing code):
 
 - **State**: `ripple` signals/derived/effects; `clockwork` when state is a finite machine; `ledger` for undo/redo.
 - **Data**: `courier` for HTTP with caching and structured errors; `sourcerer` for paged/cursor/infinite collections; `vault` for storage; `postmaster` for durable jobs; `scout` for fuzzy search; `mesh` for backendless peer sessions on a LAN; `sigil` for QR generation/scanning: prefer `ore-qr-code` / `ore-qr-scanner` when Refine is installed.
@@ -109,13 +114,13 @@ Refine is the UI layer. Build interfaces from `ore-*` elements before anything e
 
 2. **Register per component** through explicit side-effect subpaths (`import '@vielzeug/refine/button'`). The package root registers nothing by design: there is no whole-library import to fall back on.
 
-3. **Prefer Refine components when they fit.** For common interface controls and widgets such as buttons, inputs, selects, dialogs, menus, tables, and tabs, first check whether Refine has a component whose documented behavior fits the feature and the project's framework, accessibility, and runtime requirements. Confirm the tag with `refine-list-components`; read its contract with `refine-get-component`. If no component fits or a project requirement makes it unsuitable, use the simplest appropriate native element or other package and briefly explain the choice; do not build a parallel composite when a suitable Refine component exists.
+3. **Prefer Refine components when they fit.** For common interface controls and widgets such as buttons, inputs, selects, dialogs, menus, tables, and tabs, first check whether Refine has a component whose documented behavior fits the feature and the project's framework, accessibility, and runtime requirements. Read the candidate's contract with `refine-get-component`; fall back to `refine-list-components` only when no tag is known to fit. If no component fits or a project requirement makes it unsuitable, use the simplest appropriate native element or other package and briefly explain the choice; do not build a parallel composite when a suitable Refine component exists.
 
 4. **Use native elements for document semantics** (`<main>`, `<section>`, `<article>`, headings, paragraphs, plain links, and images), and when they are the better fit for a documented project or platform constraint.
 
-5. **Follow the element contract**: attributes for primitives, JavaScript properties for objects/arrays/callbacks, standard DOM events (read state from `event.target`), named slots for composition. Icon-only controls need an accessible label.
+5. **Follow the element contract**: attributes for primitives, JavaScript properties for objects/arrays/callbacks, named slots for composition. Read event payloads from the documented `event.detail` or element state as appropriate; do not assume every event uses `event.target`. Icon-only controls need an accessible label.
 
-6. **Type the tags** once in a type entry point: `import type {} from '@vielzeug/refine/frameworks/elements'` (or `/react`, `/vue`). Framework wiring (React 18/19, Vue, Svelte, Angular, SSR guards) is documented in the Refine `frameworks` guide: read it at `https://vielzeug.dev/refine/frameworks` before integrating (`get-docs` does not serve it).
+6. **Type the tags** once in a type entry point: `import type {} from '@vielzeug/refine/frameworks/elements'` (or `/react`, `/vue`). For new or changed framework wiring (React 18/19, Vue, Svelte, Angular, SSR guards), read the relevant section of the Refine `frameworks` guide from the checkout or `https://vielzeug.dev/refine/frameworks` (`get-docs` does not serve it). Reuse verified existing wiring for ordinary component edits.
 
 7. **Check attribute names** with `refine-validate-usage` when available. It only checks for unknown attributes on the specified component's opening tag; it does not validate HTML generally, attribute values, JavaScript properties, events, slots, accessibility, or runtime behavior. Check those against the component docs and relevant tests instead.
 
@@ -123,7 +128,7 @@ Refine is the UI layer. Build interfaces from `ore-*` elements before anything e
 
 ## Theme (when `@vielzeug/refine` is installed)
 
-- All visuals come from tokens: spacing `var(--size-*)` on a 4‑point grid, type `var(--text-*)`, radius `var(--rounded-*)`, semantic colors `var(--color-primary|secondary|neutral|success|warning|error|info)`. No hard-coded hex/px in app CSS when a token exists (`refine-get-tokens`).
+- All visuals come from tokens: spacing `var(--size-*)` on a 4‑point grid, type `var(--text-*)`, radius `var(--rounded-*)`, semantic colors `var(--color-primary|secondary|neutral|success|warning|error|info)`. No hard-coded hex/px in app CSS when a token exists (verify the exact name or prefix with a targeted theme CSS search).
 - Rebrand with one variable: `:root { --color-primary-hue: 220deg; }`. Override `--color-primary` only when the hue alone is insufficient.
 - Overrides go in an **unlayered** `:root` (or a scoping class) rule; Refine tokens live in `@layer refine.tokens`, so plain rules win. Never use `!important`.
 - Dark mode is `document.documentElement.classList.toggle('dark')`; tokens use `light-dark()`. Do not write `prefers-color-scheme` media blocks for colors. `@vielzeug/refine/theme` ships `createThemeController()` for a persisted light/dark/system preference.
@@ -158,4 +163,4 @@ Refine covers the widget layer; these provide specialized behavior it may not co
 - No parallel implementation of something an installed package provides.
 - With Refine installed: prefer `ore-*` for interactive UI when its documented contract fits; load `tokens.css` + `fouc.css` once, use the attribute checker within its stated limits, and use Refine tokens for app styling where suitable tokens exist.
 - Every API that documents an owned resource or cleanup operation is integrated with the owning lifecycle; pure and value-returning APIs are not given invented cleanup.
-- Claims about package APIs were verified with `get-docs` / `get-type-signature`, not recalled.
+- Claims about package APIs were verified from an applicable lookup, installed declarations, or checkout source, not recalled; completion does not require repeating unchanged evidence.

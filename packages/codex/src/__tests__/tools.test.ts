@@ -74,6 +74,34 @@ describe('MCP tool adapters', () => {
     for (const item of [...packageTools, ...refineTools]) expect(item.inputSchema.additionalProperties).toBe(false);
   });
 
+  it('lists Refine components as tags and descriptions only', () => {
+    const catalogWithComponents: RefineCatalog = {
+      ...refineCatalog,
+      listComponents: () => [{ attributes: [{ name: 'variant' }], description: 'A button.', tagName: 'ore-button' }],
+    };
+
+    expect(refineTool('refine-list-components').execute({}, catalogWithComponents)).toEqual([
+      { description: 'A button.', tagName: 'ore-button' },
+    ]);
+  });
+
+  it('filters component CSS properties by case-insensitive prefix', () => {
+    const catalogWithComponents: RefineCatalog = {
+      ...refineCatalog,
+      listComponents: () => [
+        {
+          cssProperties: [{ name: '--button-gap' }, { name: '--button-color' }, { name: '--input-gap' }],
+          tagName: 'ore-button',
+        },
+      ],
+    };
+
+    expect(refineTool('refine-get-tokens').execute({ filter: '--BUTTON-G' }, catalogWithComponents)).toEqual([
+      { component: 'ore-button', name: '--button-gap' },
+    ]);
+    expect(refineTool('refine-get-tokens').execute({ filter: '--size-' }, catalogWithComponents)).toEqual([]);
+  });
+
   it('requires an exact component tag boundary when validating usage', () => {
     expect(
       refineTool('refine-validate-usage').execute(

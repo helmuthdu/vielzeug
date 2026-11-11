@@ -7,7 +7,7 @@ description: Change package source, tests, tooling, CI, or public behavior with 
 
 ## Load
 
-- root `AGENTS.md` (policy, safety, markers, commands)
+- root `AGENTS.md` (policy, safety, markers, commands, instruction reuse)
 - `.agents/conventions.md` when editing package source
 - `.agents/reference/packages.md` when dependency impact matters
 - `.agents/skills/vielzeug/SKILL.md` when changing demos that consume `@vielzeug/*` packages
@@ -17,7 +17,7 @@ description: Change package source, tests, tooling, CI, or public behavior with 
 
 Changes are compatible by default. Use `[BLOCKED]` before changing a public API incompatibly, adding a dependency, performing an irreversible operation, or proceeding from an unrelated red baseline. A breaking change requires explicit approval, a public API/dependent impact check, and migration scope before editing.
 
-Use the required post-change validation as the default; do not rerun the same tests beforehand just to record a baseline. Run and record a pre-change baseline when the relevant check is already known or suspected to fail, when changing tests or validation behavior, or when a before/after comparison is needed to attribute a failure. If post-change validation fails and the baseline is unknown, run the same command against the unchanged baseline when practical before attributing the failure to the change.
+Use the required post-change validation as the default; do not rerun the same tests beforehand just to record a baseline. Run and record a pre-change baseline when the relevant check is already known or suspected to fail, when changing tests or validation behavior, or when a before/after comparison is needed to attribute a failure. If post-change validation fails, first read the failing test name and assertion and attribute the failure from source; run the same command against the unchanged baseline only when the failure cannot be tied to the edit.
 
 ## Flow
 
@@ -63,15 +63,17 @@ When tests are the primary scope:
 
 ## Cross-cutting removals and migrations
 
-For removals, migrations, workspace-wide renames, or package deprecations, build the completeness inventory from the `review` skill (`.agents/skills/review/SKILL.md`) before editing and reconcile it after validation. A green test run does not replace checking dependencies, generated artifacts, demos, docs, configuration, and release surfaces for leftovers.
+For removals, migrations, workspace-wide renames, or package deprecations, read only the Cross-cutting completeness inventory section of `.agents/skills/review/SKILL.md` before editing and reconcile it after validation; this reference does not require a separate review workflow. A green test run does not replace checking dependencies, generated artifacts, demos, docs, configuration, and release surfaces for leftovers.
 
 After renaming a path or prefix, search for the old name with hidden files included (`rg --hidden '<old>'`). Reference validators only know the new name and cannot see stale references to the old one.
 
 ## Validation
 
+During iteration run only the focused test files that cover the changed source (`bun x vitest run <changed test files>`); read a failure's test name and assertion before rerunning anything. The rows below are per-surface final gates, run once after the implementation changes per `AGENTS.md` Build Scheduling.
+
 | Changed surface                | Run                                                                                                                                       |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Package source                 | `bun x vitest run packages/<name>/src/__tests__/`, `bun run --filter @vielzeug/<name> lint`, `bun run --filter @vielzeug/<name> build` (subtree `AGENTS.md` may add package-local gates to `build`: they fail this row) |
+| Package source                 | `bun x vitest run packages/<name>/src/__tests__/` (full-package gate; packages with co-located tests, e.g. refine, name their suite in their subtree `AGENTS.md`), `bun run --filter @vielzeug/<name> lint`, `bun run --filter @vielzeug/<name> build` (subtree `AGENTS.md` may add package-local gates to `build`: they fail this row) |
 | Real-browser behavior (packages declaring `test:e2e` in their manifest; find with `rg '"test:e2e"' packages/*/package.json`) | `bun run --filter @vielzeug/<name> test:e2e` scoped to the affected component or module. Some packages build internally first; refine needs a prior `build:e2e` (full `build` only when validating the shipped artifact). Each package's `AGENTS.md`/`test:e2e` script is authoritative |
 | Public API                     | package validation above, plus the docs/REPL rows of the `document` skill                                                                 |
 | Tests only                     | focused tests; lint/build only when config or imports changed                                                                             |
