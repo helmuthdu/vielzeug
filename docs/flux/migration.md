@@ -4,6 +4,35 @@ title: Flux Migration
 
 # Flux Migration
 
+## Upgrading from 26.11.11
+
+This train removes duplicate and speculative surface: one import entry point, one explicit way to flatten without bounds, and truthful error labels.
+
+### The `@vielzeug/flux/async` subpath is removed
+
+`toAsyncIterable()` was already exported from the package root; only the root entry point remains.
+
+```diff
+- import { toAsyncIterable } from '@vielzeug/flux/async';
++ import { toAsyncIterable } from '@vielzeug/flux';
+```
+
+### Unbounded flattening is a mode, not a magic capacity
+
+`mergeMap()` no longer requires a `capacity` you must ignore. Finite concurrency still requires one; `{ concurrency: 'unbounded' }` replaces `Infinity` and needs no queue bound. `Infinity` now throws `RangeError` like any non-integer.
+
+```diff
+- mergeMap(fetchUser, { concurrency: Infinity, capacity: 0 })
++ mergeMap(fetchUser, { concurrency: 'unbounded' })
+
+  // unchanged: bounded runs keep both bounds
+  mergeMap(fetchUser, { concurrency: 3, capacity: 50 })
+```
+
+### Flattening errors name the operator that failed
+
+`concatMap()` capacity failures reported `"mergeMap buffer capacity exceeded"`. Errors now name the actual operator (`"concatMap buffer capacity exceeded"`), so match error text against the operator in use.
+
 ## 3.0
 
 Flux 3.0 removes package-specific adapter subpaths in favor of two dependency-free structural bridges. Flux owns push-stream behavior; state, event buses, transport, and presence remain owned by their source packages.

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "drop the unused scheduler indirection and dev-gate helpers; terminal consumers share one abort-signal watch",
+      "packageName": "@vielzeug/flux",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/flux"
+}

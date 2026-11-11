@@ -40,6 +40,11 @@ export function createChannel<T>(options: ChannelOptions<T> = {}): Channel<T> {
 
   if ('initial' in options && capacity > 0) replay.push(options.initial as T);
 
+  // Reentrant sends (a listener calling `send` while receiving a previous
+  // value) are queued so every listener observes one global FIFO order.
+  let dispatching = false;
+  const pending: T[] = [];
+
   const source = stream<T>((sink) => {
     // Disposed channels complete new subscribers immediately without replaying
     // retained values: a late subscriber never observes stale state.
@@ -67,9 +72,6 @@ export function createChannel<T>(options: ChannelOptions<T> = {}): Channel<T> {
     replay.length = 0;
     pending.length = 0;
   };
-
-  let dispatching = false;
-  const pending: T[] = [];
 
   const flush = (): void => {
     dispatching = true;
@@ -104,8 +106,6 @@ export function createChannel<T>(options: ChannelOptions<T> = {}): Channel<T> {
 
       pending.push(value);
 
-      // Reentrant sends (a listener calling `send` while receiving a previous
-      // value) are queued so every listener observes one global FIFO order.
       if (!dispatching) flush();
     },
     stream: source,

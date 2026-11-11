@@ -23,18 +23,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
-    },
-    "./async": {
-      "import": "./dist/async.js",
-      "require": "./dist/async.cjs",
-      "types": "./dist/async.d.ts"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "async": [
-        "dist/async.d.ts"
-      ]
     }
   },
   "sideEffects": false,

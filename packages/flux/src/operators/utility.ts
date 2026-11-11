@@ -3,7 +3,6 @@ import { abortError } from '@vielzeug/arsenal';
 import { link } from '../_link.js';
 import { assertDuration, assertNonNegativeInteger } from '../_numeric.js';
 import { tryCall } from '../_safe.js';
-import { defaultScheduler } from '../_scheduler.js';
 import { stream } from '../core.js';
 import { FluxCapacityError, FluxEmptyError } from '../errors.js';
 import type { Operator, Stream, Subscription } from '../types.js';
@@ -31,7 +30,7 @@ export function retry<T>(options: RetryOptions): Operator<T, T> {
     stream((sink, signal) => {
       let attempts = 0;
       let current: Subscription | undefined;
-      let cancelDelay: (() => void) | undefined;
+      let delayId: ReturnType<typeof setTimeout> | undefined;
 
       const start = (): void => {
         if (signal.aborted) return;
@@ -68,7 +67,7 @@ export function retry<T>(options: RetryOptions): Operator<T, T> {
               if (delay === undefined || delay === 0) {
                 queueMicrotask(start);
               } else {
-                cancelDelay = defaultScheduler.delay(start, delay);
+                delayId = setTimeout(start, delay);
               }
             },
             next: sink.next,
@@ -82,42 +81,61 @@ export function retry<T>(options: RetryOptions): Operator<T, T> {
       start();
 
       return () => {
-        cancelDelay?.();
+        if (delayId !== undefined) clearTimeout(delayId);
         current?.unsubscribe();
       };
     });
 }
 
+/**
+ * Wire an external AbortSignal into a terminal consumer promise. Returns the
+ * detach function every terminal callback must call, or `null` when the signal
+ * was already aborted (the promise has rejected by then).
+ */
+function watchSignal(
+  signal: AbortSignal | undefined,
+  controller: AbortController,
+  reject: (reason: unknown) => void,
+): (() => void) | null {
+  if (!signal) return () => {};
+
+  const abort = (): void => {
+    controller.abort();
+    reject(abortError(signal, 'Stream consumption aborted'));
+  };
+
+  if (signal.aborted) {
+    abort();
+
+    return null;
+  }
+
+  signal.addEventListener('abort', abort, { once: true });
+
+  return () => signal.removeEventListener('abort', abort);
+}
+
 export function first<T>(source: Stream<T>, options?: ValueOptions<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const controller = new AbortController();
-    const abort = (): void => {
-      controller.abort();
-      reject(abortError(options?.signal, 'Stream consumption aborted'));
-    };
+    const detach = watchSignal(options?.signal, controller, reject);
+    if (!detach) return;
 
-    if (options?.signal?.aborted) {
-      abort();
-
-      return;
-    }
-
-    options?.signal?.addEventListener('abort', abort, { once: true });
     link(
       source,
       {
         complete() {
-          options?.signal?.removeEventListener('abort', abort);
+          detach();
 
           if ('defaultValue' in (options ?? {})) resolve(options!.defaultValue as T);
           else reject(new FluxEmptyError());
         },
         error(reason) {
-          options?.signal?.removeEventListener('abort', abort);
+          detach();
           reject(reason);
         },
         next(value) {
-          options?.signal?.removeEventListener('abort', abort);
+          detach();
           controller.abort();
           resolve(value);
         },
@@ -130,33 +148,24 @@ export function first<T>(source: Stream<T>, options?: ValueOptions<T>): Promise<
 export function last<T>(source: Stream<T>, options?: ValueOptions<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const controller = new AbortController();
-    const abort = (): void => {
-      controller.abort();
-      reject(abortError(options?.signal, 'Stream consumption aborted'));
-    };
-
-    if (options?.signal?.aborted) {
-      abort();
-
-      return;
-    }
+    const detach = watchSignal(options?.signal, controller, reject);
+    if (!detach) return;
 
     let emitted = false;
     let latest: T | undefined;
 
-    options?.signal?.addEventListener('abort', abort, { once: true });
     link(
       source,
       {
         complete() {
-          options?.signal?.removeEventListener('abort', abort);
+          detach();
 
           if (emitted) resolve(latest as T);
           else if ('defaultValue' in (options ?? {})) resolve(options!.defaultValue as T);
           else reject(new FluxEmptyError());
         },
         error(reason) {
-          options?.signal?.removeEventListener('abort', abort);
+          detach();
           reject(reason);
         },
         next(value) {
@@ -175,32 +184,23 @@ export function toArray<T>(source: Stream<T>, options: ToArrayOptions): Promise<
   return new Promise<T[]>((resolve, reject) => {
     const controller = new AbortController();
     const values: T[] = [];
-    const abort = (): void => {
-      controller.abort();
-      reject(abortError(options?.signal, 'Stream consumption aborted'));
-    };
+    const detach = watchSignal(options.signal, controller, reject);
+    if (!detach) return;
 
-    if (options.signal?.aborted) {
-      abort();
-
-      return;
-    }
-
-    options.signal?.addEventListener('abort', abort, { once: true });
     link(
       source,
       {
         complete() {
-          options.signal?.removeEventListener('abort', abort);
+          detach();
           resolve(values);
         },
         error(reason) {
-          options.signal?.removeEventListener('abort', abort);
+          detach();
           reject(reason);
         },
         next(value) {
           if (values.length === options.maxItems) {
-            options.signal?.removeEventListener('abort', abort);
+            detach();
             controller.abort();
             reject(new FluxCapacityError(options.maxItems, 'toArray maxItems exceeded'));
 

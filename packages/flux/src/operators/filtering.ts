@@ -1,6 +1,5 @@
 import { link } from '../_link.js';
 import { assertDuration, assertNonNegativeInteger } from '../_numeric.js';
-import { defaultScheduler } from '../_scheduler.js';
 import { stream } from '../core.js';
 import { FluxTimeoutError } from '../errors.js';
 import type { Operator, Stream, Subscription } from '../types.js';
@@ -126,7 +125,8 @@ export function debounce<T>(duration: number): Operator<T, T> {
             pending = value;
             hasPending = true;
             cancel?.();
-            cancel = defaultScheduler.delay(flush, duration);
+            const id = setTimeout(flush, duration);
+            cancel = () => clearTimeout(id);
           },
         },
         signal,
@@ -147,7 +147,8 @@ export function timeout<T>(duration: number): Operator<T, T> {
       let cancel: () => void;
 
       const start = (): void => {
-        cancel = defaultScheduler.delay(() => sink.error(new FluxTimeoutError(duration)), duration);
+        const id = setTimeout(() => sink.error(new FluxTimeoutError(duration)), duration);
+        cancel = () => clearTimeout(id);
       };
 
       start();

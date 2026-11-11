@@ -5,12 +5,18 @@ import { stream } from '../core.js';
 import { FluxCapacityError } from '../errors.js';
 import type { Operator, Stream, Subscription } from '../types.js';
 
-export type FlattenOptions = {
-  /** Maximum concurrently active inner subscriptions. Use `Infinity` for unbounded concurrency. */
-  concurrency: number;
-  /** Maximum queued outer values waiting for an inner subscription slot. Required when `concurrency` is finite. */
-  capacity: number;
-};
+export type FlattenOptions =
+  | {
+      /** Maximum concurrently active inner subscriptions (positive integer). */
+      concurrency: number;
+      /** Maximum queued outer values waiting for an inner subscription slot. Required when `concurrency` is finite. */
+      capacity: number;
+    }
+  | {
+      /** Start every outer value immediately: the queue never grows, so no `capacity` applies. */
+      concurrency: 'unbounded';
+      capacity?: undefined;
+    };
 
 export function map<A, B>(project: (value: A) => B): Operator<A, B> {
   return (source) =>
@@ -122,13 +128,26 @@ export function switchMap<A, B>(project: (value: A) => Stream<B>): Operator<A, B
     });
 }
 
-function flatten<A, B>(project: (value: A) => Stream<B>, options: FlattenOptions): Operator<A, B> {
-  const unbounded = options.concurrency === Infinity;
+function flatten<A, B>(project: (value: A) => Stream<B>, options: FlattenOptions, label: string): Operator<A, B> {
+  // Read through the union once; the finite branch's `capacity` is runtime-validated for JS callers.
+  const { capacity, concurrency } = options as { capacity?: number; concurrency: number | 'unbounded' };
+  const unbounded = concurrency === 'unbounded';
 
   if (!unbounded) {
-    assertPositiveInteger(options.concurrency, 'mergeMap concurrency');
-    assertPositiveInteger(options.capacity, 'mergeMap capacity');
+    assertPositiveInteger(concurrency, `${label} concurrency`);
+
+    if (capacity === undefined) {
+      throw new RangeError(
+        `${label} requires capacity when concurrency is finite; use { concurrency: "unbounded" } to start every value immediately`,
+      );
+    }
+
+    assertPositiveInteger(capacity, `${label} capacity`);
   }
+
+  // Post-guard numeric views: the unbounded branch never enqueues, so it needs no limits.
+  const concurrencyLimit = unbounded ? Number.POSITIVE_INFINITY : (concurrency as number);
+  const capacityLimit = unbounded ? Number.POSITIVE_INFINITY : (capacity as number);
 
   return (source) =>
     stream((sink, signal) => {
@@ -167,7 +186,7 @@ function flatten<A, B>(project: (value: A) => Stream<B>, options: FlattenOptions
       const drain = (): void => {
         if (signal.aborted) return;
 
-        while (queue.length > 0 && (unbounded || inners.size < options.concurrency)) {
+        while (queue.length > 0 && inners.size < concurrencyLimit) {
           const value = queue.shift()!;
 
           startInner(value);
@@ -185,9 +204,9 @@ function flatten<A, B>(project: (value: A) => Stream<B>, options: FlattenOptions
           },
           error: sink.error,
           next(value) {
-            if (!unbounded && queue.length >= options.capacity) {
+            if (queue.length >= capacityLimit) {
               outerRef.current?.unsubscribe();
-              sink.error(new FluxCapacityError(options.capacity, 'mergeMap buffer capacity exceeded'));
+              sink.error(new FluxCapacityError(capacityLimit, `${label} buffer capacity exceeded`));
 
               return;
             }
@@ -208,12 +227,9 @@ function flatten<A, B>(project: (value: A) => Stream<B>, options: FlattenOptions
 }
 
 export function mergeMap<A, B>(project: (value: A) => Stream<B>, options: FlattenOptions): Operator<A, B> {
-  return flatten(project, options);
+  return flatten(project, options, 'mergeMap');
 }
 
-export function concatMap<A, B>(
-  project: (value: A) => Stream<B>,
-  options: Omit<FlattenOptions, 'concurrency'>,
-): Operator<A, B> {
-  return flatten(project, { capacity: options.capacity, concurrency: 1 });
+export function concatMap<A, B>(project: (value: A) => Stream<B>, options: { capacity: number }): Operator<A, B> {
+  return flatten(project, { capacity: options.capacity, concurrency: 1 }, 'concatMap');
 }

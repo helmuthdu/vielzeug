@@ -1,5 +1,4 @@
 import { assertDuration } from '../_numeric.js';
-import { defaultScheduler } from '../_scheduler.js';
 import { reportUnhandledError } from '../_subscription.js';
 import { stream } from '../core.js';
 import type { Stream } from '../types.js';
@@ -112,8 +111,9 @@ export function interval(every: number): Stream<number> {
 
   return stream((sink) => {
     let index = 0;
+    const id = setInterval(() => sink.next(index++), every);
 
-    return defaultScheduler.repeat(() => sink.next(index++), every);
+    return () => clearInterval(id);
   });
 }
 
@@ -124,8 +124,8 @@ export function timer(options: TimerOptions): Stream<number> {
 
   return stream((sink) => {
     let index = 0;
-    let cancelInterval: (() => void) | undefined;
-    const cancelDelay = defaultScheduler.delay(() => {
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+    const delayId = setTimeout(() => {
       sink.next(index++);
 
       if (options.interval === undefined) {
@@ -134,12 +134,12 @@ export function timer(options: TimerOptions): Stream<number> {
         return;
       }
 
-      cancelInterval = defaultScheduler.repeat(() => sink.next(index++), options.interval);
+      intervalId = setInterval(() => sink.next(index++), options.interval);
     }, options.delay);
 
     return () => {
-      cancelDelay();
-      cancelInterval?.();
+      clearTimeout(delayId);
+      if (intervalId !== undefined) clearInterval(intervalId);
     };
   });
 }

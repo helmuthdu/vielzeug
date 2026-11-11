@@ -10,7 +10,6 @@ export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
       entry: {
-        async: resolve(__dirname, 'src/async.ts'),
         index: resolve(__dirname, 'src/index.ts'),
       },
       name: 'flux',

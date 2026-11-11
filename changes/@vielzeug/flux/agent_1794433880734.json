@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "mergeMap gains { concurrency: 'unbounded' } and no longer demands an ignored capacity; flattening errors name the actual operator",
+      "packageName": "@vielzeug/flux",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/flux"
+}

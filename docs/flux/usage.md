@@ -56,7 +56,7 @@ clicks.subscribe({
 });
 ```
 
-Use `switchMap()` for latest-only work, `mergeMap()` for concurrent work with bounded concurrency and queue capacity, and `concatMap()` for ordered work with bounded queue capacity.
+Use `switchMap()` for latest-only work, `mergeMap()` for concurrent work with bounded concurrency and queue capacity (`{ concurrency: 'unbounded' }` starts every value immediately), and `concatMap()` for ordered work with bounded queue capacity.
 
 ```ts
 import { from, pipe, retry, switchMap } from '@vielzeug/flux';
@@ -215,7 +215,7 @@ const events = fromSubscribe<Message>((listener) => bus.on('message', listener))
 - Pass `{ signal }` from component, request, or task owner.
 - Provide `error` when subscription can recover locally.
 - Use `pipe(source, ...)`; never mutate stream definitions.
-- Bound `mergeMap()` concurrency and queue capacity.
+- Bound `mergeMap()` concurrency and queue capacity, or choose `'unbounded'` explicitly.
 - Bound `concatMap()` queue capacity.
 - Bound `toArray()` with realistic `maxItems`.
 - Choose async iterator overflow policy deliberately.

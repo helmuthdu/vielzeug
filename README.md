@@ -998,7 +998,7 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/ore`         | **28.9 KB**               | **10.5 KB** | 2\*          |
 | `@vielzeug/dnd`         | **9.7 KB**                | **3.7 KB**  | 0            |
 | `@vielzeug/familiar`    | **11.3 KB**               | **4.2 KB**  | 0            |
-| `@vielzeug/flux`        | **12.9 KB**               | **3.6 KB**  | 1\*          |
+| `@vielzeug/flux`        | **13.5 KB**               | **4.1 KB**  | 1\*          |
 | `@vielzeug/focus`       | N/A                       | N/A         | 0            |
 | `@vielzeug/forge`       | **17.9 KB**               | **5.6 KB**  | 0            |
 | `@vielzeug/gesture`     | N/A                       | N/A         | 0            |

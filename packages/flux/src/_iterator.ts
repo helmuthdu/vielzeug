@@ -10,8 +10,9 @@ type Pending<T> = {
 };
 
 type IteratorState<T> =
-  | { kind: 'complete' | 'open'; queue: T[] }
+  | { kind: 'complete'; queue: T[] }
   | { kind: 'error'; queue: T[]; reason: unknown }
+  | { kind: 'open'; queue: T[] }
   | { kind: 'returned' };
 
 /** Async iteration requires explicit queue policy because streams are push based. */
@@ -34,7 +35,7 @@ export function toIterator<T>(source: Stream<T>, options: AsyncIterableOptions):
   const complete = (): void => {
     if (state.kind !== 'open') return;
 
-    state.kind = 'complete';
+    state = { kind: 'complete', queue: state.queue };
     detach();
     resolveDone();
   };

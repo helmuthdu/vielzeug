@@ -7,6 +7,7 @@ import { createChannel } from '../index';
 import { combineLatest, concat, merge } from '../operators/combination';
 import { from, interval, of, timer } from '../operators/creation';
 import { debounce, take, takeUntil, timeout } from '../operators/filtering';
+import type { FlattenOptions } from '../operators/transformation';
 import { concatMap, filter, map, mergeMap, scan, switchMap } from '../operators/transformation';
 import { first, last, retry, toArray } from '../operators/utility';
 import { pipe } from '../pipe';
@@ -135,7 +136,28 @@ describe('core operators', () => {
     queued.send(2);
     queued.send(3);
 
-    await expect(result).rejects.toThrow('mergeMap buffer capacity exceeded');
+    await expect(result).rejects.toThrow('concatMap buffer capacity exceeded');
+  });
+
+  it('starts every value immediately with unbounded mergeMap concurrency', async () => {
+    expect(
+      await toArray(
+        pipe(
+          of(1, 2, 3),
+          mergeMap((value) => of(value * 10), { concurrency: 'unbounded' }),
+        ),
+        { maxItems: 3 },
+      ),
+    ).toEqual([10, 20, 30]);
+  });
+
+  it('rejects finite mergeMap concurrency without a capacity', () => {
+    // JS-boundary guard: TypeScript already rejects this shape at the call site.
+    const options = { concurrency: 2 } as unknown as FlattenOptions;
+
+    expect(() => mergeMap((value: number) => of(value), options)).toThrow(
+      'mergeMap requires capacity when concurrency is finite',
+    );
   });
 
   it('retries source failures with options object', async () => {

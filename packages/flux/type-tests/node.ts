@@ -1,5 +1,4 @@
-import { createChannel, first, fromStore, fromSubscribe, of, type ValueOptions } from '@vielzeug/flux';
-import { toAsyncIterable } from '@vielzeug/flux/async';
+import { createChannel, first, fromStore, fromSubscribe, of, toAsyncIterable, type ValueOptions } from '@vielzeug/flux';
 
 const events = fromSubscribe<number>((listener) => {
   listener(1);
