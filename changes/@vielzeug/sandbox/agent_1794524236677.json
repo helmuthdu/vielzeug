@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "warn host-side when a sandboxed document reports an error",
+      "packageName": "@vielzeug/sandbox",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/sandbox"
+}

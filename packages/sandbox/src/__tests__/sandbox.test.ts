@@ -617,9 +617,13 @@ describe('createSandbox: onMessage', () => {
     const received: unknown[] = [];
 
     sandbox.onMessage((msg) => received.push(msg));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     helpers.fireError('ReferenceError: x is not defined', 'at eval:1');
     expect(received).toHaveLength(1);
     expect(received[0]).toMatchObject({ message: 'ReferenceError: x is not defined', type: 'error' });
+    // Consumers without an onMessage subscription must still see sandbox failures in dev.
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('ReferenceError: x is not defined'));
+    warnSpy.mockRestore();
     sandbox.dispose();
   });
 

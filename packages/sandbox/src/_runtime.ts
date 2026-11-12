@@ -83,6 +83,11 @@ export function createSandbox<State extends object = Record<string, unknown>>(
             ...(typeof event.data.stack === 'string' ? { stack: event.data.stack } : {}),
             type: MSG_ERROR,
           });
+
+          // The bridge replaces window.onerror inside the document, so without this the
+          // host is the only place a sandboxed error can surface: consumers that do not
+          // subscribe to MSG_ERROR would otherwise watch a sandbox fail silently.
+          warn(`sandboxed document error: ${event.data.message}`);
         }
 
         break;
