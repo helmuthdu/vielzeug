@@ -1,4 +1,17 @@
 import { s } from '@vielzeug/spell';
+import {
+  ApiError,
+  badRequest,
+  conflict,
+  forbidden,
+  invalid,
+  json,
+  noStore,
+  notFound,
+  queryParams,
+  readJsonBody,
+} from '../_server/http';
+import { UUID_RE } from '../_server/uuid';
 import type { ArchiveCollection } from '../collection';
 import {
   ARCHIVE_CONTRACT_VERSION,
@@ -23,18 +36,6 @@ import {
 import { forwardPage, forwardPageParams, nextCursor } from './_pagination';
 import { JWT_CLOCK_TOLERANCE_SECONDS, type Publisher, type Session } from './auth';
 import type { ApiConfig, ArchiveWorkerEnv } from './env';
-import {
-  ApiError,
-  badRequest,
-  conflict,
-  forbidden,
-  invalid,
-  json,
-  noStore,
-  notFound,
-  queryParams,
-  readJsonBody,
-} from './http';
 import {
   likedPublicationsSql,
   likesPageSql,
@@ -109,8 +110,6 @@ const now = (): string => new Date().toISOString();
 /** A stored row that fails the emitted-DTO contract is unavailable, not malformed data. */
 const recordUnavailable = (): ApiError =>
   new ApiError(503, 'record-unavailable', 'The record is not available.', { diagnostic: { kind: 'record' } });
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Maps a joined row to the public DTO through the collection's strict entry schema:

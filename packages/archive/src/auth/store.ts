@@ -1,4 +1,4 @@
-import type { D1Like } from '../worker/env';
+import type { D1Like } from '../_server/d1';
 import { databaseOperation } from './errors';
 
 /**

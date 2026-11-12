@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import type { D1Statement } from '../_server/d1';
 import {
   ARCHIVE_CONTRACT_VERSION,
   archiveModerationLogSchema,
@@ -6,7 +7,7 @@ import {
   archiveReportsSchema,
 } from '../contract';
 import type { Session } from '../worker/auth';
-import { type ArchiveWorkerEnv, apiConfig, type D1Statement } from '../worker/env';
+import { type ArchiveWorkerEnv, apiConfig } from '../worker/env';
 import {
   deleteAccountProfile,
   deleteEntry,

@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { exportJWK, generateKeyPair, type JWK } from 'jose';
+import type { D1Like, D1Statement } from '../_server/d1';
 import type { AuthWorkerEnv } from '../auth';
-import type { D1Like, D1Statement } from '../worker/env';
 
 const MIGRATION = readFileSync(join(__dirname, '../../migrations/auth/0001_auth.sql'), 'utf8');
 

@@ -1,5 +1,5 @@
+import { noStore } from '../_server/http';
 import { REQUEST_MARKER_HEADER } from '../contract';
-import { noStore } from '../worker/http';
 import { LINK_TTL_MS } from './store';
 
 export const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);

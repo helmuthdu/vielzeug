@@ -17,6 +17,12 @@ server subpaths) and their browsers (the root contract).
   **`@vielzeug/archive/auth`** is the identity issuer factory subpath. Keep
   `package.json` `exports`, `typesVersions`, and `vite.config.ts`'s entry map aligned
   (three entries: `src/index.ts`, `src/worker.ts`, `src/auth.ts`).
+- `src/_server/` holds the server primitives shared by both Worker surfaces (the
+  `ApiError` HTTP plumbing, the D1 structural types, the bounded service call, the
+  canonical UUID shape); it is internal and imports nothing from `worker/` or
+  `auth/`. The identity issuer in `auth/` is a sibling of the catalog `worker/`, not
+  a child of it: catalog-specific origin/CORS posture stays in `worker/_cors.ts` and
+  the issuer keeps its own guard.
 - **No IIFE bundle** and no REPL examples: `archive` is in `REPL_EXCLUDED_PACKAGES`
   (`scripts/vielzeug-packages.ts`) because the registry generator inlines every
   non-excluded package's IIFE, and the sandbox cannot host D1/JWKS bindings.

@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { D1Like } from '../_server/d1';
+import { readJsonBody, sessionToken } from '../_server/http';
 import { PUBLISHER_HEADER, REQUEST_MARKER_HEADER, SESSION_COOKIE_NAME } from '../contract';
-import { type ApiConfig, type ArchiveWorkerEnv, apiConfig, type D1Like } from '../worker/env';
-import { corsHeaders, preflight, readJsonBody, requireMutationGuard, sessionToken } from '../worker/http';
+import { corsHeaders, preflight, requireMutationGuard } from '../worker/_cors';
+import { type ApiConfig, type ArchiveWorkerEnv, apiConfig } from '../worker/env';
 
 /** A real config from a minimal local env: loopback HTTP origins are legal there. */
 const config = (): ApiConfig =>

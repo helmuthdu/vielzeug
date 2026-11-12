@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Share the server primitives in src/_server and drop the legacy error-prototype fixup.",
+      "packageName": "@vielzeug/archive",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/archive"
+}

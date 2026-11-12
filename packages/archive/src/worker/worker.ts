@@ -1,20 +1,20 @@
-import type { ArchiveCollection } from '../collection';
-import { ARCHIVE_LIMITS, type ArchiveErrorCode, archiveHealthSchema, PUBLISHER_HEADER } from '../contract';
-import { ArchiveDefinitionError, ArchiveDerivationError } from '../errors';
-import { requireSession, type Session, verifySession } from './auth';
-import { type ApiConfig, type ArchiveWorkerEnv, apiConfig } from './env';
+import type { ArchiveExecutionContext } from '../_server/execution';
 import {
   ApiError,
   type ArchiveDiagnostic,
   badRequest,
-  corsHeaders,
   expiredSessionCookie,
   json,
-  preflight,
   queryParams,
-  requireMutationGuard,
   toErrorResponse,
-} from './http';
+} from '../_server/http';
+import { UUID_RE } from '../_server/uuid';
+import type { ArchiveCollection } from '../collection';
+import { ARCHIVE_LIMITS, type ArchiveErrorCode, archiveHealthSchema, PUBLISHER_HEADER } from '../contract';
+import { ArchiveDefinitionError, ArchiveDerivationError } from '../errors';
+import { corsHeaders, preflight, requireMutationGuard } from './_cors';
+import { requireSession, type Session, verifySession } from './auth';
+import { type ApiConfig, type ArchiveWorkerEnv, apiConfig } from './env';
 import {
   collectionMeta,
   deleteAccountProfile,
@@ -54,10 +54,6 @@ import { SQL } from './sql';
  */
 
 /** The minimal execution-context surface the core uses; the runtime's satisfies it. */
-export interface ArchiveExecutionContext {
-  waitUntil(promise: Promise<unknown>): void;
-}
-
 /** One sanitized request-completion event: ids, codes, route classes and duration only. */
 export interface ArchiveRequestEvent {
   /** 'ok' on success; otherwise the route's `ARCHIVE_ERROR_CODES` value. */
@@ -222,8 +218,6 @@ const matchRoute = (pathname: string): RouteMatch | null => {
 /** The matched route's event label; unmatched paths stay 'unknown', never the raw path. */
 const routeLabel = (pathname: string): string => matchRoute(pathname)?.label ?? 'unknown';
 
-const UUID_PATH = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /** The routes whose second path segment is an entry id: they share the one id rule. */
 const ID_SEGMENT_ROUTES: ReadonlySet<RouteId> = new Set(['entry', 'like', 'report', 'hidden', 'resolveReport']);
 
@@ -325,7 +319,7 @@ const withCors = (response: Response, request: Request, config: ApiConfig): Resp
 function requireExpectedPublisher(request: Request, session: Session, exempt: boolean): void {
   if (exempt || session.publisher === null) return;
   const expected = request.headers.get(PUBLISHER_HEADER);
-  if (expected === null || !UUID_PATH.test(expected)) {
+  if (expected === null || !UUID_RE.test(expected)) {
     throw new ApiError(400, 'bad-request', 'The request is not valid.');
   }
   if (expected !== session.publisher.id) {
@@ -374,7 +368,7 @@ export function createArchiveWorker<E extends ArchiveWorkerEnv>(
 
     // A malformed entry id is the same class of client bug: it answers 400 before
     // any rate-limit spend, session verification or auth state.
-    if (ID_SEGMENT_ROUTES.has(match.id) && !UUID_PATH.test(match.segments[1] ?? '')) throw badRequest();
+    if (ID_SEGMENT_ROUTES.has(match.id) && !UUID_RE.test(match.segments[1] ?? '')) throw badRequest();
 
     // Health sits deliberately outside the rate-limit and session pipelines: uptime
     // probes must never burn the anonymous read budget or couple to authentication,

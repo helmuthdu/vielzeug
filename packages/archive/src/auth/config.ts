@@ -8,8 +8,8 @@ import {
   jwtVerify,
   SignJWT,
 } from 'jose';
-import type { D1Like } from '../worker/env';
-import type { ApiError } from '../worker/http';
+import type { D1Like } from '../_server/d1';
+import type { ApiError } from '../_server/http';
 import { AuthOperationError } from './errors';
 
 /** The send-email binding subset the issuer calls; the runtime's SendEmail satisfies it. */

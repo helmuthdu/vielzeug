@@ -1,6 +1,6 @@
 import { type Schema, s } from '@vielzeug/spell';
+import { badRequest, queryParams } from '../_server/http';
 import { ARCHIVE_LIMITS, isoTimestampSchema, uuidSchema } from '../contract';
-import { badRequest, queryParams } from './http';
 
 /**
  * The package's one pagination idiom: forward-only keyset pages. A cursor is an

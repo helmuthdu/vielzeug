@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, customFetch } from 'jose';
-import { ApiError } from './http';
+import type { D1Like } from '../_server/d1';
+import { ApiError } from '../_server/http';
 
 /**
  * Worker configuration. Every value the worker trusts comes from the validated Env —
@@ -22,20 +23,6 @@ export interface ApiConfig {
 /** The rate-limit binding subset the core calls; the runtime's RateLimit satisfies it. */
 export interface RateLimiterBinding {
   limit(input: { key: string }): Promise<{ success: boolean }>;
-}
-
-/** The D1 statement subset the core binds; null params model nullable columns. */
-export interface D1Statement {
-  all<T>(): Promise<{ results?: T[] }>;
-  bind(...params: (string | number | null)[]): D1Statement;
-  first<T>(): Promise<T | null>;
-  run(): Promise<{ meta?: { changes?: number } }>;
-}
-
-/** The D1 database subset the core uses; a deployment's generated D1Database satisfies it. */
-export interface D1Like {
-  batch(statements: D1Statement[]): Promise<{ meta?: { changes?: number } }[]>;
-  prepare(sql: string): D1Statement;
 }
 
 /**

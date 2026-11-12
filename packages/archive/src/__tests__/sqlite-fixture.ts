@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import type { D1Like, D1Statement } from '../worker/env';
+import type { D1Like, D1Statement } from '../_server/d1';
 
 export function sqliteFixture() {
   const database = new DatabaseSync(':memory:');

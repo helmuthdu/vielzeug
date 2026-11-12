@@ -1,4 +1,4 @@
-import { ApiError } from '../worker/http';
+import { ApiError } from '../_server/http';
 
 export type AuthDiagnostic = {
   readonly kind: 'configuration' | 'database' | 'schema' | 'email' | 'catalog' | 'internal';

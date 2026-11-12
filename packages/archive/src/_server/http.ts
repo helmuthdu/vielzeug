@@ -1,18 +1,12 @@
-import {
-  ARCHIVE_LIMITS,
-  type ArchiveErrorCode,
-  PUBLISHER_HEADER,
-  REQUEST_MARKER_HEADER,
-  SESSION_COOKIE_NAME,
-  sessionCookieValue,
-} from '../contract';
-import type { ApiConfig } from './env';
+import { ARCHIVE_LIMITS, type ArchiveErrorCode, SESSION_COOKIE_NAME, sessionCookieValue } from '../contract';
 
 /**
- * HTTP plumbing shared by every route: the one error shape, bounded body reads, strict
- * query/header guards and the CORS contract. Handlers throw ApiError; the entry point
- * sanitizes — no stack, SQL, body, or PII ever reaches a response. Internal to the
- * Worker: clients parse the wire envelope (`archiveErrorResponseSchema`), never this class.
+ * HTTP plumbing shared by the catalog Worker and the identity issuer: the one error
+ * shape, bounded body reads, and strict query/header/cookie guards. Handlers throw
+ * ApiError; the entry point sanitizes — no stack, SQL, body, or PII ever reaches a
+ * response. Internal to the package: clients parse the wire envelope
+ * (`archiveErrorResponseSchema`), never this class. Origin/CORS posture lives in
+ * `worker/_cors.ts` and `auth/worker.ts` because each surface's policy differs.
  */
 export class ApiError extends Error {
   readonly code: ArchiveErrorCode;
@@ -83,44 +77,6 @@ export function queryParams(url: URL, allowed: readonly string[], repeatable: re
     seen.add(key);
   }
   return params;
-}
-
-/** Exact-origin plus request-marker guard for every mutation: no wildcards, no nulls. */
-export function requireMutationGuard(request: Request, config: ApiConfig): void {
-  const origin = request.headers.get('origin');
-  if (origin === null || !config.allowedOrigins.has(origin)) throw forbidden();
-  if (request.headers.get(REQUEST_MARKER_HEADER) !== '1') throw forbidden();
-}
-
-/** CORS response headers for one already-allowed origin; absent for foreign origins. */
-export function corsHeaders(request: Request, config: ApiConfig): Record<string, string> {
-  const origin = request.headers.get('origin');
-  if (origin === null || !config.allowedOrigins.has(origin)) return {};
-  return {
-    'access-control-allow-credentials': 'true',
-    'access-control-allow-origin': origin,
-    vary: 'Origin',
-  };
-}
-
-/** Answers a preflight for an allowed origin; foreign or missing origins get 403. */
-export function preflight(request: Request, config: ApiConfig): Response {
-  const origin = request.headers.get('origin');
-  if (origin === null || !config.allowedOrigins.has(origin)) {
-    return errorBody(403, 'forbidden', 'That action is not allowed.', crypto.randomUUID());
-  }
-  return new Response(null, {
-    headers: {
-      'access-control-allow-credentials': 'true',
-      // Header names are case-insensitive; the values derive from the contract constants.
-      'access-control-allow-headers': `Content-Type, ${PUBLISHER_HEADER}, ${REQUEST_MARKER_HEADER}`,
-      'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'access-control-allow-origin': origin,
-      'access-control-max-age': '600',
-      vary: 'Origin',
-    },
-    status: 204,
-  });
 }
 
 /** Hard deadline for reading a request body; slow streams fail as 408. */

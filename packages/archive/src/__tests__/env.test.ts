@@ -1,7 +1,8 @@
 import { exportJWK, generateKeyPair, jwtVerify, SignJWT } from 'jose';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { type ArchiveWorkerEnv, apiConfig, type D1Like, type RateLimiterBinding } from '../worker/env';
-import { ApiError } from '../worker/http';
+import type { D1Like } from '../_server/d1';
+import { ApiError } from '../_server/http';
+import { type ArchiveWorkerEnv, apiConfig, type RateLimiterBinding } from '../worker/env';
 
 /** The rate-limit bindings the config validates but never calls here. */
 const limiter: RateLimiterBinding = { limit: async () => ({ success: true }) };

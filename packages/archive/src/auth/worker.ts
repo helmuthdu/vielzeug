@@ -1,5 +1,21 @@
 import { errors, jwtVerify, SignJWT } from 'jose';
 import { sha256Hex } from '../_crypto';
+import type { ArchiveExecutionContext } from '../_server/execution';
+import {
+  ApiError,
+  badRequest,
+  expiredSessionCookie,
+  forbidden,
+  json,
+  noStore,
+  queryParams,
+  readJsonBody,
+  sessionToken,
+  toErrorResponse,
+  unauthenticated,
+} from '../_server/http';
+import { serviceRequest } from '../_server/service';
+import { UUID_RE } from '../_server/uuid';
 import {
   ACCOUNT_HEADER,
   ARCHIVE_OPERATOR_ROLE,
@@ -16,21 +32,6 @@ import {
   sessionCookieValue,
   uuidSchema,
 } from '../contract';
-import { serviceRequest } from '../worker/_service';
-import {
-  ApiError,
-  badRequest,
-  expiredSessionCookie,
-  forbidden,
-  json,
-  noStore,
-  queryParams,
-  readJsonBody,
-  sessionToken,
-  toErrorResponse,
-  unauthenticated,
-} from '../worker/http';
-import type { ArchiveExecutionContext } from '../worker/worker';
 import { confirmationPage, escapeHtml } from './_confirmation';
 import { type AuthConfig, type AuthWorkerEnv, authConfig, isWellFormedEmail } from './config';
 import { type AuthDiagnostic, AuthOperationError } from './errors';
@@ -123,7 +124,6 @@ const matchRoute = (request: Request): keyof typeof ROUTES | undefined =>
 const TOKEN_BYTES = 32;
 // Base64url of TOKEN_BYTES random bytes, unpadded.
 const LINK_TOKEN = /^[A-Za-z0-9_-]{43}$/;
-const PUBLISHER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const SUBJECT_MAX = 256;
 const CLOCK_TOLERANCE_SECONDS = 5;
 
@@ -362,7 +362,7 @@ async function handleErase(request: Request, env: AuthWorkerEnv, config: AuthCon
   });
   const publisher = request.headers.get(PUBLISHER_HEADER);
   if (publisher !== null) {
-    if (!PUBLISHER_ID.test(publisher)) throw badRequest();
+    if (!UUID_RE.test(publisher)) throw badRequest();
     headers.set(PUBLISHER_HEADER, publisher);
   }
   let archived: Response;
