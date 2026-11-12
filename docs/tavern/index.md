@@ -8,12 +8,16 @@ exports:
   [
     hostTavern,
     joinTavern,
-    TavernHost,
-    TavernGuest,
-    TavernHostEvent,
-    TavernGuestEvent,
+    TavernCommand,
     TavernCommands,
-    TavernNotices,
+    TavernSubject,
+    TavernHost,
+    TavernHostOptions,
+    TavernHostEvent,
+    TavernGuest,
+    TavernGuestOptions,
+    TavernGuestEvent,
+    TavernJoinResult,
     TavernError,
     TavernPairingError,
     TavernDisposedError,
@@ -59,12 +63,11 @@ bus.on('subject:updated', () => {
 
 // After: tavern owns the protocol, the validation, the broadcasting.
 const host = hostTavern({
-  commands: { apply: (name, args) => store.apply(name, args), has: (name) => name in store },
-  subjectId: 'doc-1',
-  subjects: {
-    onChanged: (listener) => store.onUpdated('doc-1', listener),
-    onRemoved: (listener) => store.onRemoved('doc-1', listener),
-    snapshot: () => store.read('doc-1'),
+  commands: { rename: (args) => store.rename(docId, args[0] as string) },
+  subject: {
+    onChanged: (listener) => store.onUpdated(docId, listener),
+    onRemoved: (listener) => store.onRemoved(docId, listener),
+    snapshot: () => store.read(docId),
   },
 });
 ```
@@ -109,33 +112,36 @@ yarn add @vielzeug/tavern
 ```ts
 import { hostTavern, joinTavern } from '@vielzeug/tavern';
 
-// Host: pick a subject, wire the command table and snapshot access.
+// Host: wire the command table and snapshot access for the shared subject.
 const host = hostTavern({
   commands: {
-    apply: (name, args) => myStore.apply(name, args),
-    has: (name) => name in myStore,
+    rename: (args) => myStore.rename(docId, args[0] as string),
+    append: (args) => myStore.append(docId, args[0] as string),
   },
-  subjectId: 'doc-1',
-  subjects: {
-    onChanged: (listener) => myStore.onUpdated('doc-1', listener),
-    onRemoved: (listener) => myStore.onRemoved('doc-1', listener),
-    snapshot: () => myStore.read('doc-1'),
+  subject: {
+    onChanged: (listener) => myStore.onUpdated(docId, listener),
+    onRemoved: (listener) => myStore.onRemoved(docId, listener),
+    snapshot: () => myStore.read(docId),
   },
 });
 
-// Produce a single-use invitation; deliver it out-of-band (QR, copy/paste).
-const invitation = await host.createInvitationText();
+// Produce a single-use invitation code; deliver it out-of-band (QR, copy/paste).
+const invitationCode = await host.createInvitationCode();
 
-// Guest: consume the invitation, produce an answer for the host.
-const { answerText, guest } = await joinTavern({
-  invitationText: invitation,
+// Guest: consume the invitation code, produce an answer code for the host.
+const { answerCode, guest, ready } = await joinTavern({
+  invitationCode,
   mount: (snapshot) => parseAndMount(snapshot),
   name: 'Alex',
 });
-await host.acceptAnswerText(answerText);
+await host.acceptAnswerCode(answerCode);
 
-// The guest's commands run through the host's own table.
-guest.sendCommand('doc-1', 'rename', ['Quarterly report']);
+// `ready` settles once the first snapshot arrives and mounts: the mirror is live.
+await ready;
+
+// The guest's commands run through the host's own table; their effect
+// arrives with the next snapshot, so a successful command needs no ack.
+guest.sendCommand('rename', ['Quarterly report']);
 
 // Cleanup: hosting ends for every guest; onEnded fires exactly once on both sides.
 host.dispose();
@@ -147,9 +153,9 @@ guest.dispose();
 <div class="features-grid">
 
 - **`hostTavern`**: host one subject: pairing, protocol validation, command application, coalesced snapshot broadcasts
-- **`joinTavern`**: join as a guest: consume the invitation, produce the answer, mirror the host's snapshots
-- **`TavernCommands`**: the host's command table: the same object the host's own UI calls, so remote actions cannot bypass validation
-- **`TavernNotices`**: consumer-defined notice serialization: catalog keys cross the wire, each client translates locally
+- **`joinTavern`**: join as a guest: consume the invitation code, produce the answer code, mirror the host's snapshots
+- **`TavernCommands`**: the host's command table as a plain record of handlers: the same functions the host's own UI calls, so remote actions cannot bypass validation
+- **`ready` promise**: the join lifecycle is awaitable: `ready` resolves with the mounted mirror or rejects with why the session never came up
 - **Coalesced snapshots**: bursts of local changes ship one snapshot per microtask, not one per change
 - **`onEnded` fires exactly once**: on both handles: channel drops, subject removal, and explicit disposal share a single idempotent cleanup path
 - **Typed errors**: `TavernPairingError` covers every unusable pasted code with the mesh failure chained as `cause`

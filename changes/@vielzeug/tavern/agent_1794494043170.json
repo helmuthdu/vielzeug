@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Redesign the session API around one subject per session: `subjectId` routing removed (sendCommand(name, args)), command table is a plain record with read-only sessions supported, notice seam split into host `serializeNotice` and guest `onNotice`, `onJoined`/`onFailed` replaced by an awaitable `ready` promise, pairing vocabulary renamed to codes, and both tap unions gained a `dispose` event.",
+      "packageName": "@vielzeug/tavern",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tavern"
+}

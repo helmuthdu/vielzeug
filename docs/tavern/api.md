@@ -10,14 +10,14 @@ description: Public API of @vielzeug/tavern.
 | Symbol                | Purpose                                                                      | Execution    | Common gotcha                                                                      |
 | --------------------- | ---------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------- |
 | `hostTavern()`        | Host a subject: pairing, command validation, snapshot broadcast              | Sync factory | Disposing ends hosting for every guest                                             |
-| `joinTavern()`        | Join a session: consume invitation, produce answer                           | Async        | The session lives only after the host accepts and the first snapshot mounts        |
+| `joinTavern()`        | Join a session: consume invitation code, produce answer code                 | Async        | The session lives only after the host accepts and the first snapshot mounts        |
 | `TavernHost`          | Host handle: invitation, answer acceptance, kick, notice relay, presence tap | N/A          | `dispose()` is idempotent; control-plane methods throw `TavernDisposedError` after |
 | `TavernGuest`         | Guest handle: command forwarding, rejection tap, disposal                    | N/A          | `dispose()` fires `onEnded` exactly once                                           |
-| `TavernHostEvent`     | Host observability union for `tap()`: presence and warnings                  | N/A          | Lifecycle transitions are callbacks, not events                                    |
-| `TavernGuestEvent`    | Guest observability union for `tap()`: rejections and warnings               | N/A          | `onJoined`/`onFailed` fire before the handle exists, so they stay callbacks        |
-| `TavernCommands`      | The host's command table                                                     | N/A          | Unknown names and foreign subject ids reject without applying                      |
-| `TavernSubjects`      | Snapshot reading, change and removal subscriptions                           | N/A          | `snapshot` returning `null` skips the broadcast                                    |
-| `TavernNotices`       | Wire serialization of local notices                                          | N/A          | `toWire` returning `null` skips that notice                                        |
+| `TavernJoinResult`    | Join outcome: answer code, guest handle, and the `ready` promise             | N/A          | A `ready` nobody awaits never surfaces as an unhandled rejection                   |
+| `TavernHostEvent`     | Host observability union for `tap()`: presence, warnings, dispose            | N/A          | Lifecycle transitions are `onEnded`, not events                                    |
+| `TavernGuestEvent`    | Guest observability union for `tap()`: rejections, warnings, dispose         | N/A          | The opening transition is `ready`, not an event                                    |
+| `TavernCommands`      | The host's command table: a record of handlers keyed by command name         | N/A          | A name the record does not hold rejects without applying                           |
+| `TavernSubject`       | Snapshot reading, change and removal subscriptions                           | N/A          | `snapshot` returning `null` skips the broadcast                                    |
 | `TavernError`         | Base error for every Tavern failure                                          | N/A          | N/A                                                                                |
 | `TavernPairingError`  | The consumer pasted the wrong kind of pairing code                           | N/A          | N/A                                                                                |
 | `TavernDisposedError` | A stopped host or ended guest was used again                                 | N/A          | N/A                                                                                |
@@ -28,20 +28,21 @@ description: Public API of @vielzeug/tavern.
 | ------------------ | -------------------------- |
 | `@vielzeug/tavern` | Complete public Tavern API |
 
+The `MeshPeer` type carried by host events and the `peers` getter is re-exported here, so a single import types everything.
+
 ## `hostTavern(options)`
 
-Creates a mesh host for one subject. Guest commands are validated against the wire shape (Tavern's own protocol), checked against `commands.has` and the `subjectId`, then applied through `commands.apply`: throwing rejects the guest with the error's message. Local changes (via `subjects.onChanged`) re-broadcast `subjects.snapshot()`: coalesced on a microtask; `subjects.onRemoved` ends hosting. Presence and transport warnings are reported through `tap()` as `TavernHostEvent`s, and the live peer list is the `peers` getter; hosting ending: from removal or `dispose()`: fires `onEnded` exactly once. `relayNotice` serializes through `notices.toWire` and broadcasts to every guest.
+Creates a mesh host for one subject. Guest commands are validated against the wire shape (Tavern's own protocol) and checked against `commands`: a name the table does not hold rejects without applying, and a handler that throws rejects the guest with the error's message. Local changes (via `subject.onChanged`) re-broadcast `subject.snapshot()`: coalesced on a microtask; `subject.onRemoved` ends hosting. Presence and transport warnings are reported through `tap()` as `TavernHostEvent`s, and the live peer list is the `peers` getter; hosting ending: from removal or `dispose()`: fires `onEnded` exactly once. `relayNotice` serializes through `serializeNotice` and broadcasts to every guest.
 
 **Returns:** `TavernHost`: the host handle.
 
-| Option      | Type             | Description                                                                   |
-| ----------- | ---------------- | ----------------------------------------------------------------------------- |
-| `commands`  | `TavernCommands` | The host's command table: the same object the host's own UI calls             |
-| `notices?`  | `TavernNotices`  | Notice relay; omit to disable notice broadcasting                             |
-| `onEnded?`  | `() => void`     | Hosting ended: the subject was removed or `dispose()` ran. Fires exactly once |
-| `rtc?`      | `MeshRtcFactory` | WebRTC factory: the injection point for tests and non-browser runtimes        |
-| `subjectId` | `string`         | The id of the hosted subject: guest commands targeting anything else reject   |
-| `subjects`  | `TavernSubjects` | Snapshot reading, change and removal subscriptions                            |
+| Option             | Type                          | Description                                                                   |
+| ------------------ | ----------------------------- | ----------------------------------------------------------------------------- |
+| `commands?`        | `TavernCommands`              | The command table guest actions run through; omit for a read-only session     |
+| `onEnded?`         | `() => void`                  | Hosting ended: the subject was removed or `dispose()` ran. Fires exactly once |
+| `rtc?`             | `MeshRtcFactory`              | WebRTC factory: the injection point for tests and non-browser runtimes        |
+| `serializeNotice?` | `(notice) => unknown \| null` | Serializes a local notice for `relayNotice`; null skips that notice           |
+| `subject`          | `TavernSubject`               | Snapshot reading, change and removal subscriptions for the hosted subject     |
 
 **Example**
 
@@ -50,187 +51,131 @@ import { hostTavern } from '@vielzeug/tavern';
 
 const host = hostTavern({
   commands: {
-    apply: (name, args) => myStore.apply(name, args),
-    has: (name) => name in myStore,
+    rename: (args) => myStore.rename(docId, args[0] as string),
+    append: (args) => myStore.append(docId, args[0] as string),
   },
-  subjectId: 'doc-1',
-  subjects: {
-    onChanged: (listener) => myStore.onUpdated('doc-1', listener),
-    onRemoved: (listener) => myStore.onRemoved('doc-1', listener),
-    snapshot: () => myStore.read('doc-1'),
+  subject: {
+    onChanged: (listener) => myStore.onUpdated(docId, listener),
+    onRemoved: (listener) => myStore.onRemoved(docId, listener),
+    snapshot: () => myStore.read(docId),
   },
 });
 ```
 
 ### `TavernHost` members
 
-| Member                   | Returns               | Description                                                                                                                                                                                                                                            |
-| ------------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `acceptAnswerText(text)` | `Promise<MeshPeer>`   | Consumes a guest's answer code; resolves with the peer once the channel opens. Throws `TavernPairingError` for any unusable code: wrong kind, malformed, expired: with the underlying error as `cause`. Throws `TavernDisposedError` after `dispose()` |
-| `createInvitationText()` | `Promise<string>`     | Produces a single-use invitation code, QR-compact when the environment allows. Throws `TavernDisposedError` after `dispose()`                                                                                                                          |
-| `disposalSignal`         | `AbortSignal`         | Aborted when hosting ends                                                                                                                                                                                                                              |
-| `dispose()`              | `void`                | Stops hosting: closes every channel and detaches all subscriptions. Idempotent; fires `onEnded` exactly once                                                                                                                                           |
-| `disposed`               | `boolean`             | Whether hosting has ended                                                                                                                                                                                                                              |
-| `kick(peerId)`           | `void`                | Disconnects a peer; the guest observes a disconnect. Throws `TavernDisposedError` after `dispose()`                                                                                                                                                    |
-| `peers`                  | `readonly MeshPeer[]` | The guests currently connected; current inside a `peer-joined`/`peer-left` tap event                                                                                                                                                                   |
-| `relayNotice(notice)`    | `void`                | Relays one local notice to every guest; the serializer decides what crosses. A notice relayed after `dispose()` is dropped: ephemeral UI state with no audience left                                                                                   |
-| `tap(handler, options?)` | `() => void`          | Observes `TavernHostEvent`s; returns an unsubscribe function                                                                                                                                                                                           |
-| `[Symbol.dispose]()`     | `void`                | Delegates to `dispose()`. Enables `using` declarations                                                                                                                                                                                                 |
-
----
+| Member                   | Type                             | Behavior                                                                                 |
+| ------------------------ | -------------------------------- | ---------------------------------------------------------------------------------------- |
+| `acceptAnswerCode()`     | `(code) => Promise<MeshPeer>`    | Consumes a guest's answer code; resolves with the peer once the channel is open          |
+| `createInvitationCode()` | `() => Promise<string>`          | Produces a single-use invitation code, QR-compact when the environment allows            |
+| `disposalSignal`         | `AbortSignal`                    | Aborted when hosting ends                                                                |
+| `dispose()`              | `() => void`                     | Stops hosting: closes every channel and detaches all subscriptions; idempotent           |
+| `disposed`               | `boolean`                        | Whether hosting has ended                                                                |
+| `kick()`                 | `(peerId) => void`               | Disconnects one guest; the guest observes it and fires `onEnded`                         |
+| `peers`                  | `readonly MeshPeer[]`            | The guests currently connected                                                           |
+| `relayNotice()`          | `(notice) => void`               | Broadcasts `serializeNotice(notice)` to every guest. Dropped after hosting ended         |
+| `tap()`                  | `(handler, opts?) => () => void` | Subscribes to `TavernHostEvent`s; handler errors are swallowed; detaches on abort or end |
+| `[Symbol.dispose]()`     | `() => void`                     | Delegates to `dispose()`; enables `using` declarations                                   |
 
 ## `joinTavern(options)`
 
-Consumes an invitation and returns `{ answerText, guest }`. The guest mounts snapshots through `mount(snapshot)`: the first successful mount fires `onJoined`; wire notices are relayed through `notices.fromWire`; host rejections and transport warnings arrive through `tap()` as `TavernGuestEvent`s. Channel failures before the first mount fire `onFailed` (once); afterwards, a disconnect or `guest.dispose()` fires `onEnded` with the mounted subject exactly once. `guest.sendCommand` forwards a command to the host with the subject id the consumer routes by. An unusable invitation: wrong kind, malformed, expired: rejects with `TavernPairingError` and leaves no node or subscriptions behind.
+Joins a session as a guest: decodes the invitation code, opens the mesh guest, and returns the answer code to show back. Snapshots mount through `mount` as they arrive; the first non-null mount settles `ready`. The session ends exactly once: from the channel dropping (`TavernError`), an early exit before mounting (`TavernDisposedError`), or disposal.
 
-**Returns:** `Promise<{ answerText: string; guest: TavernGuest }>`: the answer code to show back and the guest handle.
+**Returns:** `Promise<TavernJoinResult<Mounted>>`: the answer code, the guest handle, and the `ready` promise. Rejects with `TavernPairingError` when the invitation code cannot be used.
 
-| Option           | Type                                     | Description                                                                 |
-| ---------------- | ---------------------------------------- | --------------------------------------------------------------------------- |
-| `invitationText` | `string`                                 | The invitation code the host produced                                       |
-| `mount`          | `(snapshot: unknown) => Mounted \| null` | Mounts a received snapshot; the mounted value, or `null` to ignore          |
-| `name`           | `string`                                 | The guest's display name on the channel                                     |
-| `notices?`       | `TavernNotices`                          | Notice relay; wire notices re-emit locally through `fromWire`               |
-| `onEnded?`       | `(subject: Mounted) => void`             | The channel ended after joining; the mounted value is passed for unmounting |
-| `onFailed?`      | `(reason: string) => void`               | The host never accepted the answer in time                                  |
-| `onJoined?`      | `(subject: Mounted) => void`             | The mounted value once the first snapshot arrives                           |
-| `rtc?`           | `MeshRtcFactory`                         | WebRTC factory: the injection point for tests and non-browser runtimes      |
+| Option           | Type                            | Description                                                                             |
+| ---------------- | ------------------------------- | --------------------------------------------------------------------------------------- |
+| `invitationCode` | `string`                        | The invitation code the host produced                                                   |
+| `mount`          | `(snapshot) => Mounted \| null` | Turns a received snapshot into the mounted mirror; null ignores it. Called per snapshot |
+| `name`           | `string`                        | The guest's display name on the channel                                                 |
+| `onEnded?`       | `(subject: Mounted) => void`    | The channel ended after joining; receives the mounted subject for unmounting            |
+| `onNotice?`      | `(wire: unknown) => void`       | Receives a notice the host relayed: re-emit it in the local UI                          |
+| `rtc?`           | `MeshRtcFactory`                | WebRTC factory: the injection point for tests and non-browser runtimes                  |
 
 **Example**
 
 ```ts
 import { joinTavern } from '@vielzeug/tavern';
 
-const { answerText, guest } = await joinTavern({
-  invitationText: invitation,
-  mount: (snapshot) => sanitizeAndMount(snapshot),
+const { answerCode, guest, ready } = await joinTavern({
+  invitationCode,
+  mount: (snapshot) => mySchema.parse(snapshot),
   name: 'Alex',
-  onEnded: (subject) => unmountMirror(subject.id),
-  onJoined: (subject) => mountMirror(subject),
+  onEnded: (subject) => unmountMirror(subject),
 });
-guest.tap((event) => {
-  if (event.type === 'rejected') console.warn(event.commandId, event.message);
-});
-
-guest.sendCommand('doc-1', 'rename', ['New name']);
-guest.dispose();
+await host.acceptAnswerCode(answerCode);
+await ready; // the mirror is live
 ```
+
+### `TavernJoinResult<Mounted>` members
+
+| Member       | Type               | Behavior                                                                                         |
+| ------------ | ------------------ | ------------------------------------------------------------------------------------------------ |
+| `answerCode` | `string`           | The answer code to show back to the host, QR-compact when the environment allows                 |
+| `guest`      | `TavernGuest`      | The guest handle                                                                                 |
+| `ready`      | `Promise<Mounted>` | Resolves with the mounted subject on the first mount; rejects with why the session never came up |
 
 ### `TavernGuest` members
 
-| Member                               | Returns       | Description                                                                           |
-| ------------------------------------ | ------------- | ------------------------------------------------------------------------------------- |
-| `disposalSignal`                     | `AbortSignal` | Aborted when the session ends                                                         |
-| `dispose()`                          | `void`        | Leaves the session and drops the channel. Fires `onEnded` exactly once                |
-| `disposed`                           | `boolean`     | Whether the session has ended: the channel dropped or `dispose()` ran                 |
-| `sendCommand(subjectId, name, args)` | `void`        | Forwards a command to the host. Throws `TavernDisposedError` if the session has ended |
-| `tap(handler, options?)`             | `() => void`  | Observes `TavernGuestEvent`s; returns an unsubscribe function                         |
-| `[Symbol.dispose]()`                 | `void`        | Delegates to `dispose()`. Enables `using` declarations                                |
-
----
+| Member               | Type                             | Behavior                                                                                     |
+| -------------------- | -------------------------------- | -------------------------------------------------------------------------------------------- |
+| `disposalSignal`     | `AbortSignal`                    | Aborted when the session ends                                                                |
+| `dispose()`          | `() => void`                     | Leaves the session; `onEnded` fires exactly once                                             |
+| `disposed`           | `boolean`                        | Whether the session has ended                                                                |
+| `sendCommand()`      | `(name, args?) => void`          | Forwards a command to the host's table; throws `TavernDisposedError` after the session ended |
+| `tap()`              | `(handler, opts?) => () => void` | Subscribes to `TavernGuestEvent`s; handler errors are swallowed; detaches on abort or end    |
+| `[Symbol.dispose]()` | `() => void`                     | Delegates to `dispose()`; enables `using` declarations                                       |
 
 ## Types
 
+### `TavernCommands`
+
 ```ts
-/** What the host can do on behalf of a guest. */
-interface TavernCommands {
-  /** Whether a command name is known; unknown names reject without applying. */
-  has(name: string): boolean;
-  /** Applies the command; throwing rejects the guest with the error's message. */
-  apply(name: string, args: readonly unknown[]): unknown;
-}
+type TavernCommand = (args: readonly unknown[]) => void;
+type TavernCommands = Record<string, TavernCommand>;
+```
 
-/**
- * How the host reads and watches the subject it is sharing. All three close over
- * whatever subject state the consumer owns: the host routes by `subjectId`,
- * not by a subject object.
- */
-interface TavernSubjects {
-  /** Reads the snapshot to broadcast; null while the subject is missing. */
-  snapshot(): unknown;
-  /** Subscribes to local changes of the hosted subject: the re-broadcast trigger. */
+The host's command table, keyed by name: the same functions the host's own UI calls, so guest actions follow exactly the same validation path as local ones. A missing key rejects the guest with `The host has no command named "..."`; a throwing handler rejects with its message. Omit the table entirely for a read-only session.
+
+### `TavernSubject`
+
+```ts
+interface TavernSubject {
   onChanged(listener: () => void): () => void;
-  /** Subscribes to the hosted subject's removal: hosting ends when it fires. */
   onRemoved(listener: () => void): () => void;
-}
-
-/**
- * Notice relay between host and guests. Notices cross the wire as opaque
- * values: each client translates locally.
- */
-interface TavernNotices {
-  /** Serializes a local notice for the wire; null skips this one. */
-  toWire(notice: unknown): unknown | null;
-  /** Re-emits a received wire notice locally. */
-  fromWire(wire: unknown): void;
-}
-
-/** Notable host moments reported through `TavernHost.tap`. */
-type TavernHostEvent =
-  | { readonly peer: MeshPeer; readonly type: 'peer-joined' }
-  | { readonly peer: MeshPeer; readonly reason?: string; readonly type: 'peer-left' }
-  | { readonly error: unknown; readonly message: string; readonly type: 'warning' };
-
-/** Notable guest moments reported through `TavernGuest.tap`. */
-type TavernGuestEvent =
-  | { readonly commandId: string; readonly message: string; readonly type: 'rejected' }
-  | { readonly error: unknown; readonly message: string; readonly type: 'warning' };
-
-/** Options for `hostTavern`. */
-interface TavernHostOptions {
-  commands: TavernCommands;
-  notices?: TavernNotices;
-  /** Hosting ended: the subject was removed or `dispose()` ran. Fires exactly once. */
-  onEnded?(): void;
-  rtc?: MeshRtcFactory;
-  subjectId: string;
-  subjects: TavernSubjects;
-}
-
-/** Options for `joinTavern`. */
-interface TavernGuestOptions<Mounted> {
-  invitationText: string;
-  /** Mounts a received snapshot; the mounted value, or null to ignore. */
-  mount(snapshot: unknown): Mounted | null;
-  name: string;
-  notices?: TavernNotices;
-  onEnded?(subject: Mounted): void;
-  onFailed?(reason: string): void;
-  onJoined?(subject: Mounted): void;
-  rtc?: MeshRtcFactory;
-}
-
-/** Host handle returned by `hostTavern`. */
-interface TavernHost {
-  acceptAnswerText(text: string): Promise<MeshPeer>;
-  createInvitationText(): Promise<string>;
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
-  kick(peerId: string): void;
-  readonly peers: readonly MeshPeer[];
-  relayNotice(notice: unknown): void;
-  tap(handler: (event: TavernHostEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
-  [Symbol.dispose](): void;
-}
-
-/** Guest handle returned by `joinTavern`. */
-interface TavernGuest {
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
-  sendCommand(subjectId: string, name: string, args: readonly unknown[]): void;
-  tap(handler: (event: TavernGuestEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
-  [Symbol.dispose](): void;
+  snapshot(): unknown;
 }
 ```
 
+How the host reads and watches the single subject it shares. `onChanged` is the re-broadcast trigger; `onRemoved` ends hosting; `snapshot()` returns the JSON-serializable state to broadcast, or `null` while the subject is missing (the broadcast skips). A throwing `snapshot` is reported as a `warning` tap event instead of crashing the host.
+
+### `TavernHostEvent`
+
+| Variant                                | Fires when                                                 |
+| -------------------------------------- | ---------------------------------------------------------- |
+| `{ type: 'peer-joined'; peer }`        | A guest's channel opened                                   |
+| `{ type: 'peer-left'; peer; reason? }` | A guest's channel closed                                   |
+| `{ type: 'warning'; message; error }`  | A transport error or a throwing snapshot read was survived |
+| `{ type: 'dispose' }`                  | Hosting ended and the tap stream is about to clear         |
+
+### `TavernGuestEvent`
+
+| Variant                                    | Fires when                                             |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `{ type: 'rejected'; commandId; message }` | The host rejected a forwarded command                  |
+| `{ type: 'warning'; message; error }`      | A transport error was survived                         |
+| `{ type: 'dispose' }`                      | The session ended and the tap stream is about to clear |
+
 ## Errors
 
-| Error                 | Triggered by                                                                                                                                               | Notable properties |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `TavernError`         | Base class for every Tavern failure: catch this to handle all Tavern errors in one branch                                                                  | N/A                |
-| `TavernPairingError`  | A pairing code the consumer pasted could not be used: wrong kind, malformed, expired, or refused by the host. The mesh-level failure is chained as `cause` | `cause`            |
-| `TavernDisposedError` | A stopped host (`kick`, `createInvitationText`, `acceptAnswerText`) or an ended guest (`sendCommand`) was used again                                       | N/A                |
+### `TavernError`
 
-`TavernPairingError` and `TavernDisposedError` extend `TavernError`. Every user-input pairing mistake: a garbage code, the wrong code kind, an expired invitation, a refused answer: surfaces as `TavernPairingError` from `acceptAnswerText` and `joinTavern`; transport-level failures (timeouts, connection errors) propagate unchanged. Post-dispose use fails loudly with `TavernDisposedError`, mirroring mesh inside the Tavern error hierarchy.
+Base class for every Tavern failure; `instanceof TavernError` narrows the whole hierarchy. Channel failures before the first snapshot reject `ready` with this class.
+
+### `TavernPairingError`
+
+The code the consumer pasted could not be used: garbage, the wrong kind, an expired invitation, or an answer the host refuses. The underlying `@vielzeug/mesh` failure is chained as `cause`.
+
+### `TavernDisposedError`
+
+A stopped host or ended guest was used again: control-plane calls throw it so leaked handles surface, and it rejects `ready` when the guest leaves before the first snapshot.

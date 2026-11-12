@@ -16,27 +16,24 @@ yarn add @vielzeug/tavern
 import { hostTavern, joinTavern } from '@vielzeug/tavern';
 
 const host = hostTavern({
-  commands: {
-    apply: (name, args) => myStore.apply(name, args),
-    has: (name) => name in myStore,
-  },
-  subjectId: 'doc-1',
-  subjects: {
-    onChanged: (listener) => myStore.onUpdated('doc-1', listener),
-    onRemoved: (listener) => myStore.onRemoved('doc-1', listener),
-    snapshot: () => myStore.read('doc-1'),
+  commands: { rename: (args) => myStore.rename(docId, args[0] as string) },
+  subject: {
+    onChanged: (listener) => myStore.onUpdated(docId, listener),
+    onRemoved: (listener) => myStore.onRemoved(docId, listener),
+    snapshot: () => myStore.read(docId),
   },
 });
 
-const invitation = await host.createInvitationText();
-const { answerText, guest } = await joinTavern({
-  invitationText: invitation,
+const invitationCode = await host.createInvitationCode();
+const { answerCode, guest, ready } = await joinTavern({
+  invitationCode,
   mount: (snapshot) => parseAndMount(snapshot),
   name: 'Alex',
 });
-await host.acceptAnswerText(answerText);
+await host.acceptAnswerCode(answerCode);
+await ready; // the mirror is live
 
-guest.sendCommand('doc-1', 'rename', ['Quarterly report']);
+guest.sendCommand('rename', ['Quarterly report']);
 ```
 
 ## Documentation
