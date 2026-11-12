@@ -7,30 +7,41 @@ description: Snapshot, catalog, MCP server, and local HTTP host APIs.
 
 ## API Overview
 
-| Symbol                      | Purpose                                            | Execution mode | Common gotcha                        |
-| --------------------------- | -------------------------------------------------- | -------------- | ------------------------------------ |
-| `loadSnapshot`              | Read validated snapshot metadata                   | Sync           | Content chunks load lazily           |
-| `SnapshotCatalog`           | Query package corpus                               | Sync           | Construct from loaded snapshot       |
-| `createMcpServer`           | MCP adapter factory (generic tools)                | Sync           | Requires catalog and version         |
-| `createMcpServerWithRefine` | MCP adapter factory (all package and Refine tools) | Sync           | Import from `@vielzeug/codex/refine` |
-| `startHttpHost`             | Loopback Streamable HTTP host                      | Async          | HTTP remains local-only              |
+| Symbol             | Purpose                                    | Execution mode | Common gotcha                         |
+| ------------------ | ------------------------------------------ | -------------- | ------------------------------------- |
+| `loadSnapshot`     | Read validated snapshot metadata           | Sync           | Content chunks load lazily            |
+| `validateSnapshot` | Full artifact verification (all chunks)    | Sync           | Generation/CI use, not normal startup |
+| `SnapshotCatalog`  | Query package corpus and Refine components | Sync           | Construct from loaded snapshot        |
+| `createMcpServer`  | MCP adapter factory                        | Sync           | Requires catalog and version          |
+| `startHttpHost`    | Loopback Streamable HTTP host              | Async          | HTTP remains local-only               |
 
-## Package Entry Points
+## Package Entry Point
 
-| Import                   | Purpose                                                                 |
-| ------------------------ | ----------------------------------------------------------------------- |
-| `@vielzeug/codex`        | `Catalog`, `SnapshotCatalog`, `loadSnapshot`, MCP server, and HTTP host |
-| `@vielzeug/codex/refine` | Refine catalog and MCP server with component tools                      |
+`@vielzeug/codex` is the single entry point: catalog (package docs plus bundled Refine component
+metadata), snapshot loader, errors, the MCP server factory, the loopback HTTP host, and a
+re-export of `StdioServerTransport`. There is one `Catalog` surface and one server factory.
 
 ## Snapshot
 
 ### `loadSnapshot`
 
 ```ts
-loadSnapshot(snapshotRoot?: string, options?: { validateContents?: boolean }): LoadedSnapshot;
+loadSnapshot(directory?: string, options?: { validateContents?: boolean }): LoadedSnapshot;
 ```
 
-Loads catalog/search metadata and Refine metadata. `snapshotRoot` defaults to bundled `data/`. Package content chunks stay lazy unless `validateContents: true`, which validates every package content chunk during loading.
+Loads one snapshot directory: `manifest.json` plus `catalog.json` (eager metadata), an optional
+`refine.json`, and lazily read `packages/<slug>.json` content chunks. `directory` defaults to the
+bundled `data/`. The snapshot layout is fixed by code; the manifest carries `{ schemaVersion, version }`
+only. `validateContents: true` turns the lazy chunks into an eager cross-checked read.
+
+### `validateSnapshot`
+
+```ts
+validateSnapshot(snapshotRoot?: string): void;
+```
+
+Runs `loadSnapshot` with `validateContents: true`. Used by snapshot generation, integration tests,
+and artifact verification; normal startup keeps package chunks lazy.
 
 ### `SnapshotCatalog`
 
@@ -38,7 +49,11 @@ Loads catalog/search metadata and Refine metadata. `snapshotRoot` defaults to bu
 new SnapshotCatalog(snapshot: LoadedSnapshot)
 ```
 
-Provides generic package lookup, docs/source/example/signature access, and deterministic search. Use `SnapshotRefineCatalog` from `/refine` when component methods are needed.
+Provides package lookup, docs/source/example/signature access, deterministic search, and the
+Refine component lookup (`listComponents()`, `getComponent(tagName)`). Component methods return an
+empty list (and `NOT_FOUND` per tag) when the snapshot carries no Refine metadata. `search()`
+reads content chunks through the same lazy cache as the content getters; there is no separate
+search index.
 
 ---
 
@@ -50,27 +65,10 @@ Provides generic package lookup, docs/source/example/signature access, and deter
 createMcpServer(catalog: Catalog, options: { version: string; debug?: boolean }): Server;
 ```
 
-Registers generic package tools over `Catalog`. Refine tools are opt-in through `/refine`. The root also re-exports `StdioServerTransport` for connecting the server without a second package import.
-
-## Refine tools (`@vielzeug/codex/refine`)
-
-### `createMcpServerWithRefine`
-
-```ts
-createMcpServerWithRefine(catalog: RefineCatalog, options: { version: string; debug?: boolean }): Server;
-```
-
-Creates a server with the general Vielzeug package catalog tools and the additional `refine-*` component tools.
-
-### `SnapshotRefineCatalog`
-
-```ts
-new SnapshotRefineCatalog(snapshot: LoadedSnapshot)
-```
-
-Extends `SnapshotCatalog` with `getComponent()` and `listComponents()`.
-
-Component declarations and their nested data use readonly TypeScript types.
+Registers the generic package tools over `Catalog`, plus the `refine-*` component tools when the
+catalog actually carries Refine metadata; tools that could only answer "unavailable" are never
+offered. The root also re-exports `StdioServerTransport` for connecting the server without a
+second package import.
 
 ## HTTP
 
@@ -80,34 +78,23 @@ Component declarations and their nested data use readonly TypeScript types.
 startHttpHost(options: HttpHostOptions): Promise<HttpHost>;
 ```
 
-Starts Streamable HTTP on `127.0.0.1` by default. Runtime validation accepts only `127.0.0.1` or `::1`; every request must also pass localhost Host and Origin checks. `createServer` must return a fresh, unconnected server with its request handlers registered.
+Starts Streamable HTTP on `127.0.0.1` by default. Runtime validation accepts only `127.0.0.1` or
+`::1`; every request must also pass localhost Host and Origin checks. `createServer` must return a
+fresh, unconnected server with its request handlers registered.
 
 ## Types
 
 ```ts
-interface SnapshotPointer {
-  readonly directory: string;
-}
-
 interface SnapshotManifest {
-  readonly catalog: 'catalog.json';
-  readonly contentDirectory: 'packages';
-  readonly refine: 'refine.json' | null;
   readonly schemaVersion: typeof SNAPSHOT_SCHEMA_VERSION;
-  readonly search: 'search.json';
   readonly version: string;
 }
-```
 
-Dev snapshots use `SnapshotPointer` (via `current.json`); published snapshots are static directories.
-
-```ts
 interface LoadedSnapshot {
   readonly catalog: CatalogFile;
   readonly contentDirectory: string;
   readonly manifest: SnapshotManifest;
   readonly refineComponents: readonly CemDeclaration[];
-  readonly search: readonly SearchRecord[];
 }
 ```
 
@@ -115,19 +102,6 @@ interface LoadedSnapshot {
 interface CatalogFile {
   readonly packages: readonly PackageMeta[];
   readonly version: string;
-}
-
-interface SearchRecord {
-  readonly category: string;
-  readonly description: string;
-  readonly docs: Readonly<Partial<Record<DocPage, string>>>;
-  readonly examples: readonly { readonly id: string; readonly text: string }[];
-  readonly exports: string;
-  readonly keywords: string;
-  readonly name: string;
-  readonly related: string;
-  readonly slug: string;
-  readonly source: string | null;
 }
 
 interface PackageMeta {
@@ -153,19 +127,16 @@ interface Example {
 
 ```ts
 interface Catalog {
+  getComponent(tagName: string): CemDeclaration;
   getDocs(slug: string, page: DocPage): string;
   getExample(slug: string, exampleId: string): Example;
   getPackage(slug: string): PackageMeta;
   getSource(slug: string): string;
   getTypeSignature(slug: string, symbol: string): string;
+  listComponents(): readonly CemDeclaration[];
   listExamples(slug: string): readonly Pick<Example, 'id' | 'name'>[];
   listPackages(): readonly PackageMeta[];
   search(query: string): readonly SearchHit[];
-}
-
-interface RefineCatalog extends Catalog {
-  getComponent(tagName: string): CemDeclaration;
-  listComponents(): readonly CemDeclaration[];
 }
 
 interface SearchHit {
@@ -181,7 +152,6 @@ Catalog exposes semantic reads. It does not expose its cached content chunks.
 
 ```ts
 interface HttpHost {
-  readonly disposalSignal: AbortSignal;
   dispose(): Promise<void>;
   readonly disposed: boolean;
   readonly host: string;
@@ -201,10 +171,8 @@ interface HttpHostOptions {
 const DOC_PAGES = ['index', 'api', 'usage', 'examples'] as const;
 type DocPage = (typeof DOC_PAGES)[number];
 
-const SNAPSHOT_SCHEMA_VERSION = 1 as const;
+const SNAPSHOT_SCHEMA_VERSION = 2 as const;
 ```
-
-CEM types and `RefineCatalog` are exported from `/refine`.
 
 ```ts
 interface CemDeclaration {
@@ -259,6 +227,11 @@ interface CemSlot {
 }
 ```
 
+Component declarations and their nested data use readonly TypeScript types. The loader pins only
+the contract its consumers depend on: declarations form an array with valid, unique custom-element
+`tagName`s.
+
 ## Errors
 
-`CodexError` signals malformed snapshots or host failures. `CatalogError` adds `INVALID_ARG`, `NOT_FOUND`, or `UNAVAILABLE` for expected tool failures.
+`CodexError` signals malformed snapshots or host failures. `CatalogError` adds `INVALID_ARG`,
+`NOT_FOUND`, or `UNAVAILABLE` for expected tool failures.

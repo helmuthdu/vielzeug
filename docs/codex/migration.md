@@ -4,7 +4,37 @@ title: Codex Migration
 
 # Codex Migration
 
+## Breaking Changes Since 26.11.11
+
+One entry point, one catalog, one directory layout.
+
+`@vielzeug/codex/refine` is removed and merged into the root entry. `SnapshotCatalog` always exposes `getComponent()` and `listComponents()` (empty without Refine metadata), and `createMcpServer()` registers the `refine-*` tools exactly when the snapshot carries component metadata:
+
+```ts
+import { SnapshotCatalog, StdioServerTransport, createMcpServer, loadSnapshot } from '@vielzeug/codex';
+
+const snapshot = loadSnapshot();
+const server = createMcpServer(new SnapshotCatalog(snapshot), { version: snapshot.manifest.version });
+await server.connect(new StdioServerTransport());
+```
+
+`createMcpServerWithRefine`, `SnapshotRefineCatalog`, and the `RefineCatalog` type are gone; the CEM types are exported from the root entry. MCP behavior is unchanged for CLI and HTTP clients.
+
+`HttpHost.disposalSignal` is removed. Observe `disposed` or await `dispose()`/`Symbol.asyncDispose`.
+
+The snapshot format is now schema version 2 and always one flat directory passed directly to `loadSnapshot()` or `--snapshot`:
+
+- `manifest.json` carries `{ schemaVersion, version }` only; layout filenames are loader constants.
+- `search.json` is gone. `search-packages` reads the same lazily cached content chunks as the content getters, so the bundle no longer ships a second normalized copy of every doc page.
+- The `current.json` pointer and `.dev/snapshots` generations are gone; local dev republishes `.dev/` in place between server restarts.
+
+`loadSnapshot()`, `validateSnapshot()`, and every MCP tool keep their behavior.
+
 ## Codex 26.11: Catalog and server construction
+
+> [!NOTE]
+> The 26.11 server-construction layout was superseded by the merge into the single root entry.
+> The steps below describe the 26.11 layout only.
 
 `Catalog.getContent()` and the root `PackageContent` type are removed. Read package details through `getDocs()`, `getSource()`, `getExample()`, and `getTypeSignature()`. Catalog metadata and Refine component declarations now use readonly TypeScript types.
 

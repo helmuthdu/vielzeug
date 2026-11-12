@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Catalog } from '../catalog.js';
-import type { RefineCatalog } from '../refine-catalog.js';
 
 import { packageTools } from '../tools/packages.js';
 import { refineTools } from '../tools/refine.js';
 
 const catalog: Catalog = {
+  getComponent: () => ({ tagName: 'ore-button' }),
   getDocs: (slug, page) => `${slug}:${page}`,
   getExample: () => ({ code: 'run()', id: 'basic', name: 'Basic' }),
   getPackage: (slug) => ({
@@ -24,14 +24,10 @@ const catalog: Catalog = {
   }),
   getSource: () => 'export {}',
   getTypeSignature: () => 'export type Test = string',
+  listComponents: () => [],
   listExamples: () => [],
   listPackages: () => [],
   search: () => [],
-};
-const refineCatalog: RefineCatalog = {
-  ...catalog,
-  getComponent: () => ({ tagName: 'ore-button' }),
-  listComponents: () => [],
 };
 
 function tool(name: string) {
@@ -75,8 +71,8 @@ describe('MCP tool adapters', () => {
   });
 
   it('lists Refine components as tags and descriptions only', () => {
-    const catalogWithComponents: RefineCatalog = {
-      ...refineCatalog,
+    const catalogWithComponents: Catalog = {
+      ...catalog,
       listComponents: () => [{ attributes: [{ name: 'variant' }], description: 'A button.', tagName: 'ore-button' }],
     };
 
@@ -86,8 +82,8 @@ describe('MCP tool adapters', () => {
   });
 
   it('filters component CSS properties by case-insensitive prefix', () => {
-    const catalogWithComponents: RefineCatalog = {
-      ...refineCatalog,
+    const catalogWithComponents: Catalog = {
+      ...catalog,
       listComponents: () => [
         {
           cssProperties: [{ name: '--button-gap' }, { name: '--button-color' }, { name: '--input-gap' }],
@@ -106,7 +102,7 @@ describe('MCP tool adapters', () => {
     expect(
       refineTool('refine-validate-usage').execute(
         { html: '<ore-buttonish></ore-buttonish>', tagName: 'ore-button' },
-        refineCatalog,
+        catalog,
       ),
     ).toEqual([{ message: 'Could not find opening <ore-button> tag.', type: 'error' }]);
   });

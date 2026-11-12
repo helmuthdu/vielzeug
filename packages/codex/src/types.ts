@@ -1,7 +1,7 @@
 export const DOC_PAGES = ['index', 'api', 'usage', 'examples'] as const;
 export type DocPage = (typeof DOC_PAGES)[number];
 
-export const SNAPSHOT_SCHEMA_VERSION = 1 as const;
+export const SNAPSHOT_SCHEMA_VERSION = 2 as const;
 
 export interface CemTypeRef {
   readonly text: string;
@@ -90,36 +90,8 @@ export interface CatalogFile {
   readonly version: string;
 }
 
-export interface SearchRecord {
-  readonly category: string;
-  readonly description: string;
-  readonly docs: Readonly<Partial<Record<DocPage, string>>>;
-  readonly examples: readonly { readonly id: string; readonly text: string }[];
-  readonly exports: string;
-  readonly keywords: string;
-  readonly name: string;
-  readonly related: string;
-  readonly slug: string;
-  readonly source: string | null;
-}
-
-export interface SnapshotPointer {
-  readonly directory: string;
-}
-
+/** Layout filenames (`catalog.json`, `packages/`, `refine.json`) are code constants; the manifest carries data only. */
 export interface SnapshotManifest {
-  readonly catalog: 'catalog.json';
-  readonly contentDirectory: 'packages';
-  readonly refine: 'refine.json' | null;
   readonly schemaVersion: typeof SNAPSHOT_SCHEMA_VERSION;
-  readonly search: 'search.json';
   readonly version: string;
-}
-
-export interface SnapshotArtifacts {
-  readonly catalog: CatalogFile;
-  readonly contents: ReadonlyMap<string, PackageContent>;
-  readonly manifest: SnapshotManifest;
-  readonly refineComponents: readonly CemDeclaration[];
-  readonly search: readonly SearchRecord[];
 }

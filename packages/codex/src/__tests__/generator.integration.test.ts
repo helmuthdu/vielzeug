@@ -15,8 +15,7 @@ describe('snapshot generation', () => {
 
     expect(snapshot.catalog.packages.length).toBeGreaterThan(0);
     expect(snapshot.contents.size).toBe(snapshot.catalog.packages.length);
-    expect(snapshot.search).toHaveLength(snapshot.catalog.packages.length);
-    expect(snapshot.manifest.schemaVersion).toBe(1);
+    expect(snapshot.manifest.schemaVersion).toBe(2);
   });
 
   it('defines shared generator watch roots', () => {

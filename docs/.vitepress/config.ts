@@ -523,10 +523,9 @@ export default defineConfig({
         {
           items: [
             { link: '/codex/api#api-overview', text: 'Overview' },
-            { link: '/codex/api#package-entry-points', text: 'Entry Points' },
+            { link: '/codex/api#package-entry-point', text: 'Entry Point' },
             { link: '/codex/api#snapshot', text: 'Snapshot' },
             { link: '/codex/api#mcp', text: 'MCP' },
-            { link: '/codex/api#refine-tools-vielzeug-codex-refine', text: 'Refine Tools' },
             { link: '/codex/api#http', text: 'HTTP' },
             { link: '/codex/api#types', text: 'Types' },
             { link: '/codex/api#errors', text: 'Errors' },

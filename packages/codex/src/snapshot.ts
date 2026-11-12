@@ -11,16 +11,19 @@ import {
   type Example,
   type PackageContent,
   type PackageMeta,
-  type SearchRecord,
   SNAPSHOT_SCHEMA_VERSION,
   type SnapshotManifest,
-  type SnapshotPointer,
 } from './types.js';
 
 const DEFAULT_SNAPSHOT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../data');
 const DOC_PAGE_SET = new Set<string>(DOC_PAGES);
 const SLUG_PATTERN = /^[a-z][a-z0-9-]*$/;
-const POINTER_DIRECTORY_PATTERN = /^snapshots\/[a-z0-9-]+$/;
+const TAG_NAME_PATTERN = /^[a-z][a-z0-9._-]*-[a-z0-9._-]+$/;
+
+/** Snapshot layout is fixed by the generator; the manifest carries data only, never filenames. */
+const CATALOG_FILE = 'catalog.json';
+const CONTENT_DIRECTORY = 'packages';
+const REFINE_FILE = 'refine.json';
 
 function fail(path: string, message: string): never {
   throw new CodexError(`Invalid snapshot at ${path}: ${message}`);
@@ -99,40 +102,13 @@ function examples(value: unknown, path: string): Example[] {
   });
 }
 
-export function parsePointer(value: unknown): SnapshotPointer {
-  const pointer = record(value, 'current.json');
-  const directory = string(pointer.directory, 'current.json.directory');
-
-  if (!POINTER_DIRECTORY_PATTERN.test(directory))
-    fail('current.json.directory', 'must reference one snapshot directory.');
-
-  return { directory };
-}
-
 export function parseManifest(value: unknown): SnapshotManifest {
   const manifest = record(value, 'manifest.json');
 
   if (manifest.schemaVersion !== SNAPSHOT_SCHEMA_VERSION)
     fail('manifest.json.schemaVersion', `must equal ${SNAPSHOT_SCHEMA_VERSION}.`);
 
-  if (
-    manifest.catalog !== 'catalog.json' ||
-    manifest.search !== 'search.json' ||
-    manifest.contentDirectory !== 'packages'
-  )
-    fail('manifest.json', 'has unsupported file layout.');
-
-  if (manifest.refine !== null && manifest.refine !== 'refine.json')
-    fail('manifest.json.refine', 'must be null or "refine.json".');
-
-  return {
-    catalog: 'catalog.json',
-    contentDirectory: 'packages',
-    refine: manifest.refine as 'refine.json' | null,
-    schemaVersion: SNAPSHOT_SCHEMA_VERSION,
-    search: 'search.json',
-    version: string(manifest.version, 'manifest.json.version'),
-  };
+  return { schemaVersion: SNAPSHOT_SCHEMA_VERSION, version: string(manifest.version, 'manifest.json.version') };
 }
 
 export function parseCatalog(value: unknown): CatalogFile {
@@ -193,73 +169,10 @@ export function parseContent(value: unknown, slug: string): PackageContent {
   };
 }
 
-export function parseSearch(value: unknown, catalog: CatalogFile): SearchRecord[] {
-  if (!Array.isArray(value)) fail('search.json', 'must be an array.');
-
-  const catalogSlugs = new Set(catalog.packages.map((pkg) => pkg.slug));
-  const seen = new Set<string>();
-  const records = value.map((item, index) => {
-    const path = `search.json[${index}]`;
-    const entry = record(item, path);
-    const slug = string(entry.slug, `${path}.slug`);
-
-    if (!catalogSlugs.has(slug)) fail(`${path}.slug`, 'does not exist in catalog.');
-
-    if (seen.has(slug)) fail(`${path}.slug`, `duplicates ${slug}.`);
-
-    seen.add(slug);
-
-    if (!Array.isArray(entry.examples)) fail(`${path}.examples`, 'must be an array.');
-
-    return {
-      category: string(entry.category, `${path}.category`),
-      description: string(entry.description, `${path}.description`),
-      docs: pageMap(entry.docs, `${path}.docs`),
-      examples: entry.examples.map((example, exampleIndex) => {
-        const value = record(example, `${path}.examples[${exampleIndex}]`);
-
-        return {
-          id: string(value.id, `${path}.examples[${exampleIndex}].id`),
-          text: string(value.text, `${path}.examples[${exampleIndex}].text`),
-        };
-      }),
-      exports: string(entry.exports, `${path}.exports`),
-      keywords: string(entry.keywords, `${path}.keywords`),
-      name: string(entry.name, `${path}.name`),
-      related: string(entry.related, `${path}.related`),
-      slug,
-      source: entry.source === null ? null : string(entry.source, `${path}.source`),
-    } satisfies SearchRecord;
-  });
-
-  if (records.length !== catalog.packages.length) fail('search.json', 'must have one record per catalog package.');
-
-  return records;
-}
-
-function optionalString(entry: Record<string, unknown>, key: string, path: string): void {
-  if (entry[key] !== undefined) string(entry[key], `${path}.${key}`);
-}
-
-function typeReference(value: unknown, path: string): void {
-  if (value === undefined) return;
-  const entry = record(value, path);
-  string(entry.text, `${path}.text`);
-}
-
-function declarationArray(
-  value: unknown,
-  path: string,
-  validate: (entry: Record<string, unknown>, path: string) => void,
-): void {
-  if (value === undefined) return;
-  if (!Array.isArray(value)) fail(path, 'must be an array.');
-
-  value.forEach((item, index) => {
-    validate(record(item, `${path}[${index}]`), `${path}[${index}]`);
-  });
-}
-
+/**
+ * Refine metadata is generated from the component manifest, so declarations are passed through
+ * as-is; only the `tagName` contract the component lookup depends on is enforced here.
+ */
 export function parseRefine(value: unknown): CemDeclaration[] {
   if (!Array.isArray(value)) fail('refine.json', 'must be an array.');
 
@@ -269,45 +182,15 @@ export function parseRefine(value: unknown): CemDeclaration[] {
     const path = `refine.json[${index}]`;
     const declaration = record(item, path);
 
-    optionalString(declaration, 'description', path);
-    optionalString(declaration, 'name', path);
-
     if (declaration.tagName !== undefined) {
       const tagName = string(declaration.tagName, `${path}.tagName`);
 
-      if (tagName.length > 100 || !/^[a-z][a-z0-9._-]*-[a-z0-9._-]+$/.test(tagName)) {
+      if (tagName.length > 100 || !TAG_NAME_PATTERN.test(tagName))
         fail(`${path}.tagName`, 'must be a custom element name of at most 100 characters.');
-      }
-      if (tags.has(tagName)) fail(`${path}.tagName`, `duplicates ${tagName}.`);
-      tags.add(tagName);
-    }
 
-    declarationArray(declaration.attributes, `${path}.attributes`, (entry, entryPath) => {
-      const name = string(entry.name, `${entryPath}.name`);
-      if (!/^[^\s"'<>/=]+$/.test(name)) fail(`${entryPath}.name`, 'must be a valid HTML attribute name.');
-      for (const key of ['default', 'description', 'fieldName']) optionalString(entry, key, entryPath);
-      typeReference(entry.type, `${entryPath}.type`);
-    });
-    for (const key of ['cssParts', 'cssProperties', 'events', 'slots'] as const) {
-      declarationArray(declaration[key], `${path}.${key}`, (entry, entryPath) => {
-        string(entry.name, `${entryPath}.name`);
-        optionalString(entry, 'default', entryPath);
-        optionalString(entry, 'description', entryPath);
-        typeReference(entry.type, `${entryPath}.type`);
-      });
-    }
-    declarationArray(declaration.members, `${path}.members`, (entry, entryPath) => {
-      string(entry.name, `${entryPath}.name`);
-      optionalString(entry, 'description', entryPath);
-      if (entry.kind !== undefined && entry.kind !== 'field' && entry.kind !== 'method') {
-        fail(`${entryPath}.kind`, 'must be "field" or "method".');
-      }
-      typeReference(entry.type, `${entryPath}.type`);
-    });
-    if (declaration.superclass !== undefined) {
-      const superclass = record(declaration.superclass, `${path}.superclass`);
-      string(superclass.name, `${path}.superclass.name`);
-      optionalString(superclass, 'package', `${path}.superclass`);
+      if (tags.has(tagName)) fail(`${path}.tagName`, `duplicates ${tagName}.`);
+
+      tags.add(tagName);
     }
 
     return declaration as CemDeclaration;
@@ -319,7 +202,6 @@ export interface LoadedSnapshot {
   readonly contentDirectory: string;
   readonly manifest: SnapshotManifest;
   readonly refineComponents: readonly CemDeclaration[];
-  readonly search: readonly SearchRecord[];
 }
 
 function validateContent(meta: PackageMeta, content: PackageContent): void {
@@ -339,39 +221,35 @@ function validateContent(meta: PackageMeta, content: PackageContent): void {
     fail(`packages/${meta.slug}.json.apiSource`, 'does not match catalog hasSource.');
 }
 
-export function loadSnapshotDirectory(directory: string, options: { validateContents?: boolean } = {}): LoadedSnapshot {
+/**
+ * Loads one snapshot directory: `manifest.json` plus `catalog.json` (eager metadata), an optional
+ * `refine.json`, and lazily read `packages/<slug>.json` content chunks. `validateContents` turns
+ * the lazy chunks into an eager cross-checked read for artifact verification.
+ */
+export function loadSnapshot(
+  directory = DEFAULT_SNAPSHOT_ROOT,
+  options: { validateContents?: boolean } = {},
+): LoadedSnapshot {
+  if (!existsSync(directory))
+    throw new CodexError(
+      `Snapshot directory not found: ${directory}. Reinstall @vielzeug/codex or build it from source.`,
+    );
+
   const manifest = parseManifest(json(resolve(directory, 'manifest.json')));
-  const catalog = parseCatalog(json(resolve(directory, manifest.catalog)));
+  const catalog = parseCatalog(json(resolve(directory, CATALOG_FILE)));
 
   if (catalog.version !== manifest.version) fail('catalog.json.version', 'does not match manifest version.');
 
-  const search = parseSearch(json(resolve(directory, manifest.search)), catalog);
-  const refineComponents = manifest.refine ? parseRefine(json(resolve(directory, manifest.refine))) : [];
-  const contentDirectory = resolve(directory, manifest.contentDirectory);
+  const refineFile = resolve(directory, REFINE_FILE);
+  const refineComponents = existsSync(refineFile) ? parseRefine(json(refineFile)) : [];
+  const contentDirectory = resolve(directory, CONTENT_DIRECTORY);
 
   if (options.validateContents ?? false) {
     for (const meta of catalog.packages)
       validateContent(meta, parseContent(json(resolve(contentDirectory, `${meta.slug}.json`)), meta.slug));
   }
 
-  return { catalog, contentDirectory, manifest, refineComponents, search };
-}
-
-export function loadSnapshot(
-  snapshotRoot = DEFAULT_SNAPSHOT_ROOT,
-  options: { validateContents?: boolean } = {},
-): LoadedSnapshot {
-  if (!existsSync(snapshotRoot))
-    throw new CodexError(
-      `Snapshot root not found: ${snapshotRoot}. Reinstall @vielzeug/codex or build it from source.`,
-    );
-
-  const pointerFile = resolve(snapshotRoot, 'current.json');
-  const directory = existsSync(pointerFile)
-    ? resolve(snapshotRoot, parsePointer(json(pointerFile)).directory)
-    : snapshotRoot;
-
-  return loadSnapshotDirectory(directory, options);
+  return { catalog, contentDirectory, manifest, refineComponents };
 }
 
 export function validateSnapshot(snapshotRoot = DEFAULT_SNAPSHOT_ROOT): void {

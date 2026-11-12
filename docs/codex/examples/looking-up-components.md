@@ -55,13 +55,10 @@ for unknown attributes or slots: catching hallucinated attribute names before th
 
 ### Pitfalls
 
-- All four tools return `isError: true` when Refine component metadata is not present in the snapshot. `prepare:data` refuses to generate a snapshot without `@vielzeug/refine`'s `custom-elements.json`, so this only happens with a hand-assembled snapshot.
+- The `refine-*` tools are only offered when the snapshot carries Refine component metadata. `prepare:data` refuses to generate a snapshot without `@vielzeug/refine`'s `custom-elements.json`, so a missing set only happens with a hand-assembled snapshot.
 - `refine-get-component` matches on `tagName` exactly. Passing a class name like `"Button"` instead of `"ore-button"` returns an error.
 
 ### Related
 
 - [Refine](/refine/): the `@vielzeug/refine` package
-- [API Reference: refine-list-components](../api.md#refine-list-components)
-- [API Reference: refine-get-component](../api.md#refine-get-component)
-- [API Reference: refine-generate-template](../api.md#refine-generate-template)
-- [API Reference: refine-validate-usage](../api.md#refine-validate-usage)
+- [Tool reference](../tools.md)

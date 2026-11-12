@@ -23,17 +23,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./refine": {
-      "types": "./dist/refine.d.ts",
-      "import": "./dist/refine.js"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "refine": [
-        "dist/refine.d.ts"
-      ]
     }
   },
   "bin": {

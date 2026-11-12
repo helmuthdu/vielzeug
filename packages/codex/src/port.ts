@@ -4,9 +4,9 @@ import { CodexError } from './errors.js';
 export function resolvePort(raw: string | undefined): number | null {
   if (raw === undefined) return null;
 
-  const n = Number.parseInt(raw, 10);
+  const n = Number(raw);
 
-  if (!Number.isFinite(n) || n < 1 || n > 65535 || n !== Number(raw)) {
+  if (!Number.isInteger(n) || n < 1 || n > 65535) {
     throw new CodexError(`Invalid --port value: "${raw}". Expected an integer between 1 and 65535.`);
   }
 

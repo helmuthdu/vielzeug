@@ -2,27 +2,25 @@ import { Server } from '@modelcontextprotocol/server';
 
 import type { Catalog } from './catalog.js';
 
-import { packageTools, registerTools } from './tools/index.js';
-import type { ToolDefinition } from './tools/shared.js';
+import { registerTools } from './tools/index.js';
+import { packageTools } from './tools/packages.js';
+import { refineTools } from './tools/refine.js';
 
 export interface McpServerOptions {
   debug?: boolean;
   version: string;
 }
 
-export function createMcpServerWithTools<CatalogType extends Catalog>(
-  catalog: CatalogType,
-  options: McpServerOptions,
-  tools: readonly ToolDefinition<CatalogType>[],
-): Server {
+/**
+ * Creates the MCP server for a catalog: the generic package tools plus the `refine-*` component
+ * tools when the snapshot actually carries Refine metadata (tools that would only answer
+ * "unavailable" are not offered at all).
+ */
+export function createMcpServer(catalog: Catalog, options: McpServerOptions): Server {
   const server = new Server({ name: 'vielzeug', version: options.version }, { capabilities: { tools: {} } });
+  const tools = catalog.listComponents().length > 0 ? [...packageTools, ...refineTools] : packageTools;
 
   registerTools(server, catalog, tools, options.debug);
 
   return server;
-}
-
-/** Creates an MCP server with the generic package tools registered. */
-export function createMcpServer(catalog: Catalog, options: McpServerOptions): Server {
-  return createMcpServerWithTools(catalog, options, packageTools);
 }

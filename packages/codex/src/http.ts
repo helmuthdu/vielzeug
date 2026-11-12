@@ -14,7 +14,6 @@ import { log } from './_log.js';
 import { CodexError } from './errors.js';
 
 export interface HttpHost {
-  readonly disposalSignal: AbortSignal;
   dispose(): Promise<void>;
   readonly disposed: boolean;
   readonly host: string;
@@ -122,7 +121,6 @@ export async function startHttpHost(options: HttpHostOptions): Promise<HttpHost>
       });
   });
 
-  const disposal = new AbortController();
   let listening = false;
   let disposed = false;
   let disposing: Promise<void> | undefined;
@@ -150,7 +148,6 @@ export async function startHttpHost(options: HttpHostOptions): Promise<HttpHost>
       if (errors.length > 0) throw new AggregateError(errors, 'Failed to dispose Codex HTTP host');
 
       disposed = true;
-      disposal.abort();
     })().finally(() => {
       disposing = undefined;
     });
@@ -178,9 +175,6 @@ export async function startHttpHost(options: HttpHostOptions): Promise<HttpHost>
   log(`codex MCP HTTP host listening on http://${host}:${port}/`);
 
   return {
-    get disposalSignal() {
-      return disposal.signal;
-    },
     dispose,
     get disposed() {
       return disposed;

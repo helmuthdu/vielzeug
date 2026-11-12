@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Merge /refine into the root entry, move search to content-derived scans, and flatten the snapshot format to schema v2",
+      "packageName": "@vielzeug/codex",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

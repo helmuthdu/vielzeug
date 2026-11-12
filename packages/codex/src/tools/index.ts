@@ -3,10 +3,7 @@ import type { Server, Tool } from '@modelcontextprotocol/server';
 import { METHOD_NOT_FOUND, ProtocolError } from '@modelcontextprotocol/server';
 import { log } from '../_log.js';
 import { type Catalog, CatalogError } from '../catalog.js';
-import { packageTools } from './packages.js';
 import type { ToolDefinition } from './shared.js';
-
-export { packageTools };
 
 function content(value: unknown) {
   return {

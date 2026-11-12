@@ -3,36 +3,28 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { SnapshotCatalog } from '../catalog.js';
 import { startHttpHost } from '../http.js';
-import { createMcpServerWithRefine } from '../refine.js';
-import { SnapshotRefineCatalog } from '../refine-catalog.js';
 import { createMcpServer } from '../server.js';
 import { loadSnapshot } from '../snapshot.js';
 
 const roots: string[] = [];
 
-function catalog(): SnapshotRefineCatalog {
+function catalog({ refine = false }: { refine?: boolean } = {}): SnapshotCatalog {
   const root = mkdtempSync(join(tmpdir(), 'codex-http-'));
-  const directory = join(root, 'snapshots', 'test');
+  const directory = join(root, 'snapshot');
 
   roots.push(root);
   mkdirSync(join(directory, 'packages'), { recursive: true });
-  writeFileSync(join(root, 'current.json'), JSON.stringify({ directory: 'snapshots/test' }));
-  writeFileSync(
-    join(directory, 'manifest.json'),
-    JSON.stringify({
-      catalog: 'catalog.json',
-      contentDirectory: 'packages',
-      refine: null,
-      schemaVersion: 1,
-      search: 'search.json',
-      version: '1.0.0',
-    }),
-  );
+  writeFileSync(join(directory, 'manifest.json'), JSON.stringify({ schemaVersion: 2, version: '1.0.0' }));
   writeFileSync(join(directory, 'catalog.json'), JSON.stringify({ packages: [], version: '1.0.0' }));
-  writeFileSync(join(directory, 'search.json'), '[]');
+  if (refine)
+    writeFileSync(
+      join(directory, 'refine.json'),
+      JSON.stringify([{ description: 'A button.', tagName: 'ore-button' }]),
+    );
 
-  return new SnapshotRefineCatalog(loadSnapshot(root));
+  return new SnapshotCatalog(loadSnapshot(directory));
 }
 
 afterEach(async () => {
@@ -123,11 +115,11 @@ describe('HTTP host', () => {
 
   it('creates a fully configured Refine server for each request', async () => {
     let creations = 0;
-    const source = catalog();
+    const source = catalog({ refine: true });
     const host = await startHttpHost({
       createServer: () => {
         creations += 1;
-        return createMcpServerWithRefine(source, { version: '1.0.0' });
+        return createMcpServer(source, { version: '1.0.0' });
       },
       port: 0,
       version: '1.0.0',
@@ -158,7 +150,6 @@ describe('HTTP host', () => {
     } finally {
       await host.dispose();
       expect(host.disposed).toBe(true);
-      expect(host.disposalSignal.aborted).toBe(true);
     }
   });
 

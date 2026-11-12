@@ -24,7 +24,7 @@ npx -y @vielzeug/codex --port=3100
 curl http://127.0.0.1:3100/health
 ```
 
-Response includes snapshot version. Runtime bind validation and Host/Origin allowlists restrict access to localhost; no remote host mode exists. Programmatic HTTP hosting takes a `createServer` factory that returns a fresh, unconnected server with its request handlers registered. Dispose the host asynchronously and observe `disposed` or `disposalSignal` when coordinating shutdown.
+Response includes snapshot version. Runtime bind validation and Host/Origin allowlists restrict access to localhost; no remote host mode exists. Programmatic HTTP hosting takes a `createServer` factory that returns a fresh, unconnected server with its request handlers registered. Dispose the host asynchronously and observe `disposed` when coordinating shutdown.
 
 ## Agent Skill
 
@@ -52,7 +52,7 @@ bun run dev
 
 `test:unit` uses fixtures only. `test:integration` regenerates a current snapshot then checks real monorepo inputs.
 
-`bun run dev` watches documentation and package inputs, atomically publishes snapshots, then restarts server when snapshot changes.
+`bun run dev` watches documentation and package inputs, regenerates `.dev/` through a staging swap, and restarts the server against it.
 
 ## Debugging
 
@@ -74,23 +74,13 @@ const catalog = new SnapshotCatalog(snapshot);
 await createMcpServer(catalog, { version: snapshot.manifest.version }).connect(new StdioServerTransport());
 ```
 
-To include Refine component tools, create a server with the `@vielzeug/codex/refine` subpath:
-
-```ts
-import { StdioServerTransport, loadSnapshot } from '@vielzeug/codex';
-import { createMcpServerWithRefine, SnapshotRefineCatalog } from '@vielzeug/codex/refine';
-
-const snapshot = loadSnapshot();
-const catalog = new SnapshotRefineCatalog(snapshot);
-const server = createMcpServerWithRefine(catalog, { version: snapshot.manifest.version });
-await server.connect(new StdioServerTransport());
-```
+`createMcpServer` also registers the `refine-*` component tools whenever the loaded snapshot carries Refine metadata; there is nothing to opt into.
 
 ## Best Practices
 
 - Use `search-packages` for capability discovery before loading broad source.
 - Use `get-type-signature` before loading full source.
-- Published package snapshots are static directories; local dev snapshots are immutable generations selected by `.dev/current.json`.
+- Every snapshot is one flat directory (manifest, catalog, content chunks, optional Refine metadata); `--snapshot` points at it directly.
 - Pass `validateContents: true` to `loadSnapshot()` for artifact verification; normal startup keeps package chunks lazy.
 - Return a fresh configured server from `startHttpHost`'s `createServer` factory.
 - Keep HTTP local. Use stdio for normal client integration.

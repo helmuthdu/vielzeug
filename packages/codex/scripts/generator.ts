@@ -11,9 +11,7 @@ import {
   type DocPage,
   type PackageContent,
   type PackageMeta,
-  type SearchRecord,
   SNAPSHOT_SCHEMA_VERSION,
-  type SnapshotArtifacts,
   type SnapshotManifest,
 } from '../src/types.ts';
 import { readReplExamples } from './repl-examples.ts';
@@ -38,10 +36,6 @@ function docsFile(repoRoot: string, slug: string, page: DocPage): string | null 
   return candidates.find(existsSync) ?? null;
 }
 
-function normalise(value: string): string {
-  return value.toLowerCase().replaceAll('-', ' ');
-}
-
 function readRefineComponents(repoRoot: string): CemDeclaration[] {
   const file = resolve(repoRoot, 'packages/refine/dist/custom-elements.json');
   if (!existsSync(file)) {
@@ -64,7 +58,7 @@ function readRefineComponents(repoRoot: string): CemDeclaration[] {
   });
 }
 
-function buildPackage(repoRoot: string, project: string): { content: PackageContent; meta: PackageMeta; search: SearchRecord } {
+function buildPackage(repoRoot: string, project: string): { content: PackageContent; meta: PackageMeta } {
   const slug = project.replace('packages/', '');
   const manifest = readJson(resolve(repoRoot, project, 'package.json'));
   const source = text(resolve(repoRoot, project, 'src/index.ts'));
@@ -96,22 +90,15 @@ function buildPackage(repoRoot: string, project: string): { content: PackageCont
     examples,
     typeSignatures: source ? extractExportedSignatures(resolve(repoRoot, project, 'src/index.ts')) : {},
   };
-  return {
-    content,
-    meta,
-    search: {
-      category: normalise(meta.category),
-      description: normalise(meta.description),
-      docs: Object.fromEntries(Object.entries(docs).map(([page, value]) => [page, normalise(value)])),
-      examples: examples.map((example) => ({ id: example.id, text: normalise(`${example.name} ${example.code}`) })),
-      exports: meta.exports.map(normalise).join(' '),
-      keywords: meta.keywords.map(normalise).join(' '),
-      name: meta.name,
-      related: meta.related.map(normalise).join(' '),
-      slug,
-      source: source ? normalise(source) : null,
-    },
-  };
+  return { content, meta };
+}
+
+/** Everything one snapshot generation produces, before it is written to disk. */
+export interface SnapshotArtifacts {
+  readonly catalog: CatalogFile;
+  readonly contents: ReadonlyMap<string, PackageContent>;
+  readonly manifest: SnapshotManifest;
+  readonly refineComponents: readonly CemDeclaration[];
 }
 
 export interface GeneratorOptions {
@@ -130,20 +117,12 @@ export function generateSnapshot(options: GeneratorOptions = {}): SnapshotArtifa
   const built = projects.map((project) => buildPackage(repoRoot, project)).sort((left, right) => left.meta.slug.localeCompare(right.meta.slug));
   const packageManifest = readJson(resolve(packageRoot, 'package.json'));
   const version = typeof packageManifest.version === 'string' ? packageManifest.version : '0.0.0';
-  const manifest: SnapshotManifest = {
-    catalog: 'catalog.json',
-    contentDirectory: 'packages',
-    refine: 'refine.json',
-    schemaVersion: SNAPSHOT_SCHEMA_VERSION,
-    search: 'search.json',
-    version,
-  };
+  const manifest: SnapshotManifest = { schemaVersion: SNAPSHOT_SCHEMA_VERSION, version };
   const catalog: CatalogFile = { packages: built.map((entry) => entry.meta), version };
   return {
     catalog,
     contents: new Map(built.map((entry) => [entry.meta.slug, entry.content])),
     manifest,
     refineComponents: readRefineComponents(repoRoot),
-    search: built.map((entry) => entry.search),
   };
 }

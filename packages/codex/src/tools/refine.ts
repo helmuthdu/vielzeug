@@ -1,4 +1,4 @@
-import type { RefineCatalog } from '../refine-catalog.js';
+import type { Catalog } from '../catalog.js';
 import type { CemAttribute, CemDeclaration } from '../types.js';
 import { EMPTY_SCHEMA, parseArgs, type ToolSchema } from './schema.js';
 import type { ToolDefinition } from './shared.js';
@@ -88,7 +88,7 @@ function usageIssues(component: CemDeclaration, html: string): Array<{ message: 
   return issues;
 }
 
-export const refineTools: readonly ToolDefinition<RefineCatalog>[] = [
+export const refineTools: readonly ToolDefinition<Catalog>[] = [
   {
     description: 'List bundled Refine component tags and descriptions.',
     execute: (_args, catalog) =>

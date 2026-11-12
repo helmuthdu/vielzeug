@@ -23,7 +23,7 @@ import { log } from './_log.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const toolsDocPath = resolve(__dirname, '../../../docs/codex/tools.md');
-const packageToolsEntry = resolve(__dirname, '../dist/tools/index.js');
+const packageToolsEntry = resolve(__dirname, '../dist/tools/packages.js');
 const refineToolsEntry = resolve(__dirname, '../dist/tools/refine.js');
 
 for (const entry of [packageToolsEntry, refineToolsEntry]) {

@@ -6,10 +6,10 @@ import { parseArgs } from 'node:util';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
 import { log } from './_log.js';
+import { SnapshotCatalog } from './catalog.js';
 import { startHttpHost } from './http.js';
 import { resolvePort } from './port.js';
-import { createMcpServerWithRefine } from './refine.js';
-import { SnapshotRefineCatalog } from './refine-catalog.js';
+import { createMcpServer } from './server.js';
 import { installSkills, SKILL_TARGET_CANDIDATES } from './skills.js';
 import { loadSnapshot } from './snapshot.js';
 
@@ -92,11 +92,11 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     }));
 
     const snapshot = loadSnapshot(values.snapshot);
-    const catalog = new SnapshotRefineCatalog(snapshot);
+    const catalog = new SnapshotCatalog(snapshot);
     const port = resolvePort(values.port);
 
     if (port === null) {
-      const server = createMcpServerWithRefine(catalog, { debug: values.debug, version: snapshot.manifest.version });
+      const server = createMcpServer(catalog, { debug: values.debug, version: snapshot.manifest.version });
 
       await server.connect(new StdioServerTransport());
 
@@ -104,8 +104,7 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     }
 
     const host = await startHttpHost({
-      createServer: () =>
-        createMcpServerWithRefine(catalog, { debug: values.debug, version: snapshot.manifest.version }),
+      createServer: () => createMcpServer(catalog, { debug: values.debug, version: snapshot.manifest.version }),
       port,
       version: snapshot.manifest.version,
     });
