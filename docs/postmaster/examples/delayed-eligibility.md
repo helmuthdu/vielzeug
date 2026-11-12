@@ -20,7 +20,7 @@ import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 const jobs = {
   sendDigest: defineJob({
     version: 1,
-    validate: (v) => v as { userId: string },
+    validate: (v: unknown) => v as { userId: string },
     key: (p) => `digest:${p.userId}`,
     execute: async (payload, { key, signal }) => {
       await fetch('/api/digest', {

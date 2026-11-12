@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "defineJob defaults the payload type to unknown and documents order-independent typing paths",
+      "packageName": "@vielzeug/postmaster",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/postmaster"
+}

@@ -21,7 +21,7 @@ import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 const jobs = {
   createTodo: defineJob({
     version: 1,
-    validate: (v) => v as { id: string; title: string },
+    validate: (v: unknown) => v as { id: string; title: string },
     key: (p) => p.id,
     execute: async (payload, { key, signal }) => {
       await fetch('/api/todos', {

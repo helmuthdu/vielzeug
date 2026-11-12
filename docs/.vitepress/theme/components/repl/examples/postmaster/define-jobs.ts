@@ -5,7 +5,7 @@ import { createMemoryPostmasterStore } from '@vielzeug/postmaster/testing'
 const jobs = {
   send: defineJob({
     version: 1,
-    validate: (v) => String(v),
+    validate: (v: unknown) => String(v),
     key: (p) => \`send:\${p}\`,
     execute: async (payload, { key, attempt }) => {
       console.log(\`delivering "\${payload}" (attempt \${attempt}, key \${key})\`)

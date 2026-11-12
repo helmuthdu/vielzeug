@@ -64,9 +64,15 @@ export function validateJobs(jobs: JobDefinitions): void {
 }
 
 /**
- * Types one job definition. The payload type is inferred from `validate` when present
- * (a plain function or a `{ parse }` validator object such as a Spell schema), or
- * from an annotated `execute` payload. Without either, payloads stay `unknown`.
+ * Types one job definition. The payload type comes from `validate` when TypeScript can
+ * read it without context: a named validator, a `{ parse }` validator object such as a
+ * Spell schema, or an inline arrow with an annotated `unknown` parameter. An annotated
+ * `execute` payload works the same way. Otherwise pass the type argument explicitly;
+ * with neither, payloads stay `unknown`.
+ *
+ * An inline arrow with an unannotated parameter only supplies the payload type when it
+ * is declared before `execute`/`key`; pass `defineJob<T>(...)` to stay independent of
+ * property order.
  *
  * Configuration (versions, migrations, retry) is validated by `createPostmaster`.
  *
@@ -74,13 +80,13 @@ export function validateJobs(jobs: JobDefinitions): void {
  * const jobs = {
  *   syncStage: defineJob({
  *     version: 1,
- *     validate: (value): { id: string } => value as { id: string },
+ *     validate: (value: unknown): { id: string } => value as { id: string },
  *     key: (payload) => payload.id,
  *     execute: async (payload) => sync(payload.id),
  *   }),
  * };
  * ```
  */
-export function defineJob<T>(spec: JobDefinition<T>): JobDefinition<T> {
+export function defineJob<T = unknown>(spec: JobDefinition<T>): JobDefinition<T> {
   return spec;
 }

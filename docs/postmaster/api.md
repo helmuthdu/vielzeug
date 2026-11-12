@@ -32,11 +32,11 @@ description: Job definitions, processor, store contracts, events, errors, and en
 function defineJob<T>(spec: JobDefinition<T>): JobDefinition<T>;
 ```
 
-Types a single job definition. The payload type is inferred from `validate` when present: either a function returning the payload type or a `{ parse(value) }` validator object such as a Spell schema. Without `validate`, an annotated `execute` payload provides the type; with neither, payloads stay `unknown`. `createPostmaster()` validates every registered definition (versions, `execute`/`key`, retry `maxAttempts`, migration ranges) when it is constructed.
+Types a single job definition. The payload type comes from `validate` when TypeScript can read it without context: a named validator, a `{ parse(value) }` validator object such as a Spell schema, or an inline arrow with an annotated `unknown` parameter (an annotated `execute` payload works the same way). Otherwise pass the type argument (`defineJob<Todo>({ ... })`) to stay independent of property order; with neither, payloads stay `unknown`. `createPostmaster()` validates every registered definition (versions, `execute`/`key`, retry `maxAttempts`, migration ranges) when it is constructed.
 
-| Parameter | Type                  | Description                       |
-| --------- | --------------------- | --------------------------------- |
-| `spec`    | `JobDefinition<T>`    | Definition with contextual typing |
+| Parameter | Type               | Description                       |
+| --------- | ------------------ | --------------------------------- |
+| `spec`    | `JobDefinition<T>` | Definition with contextual typing |
 
 **Returns:** the same definition, typed for payload inference.
 
@@ -48,7 +48,7 @@ import { defineJob } from '@vielzeug/postmaster';
 const jobs = {
   createTodo: defineJob({
     version: 1,
-    validate: (v) => v as { id: string; title: string },
+    validate: (v: unknown) => v as { id: string; title: string },
     key: (p) => p.id,
     execute: async (payload, { key, signal }) => {
       await fetch('/api/todos', {

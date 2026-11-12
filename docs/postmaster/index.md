@@ -154,7 +154,7 @@ await store.dispose();
 
 ## Features
 
-- `defineJob()`: Types one job definition; payloads infer from the validator into `execute`, `key`, and `enqueue`.
+- `defineJob()`: Types one job definition; the payload type comes from the validator (or an explicit `defineJob<T>`) and flows into `execute`, `key`, and `enqueue`.
 - `createPostmaster()`: Processor with leased claims, heartbeat renewal, and crash recovery.
 - `enqueue()`: Persist a job and wake the processor, with optional delayed eligibility via `availableAt`.
 - `flush()`: Process every available job until the queue is empty.

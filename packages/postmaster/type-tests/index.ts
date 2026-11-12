@@ -17,6 +17,8 @@ const jobs = {
     key: (payload) => String(payload),
     version: 1,
   }),
+  // Keys sorted (execute before validate): the annotated `unknown` parameter keeps
+  // `validate` independent of context, so the payload type still flows through.
   createTodo: defineJob({
     execute: async (payload, context) => {
       const id: string = payload.id;
@@ -27,7 +29,16 @@ const jobs = {
       void aborted;
     },
     key: (payload) => payload.id,
-    validate: (value): Todo => value as Todo,
+    validate: (value: unknown): Todo => value as Todo,
+    version: 1,
+  }),
+  // Explicit type argument types the payload regardless of property order.
+  explicit: defineJob<Todo>({
+    execute: async (payload) => {
+      void payload.title;
+    },
+    key: (payload) => payload.id,
+    validate: (value) => value as Todo,
     version: 1,
   }),
   // Without validate, an annotated execute carries the payload type.
