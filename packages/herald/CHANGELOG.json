@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "waitAny() rebuilt on Promise.race with a synchronous TypeError for empty lists; SubscribeOptions unified across all subscription-shaped methods; registration internals flattened",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 15:13:50 GMT",
+      "tag": "@vielzeug/herald_v26.11.13",
+      "version": "26.11.13"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

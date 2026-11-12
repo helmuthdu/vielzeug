@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Remove createPhaseMirror and route all URL resolution through one redirect-following resolver; load() now resolves router-internal URLs and returns the notFound route state for unmatched URLs",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 15:13:50 GMT",
+      "tag": "@vielzeug/wayfinder_v26.11.13",
+      "version": "26.11.13"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/wayfinder
 
-This log was last generated on Wed, 11 Nov 2026 21:47:10 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Nov 2026 15:13:50 GMT and should not be manually modified.
 
+## 26.11.13
+
+Thu, 12 Nov 2026 15:13:50 GMT
+
+### Major changes
+
+- Remove createPhaseMirror and route all URL resolution through one redirect-following resolver; load() now resolves router-internal URLs and returns the notFound route state for unmatched URLs
 ## 26.11.12
 
 Wed, 11 Nov 2026 21:47:10 GMT

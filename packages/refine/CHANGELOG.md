@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 11 Nov 2026 21:47:10 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Nov 2026 15:13:50 GMT and should not be manually modified.
 
+## 26.11.13
+
+Thu, 12 Nov 2026 15:13:50 GMT
+
+### Minor changes
+
+- feat(refine): add ore-prose component rendering scribe-parsed Markdown with Refine tokens
 ## 26.11.12
 
 Wed, 11 Nov 2026 21:47:10 GMT

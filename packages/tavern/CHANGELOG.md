@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/tavern
 
-This log was last generated on Wed, 11 Nov 2026 21:47:10 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Nov 2026 15:13:50 GMT and should not be manually modified.
 
+## 26.11.13
+
+Thu, 12 Nov 2026 15:13:50 GMT
+
+### Major changes
+
+- Redesign the session API around one subject per session: `subjectId` routing removed (sendCommand(name, args)), command table is a plain record with read-only sessions supported, notice seam split into host `serializeNotice` and guest `onNotice`, `onJoined`/`onFailed` replaced by an awaitable `ready` promise, pairing vocabulary renamed to codes, and both tap unions gained a `dispose` event.
 ## 26.11.12
 
 Wed, 11 Nov 2026 21:47:10 GMT

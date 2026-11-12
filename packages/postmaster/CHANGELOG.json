@@ -2,6 +2,32 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "defineJob replaces defineJobs with real payload inference; truthful lifecycle events",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Use arsenal timer for the wake timer",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "defineJob defaults the payload type to unknown and documents order-independent typing paths",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 15:13:50 GMT",
+      "tag": "@vielzeug/postmaster_v26.11.13",
+      "version": "26.11.13"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

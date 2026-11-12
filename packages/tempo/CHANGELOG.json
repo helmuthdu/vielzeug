@@ -2,6 +2,27 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Narrow the API to the core surface: remove contains/clamp, classifyExpiry, timeDiff/humanize, dateRange/recurrence; replace inTimeZone with a symmetric toZoned; make formatRange order-free.",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ],
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat(tempo): add @vielzeug/tempo/cadence — RFC 5545 recurrence engine (parse/serialize/expand with DST-safe wall-time expansion and RDATE/EXDATE merging)",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 15:13:50 GMT",
+      "tag": "@vielzeug/tempo_v26.11.13",
+      "version": "26.11.13"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

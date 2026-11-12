@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Collapse translation surface: single translate(), locale snapshots, unversioned SSR hydration",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 15:13:50 GMT",
+      "tag": "@vielzeug/lingua_v26.11.13",
+      "version": "26.11.13"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

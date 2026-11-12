@@ -1,7 +1,22 @@
 # Change Log - @vielzeug/flux
 
-This log was last generated on Wed, 11 Nov 2026 21:47:10 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Nov 2026 15:13:50 GMT and should not be manually modified.
 
+## 26.11.13
+
+Thu, 12 Nov 2026 15:13:50 GMT
+
+### Major changes
+
+- remove the @vielzeug/flux/async subpath: toAsyncIterable is exported from the package root only
+
+### Minor changes
+
+- mergeMap gains { concurrency: 'unbounded' } and no longer demands an ignored capacity; flattening errors name the actual operator
+
+### Patches
+
+- drop the unused scheduler indirection and dev-gate helpers; terminal consumers share one abort-signal watch
 ## 26.11.12
 
 Wed, 11 Nov 2026 21:47:10 GMT

@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/sentinel
 
-This log was last generated on Wed, 11 Nov 2026 21:47:10 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Nov 2026 15:13:50 GMT and should not be manually modified.
 
+## 26.11.13
+
+Thu, 12 Nov 2026 15:13:50 GMT
+
+### Minor changes
+
+- Wake lock and fullscreen sentinels keep the live disposed getter and Symbol.dispose; media-query listening requires MediaQueryList.addEventListener; all window factories accept WindowSentinelOptions
 ## 26.11.12
 
 Wed, 11 Nov 2026 21:47:10 GMT

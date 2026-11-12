@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Redesign the session API around one subject per session: `subjectId` routing removed (sendCommand(name, args)), command table is a plain record with read-only sessions supported, notice seam split into host `serializeNotice` and guest `onNotice`, `onJoined`/`onFailed` replaced by an awaitable `ready` promise, pairing vocabulary renamed to codes, and both tap unions gained a `dispose` event.",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 15:13:50 GMT",
+      "tag": "@vielzeug/tavern_v26.11.13",
+      "version": "26.11.13"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

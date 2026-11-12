@@ -1,7 +1,18 @@
 # Change Log - @vielzeug/tempo
 
-This log was last generated on Wed, 11 Nov 2026 21:47:10 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Nov 2026 15:13:50 GMT and should not be manually modified.
 
+## 26.11.13
+
+Thu, 12 Nov 2026 15:13:50 GMT
+
+### Major changes
+
+- Narrow the API to the core surface: remove contains/clamp, classifyExpiry, timeDiff/humanize, dateRange/recurrence; replace inTimeZone with a symmetric toZoned; make formatRange order-free.
+
+### Minor changes
+
+- feat(tempo): add @vielzeug/tempo/cadence — RFC 5545 recurrence engine (parse/serialize/expand with DST-safe wall-time expansion and RDATE/EXDATE merging)
 ## 26.11.12
 
 Wed, 11 Nov 2026 21:47:10 GMT

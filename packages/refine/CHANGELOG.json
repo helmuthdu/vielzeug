@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "feat(refine): add ore-prose component rendering scribe-parsed Markdown with Refine tokens",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 15:13:50 GMT",
+      "tag": "@vielzeug/refine_v26.11.13",
+      "version": "26.11.13"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "add `gauge` type, `min` range, `show-value` percentage display, and `floating-label-position` to `ore-progress`",
             "commit": "55ebcfdeb6b3bf61066c3beb82c32a8f538c690f"
           },

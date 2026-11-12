@@ -2,6 +2,34 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "remove the @vielzeug/flux/async subpath: toAsyncIterable is exported from the package root only",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ],
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "mergeMap gains { concurrency: 'unbounded' } and no longer demands an ignored capacity; flattening errors name the actual operator",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "drop the unused scheduler indirection and dev-gate helpers; terminal consumers share one abort-signal watch",
+            "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 15:13:50 GMT",
+      "tag": "@vielzeug/flux_v26.11.13",
+      "version": "26.11.13"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",
