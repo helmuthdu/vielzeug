@@ -95,8 +95,8 @@ describe('declarative redirect', () => {
   });
 
   it('throws after 5 consecutive declarative redirects (depth>=5 boundary)', async () => {
-    // #commitRedirect throws when depth >= 5. Each redirect hop increments depth by 1.
-    // To trigger the guard: 6 chained redirects (depth 0→1→2→3→4→5 throws on the 6th call).
+    // #resolveWithRedirects throws once a redirect would be followed beyond MAX_REDIRECT_HOPS.
+    // To trigger the guard: 6 chained redirects (5 hops allowed, the 6th redirect throws).
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
@@ -114,6 +114,28 @@ describe('declarative redirect', () => {
 
     await settle();
     await expect(router.navigate({ path: '/a' })).rejects.toThrow('Redirect loop detected');
+    router.dispose();
+  });
+
+  it('resolves exactly 5 chained declarative redirects', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        a: { path: '/a', redirect: { path: '/b' } },
+        b: { path: '/b', redirect: { path: '/c' } },
+        c: { path: '/c', redirect: { path: '/d' } },
+        d: { path: '/d', redirect: { path: '/e' } },
+        e: { path: '/e', redirect: { path: '/f' } },
+        f: { path: '/f' },
+        home: { path: '/' },
+      },
+    });
+
+    await settle();
+    await router.navigate({ path: '/a' });
+
+    expect(router.getSnapshot().location.pathname).toBe('/f');
     router.dispose();
   });
 

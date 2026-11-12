@@ -1,5 +1,5 @@
 import { WayfinderConfigError, WayfinderRouteError } from './errors';
-import type { QueryParams, ResolvedQueryParams, RouteLocation, RouteMatcher, RouteParams, RouteRecord } from './types';
+import type { QueryParams, ResolvedQueryParams, RouteMatcher, RouteParams, RouteRecord } from './types';
 
 /** Ensure leading slash, collapse duplicate slashes, preserve root. */
 export function normalizePath(path: string): string {
@@ -216,16 +216,4 @@ export function stripBase(pathname: string, base = '/'): string {
   return normalizedPath.startsWith(prefix)
     ? normalizePath(normalizedPath.slice(normalizedBase.length))
     : normalizedPath;
-}
-
-export function readLocation(
-  base: string,
-  history: { location: { hash: string; pathname: string; search: string; state: unknown } },
-): RouteLocation {
-  return {
-    hash: history.location.hash.replace(/^#/, ''),
-    historyState: history.location.state,
-    pathname: stripBase(history.location.pathname || '/', base),
-    query: parseQuery(history.location.search || ''),
-  };
 }

@@ -5,6 +5,44 @@ description: Migrate to the narrowed Wayfinder routing core API.
 
 [[toc]]
 
+## Breaking Changes Since 26.11.11
+
+Wayfinder's routing core was narrowed: the phase-mirror workflow was removed, and URL resolution runs through a single redirect-following implementation.
+
+### `createPhaseMirror` removed
+
+`createPhaseMirror()` (with its `PhaseMirror` and `PhaseMirrorOptions` types) was a two-way mirror between a domain state machine's phase and a `/:subject/:id/:phase` route segment. It encoded one application's stepped-flow workflow (revisit dialogs, subject ids, canonicalization rules) into the router package and had no consumers. Stepped flows remain a plain routing pattern: navigate by route name with `{ replace: true }` and drive the URL from your own state, or keep the mirror in the application that needs its exact confirm/revisit semantics.
+
+```ts
+// Before
+import { createPhaseMirror } from '@vielzeug/wayfinder';
+const mirror = createPhaseMirror({
+  canRevisit,
+  currentPhase,
+  detailRoute,
+  phases,
+  phaseRoute,
+  requestRevisit,
+  router,
+  subjectId,
+});
+
+// After: no replacement export. Replace the phase route yourself:
+await router.navigate({ name: 'phaseRoute', params: { id, phase } }, { replace: true });
+```
+
+### `load()` resolves router-internal URLs and honors `notFound`
+
+`router.load(url)` now normalizes its input through the same base-aware resolution as `navigate()`, `preload()`, and committed history hrefs: on a router with `base: '/app'`, `load('/page')` resolves to route `page` instead of returning `null`. In addition, when a `notFound` route is configured, `load()` of an unmatched URL returns the fallback route's state (with its `data` loaded, `matches` ending in the `__notFound__` node) instead of `null`. Middleware is still not executed.
+
+```ts
+// Before: null on a base router
+await router.load('/page'); // base '/app' → null
+
+// After
+await router.load('/page'); // base '/app' → RouteState for route `page`
+```
+
 ## Wayfinder 26.10
 
 Wayfinder 26.10 separates definition errors from navigation errors and hardens state notification.

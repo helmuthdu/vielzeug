@@ -9,35 +9,6 @@ description: Router setup, middleware, data loading, nested routes, and state pa
 Start with the [Overview](./index.md), then use this page for the day-to-day API.
 :::
 
-## Mirror a State Machine into the URL
-
-A stepped flow's URL should name the step the domain is on: shareable, reload-safe, and never ahead of the truth. `createPhaseMirror` wires a `Router` to the domain phase as a ripple `Readable`, replacing (never pushing) so back exits the flow.
-
-```ts
-import { createPhaseMirror } from '@vielzeug/wayfinder';
-import { signal } from '@vielzeug/ripple';
-
-const currentPhase = signal<'story' | 'preparing' | 'fight' | null>(null);
-const subjectId = signal<string | null>(null);
-
-const mirror = createPhaseMirror({
-  canRevisit: (current, target) => current === 'fight' && target === 'preparing',
-  currentPhase,
-  detailRoute: 'easyPathDetail',
-  phases: ['story', 'preparing', 'fight'],
-  phaseRoute: 'easyPathPhase',
-  requestRevisit: (phase) => openConfirmDialog(phase),
-  router,
-  subjectId,
-});
-
-mirror.routePhase.value; // the phase segment of the current route, or null
-mirror.phaseHref('preparing'); // anchor href for a tracker link
-mirror.dispose(); // stop mirroring
-```
-
-The consumer supplies reactivity; the mirror never writes history. A Vue app bridges its reactive getters into ripple signals and disposes the mirror with its component scope.
-
 ## Basic Usage
 
 Create a deterministic router with memory history, wait for startup, and navigate by route name.
@@ -422,7 +393,7 @@ const controller = new AbortController();
 const state = await router.load('/users/42', { signal: controller.signal });
 ```
 
-`load()` follows declarative redirects (up to five hops). Middleware is not executed and its result is not reused by client navigation.
+`load()` follows declarative redirects (up to five hops) and accepts the same router-internal URLs as `url()`/`href()`. Middleware is not executed and its result is not reused by client navigation. When a `notFound` route is configured, an unmatched URL returns that fallback route's state; otherwise `load()` returns `null`.
 
 ## Preload Client Navigation
 

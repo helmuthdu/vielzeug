@@ -64,6 +64,26 @@ describe('load()', () => {
     router.dispose();
   });
 
+  it('loads the notFound route for unmatched URLs when configured', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      notFound: { data: async ({ pathname }: { pathname: string }) => ({ requestedPath: pathname }) },
+      routes: { home: { path: '/' } },
+    });
+
+    await settle();
+
+    const state = await router.load('/does-not-exist');
+
+    expect(state?.status).toBe('idle');
+    expect(state?.matches.at(-1)?.name).toBe('__notFound__');
+    expect(state?.matches.at(-1)?.data).toEqual({ requestedPath: '/does-not-exist' });
+    // load() never mutulates router state: the live router stays on '/'.
+    expect(router.getSnapshot().location.pathname).toBe('/');
+    router.dispose();
+  });
+
   it('follows declarative redirects without navigating', async () => {
     const history = createMemoryHistory('/');
     const router = createRouter({
@@ -164,6 +184,8 @@ describe('load()', () => {
 
     expect(state?.location.pathname).toBe('/page');
     expect(router.getSnapshot().location.pathname).toBe('/');
+    // load() accepts any router-internal URL, so base-less paths normalize onto the base.
+    await expect(router.load('/page')).resolves.toMatchObject({ location: { pathname: '/page' } });
     router.dispose();
   });
 

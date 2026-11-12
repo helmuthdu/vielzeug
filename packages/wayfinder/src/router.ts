@@ -10,16 +10,7 @@ import {
 import { WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError } from './errors';
 import { type RegisteredBlocker, runLeaveBlockers } from './guards';
 import { createBrowserHistory } from './history';
-import {
-  buildUrl,
-  joinPaths,
-  matchesPrefix,
-  matchRouteFor,
-  normalizePath,
-  parseQuery,
-  readLocation,
-  stripBase,
-} from './path';
+import { buildUrl, joinPaths, matchesPrefix, matchRouteFor, normalizePath, parseQuery, stripBase } from './path';
 import type {
   BeforeLeaveBlocker,
   BeforeLeaveOptions,
@@ -88,6 +79,9 @@ function resolveTarget(
 
 const ROUTER_ERROR = Symbol('wayfinder.routerError');
 
+/** Declarative redirect hops the router follows before declaring a loop. */
+const MAX_REDIRECT_HOPS = 5;
+
 type RouterErrorCarrier = {
   [ROUTER_ERROR]: true;
   readonly error: unknown;
@@ -121,6 +115,9 @@ type NavigationDecision =
     }
   | { location: RouteLocation; params: RouteParams; type: 'unmatched' }
   | { location: RouteLocation; params: RouteParams; redirectTo: string; type: 'redirect' };
+
+/** The decision left after declarative redirects have been followed. */
+type TerminalDecision = Exclude<NavigationDecision, { type: 'redirect' }>;
 
 // ─── Router class ─────────────────────────────────────────────────────────────
 
@@ -192,15 +189,17 @@ class Router<TRoutes extends RouteTable = RouteTable> {
 
     this.#unlistenHistory = this.#registerHistoryListener();
 
-    const { hash, pathname, search } = this.#history.location;
+    const { hash, pathname, search, state } = this.#history.location;
+    const initialHref = `${pathname}${search}${hash}`;
 
-    this.#lastHref = `${pathname}${search}${hash}`;
+    this.#lastHref = initialHref;
 
     const attempt = this.#navigation.begin();
 
     const navigationPromise = this.#handleRoute(
       attempt,
-      readLocation(this.#base, this.#history),
+      initialHref,
+      state,
       (location, replace) => {
         if (!attempt.isCurrent()) return;
 
@@ -211,7 +210,6 @@ class Router<TRoutes extends RouteTable = RouteTable> {
         this.#lastHref = href;
       },
       undefined,
-      0,
       false,
     ).then(() => undefined);
 
@@ -299,7 +297,7 @@ class Router<TRoutes extends RouteTable = RouteTable> {
     options?: NavigateOptions,
   ): Promise<void> {
     const normalized = typeof target === 'string' ? { path: target } : target;
-    const destination = resolveTarget(normalized, this.#routesByName);
+    const destination = resolveTarget(normalized, this.#routesByName, this.#base);
 
     return this.#navigateToPath(destination, options);
   }
@@ -360,12 +358,14 @@ class Router<TRoutes extends RouteTable = RouteTable> {
   }
 
   /**
-   * Load a URL into a route state including data loader results, without modifying
-   * router state or history. Follows declarative redirects but does not cache results.
-   * Middleware is not executed: use `navigate()` when middleware side effects are needed.
+   * Load a router-internal URL into a route state including data loader results,
+   * without modifying router state or history. Follows declarative redirects but
+   * does not cache results. Middleware is not executed: use `navigate()` when
+   * middleware side effects are needed. An unmatched URL resolves to the
+   * `notFound` route when configured; otherwise `null` is returned.
    */
   async load(url: string, options?: { signal?: AbortSignal }): Promise<RouteState | null> {
-    const prepared = await this.#resolveUrl(url);
+    const { decision: prepared } = await this.#resolveWithRedirects(url, null);
 
     if (prepared.type !== 'matched') return null;
 
@@ -581,7 +581,8 @@ class Router<TRoutes extends RouteTable = RouteTable> {
 
     const terminalRan = await this.#handleRoute(
       attempt,
-      readLocation(this.#base, this.#history),
+      newHref,
+      this.#history.location.state,
       (location, replace) => {
         if (!attempt.isCurrent()) return;
 
@@ -592,7 +593,6 @@ class Router<TRoutes extends RouteTable = RouteTable> {
         this.#lastHref = href;
       },
       undefined,
-      0,
       false,
     );
 
@@ -662,27 +662,42 @@ class Router<TRoutes extends RouteTable = RouteTable> {
 
   // ─── Private: URL resolution ──────────────────────────────────────────────
 
-  /** Parse a URL, call #prepareRoute, and follow declarative redirects up to 5 hops. */
-  async #resolveUrl(url: string): Promise<NavigationDecision> {
+  /**
+   * Resolve a router-internal URL to its terminal route, following declarative
+   * redirects. This is the single redirect-following implementation shared by
+   * navigations and `load()`. `hopped` reports whether any redirect was
+   * followed; hopped navigations must replace rather than push history.
+   */
+  async #resolveWithRedirects(
+    url: string,
+    historyState: unknown,
+  ): Promise<{ decision: TerminalDecision; hopped: boolean }> {
     let destination = url;
+    let hopped = false;
 
-    for (let i = 0; i < 5; i += 1) {
-      const parsed = new URL(destination, 'http://localhost');
-      const location: RouteLocation = {
-        hash: parsed.hash.replace(/^#/, ''),
-        historyState: null,
-        pathname: stripBase(parsed.pathname, this.#base),
-        query: parseQuery(parsed.search),
-      };
+    for (let hop = 0; ; hop += 1) {
+      const prepared = await this.#prepareRoute(this.#locationFromPath(destination, historyState));
 
-      const prepared = await this.#prepareRoute(location);
+      if (prepared.type !== 'redirect') return { decision: prepared, hopped };
 
-      if (prepared.type !== 'redirect') return prepared;
+      if (hop >= MAX_REDIRECT_HOPS) throw new WayfinderRedirectLoopError();
 
-      destination = this.#resolveDestination(prepared.redirectTo);
+      destination = prepared.redirectTo;
+      hopped = true;
     }
+  }
 
-    throw new WayfinderRedirectLoopError();
+  /** Run a coercion function with fallback to the raw query, reporting failures through `onError`. */
+  #coerceQuery(location: RouteLocation, coerce?: CoerceSearchFn): ResolvedQueryParams {
+    if (!coerce) return location.query;
+
+    try {
+      return coerce(location.query);
+    } catch (err) {
+      this.#reportError(err, { source: 'coerce-search' });
+
+      return location.query;
+    }
   }
 
   // ─── Private: route preparation ───────────────────────────────────────────
@@ -691,6 +706,19 @@ class Router<TRoutes extends RouteTable = RouteTable> {
     const { params, record } = matchRouteFor(location.pathname, this.#records);
 
     if (!record) {
+      // The configured notFound fallback is a plain route record: fold it into a
+      // matched decision so fallback navigations run through the same pipeline.
+      if (this.#notFoundRecord) {
+        return {
+          branch: buildMatchBranch(this.#notFoundRecord.branchDefs, {}, location.pathname, [undefined]),
+          location,
+          params: {},
+          record: this.#notFoundRecord,
+          resolvedQuery: this.#coerceQuery(location, this.#globalCoerceSearch),
+          type: 'matched',
+        };
+      }
+
       return { location, params, type: 'unmatched' };
     }
 
@@ -703,18 +731,7 @@ class Router<TRoutes extends RouteTable = RouteTable> {
       };
     }
 
-    let resolvedQuery: ResolvedQueryParams = location.query;
-
-    const coerce: CoerceSearchFn | undefined = record.coerceSearch ?? this.#globalCoerceSearch;
-
-    if (coerce) {
-      try {
-        resolvedQuery = coerce(location.query);
-      } catch (err) {
-        this.#reportError(err, { source: 'coerce-search' });
-        resolvedQuery = location.query;
-      }
-    }
+    const resolvedQuery = this.#coerceQuery(location, record.coerceSearch ?? this.#globalCoerceSearch);
 
     return {
       branch: buildMatchBranch(
@@ -800,132 +817,27 @@ class Router<TRoutes extends RouteTable = RouteTable> {
   // ─── Private: main navigation orchestrator ────────────────────────────────
 
   /**
-   * Declarative redirects reuse the active attempt and replace the final history entry.
-   * Middleware redirects call `ctx.navigate()`, which starts a new attempt.
+   * Run a navigation to completion: resolve (following declarative redirects),
+   * middleware, history commit, terminal data loaders, scroll, and notification.
+   * Declarative redirects reuse the active attempt and replace the final history
+   * entry. Middleware redirects call `ctx.navigate()`, which starts a new attempt.
    */
   async #handleRoute(
     attempt: NavigationAttempt,
-    currentLocation: RouteLocation,
+    url: string,
+    historyState: unknown,
     commit: (location: RouteLocation, replace: boolean) => void,
-    useTransition?: boolean,
-    depth = 0,
-    replace = false,
+    useTransition: boolean | undefined,
+    replace: boolean,
   ): Promise<boolean> {
     const previousState = this.#currentState;
     const isCurrent = (): boolean => attempt.isCurrent() && !this.#disposed;
-    const prepared = await this.#prepareRoute(currentLocation);
+    const { decision: prepared, hopped } = await this.#resolveWithRedirects(url, historyState);
 
     if (!isCurrent()) return false;
 
-    if (prepared.type === 'redirect') {
-      if (depth >= 5) throw new WayfinderRedirectLoopError();
-
-      return this.#handleRoute(
-        attempt,
-        this.#locationFromPath(prepared.redirectTo, currentLocation.historyState),
-        commit,
-        useTransition,
-        depth + 1,
-        true,
-      );
-    }
-
     if (prepared.type === 'unmatched') {
-      // Fall back to notFound record when defined.
-      if (this.#notFoundRecord) {
-        const nfDefs = [this.#notFoundRecord.leaf];
-        const nfBranch = buildMatchBranch(nfDefs, {}, currentLocation.pathname, [undefined]);
-        let committed = false;
-        let dataError: unknown;
-        let hasDataError = false;
-        let terminalRan = false;
-
-        // Apply global coerceSearch to the unmatched location so notFound handlers
-        // receive typed query params, consistent with matched-route behaviour.
-        let nfResolvedQuery: ResolvedQueryParams = currentLocation.query;
-        let notified = false;
-
-        if (this.#globalCoerceSearch) {
-          try {
-            nfResolvedQuery = this.#globalCoerceSearch(currentLocation.query);
-          } catch (err) {
-            this.#reportError(err, { source: 'coerce-search' });
-          }
-        }
-
-        const run = async (): Promise<void> => {
-          if (!isCurrent()) return;
-
-          const context = createRouteContext<TRoutes>(
-            currentLocation,
-            nfResolvedQuery,
-            {},
-            nfBranch,
-            (target, options) => this.navigate(target, options),
-          );
-
-          terminalRan = await executeMiddlewarePipeline(
-            context,
-            [...this.#globalMiddleware, ...this.#notFoundRecord!.ownMiddleware] as unknown as Middleware<TRoutes>[],
-            async () => {
-              if (!isCurrent()) return;
-
-              committed = true;
-              commit(currentLocation, replace);
-
-              if (!isCurrent()) return;
-
-              await this.#runTerminal(
-                this.#notFoundRecord!,
-                context,
-                currentLocation,
-                {},
-                attempt.signal,
-                isCurrent,
-                (error) => {
-                  dataError = error;
-                  hasDataError = true;
-                },
-              );
-
-              if (!isCurrent()) return;
-
-              // Swap and scroll while the view transition is still open: the new view renders
-              // and the scroll resets before the new-state capture, so neither change lands
-              // as an uncovered jump after the animation ends.
-              notified = true;
-              this.#notifyListeners();
-              this.#applyScroll(this.#currentState, previousState);
-            },
-            (error) =>
-              isRouterErrorCarrier(error) || (hasDataError && error === dataError)
-                ? error
-                : carryError(error, { routeName: '__notFound__', source: 'middleware' }),
-          );
-        };
-
-        try {
-          await this.#runWithTransition(run, useTransition);
-        } catch (error) {
-          if (hasDataError && error === dataError) {
-            throw carryError(error, { routeName: '__notFound__', source: 'data-loader' });
-          }
-
-          throw error;
-        } finally {
-          // Abort and error paths skip the in-run swap above; they still settle here.
-          if (isCurrent() && committed && !notified) {
-            this.#notifyListeners();
-            this.#applyScroll(this.#currentState, previousState);
-          }
-        }
-
-        return terminalRan && committed;
-      }
-
-      if (!isCurrent()) return false;
-
-      commit(prepared.location, replace);
+      commit(prepared.location, replace || hopped);
 
       if (!isCurrent()) return false;
 
@@ -941,6 +853,7 @@ class Router<TRoutes extends RouteTable = RouteTable> {
     }
 
     const { branch, location, params, record, resolvedQuery } = prepared;
+    const shouldReplace = replace || hopped;
     let committed = false;
     let dataError: unknown;
     let hasDataError = false;
@@ -961,7 +874,7 @@ class Router<TRoutes extends RouteTable = RouteTable> {
           if (!isCurrent()) return;
 
           committed = true;
-          commit(location, replace);
+          commit(location, shouldReplace);
 
           if (!isCurrent()) return;
 
@@ -1110,7 +1023,8 @@ class Router<TRoutes extends RouteTable = RouteTable> {
     try {
       await this.#handleRoute(
         attempt,
-        this.#locationFromPath(destination, options.state),
+        destination,
+        options.state,
         (location, replace) => {
           if (!attempt.isCurrent()) return;
 
@@ -1122,7 +1036,6 @@ class Router<TRoutes extends RouteTable = RouteTable> {
           this.#lastHref = href;
         },
         options.viewTransition,
-        0,
         options.replace ?? false,
       );
     } catch (value) {

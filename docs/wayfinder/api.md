@@ -307,7 +307,7 @@ const controller = new AbortController();
 const state = await router.load('/dashboard', { signal: controller.signal });
 ```
 
-Load a full URL into a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops). Returns `null` for unmatched URLs.
+Load a router-internal URL into a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops). Returns `null` for unmatched URLs, except when a `notFound` route is configured: then the fallback route's state (with its `data` loaded) is returned instead.
 
 Middleware is **not** executed: `load` is a data-only prefetch for SSR and pre-rendering where middleware side effects are not wanted. If your data loaders depend on `ctx.locals` set by middleware, use `navigate()` instead.
 
@@ -391,16 +391,6 @@ router.beforeLeave(async () => confirm('Discard changes?'), { routes: ['editor']
 The guard fires when the router is leaving any route whose name appears in the `routes` array (any node in the active branch, not just the leaf). Declarative `redirect` routes bypass all leave guards.
 
 **Returns:** `() => void`
-
-## `createPhaseMirror(options)`
-
-Mirrors a domain state machine's phase into a `/:subject/:id/:phase` route segment: the shared routing approach for stepped flows (wizards, chapters, onboarding). Two-way, with the state machine as the sole source of truth:
-
-- **Domain → URL**: every phase change lands on the phase's route, replacing so the browser back button exits the flow rather than stepping between phases.
-- **URL → domain**: a mismatched phase route is a revisit request (`requestRevisit`: the consumer owns its confirm dialog) when `canRevisit(current, target)` allows it, otherwise a bounce back to the actual phase. Reacts to the URL and to the domain loading, never to domain-led changes. The mirror stops following entirely when the route leaves the flow or names a different subject.
-- **Canonicalization**: the bare `detailRoute` URL redirects onto the current phase's route, so every arrival is shareable and reload-safe.
-
-Options carry the router, the valid `phases`, both route names, and ripple `Readable`s for `currentPhase` and `subjectId` (`null` while the subject is missing). The mirror exposes `routePhase`, `revisitPhases` (readables), `phaseHref`, `followPhase`, `bounceIfMismatched` (the dialog cancel path), and `dispose()`.
 
 ## `createRouteSignals(router)`
 
