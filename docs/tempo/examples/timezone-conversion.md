@@ -1,6 +1,6 @@
 ---
 title: 'Tempo Examples: Timezone Conversion'
-description: 'Project an instant into user timezones with inTimeZone().'
+description: 'Project an instant into user timezones with toZoned().'
 ---
 
 ## Timezone Conversion
@@ -11,22 +11,22 @@ An event has one absolute instant but needs distinct local displays for each use
 
 ### Solution
 
-Parse the API timestamp as an instant and project it with `inTimeZone()`.
+Parse the API timestamp as an instant and project it with `toZoned()`.
 
 ```ts
-import { format, inTimeZone, parse } from '@vielzeug/tempo';
+import { format, parse, toZoned } from '@vielzeug/tempo';
 
 const event = parse('2026-04-15T14:00:00Z', { as: 'instant' });
 
 for (const timeZone of ['America/New_York', 'Europe/Berlin', 'Asia/Tokyo']) {
-  const local = inTimeZone(event, timeZone);
+  const local = toZoned(event, { timeZone });
   console.log(format(local, { locale: 'en-US', pattern: 'long' }));
 }
 ```
 
 ### Pitfalls
 
-- `inTimeZone()` projects the same instant; it does not add elapsed time.
+- `toZoned()` projects the same instant; it does not add elapsed time.
 - Use `shift()` when arithmetic must resolve plain or instant inputs in a specific timezone.
 
 ### Related

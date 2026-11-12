@@ -3,12 +3,11 @@ import { toInstant, toZoned } from './_convert';
 import { inferTimeZone, validateTimeZone } from './_tz';
 import { fail, TempoInvalidInputError } from './errors';
 import type {
+  AbsoluteTime,
   DurationFormatOptions,
   FormatOptions,
   FormatPattern,
   RelativeFormatOptions,
-  RelativeTimeInput,
-  TimeDiffResult,
   TimeInput,
   TimerFormatOptions,
   TimeZoneOptions,
@@ -154,13 +153,14 @@ function toRelativeUnit(seconds: number): { unit: Intl.RelativeTimeFormatUnit; v
   for (const { scale, thresholdToPromote, unit } of RELATIVE_UNITS) {
     const value = Math.round(roundedSeconds / scale);
 
+    // The final entry promotes at Infinity, so the loop is exhaustive.
     if (Math.abs(value) < thresholdToPromote) return { unit, value };
   }
 
-  return { unit: 'week', value: Math.round(roundedSeconds / SECONDS_PER_WEEK) };
+  throw new TempoInvalidInputError('Relative unit table exhausted.');
 }
 
-function resolveRelativeTimeZone(input: RelativeTimeInput, base: RelativeTimeInput, timeZone?: string): string {
+function resolveRelativeTimeZone(input: AbsoluteTime, base: AbsoluteTime, timeZone?: string): string {
   if (timeZone) return validateTimeZone(timeZone);
 
   const inputTimeZone = input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined;
@@ -174,8 +174,8 @@ function resolveRelativeTimeZone(input: RelativeTimeInput, base: RelativeTimeInp
 }
 
 function toCalendarRelativeUnit(
-  input: RelativeTimeInput,
-  base: RelativeTimeInput,
+  input: AbsoluteTime,
+  base: AbsoluteTime,
   timeZone: string,
 ): { unit: Intl.RelativeTimeFormatUnit; value: number } {
   const target = toZoned(input, { timeZone });
@@ -229,6 +229,19 @@ function buildDurationFallback(duration: Temporal.Duration): string {
 // ─── Private helpers ──────────────────────────────────────────────────────────
 
 /**
+ * Intl `formatRange` throws a native `RangeError` when the first date is later than the second;
+ * tempo ranges are order-free, so callers get them sorted as instants up front. Plain inputs
+ * without a resolvable timezone raise the standard `TempoMissingTzError` here, exactly as the
+ * display conversion would have.
+ */
+function orderRange(start: TimeInput, end: TimeInput, timeZone?: string): [Temporal.Instant, Temporal.Instant] {
+  const first = toInstant(start, { timeZone });
+  const second = toInstant(end, { timeZone });
+
+  return first.epochMilliseconds <= second.epochMilliseconds ? [first, second] : [second, first];
+}
+
+/**
  * Resolves a shared display timezone for two-input range functions.
  * Throws when both inputs are `ZonedDateTime` with different zones and no `options.timeZone` override.
  */
@@ -276,12 +289,10 @@ export function format(input: TimeInput, options: FormatOptions = {}): string {
  */
 export function formatRange(start: TimeInput, end: TimeInput, options: FormatOptions = {}): string {
   const timeZone = resolveRangeTz(start, end, options, 'formatRange');
+  const [earlier, later] = orderRange(start, end, timeZone);
   const formatter = makeFormatter(options, timeZone);
 
-  return formatter.formatRange(
-    new Date(toInstant(start, { timeZone }).epochMilliseconds),
-    new Date(toInstant(end, { timeZone }).epochMilliseconds),
-  );
+  return formatter.formatRange(new Date(earlier.epochMilliseconds), new Date(later.epochMilliseconds));
 }
 
 /**
@@ -300,12 +311,10 @@ export function formatRangeParts(
   options: FormatOptions = {},
 ): ReturnType<Intl.DateTimeFormat['formatRangeToParts']> {
   const timeZone = resolveRangeTz(start, end, options, 'formatRangeParts');
+  const [earlier, later] = orderRange(start, end, timeZone);
   const formatter = makeFormatter(options, timeZone);
 
-  return formatter.formatRangeToParts(
-    new Date(toInstant(start, { timeZone }).epochMilliseconds),
-    new Date(toInstant(end, { timeZone }).epochMilliseconds),
-  );
+  return formatter.formatRangeToParts(new Date(earlier.epochMilliseconds), new Date(later.epochMilliseconds));
 }
 
 /**
@@ -367,7 +376,7 @@ export function formatZoned(input: TimeInput, options: TimeZoneOptions = {}): st
  * // 'in 2 hours'
  * ```
  */
-export function formatRelative(input: RelativeTimeInput, options: RelativeFormatOptions = {}): string {
+export function formatRelative(input: AbsoluteTime, options: RelativeFormatOptions = {}): string {
   const base = options.base ?? Temporal.Now.instant();
   const timeZone = resolveRelativeTimeZone(input, base, options.timeZone);
   const { unit, value } = toCalendarRelativeUnit(input, base, timeZone);
@@ -470,27 +479,4 @@ export function formatParts(input: TimeInput, options: FormatOptions = {}): Intl
   const timeZone = options.timeZone ?? (input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined);
 
   return makeFormatter(options, timeZone).formatToParts(new Date(toInstant(input, { timeZone }).epochMilliseconds));
-}
-
-/**
- * Converts a `TimeDiffResult` to a human-readable string.
- * Uses the singular unit name when value is 1, plural (unit + 's') otherwise.
- *
- * Pass `options.locale` to localize the numeric part via `Intl.NumberFormat`.
- * Unit names remain English: for fully localized output use {@link formatRelative}
- * or {@link formatDuration} instead.
- *
- * @example
- * ```ts
- * humanize({ unit: 'day', value: 1 })  // '1 day'
- * humanize({ unit: 'day', value: 3 })  // '3 days'
- * humanize({ unit: 'day', value: 3 }, { locale: 'ar' }) // '٣ days'
- * humanize({ unit: 'millisecond', value: 0 }) // '0 milliseconds'
- * ```
- */
-export function humanize(diff: TimeDiffResult, options: { locale?: Intl.LocalesArgument } = {}): string {
-  const { unit, value } = diff;
-  const formatted = options.locale ? new Intl.NumberFormat(options.locale).format(value) : String(value);
-
-  return `${formatted} ${value === 1 ? unit : `${unit}s`}`;
 }

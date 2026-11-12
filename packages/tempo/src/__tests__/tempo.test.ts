@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  clamp,
-  classifyExpiry,
-  contains,
-  dateRange,
   difference,
   endOf,
   format,
@@ -16,8 +12,6 @@ import {
   formatRelative,
   formatTimer,
   formatZoned,
-  humanize,
-  inTimeZone,
   isAfter,
   isBefore,
   isSame,
@@ -26,15 +20,14 @@ import {
   type ParseAs,
   parse,
   parseDuration,
-  recurrence,
   shift,
   startOf,
   TempoInvalidInputError,
   TempoInvalidTzError,
   TempoMissingTzError,
   Temporal,
-  timeDiff,
   toInstant,
+  toZoned,
 } from '../index';
 
 describe('parse', () => {
@@ -84,11 +77,19 @@ describe('time zone resolution', () => {
     );
   });
 
-  it('projects an instant with inTimeZone', () => {
+  it('projects an instant with toZoned', () => {
     const instant = parse('2026-03-21T10:00:00Z', { as: 'instant' });
 
-    expect(inTimeZone(instant, 'Europe/Berlin').toString()).toBe('2026-03-21T11:00:00+01:00[Europe/Berlin]');
+    expect(toZoned(instant, { timeZone: 'Europe/Berlin' }).toString()).toBe('2026-03-21T11:00:00+01:00[Europe/Berlin]');
     expect(now({ timeZone: 'UTC' }).timeZoneId).toBe('UTC');
+  });
+
+  it('round-trips a wall time through toInstant and toZoned', () => {
+    const wall = parse('2026-03-21T10:15:30', { as: 'plainDateTime' });
+
+    expect(toZoned(toInstant(wall, { timeZone: 'Europe/Berlin' }), { timeZone: 'Europe/Berlin' }).toString()).toBe(
+      '2026-03-21T10:15:30+01:00[Europe/Berlin]',
+    );
   });
 
   it('preserves the original error as cause for invalid timezone', () => {
@@ -112,13 +113,6 @@ describe('arithmetic and comparisons', () => {
     expect(difference({ end, largestUnit: 'hour', start }).toString()).toBe('PT2H');
   });
 
-  it('normalizes reversed containment and clamp bounds', () => {
-    expect(contains({ end: start, start: end, value: middle })).toBe(true);
-    expect(clamp({ end: start, start: end, value: parse('2026-03-21T13:00:00Z', { as: 'instant' }) }).toString()).toBe(
-      '2026-03-21T12:00:00Z',
-    );
-  });
-
   it('compares wall times in an explicit timezone and unit', () => {
     const morning = parse('2026-03-21T10:00:00', { as: 'plainDateTime' });
     const evening = parse('2026-03-21T20:00:00', { as: 'plainDateTime' });
@@ -134,59 +128,6 @@ describe('arithmetic and comparisons', () => {
     expect(shift(before, { days: 1 }, { timeZone: 'America/New_York' }).toString()).toBe(
       '2026-03-09T01:30:00-04:00[America/New_York]',
     );
-  });
-});
-
-describe('expiry classification', () => {
-  const reference = parse('2026-06-01T00:00:00Z', { as: 'instant' });
-
-  it('classifies fixed elapsed-time thresholds', () => {
-    expect(
-      classifyExpiry({
-        relativeTo: reference,
-        thresholds: { expired: { days: 0 }, warning: { days: 7 } },
-        value: parse('2026-06-04T00:00:00Z', { as: 'instant' }),
-      }),
-    ).toBe('warning');
-  });
-
-  it('rejects calendar months and years rather than approximating them', () => {
-    expect(() =>
-      classifyExpiry({
-        relativeTo: reference,
-        thresholds: { invalid: { months: 1 } as never },
-        value: reference,
-      }),
-    ).toThrow(TempoInvalidInputError);
-  });
-});
-
-describe('calendar sequences', () => {
-  const start = parse('2026-03-01T00:00:00[UTC]', { as: 'zonedDateTime' });
-
-  it('yields an inclusive zoned date range', () => {
-    const end = parse('2026-03-03T00:00:00[UTC]', { as: 'zonedDateTime' });
-
-    expect([...dateRange(start, end, { days: 1 })].map((value) => value.day)).toEqual([1, 2, 3]);
-  });
-
-  it('rejects non-advancing sequence steps and intervals', () => {
-    expect(() => dateRange(start, start, { days: 0 })).toThrow(TempoInvalidInputError);
-    expect(() => recurrence(start, { count: 3, frequency: 'weekly', interval: 0 })).toThrow(TempoInvalidInputError);
-    expect(() => recurrence(start, { count: 3, frequency: 'weekly', interval: 1.5 })).toThrow(TempoInvalidInputError);
-    expect(() => recurrence(start, { count: 1.5, frequency: 'weekly' })).toThrow(TempoInvalidInputError);
-  });
-
-  it('supports count, interval, and until recurrence limits', () => {
-    expect([...recurrence(start, { count: 3, frequency: 'weekly', interval: 2 })].map((value) => value.day)).toEqual([
-      1, 15, 29,
-    ]);
-    expect([
-      ...recurrence(start, {
-        frequency: 'daily',
-        until: parse('2026-03-03T00:00:00[UTC]', { as: 'zonedDateTime' }),
-      }),
-    ]).toHaveLength(3);
   });
 });
 
@@ -430,50 +371,21 @@ describe('formatTimer', () => {
     expect(() => formatTimer({ years: 1 })).toThrow(TempoInvalidInputError);
   });
 });
+describe('formatRange order normalization', () => {
+  const options = { locale: 'en-GB', pattern: 'short', timeZone: 'UTC' } as const;
 
-describe('humanize', () => {
-  it('humanizes a single unit', () => {
-    expect(humanize({ unit: 'day', value: 1 })).toBe('1 day');
-    expect(humanize({ unit: 'day', value: 3 })).toBe('3 days');
+  it('formats reversed instants like the sorted pair', () => {
+    const morning = parse('2026-03-21T10:00:00Z', { as: 'instant' });
+    const evening = parse('2026-03-21T12:00:00Z', { as: 'instant' });
+
+    expect(formatRange(evening, morning, options)).toBe(formatRange(morning, evening, options));
   });
 
-  it('humanizes zero', () => {
-    expect(humanize({ unit: 'millisecond', value: 0 })).toBe('0 milliseconds');
-  });
+  it('formats reversed plain dates in a shared timezone', () => {
+    const earlier = parse('2026-03-21', { as: 'plainDate' });
+    const later = parse('2026-03-23', { as: 'plainDate' });
 
-  it('passes locale to Intl.NumberFormat when available', () => {
-    // Locale-dependent digit rendering varies by ICU build; verify the unit suffix is correct.
-    const result = humanize({ unit: 'day', value: 3 }, { locale: 'de' });
-
-    expect(result).toMatch(/days$/);
-  });
-});
-
-describe('timeDiff', () => {
-  it('returns the largest non-zero unit', () => {
-    const a = parse('2026-03-21T10:00:00Z', { as: 'instant' });
-    const b = parse('2026-03-21T12:00:00Z', { as: 'instant' });
-
-    expect(timeDiff(a, b)).toEqual({ unit: 'hour', value: 2 });
-  });
-
-  it('returns days for multi-day differences', () => {
-    const a = parse('2026-03-21T10:00:00Z', { as: 'instant' });
-    const b = parse('2026-03-24T10:00:00Z', { as: 'instant' });
-
-    expect(timeDiff(a, b)).toEqual({ unit: 'day', value: 3 });
-  });
-
-  it('returns zero for identical instants', () => {
-    const a = parse('2026-03-21T10:00:00Z', { as: 'instant' });
-
-    expect(timeDiff(a, a)).toEqual({ unit: 'millisecond', value: 0 });
-  });
-
-  it('works with ZonedDateTime inputs', () => {
-    const a = parse('2026-03-21T10:00:00[UTC]', { as: 'zonedDateTime' });
-    const b = parse('2026-03-21T10:30:00[UTC]', { as: 'zonedDateTime' });
-
-    expect(timeDiff(a, b)).toEqual({ unit: 'minute', value: 30 });
+    expect(formatRange(later, earlier, options)).toContain('–');
+    expect(formatRangeParts(later, earlier, options).some((p) => p.source === 'startRange')).toBe(true);
   });
 });

@@ -33,10 +33,10 @@ const birthday = parse('2026-03-21', { as: 'plainDate' });
 
 ## Convert Timezones
 
-Use `inTimeZone()` to project an absolute value. Use `toInstant()` only when resolving a wall-clock value.
+Use `toZoned()` to project a value into a display timezone. Use `toInstant()` only when resolving a wall-clock value.
 
 ```ts
-import { inTimeZone, parse, toInstant } from '@vielzeug/tempo';
+import { parse, toInstant, toZoned } from '@vielzeug/tempo';
 
 const local = parse('2026-11-01T01:30:00', { as: 'plainDateTime' });
 const firstOccurrence = toInstant(local, {
@@ -44,46 +44,26 @@ const firstOccurrence = toInstant(local, {
   timeZone: 'America/New_York',
 });
 
-const berlin = inTimeZone(firstOccurrence, 'Europe/Berlin');
+const berlin = toZoned(firstOccurrence, { timeZone: 'Europe/Berlin' });
 ```
 
 ## Calculate and Compare
 
-Use Tempo helpers when an operation must resolve timezones, normalize ranges, or compare calendar units. Use Temporal methods directly when values are already the exact kind and timezone you need.
+Use Tempo helpers when an operation must resolve timezones or compare calendar units. Use Temporal methods directly when values are already the exact kind and timezone you need.
 
 ```ts
-import { clamp, contains, difference, parse, shift } from '@vielzeug/tempo';
+import { difference, isAfter, isBefore, isSame, parse, shift } from '@vielzeug/tempo';
 
 const start = parse('2026-03-21T10:00:00Z', { as: 'instant' });
 const end = parse('2026-03-21T12:00:00Z', { as: 'instant' });
-const value = parse('2026-03-21T13:00:00Z', { as: 'instant' });
 
 const duration = difference({ end, largestUnit: 'hour', start });
-const isScheduled = contains({ end, start, value });
-const bounded = clamp({ end, start, value });
+const isWithinWindow = isAfter(end, start) && isBefore(end, parse('2026-03-21T14:00:00Z', { as: 'instant' }));
+
+const sameDay = isSame(start, end, { timeZone: 'UTC', unit: 'day' });
 
 const local = parse('2026-03-08T01:30:00', { as: 'plainDateTime' });
 const tomorrow = shift(local, { days: 1 }, { timeZone: 'America/New_York' });
-```
-
-## Classify Expiry
-
-Use fixed elapsed-time thresholds in milliseconds or larger units. Handle `null` as the unclassified state instead of adding a far-future catch-all.
-
-```ts
-import { classifyExpiry, parse } from '@vielzeug/tempo';
-
-const status = classifyExpiry({
-  relativeTo: parse('2026-06-01T00:00:00Z', { as: 'instant' }),
-  thresholds: {
-    expired: { days: 0 },
-    critical: { days: 3 },
-    warning: { days: 14 },
-  },
-  value: parse('2026-06-04T00:00:00Z', { as: 'instant' }),
-});
-
-const label = status ?? 'safe';
 ```
 
 ## Format Values
@@ -113,33 +93,18 @@ formatTimer({ milliseconds: 3_753_000 }); // '1:02:33'
 formatTimer('PT5M', { hours: 'always' }); // '0:05:00'
 ```
 
-## Generate Calendar Sequences
-
-Use zoned values when the sequence already has a timezone. Plain and instant starts require `timeZone`.
-
-```ts
-import { dateRange, parse, recurrence } from '@vielzeug/tempo';
-
-const start = parse('2026-03-01T09:00:00[America/New_York]', { as: 'zonedDateTime' });
-const end = parse('2026-03-03T09:00:00[America/New_York]', { as: 'zonedDateTime' });
-
-const days = [...dateRange(start, end, { days: 1 })];
-const meetings = [...recurrence(start, { count: 4, frequency: 'weekly', interval: 2 })];
-```
-
-Both functions advance with zoned calendar arithmetic. Non-advancing range steps, invalid recurrence intervals, and negative or fractional counts throw `TempoInvalidInputError`.
-
 ## Testing
 
-Pin the reference instant for deterministic expiry tests.
+Pin reference instants so relative and boundary assertions stay deterministic.
 
 ```ts
-import { classifyExpiry, parse } from '@vielzeug/tempo';
+import { formatRelative, parse, startOf } from '@vielzeug/tempo';
 
-const relativeTo = parse('2026-06-01T00:00:00Z', { as: 'instant' });
-const value = parse('2026-05-31T00:00:00Z', { as: 'instant' });
+const base = parse('2026-06-01T00:00:00Z', { as: 'instant' });
+const value = parse('2026-06-04T00:00:00Z', { as: 'instant' });
 
-classifyExpiry({ relativeTo, thresholds: { expired: { days: 0 } }, value });
+formatRelative(value, { base, locale: 'en-US' }); // 'in 3 days'
+startOf(value, 'month').toString(); // '2026-06-01T00:00:00+00:00[UTC]'
 ```
 
 ## Framework Integration
@@ -199,9 +164,7 @@ const expiresAt = now({ timeZone: 'UTC' }).add({ minutes: 30 }).toInstant();
 
 - Parse strings with their actual temporal meaning and pass `timeZone` when resolving plain values.
 - Use `disambiguation` for DST overlap and gap handling.
-- Use Tempo helpers for timezone resolution, normalized ranges, and calendar units; use Temporal directly for already-normalized values.
-- Use fixed duration units for expiry thresholds.
-- Reject non-advancing range and recurrence configuration.
+- Use Tempo helpers for timezone resolution and calendar units; use Temporal directly for already-normalized values.
 - Store instants for transport and database values.
 - Use `formatInstant()` for machine output and `format()` for user-facing text.
 - Pass `timeZone` to `formatRelative()` when month and year boundaries must use a specific region.

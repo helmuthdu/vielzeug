@@ -1,9 +1,39 @@
 ---
-title: Tempo 3 Migration
-description: Migrate Tempo relative formatting and recurrence validation to Tempo 3.
+title: Tempo Migration
+description: Migrate Tempo to the narrowed core API, shared Temporal gateway, and calendar-aware relative formatting.
 ---
 
 [[toc]]
+
+## Breaking Changes Since 26.11.11
+
+Tempo's surface was narrowed to its core: parsing, timezone resolution, DST-safe arithmetic, boundaries, comparison predicates, and the `Intl` formatting suite. Speculative and app-level clusters were removed, and `inTimeZone()` was replaced by the symmetric `toInstant()`/`toZoned()` pair.
+
+Removed exports:
+
+- `contains()` / `clamp()` — range checks are two `Instant` comparisons; use `isBefore()`/`isAfter()` or compare `epochMilliseconds` directly.
+- `classifyExpiry()` (with `FixedDuration`, `ExpiryThresholds`, `ClassifyExpiryInput`) — expiry buckets are application policy; express thresholds with `difference()` in the app that owns them.
+- `timeDiff()` / `humanize()` (with `TimeDiffUnit`, `TimeDiffResult`) — `formatRelative()` localizes the same spans, and `Temporal.Duration` plus `formatDuration()` cover unit-level rendering.
+- `dateRange()` / `recurrence()` (with `RecurrenceRule`) — lazy calendar walks are a few lines of `Temporal` arithmetic in the app that needs them; the toy recurrence subset was never RRULE-compatible.
+- `RelativeTimeInput` — use `AbsoluteTime` directly.
+
+### `inTimeZone()` becomes `toZoned()`
+
+```ts
+// Before
+import { inTimeZone } from '@vielzeug/tempo';
+const local = inTimeZone(instant, 'Europe/Berlin');
+
+// After
+import { toZoned } from '@vielzeug/tempo';
+const local = toZoned(instant, { timeZone: 'Europe/Berlin' });
+```
+
+`toZoned()` mirrors `toInstant()`: named options, an explicit `timeZone`, and DST `disambiguation` for wall-clock inputs.
+
+### `formatRange()` and `formatRangeParts()` accept reversed bounds
+
+`Intl.DateTimeFormat.formatRange` throws a native `RangeError` when the first value is later than the second. Tempo ranges are now order-free: reversed inputs are sorted before formatting, matching the normalized bounds the old `contains()`/`clamp()` provided.
 
 ## Tempo 3 Changes
 

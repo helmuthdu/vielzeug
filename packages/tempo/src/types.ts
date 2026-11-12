@@ -3,8 +3,6 @@ import type { Temporal } from '@js-temporal/polyfill';
 export type AbsoluteTime = Temporal.Instant | Temporal.ZonedDateTime;
 export type WallTime = Temporal.PlainDate | Temporal.PlainDateTime;
 export type TimeInput = AbsoluteTime | WallTime;
-export type RelativeTimeInput = AbsoluteTime;
-
 export type ParseAs = 'instant' | 'plainDate' | 'plainDateTime' | 'zonedDateTime';
 export type Disambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
 
@@ -33,7 +31,7 @@ export type FormatOptions =
   | { intl?: never; locale?: Intl.LocalesArgument; pattern?: FormatPattern; timeZone?: string };
 
 export interface RelativeFormatOptions extends TimeZoneOptions {
-  base?: RelativeTimeInput;
+  base?: AbsoluteTime;
   locale?: Intl.LocalesArgument;
   numeric?: Intl.RelativeTimeFormatNumeric;
   style?: Intl.RelativeTimeFormatStyle;
@@ -72,33 +70,3 @@ export interface CompareOptions extends TimeZoneOptions {
   unit?: BoundaryUnit;
   weekStartsOn?: WeekStartDay;
 }
-
-export interface ContainsInput extends CompareOptions {
-  end: TimeInput;
-  start: TimeInput;
-  value: TimeInput;
-}
-
-export interface ClampInput extends CompareOptions {
-  end: TimeInput;
-  start: TimeInput;
-  value: TimeInput;
-}
-
-export type FixedDuration = Pick<
-  Temporal.DurationLike,
-  'days' | 'hours' | 'microseconds' | 'milliseconds' | 'minutes' | 'nanoseconds' | 'seconds' | 'weeks'
->;
-export type ExpiryThresholds<K extends string> = Record<K, FixedDuration>;
-export interface ClassifyExpiryInput<K extends string> extends TimeZoneOptions {
-  relativeTo?: Temporal.Instant;
-  thresholds: ExpiryThresholds<K>;
-  value: TimeInput;
-}
-
-export type TimeDiffUnit = Exclude<TempoUnit, 'microsecond' | 'nanosecond'>;
-export type TimeDiffResult = { unit: TimeDiffUnit; value: number };
-
-type RecurrenceBase = { frequency: 'daily' | 'monthly' | 'weekly' | 'yearly'; interval?: number };
-export type RecurrenceRule = RecurrenceBase &
-  ({ count: number; until?: TimeInput } | { count?: number; until: TimeInput });

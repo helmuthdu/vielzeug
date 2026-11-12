@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Narrow the API to the core surface: remove contains/clamp, classifyExpiry, timeDiff/humanize, dateRange/recurrence; replace inTimeZone with a symmetric toZoned; make formatRange order-free.",
+      "packageName": "@vielzeug/tempo",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tempo"
+}
