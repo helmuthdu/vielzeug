@@ -40,7 +40,7 @@ The first CalVer train (`26.10.0`) was an epoch: every publishable package carri
 ## Consequences
 
 - An npm version is "the train this package last shipped on": which is every train, since every package rides every train. A package's version number tells you _when_, and its changelog entry for that train tells you _whether anything changed_.
-- Consumers outside the monorepo should pin exact versions and read the changed packages' `migration.md` when moving between trains. Note what CalVer means for ranges: `^26.10.0` spans _months_ (`>=26.10.0 <27.0.0` includes `26.11.x`, `26.12.x`:), and a breaking change rides the next train like any other, so a caret range can silently pull a breaking monthly train. Exact pins are the contract; upgrade deliberately, train by train.
+- Consumers outside the monorepo should pin exact versions and read the changed packages' `migration.md` when moving between trains. Note what CalVer means for ranges: `^26.10.0` spans _months_ (`>=26.10.0 <27.0.0` includes `26.11.x`, `26.12.x`:), and a breaking change rides the next train like any other, so a caret range can silently pull a breaking monthly train. Exact pins are the contract; upgrade deliberately, train by train. When a train's breaking changes are pure renames, publish a rule file under `scripts/codemods/` (see `train-26.11.ts`) so consumers can apply them mechanically with `bun run apply:codemod` before reading the migration notes.
 - The docs site and demos always track `main`, the latest train.
 
 ## Local use

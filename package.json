@@ -9,6 +9,7 @@
     "demos/*"
   ],
   "scripts": {
+    "apply:codemod": "bun scripts/codemods/apply.ts",
     "build": "bun run --filter './packages/*' build",
     "check:ai-data": "bun scripts/sync-ai-data.mjs --check",
     "check:change-files": "bun scripts/validate-change-files.mjs",
