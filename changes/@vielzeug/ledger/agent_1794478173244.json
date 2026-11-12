@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix the README quickstart to read state via getSnapshot and drop the legacy error prototype fixup.",
+      "packageName": "@vielzeug/ledger",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ledger"
+}

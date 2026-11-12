@@ -29,7 +29,7 @@ await ledger.do({
 });
 
 await ledger.undo();
-console.log(ledger.state.value.undo.length); // 0
+console.log(ledger.state.getSnapshot().undo.length); // 0
 ledger.dispose();
 ```
 
