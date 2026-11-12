@@ -47,26 +47,68 @@ const lucideUmd = resolve(dirname(req.resolve('lucide')), '../../dist/umd/lucide
 // dependencies as bare globals in its invocation arguments (read from each bundle's own tail,
 // e.g. sentinel's is `})({},Arsenal)`), so an out-of-order entry captures `undefined` for that
 // dependency: silently, because everything here is concatenated into one script where `var`
-// hoisting suppresses the ReferenceError. The previous order loaded Sentinel before Arsenal
-// and Focus before Keymap, leaving both with an undefined dependency.
-//   Temporal → Ripple → Arsenal → Keymap → Sigil → Gesture → Sentinel(Arsenal)
-//   → Focus(Keymap) → Ore(Ripple) → Orbit(Arsenal) → Prism(Orbit) → Tempo(Temporal)
-//   → Dnd(Keymap,Gesture) → Necromancer → Lucide
-const depPaths = [
+// hoisting suppresses the ReferenceError. A missing entry is louder but still easy to miss:
+// the hand-maintained list eventually omitted `scribe` entirely, and refine.iife.js — which
+// takes `Scribe` as a bare global — then died at evaluation with a ReferenceError inside the
+// sandbox, leaving every preview on the site unregistered and unstyled.
+//
+// The list is therefore DERIVED, the same way refine's own vite config derives its externals
+// from package.json: the closure of refine's workspace dependencies is topologically sorted by
+// manifest edges, so a new dependency joins the preview runtime the moment it joins refine.
+function workspaceDepNames(pkg: string): string[] {
+  const manifest = JSON.parse(readFileSync(resolve(pkgDir, pkg, 'package.json'), 'utf-8')) as {
+    dependencies?: Record<string, string>;
+  };
+
+  return Object.keys(manifest.dependencies ?? {})
+    .filter((dep) => dep.startsWith('@vielzeug/'))
+    .map((dep) => dep.slice('@vielzeug/'.length));
+}
+
+// Kahn topological sort over the @vielzeug/* dependency closure, alphabetical for determinism.
+function topoSortedWorkspaceClosure(root: string): string[] {
+  const names = new Set<string>([root]);
+
+  for (const queue = [root]; queue.length > 0; ) {
+    for (const dep of workspaceDepNames(queue.shift() as string)) {
+      if (!names.has(dep)) {
+        names.add(dep);
+        queue.push(dep);
+      }
+    }
+  }
+  names.delete(root);
+
+  const pending = new Map<string, Set<string>>(
+    [...names].sort().map((name) => [name, new Set(workspaceDepNames(name).filter((dep) => names.has(dep)))]),
+  );
+  const ordered: string[] = [];
+
+  while (pending.size > 0) {
+    const ready = [...pending].filter(([, deps]) => deps.size === 0).map(([name]) => name);
+
+    if (ready.length === 0) {
+      throw new Error(`component-preview: dependency cycle among ${[...pending.keys()].join(', ')}`);
+    }
+
+    for (const name of ready.sort()) {
+      pending.delete(name);
+      ordered.push(name);
+    }
+    for (const deps of pending.values()) {
+      for (const name of ready) deps.delete(name);
+    }
+  }
+
+  return ordered;
+}
+
+export const depPaths: string[] = [
   temporalUmd,
-  resolve(pkgDir, 'ripple/dist/ripple.iife.js'),
-  resolve(pkgDir, 'arsenal/dist/arsenal.iife.js'),
-  resolve(pkgDir, 'keymap/dist/keymap.iife.js'),
-  resolve(pkgDir, 'sigil/dist/sigil.iife.js'),
-  resolve(pkgDir, 'gesture/dist/gesture.iife.js'),
-  resolve(pkgDir, 'sentinel/dist/sentinel.iife.js'),
-  resolve(pkgDir, 'focus/dist/focus.iife.js'),
-  resolve(pkgDir, 'ore/dist/ore.iife.js'),
-  resolve(pkgDir, 'orbit/dist/orbit.iife.js'),
+  ...topoSortedWorkspaceClosure('refine').map((name) => resolve(pkgDir, `${name}/dist/${name}.iife.js`)),
+  // Prism backs the chart previews but is not a refine dependency; its own dependency (Orbit)
+  // is already loaded above by the closure.
   resolve(pkgDir, 'prism/dist/prism.iife.js'),
-  resolve(pkgDir, 'tempo/dist/tempo.iife.js'),
-  resolve(pkgDir, 'dnd/dist/dnd.iife.js'),
-  resolve(pkgDir, 'necromancer/dist/necromancer.iife.js'),
   lucideUmd,
 ];
 
