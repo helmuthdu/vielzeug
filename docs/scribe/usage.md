@@ -15,10 +15,10 @@ import { parseProse, proseOutline, proseToText, renderProseDom, renderProseHtml 
 
 const doc = parseProse('# Hello\n\nShip **today**.');
 
-renderProseHtml(doc);            // string (SSR, VitePress, archive publications)
-renderProseDom(doc);             // DocumentFragment (client replaces, refine ore-prose)
-proseToText(doc);                // plain text (search, notifications, a11y)
-proseOutline(doc);               // [{ level: 1, text: 'Hello', id: 'hello' }]
+renderProseHtml(doc); // string (SSR, VitePress, archive publications)
+renderProseDom(doc); // DocumentFragment (client replaces, refine ore-prose)
+proseToText(doc); // plain text (search, notifications, a11y)
+proseOutline(doc); // [{ level: 1, text: 'Hello', id: 'hello' }]
 ```
 
 `renderProseDom` builds nodes exclusively with `document.createElement` and
@@ -30,16 +30,16 @@ proseOutline(doc);               // [{ level: 1, text: 'Hello', id: 'hello' }]
 Scribe implements a fixed CommonMark + GFM subset — the same on every platform and every
 release:
 
-| Feature | Notes |
-| --- | --- |
-| Headings | ATX (`#`–`######`) only; setext underlines render literally |
-| Emphasis | `*`, `**`, `***`, `_`, `__` with CommonMark flanking rules (`snake_case` is safe); `~~strikethrough~~` |
-| Code | Fenced (``` / `~~~`, info string preserved as `lang`), indented (4 spaces), backtick spans |
-| Blocks | Paragraphs, blockquotes, thematic breaks, hard breaks (`two spaces` or `\`) |
-| Lists | `-`/`+`/`*` bullets and `1.` ordered; strict last-marker nesting; simplified tight/loose rule |
-| Tables | GFM pipes with alignment row; a table must start on its own line |
+| Feature      | Notes                                                                                                      |
+| ------------ | ---------------------------------------------------------------------------------------------------------- |
+| Headings     | ATX (`#`–`######`) only; setext underlines render literally                                                |
+| Emphasis     | `*`, `**`, `***`, `_`, `__` with CommonMark flanking rules (`snake_case` is safe); `~~strikethrough~~`     |
+| Code         | Fenced (``` / `~~~`, info string preserved as `lang`), indented (4 spaces), backtick spans                 |
+| Blocks       | Paragraphs, blockquotes, thematic breaks, hard breaks (`two spaces` or `\`)                                |
+| Lists        | `-`/`+`/`*` bullets and `1.` ordered; strict last-marker nesting; simplified tight/loose rule              |
+| Tables       | GFM pipes with alignment row; a table must start on its own line                                           |
 | Links/images | Inline links with optional titles, images with alt text; autolinks and bare www URLs; GFM autoliteral URLs |
-| Task lists | `[ ]`/`[x]` items render a **disabled** checkbox (never interactive) |
+| Task lists   | `[ ]`/`[x]` items render a **disabled** checkbox (never interactive)                                       |
 
 Deliberately absent: raw HTML and entities (rendered as inert text), reference link
 definitions, setext headings, lazy list continuation, definition lists, footnotes, math.
@@ -105,9 +105,9 @@ import { parseProse, proseOutline, proseToText } from '@vielzeug/scribe';
 
 const doc = parseProse('# Intro\n\nText\n\n## Setup\n\nMore text.');
 
-proseOutline(doc);            // [{ level: 1, text: 'Intro', id: 'intro' }, …]
+proseOutline(doc); // [{ level: 1, text: 'Intro', id: 'intro' }, …]
 proseOutline(doc, { maxLevel: 2 }); // shallow TOC for sidebars
-proseToText(doc);             // "Intro\nText\nSetup\nMore text." for search & alerts
+proseToText(doc); // "Intro\nText\nSetup\nMore text." for search & alerts
 ```
 
 Outline `id`s are produced by the same slugger the renderer uses with `headingIds`, so TOC

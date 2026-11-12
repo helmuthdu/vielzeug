@@ -74,26 +74,26 @@ Edit the config."
 
 ### Attributes
 
-| Attribute     | Type    | Default | Description                                       |
-| ------------- | ------- | ------- | ------------------------------------------------- |
-| `markdown`    | `string` | `''`    | Markdown source rendered through scribe           |
-| `heading-ids` | `boolean` | `false` | Emit unique slug `id` attributes on headings      |
+| Attribute     | Type      | Default | Description                                  |
+| ------------- | --------- | ------- | -------------------------------------------- |
+| `markdown`    | `string`  | `''`    | Markdown source rendered through scribe      |
+| `heading-ids` | `boolean` | `false` | Emit unique slug `id` attributes on headings |
 
 ### Events
 
-| Event   | Detail                       | Description                                                             |
-| ------- | ---------------------------- | ----------------------------------------------------------------------- |
+| Event   | Detail                   | Description                                                            |
+| ------- | ------------------------ | ---------------------------------------------------------------------- |
 | `error` | `{ error: ScribeError }` | Fired when the source exceeds a parser limit; raw source shows as text |
 
 ### CSS Custom Properties
 
-| Property               | Description                          | Default                        |
-| ---------------------- | ------------------------------------ | ------------------------------ |
-| `--prose-color`        | Body text color                      | `var(--text-color-body)`       |
-| `--prose-link-color`   | Link color                           | `var(--color-primary)`         |
+| Property               | Description                           | Default                         |
+| ---------------------- | ------------------------------------- | ------------------------------- |
+| `--prose-color`        | Body text color                       | `var(--text-color-body)`        |
+| `--prose-link-color`   | Link color                            | `var(--color-primary)`          |
 | `--prose-code-bg`      | Inline code and code block background | `var(--color-neutral-backdrop)` |
-| `--prose-border-color` | Table, rule, and quote border color  | `var(--color-divider)`         |
-| `--prose-radius`       | Code block and inline code radius    | `var(--rounded-md)`            |
+| `--prose-border-color` | Table, rule, and quote border color   | `var(--color-divider)`          |
+| `--prose-radius`       | Code block and inline code radius     | `var(--rounded-md)`             |
 
 ### Parts
 

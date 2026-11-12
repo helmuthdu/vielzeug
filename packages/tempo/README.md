@@ -25,6 +25,7 @@ console.log(format(reminder, { locale: 'en-US', pattern: 'short' }));
 
 - [Overview](https://vielzeug.dev/tempo/)
 - [Usage Guide](https://vielzeug.dev/tempo/usage)
+- [Cadence (RRULE)](https://vielzeug.dev/tempo/cadence)
 - [API Reference](https://vielzeug.dev/tempo/api)
 - [Examples](https://vielzeug.dev/tempo/examples)
 - [Migration Guide](https://vielzeug.dev/tempo/migration)

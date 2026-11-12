@@ -23,6 +23,21 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
+    },
+    "./cadence": {
+      "import": "./dist/cadence/index.js",
+      "require": "./dist/cadence/index.cjs",
+      "types": "./dist/cadence/index.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "cadence": [
+        "dist/cadence/index.d.ts"
+      ],
+      "index": [
+        "dist/index.d.ts"
+      ]
     }
   },
   "sideEffects": false,

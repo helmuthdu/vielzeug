@@ -5,6 +5,7 @@ export { endOf, startOf } from './boundary';
 export { isAfter, isBefore, isSame } from './compare';
 export { difference, isValid, now, nowInstant, parse, shift } from './core';
 export {
+  CadenceError,
   TempoError,
   TempoInvalidInputError,
   TempoInvalidTzError,

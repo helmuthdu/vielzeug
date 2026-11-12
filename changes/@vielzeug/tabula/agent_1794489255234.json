@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(tabula): initial release — RFC 4180 CSV/TSV parser with streaming reader, spell-typed rows, and safe serializer",
+      "packageName": "@vielzeug/tabula",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tabula"
+}

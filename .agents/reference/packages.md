@@ -30,6 +30,7 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/necromancer` | Lifecycle-owned Web Animations API primitives with native access, per-handle groups, and additive FLIP | N/A | N/A | N/A |
 | `@vielzeug/orbit` | Floating UI positioning with lifecycle-owned geometry and middleware | `arsenal` | N/A | `ripple` |
 | `@vielzeug/ore` | Functional web-component authoring on top of ripple | N/A | `ripple` | `assay` |
+| `@vielzeug/patchwork` | RFC 6902 JSON Patch: structural diff, immutable apply, and guarded tryApply for sync protocols. | N/A | N/A | N/A |
 | `@vielzeug/postmaster` | Typed durable job outbox with leased processing, retries, and dead-letter recovery | `arsenal`, `vault` | N/A | N/A |
 | `@vielzeug/prism` | Responsive SVG charts with explicit updates: line, bar, area, scatter, pie, radar, heatmap, sparkline | `orbit` | N/A | N/A |
 | `@vielzeug/pulse` | Typed WebSocket client with channels, rooms, presence, reconnect | `arsenal` | N/A | N/A |
@@ -44,6 +45,7 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/sigil` | QR code generation and scanning: pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning | N/A | N/A | N/A |
 | `@vielzeug/sourcerer` | Reactive collection sources with local, page, cursor, and infinite pagination | `arsenal` | N/A | N/A |
 | `@vielzeug/spell` | Zero-dependency schema validation with Standard Schema interoperability | `arsenal` | N/A | N/A |
+| `@vielzeug/tabula` | Typed CSV and TSV: RFC 4180 parser with schema-validated rows, streaming reader, and safe serializer. | `spell` | N/A | N/A |
 | `@vielzeug/tandem` | Offline-first sync engine with rev baselines, tombstoned deletions, and idle-batched pushes | `arsenal` | N/A | N/A |
 | `@vielzeug/tavern` | Table sessions over mesh: host-owned state replication with guest command forwarding | `mesh` | N/A | N/A |
 | `@vielzeug/tempo` | Temporal-powered date utilities | N/A | N/A | N/A |

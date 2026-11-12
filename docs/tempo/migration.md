@@ -14,7 +14,7 @@ Removed exports:
 - `contains()` / `clamp()` — range checks are two `Instant` comparisons; use `isBefore()`/`isAfter()` or compare `epochMilliseconds` directly.
 - `classifyExpiry()` (with `FixedDuration`, `ExpiryThresholds`, `ClassifyExpiryInput`) — expiry buckets are application policy; express thresholds with `difference()` in the app that owns them.
 - `timeDiff()` / `humanize()` (with `TimeDiffUnit`, `TimeDiffResult`) — `formatRelative()` localizes the same spans, and `Temporal.Duration` plus `formatDuration()` cover unit-level rendering.
-- `dateRange()` / `recurrence()` (with `RecurrenceRule`) — lazy calendar walks are a few lines of `Temporal` arithmetic in the app that needs them; the toy recurrence subset was never RRULE-compatible.
+- `dateRange()` / `recurrence()` (with `RecurrenceRule`) — lazy calendar walks are a few lines of `Temporal` arithmetic in the app that needs them; the toy recurrence subset was never RRULE-compatible and has been replaced by the RFC 5545 engine at `@vielzeug/tempo/cadence` (see [Cadence](./cadence.md)).
 - `RelativeTimeInput` — use `AbsoluteTime` directly.
 
 ### `inTimeZone()` becomes `toZoned()`
@@ -57,19 +57,24 @@ formatRelative(target, {
 
 When both values are `Instant`, the default calendar timezone is UTC. One `ZonedDateTime` supplies its timezone. Two zoned values with different timezones require `options.timeZone` so the calendar boundary is unambiguous.
 
-## Validate Recurrence Intervals
+## Recurrence moves to Cadence
 
-`recurrence()` now requires `interval` to be a positive safe integer and `count` to be a non-negative safe integer. Tempo 2 accepted zero or fractional values, which could repeat timestamps or produce unclear schedules.
+The old `recurrence()` helper (a toy `frequency`/`interval` subset) is gone. Recurrence now
+lives in `@vielzeug/tempo/cadence`: a real RFC 5545 RRULE engine — parse, expand, and merge
+RDATE/EXDATE — built on Temporal, DST-correct by construction.
 
 ```ts
-// Tempo 2: accepted but did not describe a valid advancing recurrence
-recurrence(start, { count: 4, frequency: 'weekly', interval: 0 });
+// Before: toy subset, never RRULE-compatible
+import { recurrence } from '@vielzeug/tempo';
+const dates = recurrence(start, { count: 4, frequency: 'weekly', interval: 2 });
 
-// Tempo 3
-recurrence(start, { count: 4, frequency: 'weekly', interval: 2 });
+// After: spec-conformant entry, same subpath import from tempo
+import { expandCadence, parseCadence } from '@vielzeug/tempo/cadence';
+const occurrences = [...expandCadence(start, parseCadence('FREQ=WEEKLY;INTERVAL=2;COUNT=4'))];
 ```
 
-`dateRange()` continues to reject duration steps that do not advance time.
+See [Cadence](./cadence.md) for the full engine: `parseCadence`, `toCadence`,
+`expandCadence`, and `resolveCadenceDates`.
 
 ## Tempo 2 Changes
 

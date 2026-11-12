@@ -100,53 +100,16 @@ const monoVersion = computed(() => {
 
 const categories = PACKAGE_GROUPS;
 
-const heroPackages = [
-  { cmd: 'pnpm add @vielzeug/arsenal', id: 'arsenal', name: 'arsenal', tagline: '75+ utility functions' },
-  { cmd: 'pnpm add -D @vielzeug/assay', id: 'assay', name: 'assay', tagline: 'DOM testing primitives' },
-  { cmd: 'pnpm add @vielzeug/clockwork', id: 'clockwork', name: 'clockwork', tagline: 'Finite state machines' },
-  { cmd: 'pnpm add @vielzeug/coins', id: 'coins', name: 'coins', tagline: 'Monetary arithmetic' },
-  { cmd: 'pnpm add @vielzeug/conduit', id: 'conduit', name: 'conduit', tagline: 'Dependency injection' },
-  { cmd: 'pnpm add @vielzeug/courier', id: 'courier', name: 'courier', tagline: 'HTTP client & caching' },
-  { cmd: 'pnpm add @vielzeug/dnd', id: 'dnd', name: 'dnd', tagline: 'Drag & drop' },
-  { cmd: 'pnpm add @vielzeug/familiar', id: 'familiar', name: 'familiar', tagline: 'Web Worker pool' },
-  { cmd: 'pnpm add @vielzeug/flux', id: 'flux', name: 'flux', tagline: 'Reactive streams & operators' },
-  { cmd: 'pnpm add @vielzeug/focus', id: 'focus', name: 'focus', tagline: 'Keyboard nav & focus restoration' },
-  { cmd: 'pnpm add @vielzeug/forge', id: 'forge', name: 'forge', tagline: 'Form state & validation' },
-  { cmd: 'pnpm add @vielzeug/gesture', id: 'gesture', name: 'gesture', tagline: 'Swipe gesture recognition' },
-  { cmd: 'pnpm add @vielzeug/herald', id: 'herald', name: 'herald', tagline: 'Typed event bus' },
-  { cmd: 'pnpm add @vielzeug/illusionist', id: 'illusionist', name: 'illusionist', tagline: 'Fake data generator' },
-  { cmd: 'pnpm add @vielzeug/keymap', id: 'keymap', name: 'keymap', tagline: 'Keyboard shortcuts & chords' },
-  { cmd: 'pnpm add @vielzeug/ledger', id: 'ledger', name: 'ledger', tagline: 'Async undo / redo history' },
-  { cmd: 'pnpm add @vielzeug/lingua', id: 'lingua', name: 'lingua', tagline: 'i18n & pluralization' },
-  { cmd: 'pnpm add @vielzeug/mesh', id: 'mesh', name: 'mesh', tagline: 'Backendless P2P sessions' },
-  {
-    cmd: 'pnpm add @vielzeug/necromancer',
-    id: 'necromancer',
-    name: 'necromancer',
-    tagline: 'Web Animations API primitives',
-  },
-  { cmd: 'pnpm add @vielzeug/orbit', id: 'orbit', name: 'orbit', tagline: 'Floating positioning' },
-  { cmd: 'pnpm add @vielzeug/ore', id: 'ore', name: 'ore', tagline: 'Web component primitives' },
-  { cmd: 'pnpm add @vielzeug/prism', id: 'prism', name: 'prism', tagline: 'SVG charts' },
-  { cmd: 'pnpm add @vielzeug/pulse', id: 'pulse', name: 'pulse', tagline: 'WebSocket client & presence' },
-  { cmd: 'pnpm add @vielzeug/postmaster', id: 'postmaster', name: 'postmaster', tagline: 'Durable job outbox' },
-  { cmd: 'pnpm add @vielzeug/refine', id: 'refine', name: 'refine', tagline: 'Accessible components' },
-  { cmd: 'pnpm add @vielzeug/ripple', id: 'ripple', name: 'ripple', tagline: 'Signals, computed, effects' },
-  { cmd: 'pnpm add @vielzeug/rune', id: 'rune', name: 'rune', tagline: 'Structured logging' },
-  { cmd: 'pnpm add @vielzeug/sandbox', id: 'sandbox', name: 'sandbox', tagline: 'Sandboxed iframe runtime' },
-  { cmd: 'pnpm add @vielzeug/scout', id: 'scout', name: 'scout', tagline: 'Trigram fuzzy search' },
-  { cmd: 'pnpm add @vielzeug/scroll', id: 'scroll', name: 'scroll', tagline: 'Virtual lists' },
-  { cmd: 'pnpm add @vielzeug/sentinel', id: 'sentinel', name: 'sentinel', tagline: 'Reactive environment state' },
-  { cmd: 'pnpm add @vielzeug/sigil', id: 'sigil', name: 'sigil', tagline: 'QR generation & scanning' },
-  { cmd: 'pnpm add @vielzeug/sourcerer', id: 'sourcerer', name: 'sourcerer', tagline: 'Reactive data sources' },
-  { cmd: 'pnpm add @vielzeug/spell', id: 'spell', name: 'spell', tagline: 'Schema validation' },
-  { cmd: 'pnpm add @vielzeug/tandem', id: 'tandem', name: 'tandem', tagline: 'Offline-first sync engine' },
-  { cmd: 'pnpm add @vielzeug/tavern', id: 'tavern', name: 'tavern', tagline: 'Table session replication' },
-  { cmd: 'pnpm add @vielzeug/tempo', id: 'tempo', name: 'tempo', tagline: 'Date & time' },
-  { cmd: 'pnpm add @vielzeug/vault', id: 'vault', name: 'vault', tagline: 'Browser storage' },
-  { cmd: 'pnpm add @vielzeug/ward', id: 'ward', name: 'ward', tagline: 'RBAC & permissions' },
-  { cmd: 'pnpm add @vielzeug/wayfinder', id: 'wayfinder', name: 'wayfinder', tagline: 'Client-side routing' },
-];
+// Derived from PACKAGE_GROUPS: every package joins the hero rotation automatically.
+const heroPackages = PACKAGE_GROUPS.flatMap((group) =>
+  group.packages.map((pkg) => ({
+    cmd: `pnpm add ${pkg.id === 'assay' ? '-D ' : ''}@vielzeug/${pkg.id}`,
+    id: pkg.id,
+    name: pkg.id,
+    tagline: pkg.tagline,
+  })),
+).sort((a, b) => a.id.localeCompare(b.id));
+
 const activeHeroIndex = ref(0);
 const activeHeroPkg = computed(() => heroPackages[activeHeroIndex.value]);
 const activeHeroAnnouncement = computed(

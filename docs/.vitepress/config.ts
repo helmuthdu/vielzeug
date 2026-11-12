@@ -1399,6 +1399,33 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
+      '/patchwork/': [
+        { link: '/patchwork/', text: 'Overview' },
+        { link: '/patchwork/migration', text: 'Migration' },
+        {
+          items: [
+            { link: '/patchwork/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/patchwork/usage#reading-and-pointers', text: 'Pointers' },
+            { link: '/patchwork/usage#conflicts-as-data', text: 'Conflicts as Data' },
+            { link: '/patchwork/usage#what-diff-emits', text: 'What diff Emits' },
+            { link: '/patchwork/usage#the-json-domain', text: 'The JSON Domain' },
+            { link: '/patchwork/usage#error-handling', text: 'Error Handling' },
+          ],
+          text: 'Guide',
+        },
+        {
+          items: [{ link: '/patchwork/api', text: 'API Reference' }],
+          text: 'Reference',
+        },
+        {
+          items: [
+            { link: '/patchwork/examples', text: 'All Examples' },
+            { link: '/patchwork/examples/diff-and-apply', text: 'Diff and Apply' },
+            { link: '/patchwork/examples/optimistic-sync', text: 'Optimistic Sync' },
+          ],
+          text: 'Examples',
+        },
+      ],
       '/postmaster/': [
         { link: '/postmaster/', text: 'Overview' },
         { link: '/postmaster/migration', text: 'Migration' },
@@ -1829,7 +1856,7 @@ export default defineConfig({
         {
           items: [
             { link: '/scribe/examples', text: 'All Examples' },
-            { link: '/scribe/examples/getting-started', text: 'Getting Started' },
+            { link: '/scribe/examples/parse-and-render', text: 'Parse and Render' },
             { link: '/scribe/examples/safe-rendering', text: 'Safe Rendering' },
           ],
           text: 'Examples',
@@ -2095,6 +2122,33 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
+      '/tabula/': [
+        { link: '/tabula/', text: 'Overview' },
+        { link: '/tabula/migration', text: 'Migration' },
+        {
+          items: [
+            { link: '/tabula/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/tabula/usage#delimiter-detection', text: 'Delimiter Detection' },
+            { link: '/tabula/usage#serializing', text: 'Serializing' },
+            { link: '/tabula/usage#streaming', text: 'Streaming' },
+            { link: '/tabula/usage#typed-rows', text: 'Typed Rows' },
+            { link: '/tabula/usage#error-handling', text: 'Error Handling' },
+          ],
+          text: 'Guide',
+        },
+        {
+          items: [{ link: '/tabula/api', text: 'API Reference' }],
+          text: 'Reference',
+        },
+        {
+          items: [
+            { link: '/tabula/examples', text: 'All Examples' },
+            { link: '/tabula/examples/parse-and-serialize', text: 'Parse and Serialize' },
+            { link: '/tabula/examples/typed-imports', text: 'Typed Imports' },
+          ],
+          text: 'Examples',
+        },
+      ],
       '/tandem/': [
         { link: '/tandem/', text: 'Overview' },
         { link: '/tandem/migration', text: 'Migration' },
@@ -2195,6 +2249,17 @@ export default defineConfig({
       '/tempo/': [
         { link: '/tempo/', text: 'Overview' },
         { link: '/tempo/migration', text: 'Migration' },
+        {
+          items: [
+            { link: '/tempo/cadence#basic-usage', text: 'Basic Usage' },
+            { link: '/tempo/cadence#parsing-and-serializing', text: 'Parsing and Serializing' },
+            { link: '/tempo/cadence#expanding', text: 'Expanding' },
+            { link: '/tempo/cadence#merging-rdate-and-exdate', text: 'RDATE and EXDATE' },
+            { link: '/tempo/cadence#errors', text: 'Errors' },
+          ],
+          link: '/tempo/cadence',
+          text: 'Cadence (RRULE)',
+        },
         {
           items: [
             { link: '/tempo/usage#basic-usage', text: 'Basic Usage' },

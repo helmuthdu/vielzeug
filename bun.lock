@@ -91,6 +91,7 @@
         "@vielzeug/scout": "workspace:*",
         "@vielzeug/scroll": "workspace:*",
         "@vielzeug/spell": "workspace:*",
+        "@vielzeug/tabula": "workspace:*",
         "@vielzeug/tempo": "workspace:*",
         "@vielzeug/vault": "workspace:*",
         "@vielzeug/ward": "workspace:*",
@@ -445,6 +446,16 @@
         "@vielzeug/assay",
       ],
     },
+    "packages/patchwork": {
+      "name": "@vielzeug/patchwork",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^26.6.6",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.6",
+        "vitest": "^5.1.0",
+      },
+    },
     "packages/postmaster": {
       "name": "@vielzeug/postmaster",
       "version": "26.11.11",
@@ -636,6 +647,19 @@
       "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "^26.6.6",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.6",
+        "vitest": "^5.1.0",
+      },
+    },
+    "packages/tabula": {
+      "name": "@vielzeug/tabula",
+      "version": "0.1.0",
+      "dependencies": {
+        "@vielzeug/spell": "workspace:*",
       },
       "devDependencies": {
         "@types/node": "^26.6.6",
@@ -1111,6 +1135,8 @@
 
     "@vielzeug/ore": ["@vielzeug/ore@workspace:packages/ore"],
 
+    "@vielzeug/patchwork": ["@vielzeug/patchwork@workspace:packages/patchwork"],
+
     "@vielzeug/postmaster": ["@vielzeug/postmaster@workspace:packages/postmaster"],
 
     "@vielzeug/prism": ["@vielzeug/prism@workspace:packages/prism"],
@@ -1138,6 +1164,8 @@
     "@vielzeug/sourcerer": ["@vielzeug/sourcerer@workspace:packages/sourcerer"],
 
     "@vielzeug/spell": ["@vielzeug/spell@workspace:packages/spell"],
+
+    "@vielzeug/tabula": ["@vielzeug/tabula@workspace:packages/tabula"],
 
     "@vielzeug/tandem": ["@vielzeug/tandem@workspace:packages/tandem"],
 

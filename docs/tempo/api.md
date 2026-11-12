@@ -20,9 +20,12 @@ description: Reference for Tempo Temporal parsing, conversion, arithmetic, compa
 
 ## Package Entry Point
 
-| Import            | Purpose                                                         |
-| ----------------- | --------------------------------------------------------------- |
-| `@vielzeug/tempo` | Tempo utilities, errors, types, and shared `Temporal` namespace |
+| Import                    | Purpose                                                                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| `@vielzeug/tempo`         | Tempo utilities, errors, types, and shared `Temporal` namespace                          |
+| `@vielzeug/tempo/cadence` | RFC 5545 recurrence: `parseCadence`, `toCadence`, `expandCadence`, `resolveCadenceDates` |
+
+Cadence has its own reference: [Cadence](./cadence.md).
 
 ## Core Functions
 
@@ -290,6 +293,7 @@ interface DurationFormatOptions {
 | Error                        | Trigger                                 | Notable properties                            |
 | ---------------------------- | --------------------------------------- | --------------------------------------------- |
 | `TempoError`                 | Base Tempo error                        | `instanceof TempoError` narrows every subtype |
+| `CadenceError`               | Cadence rule cannot be parsed/expanded  | Also exported from `@vielzeug/tempo/cadence`  |
 | `TempoInvalidInputError`     | Invalid parse or duration input         | Extends `TempoError`                          |
 | `TempoInvalidTzError`        | Invalid IANA zone or offset             | Extends `TempoError`                          |
 | `TempoMissingTzError`        | Wall time without required `timeZone`   | Extends `TempoError`                          |

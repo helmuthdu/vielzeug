@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(patchwork): initial release — RFC 6901 pointers, RFC 6902 apply/tryApply with structural sharing, and structural diff",
+      "packageName": "@vielzeug/patchwork",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/patchwork"
+}

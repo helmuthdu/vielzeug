@@ -118,6 +118,7 @@ const text = format(reminder, {
 - `startOf()` / `endOf()`: Resolve timezone-aware calendar boundaries, including configurable week starts.
 - `format()` / `formatRelative()` / `formatDuration()`: Render localized values through `Intl`, including calendar-aware relative months and years.
 - `formatTimer()`: Deterministic stopwatch clocks (`47:12`, `1:02:35`) for elapsed-time UI.
+- `@vielzeug/tempo/cadence`: RFC 5545 RRULE engine — parse, lazy DST-correct expansion, and `RDATE`/`EXDATE` merging.
 
 </div>
 
@@ -126,6 +127,7 @@ const text = format(reminder, {
 <div class="doc-links">
 
 - [Usage Guide](./usage.md)
+- [Cadence (RRULE)](./cadence.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 - [Migration Guide](./migration.md)

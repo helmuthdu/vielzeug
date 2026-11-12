@@ -18,6 +18,9 @@ export class TempoMissingTzError extends TempoError {}
 /** Thrown when an input type is not supported by the called operation. */
 export class TempoUnsupportedInputError extends TempoError {}
 
+/** An invalid RFC 5545 recurrence rule: malformed parts, unknown keys, or unsupported combinations. */
+export class CadenceError extends TempoError {}
+
 // ─── Error helpers ────────────────────────────────────────────────────────────
 
 type TempoErrorCtor = new (message: string, opts?: ErrorOptions) => TempoError;

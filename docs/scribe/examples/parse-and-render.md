@@ -1,9 +1,9 @@
 ---
-title: 'Scribe Examples: Getting Started'
+title: 'Scribe Examples: Parse and Render'
 description: 'First steps with @vielzeug/scribe: parse once, render to HTML, DOM, text, and outline.'
 ---
 
-## Getting Started
+## Parse and Render
 
 ### Problem
 

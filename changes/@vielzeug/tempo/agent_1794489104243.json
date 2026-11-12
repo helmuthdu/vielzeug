@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(tempo): add @vielzeug/tempo/cadence — RFC 5545 recurrence engine (parse/serialize/expand with DST-safe wall-time expansion and RDATE/EXDATE merging)",
+      "packageName": "@vielzeug/tempo",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tempo"
+}
