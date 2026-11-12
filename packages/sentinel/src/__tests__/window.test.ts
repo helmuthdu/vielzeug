@@ -14,7 +14,6 @@ function createMediaQueryController(initialMatches = false): MediaQueryControlle
     addEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
       if (typeof listener === 'function') listeners.add(listener);
     },
-    addListener: (listener: (event: MediaQueryListEvent) => void) => listeners.add(listener),
     dispatchEvent: () => true,
     get matches() {
       return matches;
@@ -24,7 +23,6 @@ function createMediaQueryController(initialMatches = false): MediaQueryControlle
     removeEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
       if (typeof listener === 'function') listeners.delete(listener);
     },
-    removeListener: (listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener),
   } as unknown as MediaQueryList;
 
   return {

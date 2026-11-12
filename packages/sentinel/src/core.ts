@@ -14,6 +14,17 @@ export function createSentinel<T>(
   return new SentinelHandle(options, setup);
 }
 
+/**
+ * Attach command methods to a sentinel without breaking its contract.
+ * Object spread evaluates/copy-shallow members, which silently drops
+ * prototype-defined members such as the live `disposed` getter and
+ * `[Symbol.dispose]`. Inheriting from the handle instead keeps every member
+ * live, while the arrow-function members already carry their `this` binding.
+ */
+export function extendSentinel<T, C extends object>(sentinel: Sentinel<T>, commands: C): Sentinel<T> & C {
+  return Object.assign(Object.create(sentinel), commands) as Sentinel<T> & C;
+}
+
 class SentinelHandle<T> implements Sentinel<T> {
   readonly disposalSignal: AbortSignal;
   private readonly abortController = new AbortController();

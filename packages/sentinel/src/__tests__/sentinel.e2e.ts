@@ -17,10 +17,14 @@ type TestWindow = Window & {
 };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const arsenalBundle = path.resolve(__dirname, '../../../arsenal/dist/arsenal.iife.js');
 const sentinelBundle = path.resolve(__dirname, '../../dist/sentinel.iife.js');
 
 async function loadSentinel(page: Page): Promise<void> {
   await page.setContent('<!DOCTYPE html><html><body></body></html>');
+  // The sentinel IIFE keeps workspace dependencies external and reads them from
+  // their global bundle build (Arsenal), like a CDN consumer would.
+  await page.addScriptTag({ path: arsenalBundle });
   await page.addScriptTag({ path: sentinelBundle });
 }
 

@@ -1,10 +1,8 @@
 import { resolveWindow } from './_platform.ts';
-import { createSentinel } from './core.ts';
-import type { SentinelOptions, WakeLockSentinel, WakeLockState } from './types.ts';
+import { createSentinel, extendSentinel } from './core.ts';
+import type { WakeLockSentinel, WakeLockState, WindowSentinelOptions } from './types.ts';
 
-type WakeLockWindow = Window & { document: Document };
-
-export function createWakeLock(options?: SentinelOptions & { readonly target?: WakeLockWindow }): WakeLockSentinel {
+export function createWakeLock(options?: WindowSentinelOptions): WakeLockSentinel {
   const target = resolveWindow(options?.target);
   const navigator = target.navigator;
   const supported = typeof navigator.wakeLock?.request === 'function';
@@ -59,8 +57,7 @@ export function createWakeLock(options?: SentinelOptions & { readonly target?: W
     };
   });
 
-  return {
-    ...sentinel,
+  return extendSentinel(sentinel, {
     release(): void {
       wantsLock = false;
       if (handle) {
@@ -74,5 +71,5 @@ export function createWakeLock(options?: SentinelOptions & { readonly target?: W
       wantsLock = true;
       void acquire();
     },
-  };
+  });
 }

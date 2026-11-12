@@ -132,4 +132,19 @@ describe('createFullscreen', () => {
     expect(removeSpy).toHaveBeenCalledWith('fullscreenchange', expect.any(Function));
     expect(target.document.exitFullscreen).toHaveBeenCalled();
   });
+
+  it('keeps the inherited contract live: disposed getter and Symbol.dispose', async () => {
+    const target = createTarget();
+    const fullscreen = createFullscreen({ target: target as unknown as Window });
+
+    expect(fullscreen.disposed).toBe(false);
+
+    fullscreen.request();
+    await vi.waitFor(() => expect(fullscreen.getSnapshot().active).toBe(true));
+
+    fullscreen[Symbol.dispose]();
+
+    expect(fullscreen.disposed).toBe(true);
+    expect(target.document.exitFullscreen).toHaveBeenCalled();
+  });
 });

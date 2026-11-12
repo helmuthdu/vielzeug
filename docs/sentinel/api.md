@@ -179,7 +179,7 @@ intersection.dispose();
 ### `createWakeLock()`
 
 ```ts
-function createWakeLock(options?: SentinelOptions & { readonly target?: Window }): WakeLockSentinel;
+function createWakeLock(options?: WindowSentinelOptions): WakeLockSentinel;
 ```
 
 Returns a Sentinel-backed screen wake lock. `request()` acquires the lock; `release()` frees it. When the tab is hidden the browser auto-releases the lock; the Sentinel re-acquires it automatically on `visibilitychange` if the lock was active. Degrades silently when the Screen Wake Lock API is unavailable.
@@ -214,7 +214,7 @@ wakeLock.dispose();
 ### `createFullscreen()`
 
 ```ts
-function createFullscreen(options?: SentinelOptions & { readonly target?: Window }): FullscreenSentinel;
+function createFullscreen(options?: WindowSentinelOptions): FullscreenSentinel;
 ```
 
 Returns a Sentinel-backed fullscreen view. `request()` enters fullscreen for an element (default: the document element), `exit()` leaves it, and `toggle()` flips it. All degrade silently when the Fullscreen API is missing or the browser refuses (user-activation requirements). Disposing the sentinel exits fullscreen and stops tracking `fullscreenchange`.

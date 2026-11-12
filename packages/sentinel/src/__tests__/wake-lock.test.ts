@@ -109,4 +109,23 @@ describe('createWakeLock', () => {
     expect(removeSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
     expect(mockSentinel.released).toBe(true);
   });
+
+  it('keeps the inherited contract live: disposed getter and Symbol.dispose', async () => {
+    const mockSentinel = new MockWakeLockSentinel();
+    const navigator = {
+      wakeLock: { request: vi.fn(async () => mockSentinel) },
+    } as unknown as Navigator;
+    const target = createTestWindow(navigator);
+    const lock = createWakeLock({ target: target as unknown as Window });
+
+    expect(lock.disposed).toBe(false);
+
+    lock.request();
+    await vi.waitFor(() => expect(lock.getSnapshot().active).toBe(true));
+
+    lock[Symbol.dispose]();
+
+    expect(lock.disposed).toBe(true);
+    expect(mockSentinel.released).toBe(true);
+  });
 });

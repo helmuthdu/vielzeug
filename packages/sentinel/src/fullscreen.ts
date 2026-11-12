@@ -1,8 +1,6 @@
 import { resolveWindow } from './_platform.ts';
-import { createSentinel } from './core.ts';
-import type { FullscreenSentinel, FullscreenState, SentinelOptions } from './types.ts';
-
-type FullscreenWindow = Window & { document: Document };
+import { createSentinel, extendSentinel } from './core.ts';
+import type { FullscreenSentinel, FullscreenState, WindowSentinelOptions } from './types.ts';
 
 /**
  * A sentinel-backed fullscreen view. `request()` enters fullscreen for an element (default:
@@ -10,9 +8,7 @@ type FullscreenWindow = Window & { document: Document };
  * when the Fullscreen API is missing or the browser refuses (user-activation requirements).
  * Disposing the sentinel exits fullscreen and stops tracking `fullscreenchange`.
  */
-export function createFullscreen(
-  options?: SentinelOptions & { readonly target?: FullscreenWindow },
-): FullscreenSentinel {
+export function createFullscreen(options?: WindowSentinelOptions): FullscreenSentinel {
   const target = resolveWindow(options?.target);
   const doc = target.document;
   const supported = typeof doc.documentElement?.requestFullscreen === 'function';
@@ -47,13 +43,12 @@ export function createFullscreen(
     };
   });
 
-  return {
-    ...sentinel,
+  return extendSentinel(sentinel, {
     exit,
     request,
     toggle(element?: Element): void {
       if (doc.fullscreenElement) exit();
       else request(element);
     },
-  };
+  });
 }

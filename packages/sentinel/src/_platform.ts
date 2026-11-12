@@ -1,10 +1,5 @@
 import { SentinelUnavailableError } from './errors.ts';
 
-type LegacyMediaQueryList = MediaQueryList & {
-  addListener?: (listener: (event: MediaQueryListEvent) => void) => void;
-  removeListener?: (listener: (event: MediaQueryListEvent) => void) => void;
-};
-
 export type ObserverWindow = Window & {
   readonly IntersectionObserver?: {
     new (callback: IntersectionObserverCallback, options?: IntersectionObserverInit): IntersectionObserver;
@@ -35,16 +30,7 @@ export function resolveElementWindow(element: Element): ObserverWindow {
 export function listenMediaQuery(mediaQuery: MediaQueryList, listener: () => void): () => void {
   const onChange = () => listener();
 
-  if (typeof mediaQuery.addEventListener === 'function') {
-    mediaQuery.addEventListener('change', onChange);
-    return () => mediaQuery.removeEventListener('change', onChange);
-  }
+  mediaQuery.addEventListener('change', onChange);
 
-  const legacyMediaQuery = mediaQuery as LegacyMediaQueryList;
-  if (typeof legacyMediaQuery.addListener === 'function') {
-    legacyMediaQuery.addListener(onChange);
-    return () => legacyMediaQuery.removeListener?.(onChange);
-  }
-
-  return () => {};
+  return () => mediaQuery.removeEventListener('change', onChange);
 }
