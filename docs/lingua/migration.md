@@ -146,7 +146,7 @@ This train collapses the translation surface to one method and removes the snaps
 
 | Before                                     | After                                                            |
 | ------------------------------------------ | ---------------------------------------------------------------- |
-| `translateDynamic(key, options?)`          | `translate(key as TextKey<C>, options?)`                         |
+| `translateDynamic(key, options?)`          | `translateUnkeyed(key, options?)`                                |
 | `parts()` / `partsDynamic()` / `Part<V>`   | Removed: translate strings; keep rich rendering in the framework |
 | `getSnapshot(): I18nSnapshot<C>`           | `getSnapshot(): Locale`                                          |
 | `subscribe((snapshot) => ...)`             | `subscribe((locale) => ...)`                                     |
@@ -158,15 +158,15 @@ This train collapses the translation surface to one method and removes the snaps
 
 ## One translate method
 
-`translateDynamic()` was a runtime-identical alias of `translate()` with a widened key. Pass runtime-assembled keys through a single cast at your wrapper boundary:
+`translateDynamic()` was a runtime-identical alias of `translate()` with a widened key. That widened door is now the named `translateUnkeyed()` method: same lookup, same `missing` strategy, a plain `string` key instead of a cast at your wrapper boundary:
 
 ```ts
-import type { TextKey } from '@vielzeug/lingua';
-
 function t(i18n: I18n<typeof messages.en>, key: string, values?: Values): string {
-  return i18n.translate(key as TextKey<typeof messages.en>, values ? { values } : undefined);
+  return i18n.translateUnkeyed(key, values ? { values } : undefined);
 }
 ```
+
+On the reactive path the same rule applies to the ripple bridge: wrap `reactive.translateUnkeyed`, not `i18n.translateUnkeyed`, so bindings re-evaluate when the locale changes.
 
 ## Rich content moved out
 

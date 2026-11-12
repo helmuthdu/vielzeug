@@ -165,6 +165,8 @@ export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> 
     },
     translate: (key: string, translateOptions?: TranslateOptions | PluralOptions): string =>
       engine.translate(key, translateOptions),
+    translateUnkeyed: (key: string, translateOptions?: TranslateOptions | PluralOptions): string =>
+      engine.translate(key, translateOptions),
     [Symbol.dispose]: dispose,
   };
 

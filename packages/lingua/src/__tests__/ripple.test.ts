@@ -1,7 +1,7 @@
 import { computed } from '@vielzeug/ripple';
 import { describe, expect, test } from 'vitest';
 
-import { createI18n, type TextKey } from '../';
+import { createI18n } from '../';
 import { createReactiveI18n } from '../ripple';
 
 const enCatalog = {
@@ -51,10 +51,10 @@ describe('createReactiveI18n', () => {
     expect(heading.value).toBe('Accueil');
   });
 
-  test('translate re-evaluates for runtime-assembled keys after locale changes', async () => {
+  test('translateUnkeyed re-evaluates for runtime-assembled keys after locale changes', async () => {
     const reactive = setup();
     const dynamicKey = 'ti' + 'tle';
-    const heading = computed(() => reactive.translate(dynamicKey as TextKey<DemoCatalog>));
+    const heading = computed(() => reactive.translateUnkeyed(dynamicKey));
 
     expect(heading.value).toBe('Home');
 

@@ -22,6 +22,8 @@ describe('createI18n', () => {
 
     expect(i18n.translate('title')).toBe('Home');
     expect(i18n.translate('greeting', { values: { name: 'Ada' } })).toBe('Hello Ada');
+    expect(i18n.translateUnkeyed('greeting', { values: { name: 'Ada' } })).toBe('Hello Ada');
+    expect(i18n.translateUnkeyed('no.such.key')).toBe('no.such.key');
 
     await i18n.setLocale('fr');
 

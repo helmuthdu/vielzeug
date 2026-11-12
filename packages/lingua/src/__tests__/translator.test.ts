@@ -38,6 +38,22 @@ describe('createTranslator', () => {
     expect(translator.translate('inbox', { count: 3 })).toBe('3 messages');
   });
 
+  test('translates untyped runtime keys through translateUnkeyed', () => {
+    const translator = createTranslator(catalog, { locale: 'en' });
+
+    expect(translator.translateUnkeyed('nav.home')).toBe('Home');
+    expect(translator.translateUnkeyed('error', { values: { retry: 'again' } })).toBe('Try again.');
+    expect(translator.translateUnkeyed('inbox', { count: 3 })).toBe('3 messages');
+    // A missing key follows the default strategy: the key itself, no throw.
+    expect(translator.translateUnkeyed('no.such.key')).toBe('no.such.key');
+  });
+
+  test('translateUnkeyed honors the throw strategy for missing keys', () => {
+    const strict = createTranslator(catalog, { locale: 'en', missing: 'throw' });
+
+    expect(() => strict.translateUnkeyed('no.such.key')).toThrow(LinguaMissingKeyError);
+  });
+
   test('uses the zero category when the locale defines it', () => {
     const arabic = createTranslator(catalog, { locale: 'ar' });
 

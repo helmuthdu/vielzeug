@@ -54,10 +54,11 @@ const translator = createTranslator({ save: 'Enregistrer' }, { locale: 'fr' });
 translator.translate('save');
 ```
 
-| Method      | Signature                                                            | Returns                |
-| ----------- | -------------------------------------------------------------------- | ---------------------- |
-| `translate` | `(textKey, options?)` or `(pluralKey, { count, ordinal?, values? })` | Rendered string        |
-| `locale`    | `Locale`                                                             | Resolved active locale |
+| Method             | Signature                                                            | Returns                |
+| ------------------ | -------------------------------------------------------------------- | ---------------------- |
+| `translate`        | `(textKey, options?)` or `(pluralKey, { count, ordinal?, values? })` | Rendered string        |
+| `translateUnkeyed` | `(key: string, options?)`                                            | Rendered string        |
+| `locale`           | `Locale`                                                             | Resolved active locale |
 
 ---
 
@@ -96,6 +97,7 @@ i18n.translate('title');
 | Method or property | Signature                             | Returns                                                        |
 | ------------------ | ------------------------------------- | -------------------------------------------------------------- |
 | `translate`        | Translator method                     | Rendered string                                                |
+| `translateUnkeyed` | Translator method                     | Rendered string for a runtime key outside the typed key set    |
 | `load`             | `({ locale? })`                       | `Promise<void>` after the locale and configured fallbacks load |
 | `setLocale`        | `(locale)`                            | `Promise<void>` after an atomic loaded-locale commit           |
 | `isLoaded`         | `({ locale? })`                       | `boolean`                                                      |
@@ -118,7 +120,7 @@ i18n.translate('title');
 function createReactiveI18n<C extends Catalog>(i18n: I18n<C>): ReactiveI18n<C>;
 ```
 
-Bridges a lingua instance into `@vielzeug/ripple` so translated strings are reactive. `i18n.translate()` is not ripple-reactive on its own: reading it inside a `computed()` computes once and never re-runs, since it registers no tracked dependency. The bridge's `translate` first reads the reactive `locale` readable, so any binding built on it re-evaluates the instant `setLocale()` resolves.
+Bridges a lingua instance into `@vielzeug/ripple` so translated strings are reactive. `i18n.translate()` is not ripple-reactive on its own: reading it inside a `computed()` computes once and never re-runs, since it registers no tracked dependency. The bridge's `translate` and `translateUnkeyed` first read the reactive `locale` readable, so any binding built on them re-evaluates the instant `setLocale()` resolves. For runtime-assembled keys inside reactive bindings use the bridge's `translateUnkeyed`: calling `i18n.translateUnkeyed` directly skips the reactive locale and caches the first result.
 
 `@vielzeug/ripple` is an optional peer dependency: install it only when you use this subpath.
 
@@ -138,6 +140,7 @@ await reactive.i18n.setLocale('fr');
 | `i18n`             | `I18n<C>`          | The underlying instance for imperative work (`setLocale`, `load`, disposal)     |
 | `locale`           | `Readable<Locale>` | Reactive locale: reading it inside a computed/template registers the dependency |
 | `translate`        | `(key, options?)`  | Rendered string; re-evaluates whenever the locale changes                       |
+| `translateUnkeyed` | `(key, options?)`  | Rendered string for a runtime key; re-evaluates whenever the locale changes     |
 
 ---
 
@@ -285,6 +288,7 @@ type Translator<C extends Catalog = Catalog> = {
   readonly locale: Locale;
   translate(key: TextKey<C>, options?: TranslateOptions): string;
   translate(key: PluralKey<C>, options: PluralOptions): string;
+  translateUnkeyed(key: string, options?: TranslateOptions | PluralOptions): string;
 };
 ```
 

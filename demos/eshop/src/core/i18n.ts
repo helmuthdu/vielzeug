@@ -1,4 +1,4 @@
-import { createI18n, type TextKey } from '@vielzeug/lingua';
+import { createI18n } from '@vielzeug/lingua';
 import { createReactiveI18n } from '@vielzeug/lingua/ripple';
 import { computed } from '@vielzeug/ripple';
 
@@ -1457,5 +1457,5 @@ export const currentLocale = computed<'de' | 'en'>(() => (reactive.locale.value 
  * any template binding built on `t()` re-evaluates the instant `setLocale()` runs.
  */
 export function t(key: string, vars?: Record<string, unknown>): string {
-  return reactive.translate(key as TextKey<(typeof messages)['en']>, vars ? { values: vars } : undefined);
+  return reactive.translateUnkeyed(key, vars ? { values: vars } : undefined);
 }

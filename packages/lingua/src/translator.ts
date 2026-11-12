@@ -19,6 +19,13 @@ export type Translator<C extends Catalog = Catalog> = {
   readonly locale: Locale;
   translate(key: TextKey<C>, options?: TranslateOptions): string;
   translate(key: PluralKey<C>, options: PluralOptions): string;
+  /**
+   * Translates a runtime key that is not in the catalog's typed key set. Identical to
+   * `translate` at runtime: the key is looked up the same way and a missing key follows
+   * the configured `missing` strategy. The one typed escape hatch for keys that arrive
+   * as strings, so consumers never cast around the typed surface.
+   */
+  translateUnkeyed(key: string, options?: TranslateOptions | PluralOptions): string;
 };
 
 /** Loose translate signature implemented by the engine; public overloads restrict keys per catalog type. */
@@ -121,5 +128,5 @@ export function createTranslator<C extends Catalog>(catalog: C, options?: Transl
     options,
   );
 
-  return { locale: engine.locale, translate: engine.translate };
+  return { locale: engine.locale, translate: engine.translate, translateUnkeyed: engine.translate };
 }

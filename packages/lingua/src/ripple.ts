@@ -12,6 +12,8 @@ export interface ReactiveI18n<C extends Catalog> {
   readonly locale: Readable<Locale>;
   /** Translate a text or plural key; re-evaluates whenever the locale changes. */
   readonly translate: Translator<C>['translate'];
+  /** Translate a runtime key outside the typed key set; re-evaluates whenever the locale changes. */
+  readonly translateUnkeyed: (key: string, options?: TranslateOptions | PluralOptions) => string;
 }
 
 /**
@@ -33,5 +35,10 @@ export function createReactiveI18n<C extends Catalog>(i18n: I18n<C>): ReactiveI1
     return i18n.translate(key as never, options as never);
   };
 
-  return { i18n, locale, translate: translate as ReactiveI18n<C>['translate'] };
+  const translateUnkeyed = (key: string, options?: TranslateOptions | PluralOptions): string => {
+    void locale.value;
+    return i18n.translateUnkeyed(key, options);
+  };
+
+  return { i18n, locale, translate: translate as ReactiveI18n<C>['translate'], translateUnkeyed };
 }

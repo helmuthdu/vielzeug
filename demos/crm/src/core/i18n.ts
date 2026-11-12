@@ -1,4 +1,4 @@
-import { createI18n, type TextKey } from '@vielzeug/lingua';
+import { createI18n } from '@vielzeug/lingua';
 import { createReactiveI18n } from '@vielzeug/lingua/ripple';
 
 const catalogs = {
@@ -950,5 +950,5 @@ export async function setLocale(next: DemoLocale): Promise<void> {
   await i18n.setLocale(next);
 }
 export function t(key: string, values?: Record<string, unknown>): string {
-  return reactive.translate(key as TextKey<(typeof catalogs)['en']>, values ? { values } : undefined);
+  return reactive.translateUnkeyed(key, values ? { values } : undefined);
 }
