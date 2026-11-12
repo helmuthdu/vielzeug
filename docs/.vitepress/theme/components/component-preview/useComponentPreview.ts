@@ -59,6 +59,8 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
   // ── Sandbox ─────────────────────────────────────────────────────────────────
 
   const sandboxContainerRef = ref<HTMLDivElement | null>(null);
+  /** The sized wrapper around the sandbox: the sandbox div itself is 0x0 until the iframe mounts. */
+  const previewContainerRef = ref<HTMLDivElement | null>(null);
   let sandbox: SandboxHandle | null = null;
 
   // ── Derived values ──────────────────────────────────────────────────────────
@@ -132,7 +134,20 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
     return sandbox;
   }
 
+  // Building a sandbox means the iframe parses a full embedded copy of the
+  // refine bundle (~2 MB of srcdoc). A component page mounts many previews,
+  // so rendering is deferred until the container nears the viewport: pages
+  // with 20+ previews hydrate fast and off-screen sandboxes only pay when
+  // scrolled to.
+  let sandboxVisible = false;
+  let pendingFragment: string | null = null;
+
   function render(fragment: string): void {
+    if (!sandboxVisible) {
+      pendingFragment = fragment;
+      return;
+    }
+
     if (!sandboxContainerRef.value) return;
 
     void ensureSandbox(sandboxContainerRef.value)
@@ -163,6 +178,27 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
 
   onMounted(() => {
     useRefineHmr(patchCss);
+
+    const container = previewContainerRef.value ?? sandboxContainerRef.value;
+    const reveal = () => {
+      sandboxVisible = true;
+      if (pendingFragment !== null) render(pendingFragment);
+    };
+
+    // Environments without IntersectionObserver render eagerly.
+    if (!container || typeof IntersectionObserver === 'undefined') reveal();
+    else {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry?.isIntersecting) return;
+          observer.disconnect();
+          reveal();
+        },
+        { rootMargin: '600px 0px' },
+      );
+      observer.observe(container);
+      onUnmounted(() => observer.disconnect());
+    }
 
     watchEffect(
       () => {
@@ -204,6 +240,7 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
     isCopied,
     isMaximized,
     isRtl,
+    previewContainerRef,
     sandboxContainerRef,
     setViewportSize,
     toggleDirection,

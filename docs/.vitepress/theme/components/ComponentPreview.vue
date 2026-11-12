@@ -23,6 +23,8 @@ const {
   isMaximized,
   isRtl,
   // biome-ignore lint/correctness/noUnusedVariables: bound through the template `ref` attribute
+  previewContainerRef,
+  // biome-ignore lint/correctness/noUnusedVariables: bound through the template `ref` attribute
   sandboxContainerRef,
   setViewportSize,
   toggleDirection,
@@ -117,7 +119,11 @@ const {
             class="preview-scroll-container"
             :style="!isMaximized && props.height ? { height: props.height, minHeight: props.height } : {}">
             <div class="preview-container-wrapper" :style="{ width: viewportWidth }">
-              <div class="preview-container" :class="{ colorful }" :style="backgroundStyle">
+              <div
+                class="preview-container"
+                ref="previewContainerRef"
+                :class="{ colorful }"
+                :style="backgroundStyle">
                 <ClientOnly>
                   <div class="preview-sandbox" ref="sandboxContainerRef" ></div>
                 </ClientOnly>
