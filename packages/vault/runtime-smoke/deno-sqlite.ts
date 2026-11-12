@@ -14,9 +14,9 @@ const parseUser = (value: unknown): User => {
 Deno.test('persists a typed record through @db/sqlite', async () => {
   const database = new Database(':memory:');
   const store = createSQLite({
-    codecs: { users: { parse: parseUser } },
     database,
     name: 'deno-smoke',
+    parsers: { users: { parse: parseUser } },
     schema: { users: table<{ id: number; name: string }>('id') },
   });
 

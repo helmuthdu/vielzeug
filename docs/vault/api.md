@@ -1,6 +1,6 @@
 ---
 title: 'Vault: API Reference'
-description: Reference for Vault schemas, adapter entry points, storage capabilities, codecs, SQLite drivers, and errors.
+description: Reference for Vault schemas, adapter entry points, storage capabilities, parsers, SQLite drivers, and errors.
 ---
 
 [[toc]]
@@ -9,26 +9,25 @@ description: Reference for Vault schemas, adapter entry points, storage capabili
 
 | Symbol                                            | Purpose                                                       | Execution mode                      | Common gotcha                                                          |
 | ------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------- |
-| `createMemory()`                                  | In-memory document store                                      | Async API                           | Import from `/memory`; codecs optional                                 |
-| `createLocalStorage()` / `createSessionStorage()` | Web Storage-backed key-value stores                           | Async API                           | Codecs required; available only where the corresponding Web API exists |
-| `createIndexedDB()`                               | Browser document store with transactions and cursor iteration | Async API                           | Import from `/indexeddb`; codecs required                              |
-| `createSQLite()`                                  | Driver-neutral SQLite document store                          | Async API over a synchronous driver | Import from `/sqlite`; codecs required                                 |
+| `createMemory()`                                  | In-memory document store                                      | Async API                           | Import from `/memory`; parsers optional                                |
+| `createLocalStorage()` / `createSessionStorage()` | Web Storage-backed key-value stores                           | Async API                           | Parsers required; available only where the corresponding Web API exists |
+| `createIndexedDB()`                               | Browser document store with transactions and cursor iteration | Async API                           | Import from `/indexeddb`; parsers required                             |
+| `createSQLite()`                                  | Driver-neutral SQLite document store                          | Async API over a synchronous driver | Import from `/sqlite`; parsers required                                |
 | `table()`                                         | Typed record schema                                           | Sync                                | The key field must be a string or finite number                        |
-| `validatorCodec()`                                | Create an identity-encoding codec from a parser               | Sync                                | Spell schemas can also be passed directly                              |
 | `ttl`                                             | Valid expiration durations                                    | Sync                                | Durations must be positive                                             |
 
 ## Package Entry Points
 
 | Import                            | Purpose                                                                       |
 | --------------------------------- | ----------------------------------------------------------------------------- |
-| `@vielzeug/vault`                 | Adapter-free schemas, TTL, errors, codecs, derived helpers, and shared types  |
+| `@vielzeug/vault`                 | Adapter-free schemas, TTL, errors, parsers, derived helpers, and shared types |
 | `@vielzeug/vault/memory`          | `createMemory`                                                                |
 | `@vielzeug/vault/local-storage`   | `createLocalStorage`                                                          |
 | `@vielzeug/vault/session-storage` | `createSessionStorage`                                                        |
 | `@vielzeug/vault/indexeddb`       | `createIndexedDB`, the `migrate` upgrade-hook types, and IndexedDB-only types |
 | `@vielzeug/vault/sqlite`          | `createSQLite`, the SQLite driver protocol types, and `TransactionContext`    |
 
-## Schemas, Codecs, and TTL
+## Schemas, Parsers, and TTL
 
 ### `table()`
 
@@ -45,7 +44,7 @@ Defines a typed table and its primary-key field.
 | -------------------- | ---------------------------------------------------------------- |
 | `key`                | A record field whose values are `string` or finite `number` keys |
 | `options.defaultTtl` | Per-table default TTL in milliseconds                            |
-| `options.indexes`    | IndexedDB secondary index fields                                 |
+| `options.indexes`    | IndexedDB-only secondary index fields (`getAllByIndex()`)      |
 
 **Returns:** A `SchemaEntry` describing the table.
 
@@ -57,31 +56,6 @@ const users = table<{ id: number; email: string }>('id', {
   defaultTtl: ttl.days(7),
 });
 ```
-
----
-
-### `validatorCodec()`
-
-```ts
-function validatorCodec<T>(validator: { parse(value: unknown): T }): RecordCodec<T>;
-```
-
-Wraps any object with a `parse(value): T` method as an identity-encoding `RecordCodec`. Parser schemas can also be passed directly in `codecs`; a Spell schema requires no adapter.
-
-**Returns:** A `RecordCodec<T>`.
-
-```ts
-import { s } from '@vielzeug/spell';
-
-const UserSchema = s.object({ id: s.number(), name: s.string() });
-const store = createLocalStorage({
-  name: 'app',
-  schema: { users: table<{ id: number; name: string }>('id') },
-  codecs: { users: UserSchema },
-});
-```
-
-Custom `RecordCodec` values validate writes by round-tripping `decode(encode(value))`. IndexedDB codecs must preserve declared indexed field names and values in their encoded object.
 
 ---
 
@@ -109,7 +83,7 @@ const cacheLifetime = ttl.minutes(5);
 
 ## Factories
 
-Durable factories (LocalStorage, SessionStorage, IndexedDB, SQLite) require `codecs`. Memory may omit them.
+Durable factories (LocalStorage, SessionStorage, IndexedDB, SQLite) require `parsers`. Memory may omit them.
 
 ### `createMemory()`
 
@@ -117,12 +91,12 @@ Durable factories (LocalStorage, SessionStorage, IndexedDB, SQLite) require `cod
 function createMemory<S extends AnySchema>(options: MemoryStoreOptions<S>): DocumentVaultStore<S>;
 ```
 
-Creates an in-memory document store with `batch()` and `iterate()`. `batch()` snapshots the declared tables and restores them when the callback throws. Codecs are optional because memory values never cross a trust boundary.
+Creates an in-memory document store with `batch()` and `iterate()`. `batch()` snapshots the declared tables and restores them when the callback throws. Parsers are optional because memory values never cross a trust boundary.
 
 | Parameter | Description                 |
 | --------- | --------------------------- |
 | `schema`  | Tables created by `table()` |
-| `codecs`  | Optional per-table codecs   |
+| `parsers` | Optional per-table parsers  |
 
 **Returns:** `DocumentVaultStore<S>`.
 
@@ -145,12 +119,12 @@ function createLocalStorage<S extends AnySchema>(
 ): KeyValueVaultStore<S>;
 ```
 
-Creates a namespaced `localStorage` store. Codecs are required.
+Creates a namespaced `localStorage` store. Parsers are required.
 
 | Parameter | Description                 |
 | --------- | --------------------------- |
 | `schema`  | Tables created by `table()` |
-| `codecs`  | Required per-table codecs   |
+| `parsers` | Required per-table parsers  |
 | `name`    | Required storage namespace  |
 
 A write that exceeds the browser quota rejects with `VaultQuotaError`.
@@ -164,7 +138,7 @@ import { createLocalStorage } from '@vielzeug/vault/local-storage';
 const store = createLocalStorage({
   name: 'app',
   schema: { settings: table<{ id: string }>('id') },
-  codecs: { settings: SettingsSchema },
+  parsers: { settings: SettingsSchema },
 });
 ```
 
@@ -191,7 +165,7 @@ import { createSessionStorage } from '@vielzeug/vault/session-storage';
 const store = createSessionStorage({
   name: 'checkout',
   schema: { cart: table<{ id: string }>('id') },
-  codecs: { cart: CartSchema },
+  parsers: { cart: CartSchema },
 });
 ```
 
@@ -209,12 +183,12 @@ function createIndexedDB<S extends AnySchema>(
 ): IndexedDbVaultStore<S>;
 ```
 
-Creates an IndexedDB document store with atomic batches, lazy cursor iteration, and optional schema migrations. Codecs are required.
+Creates an IndexedDB document store with atomic batches, lazy cursor iteration, and optional schema migrations. Parsers are required.
 
 | Parameter | Description                                                                                                                                                     |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `schema`  | Tables and IndexedDB secondary indexes                                                                                                                          |
-| `codecs`  | Required per-table codecs                                                                                                                                       |
+| `parsers` | Required per-table parsers                                                                                                                                      |
 | `name`    | Required database name                                                                                                                                          |
 | `version` | Positive schema version; defaults to `1`                                                                                                                        |
 | `migrate` | Synchronous `onupgradeneeded` callback. Object stores and schema-declared indexes are created automatically; use the hook only for deletes or record transforms |
@@ -228,7 +202,7 @@ import { createIndexedDB } from '@vielzeug/vault/indexeddb';
 const store = createIndexedDB({
   name: 'app',
   schema: { users: table<{ id: number; role: string }>('id', { indexes: ['role'] }) },
-  codecs: { users: UserSchema },
+  parsers: { users: UserSchema },
 });
 
 const admins = await store.getAllByIndex('users', 'role', 'admin');
@@ -242,12 +216,12 @@ const admins = await store.getAllByIndex('users', 'role', 'admin');
 function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>): DocumentVaultStore<S>;
 ```
 
-Creates a namespaced SQLite document store with atomic batches and keyset-paginated iteration. Codecs are required. It accepts an application-provided positional-parameter driver and never opens or imports a runtime driver.
+Creates a namespaced SQLite document store with atomic batches and keyset-paginated iteration. Parsers are required. It accepts an application-provided positional-parameter driver and never opens or imports a runtime driver.
 
 | Parameter        | Description                                                |
 | ---------------- | ---------------------------------------------------------- |
 | `schema`         | Tables created by `table()`                                |
-| `codecs`         | Required per-table codecs                                  |
+| `parsers`        | Required per-table parsers                                   |
 | `database`       | Caller-provided `SQLiteDatabase` connection                |
 | `name`           | Namespace within the connection                            |
 | `closeOnDispose` | Closes the connection during disposal; defaults to `false` |
@@ -264,11 +238,11 @@ const store = createSQLite({
   database: new DatabaseSync(':memory:'),
   name: 'tests',
   schema: { users: table<{ id: number; name: string }>('id') },
-  codecs: { users: UserSchema },
+  parsers: { users: UserSchema },
 });
 ```
 
-Node `DatabaseSync`, Bun `Database`, and Deno `jsr:@db/sqlite` `Database` satisfy the protocol. Codec output may be any JSON-compatible value. During a `batch()` callback, calls on every Vault store sharing that connection reject; use `tx.*` instead.
+Node `DatabaseSync`, Bun `Database`, and Deno `jsr:@db/sqlite` `Database` satisfy the protocol. Records must be JSON-compatible values. During a `batch()` callback, calls on every Vault store sharing that connection reject; use `tx.*` instead.
 
 ## Store Capabilities
 
@@ -299,7 +273,7 @@ interface KeyValueVaultStore<S extends AnySchema> {
 }
 ```
 
-The portable key-value store API is returned by Memory and Web Storage factories. `put()`, `update()`, and `upsert()` return the canonical value produced by codec validation. `observe()` emits the current table snapshot by default and then emits after mutations.
+The portable key-value store API is returned by Memory and Web Storage factories. `put()`, `update()`, and `upsert()` return the canonical value produced by the table parser. `observe()` emits the current table snapshot by default and then emits after mutations. Listener errors never break the snapshot stream; pass `onObserverError` to the factory to report them.
 
 ---
 
@@ -393,28 +367,28 @@ type KeyOf<S extends AnySchema, K extends keyof S> = K extends unknown
 ```
 
 ```ts
-type RecordCodec<T> = {
-  decode(value: unknown): T;
-  encode(value: T): unknown;
-};
-
 type RecordParser<T> = { parse(value: unknown): T };
-type CodecInput<T> = RecordCodec<T> | RecordParser<T>;
 
-type TableCodecs<S extends AnySchema> = {
-  [K in keyof S]: CodecInput<RecordOf<S, K>>;
+type TableParsers<S extends AnySchema> = {
+  [K in keyof S]: RecordParser<RecordOf<S, K>>;
 };
+
+type ObserverErrorHandler = (error: unknown) => void;
 
 type MemoryStoreOptions<S extends AnySchema> = {
   schema: S;
-  codecs?: TableCodecs<S>;
+  parsers?: TableParsers<S>;
+  onObserverError?: ObserverErrorHandler;
 };
 
 type DurableStoreOptions<S extends AnySchema> = {
   schema: S;
-  codecs: TableCodecs<S>;
+  parsers: TableParsers<S>;
+  onObserverError?: ObserverErrorHandler;
 };
 ```
+
+Parsers validate writes and decode persisted values: `put()` stores the parser's canonical output, so a record that parses can always be read back. Records must be JSON-safe (use ISO strings for dates) to survive every adapter's serialization. Spell schemas satisfy `RecordParser` directly.
 
 ```ts
 type MigrationContext = {
@@ -470,7 +444,7 @@ interface TransactionContext<S extends AnySchema, K extends keyof S & string = k
 
 | Error                 | Trigger                                                                 |
 | --------------------- | ----------------------------------------------------------------------- |
-| `VaultError`          | Any Vault-originated validation, serialization, storage, or codec error |
+| `VaultError`          | Any Vault-originated validation, serialization, storage, or parser error |
 | `VaultDisposedError`  | An operation after the store or observer hub is disposed                |
 | `VaultScopeError`     | A `batch()` callback accesses a table outside its declared scope        |
 | `VaultQuotaError`     | A LocalStorage or SessionStorage write exceeds the browser quota        |

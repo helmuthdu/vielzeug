@@ -1,10 +1,10 @@
-import { type KeyValueVaultStore, table, ttl, validatorCodec } from '../index';
+import { type KeyValueVaultStore, table, ttl } from '../index';
 import { createSessionStorage } from '../session-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
 const userSchema = { users: table<User>('id') };
-const codecs = { users: validatorCodec({ parse: (v) => v as User }) };
+const parsers = { users: { parse: (v: unknown) => v as User } };
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -13,7 +13,7 @@ describe('SessionStorage adapter', () => {
 
   beforeEach(() => {
     sessionStorage.clear();
-    db = createSessionStorage({ codecs, name: 'SS', schema: userSchema });
+    db = createSessionStorage({ name: 'SS', parsers, schema: userSchema });
   });
 
   test('put/get and delete roundtrip', async () => {
@@ -54,7 +54,7 @@ describe('SessionStorage adapter', () => {
   });
 
   test('instances sharing the same namespace can read each other writes', async () => {
-    const db2 = createSessionStorage({ codecs, name: 'SS', schema: userSchema });
+    const db2 = createSessionStorage({ name: 'SS', parsers, schema: userSchema });
 
     await db.put('users', { id: 1, name: 'Alice' });
 

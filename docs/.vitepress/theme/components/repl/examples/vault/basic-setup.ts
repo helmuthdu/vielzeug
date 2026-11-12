@@ -11,7 +11,7 @@ const schema = {
 const db = createLocalStorage({
   name: 'demo',
   schema,
-  codecs: { users: UserSchema },
+  parsers: { users: UserSchema },
 })
 
 await db.put('users', { id: 1, name: 'Alice', email: 'alice@example.com' })

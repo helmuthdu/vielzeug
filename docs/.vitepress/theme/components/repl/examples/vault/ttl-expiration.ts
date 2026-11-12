@@ -11,7 +11,7 @@ const schema = {
 const db = createLocalStorage({
   name: 'cache-demo',
   schema,
-  codecs: { cache: CacheSchema },
+  parsers: { cache: CacheSchema },
 })
 
 // ttl helpers produce finite, positive millisecond durations

@@ -2243,7 +2243,7 @@ export default defineConfig({
           items: [
             { link: '/vault/api#factories', text: 'Factories' },
             { link: '/vault/api#store-capabilities', text: 'Store capabilities' },
-            { link: '/vault/api#schemas-codecs-and-ttl', text: 'Schema & TTL' },
+            { link: '/vault/api#schemas-parsers-and-ttl', text: 'Schema & TTL' },
           ],
           link: '/vault/api',
           text: 'API Reference',

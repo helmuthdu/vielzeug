@@ -53,6 +53,7 @@ export function decodeStorageTableFromKey(dbName: string, storageKey: string | n
 /** `observe()` is Vault's single reactivity primitive: a snapshot now, then on mutations. */
 export function createObserverHub<S extends AnySchema>(
   getAll: <K extends keyof S & string>(table: K) => Promise<RecordOf<S, K>[]>,
+  onError?: (error: unknown) => void,
 ) {
   const observers = new Map<string, Set<ObserverListener<unknown>>>();
   const revisions = new Map<string, number>();
@@ -78,8 +79,9 @@ export function createObserverHub<S extends AnySchema>(
         for (const listener of current) {
           try {
             listener(records as unknown[]);
-          } catch {
-            /* observer listener errors are intentionally swallowed */
+          } catch (error) {
+            // Without a handler the snapshot stream must never break on one listener.
+            onError?.(error);
           }
         }
       })

@@ -2,21 +2,20 @@ export { VaultDisposedError, VaultError, VaultMigrationError, VaultQuotaError, V
 export { ttl } from './ttl';
 export type {
   AnySchema,
-  CodecInput,
   DocumentVaultStore,
   DurableStoreOptions,
   KeyOf,
   KeyValueVaultStore,
   MemoryStoreOptions,
   Observer,
-  RecordCodec,
+  ObserverErrorHandler,
   RecordOf,
   RecordParser,
   SchemaEntry,
-  TableCodecs,
+  TableParsers,
   TransactionContext,
   Unsubscribe,
   VaultConveniences,
   VaultKey,
 } from './types';
-export { table, validatorCodec } from './types';
+export { table } from './types';

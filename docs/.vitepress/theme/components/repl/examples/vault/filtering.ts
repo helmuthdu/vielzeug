@@ -11,7 +11,7 @@ const schema = {
 const db = createLocalStorage({
   name: 'shop',
   schema,
-  codecs: { products: ProductSchema },
+  parsers: { products: ProductSchema },
 })
 
 await db.putAll('products', [

@@ -9,7 +9,7 @@ export type VaultKey = number | string;
 /** A typed table definition whose primary-key field must hold a portable Vault key. */
 export type SchemaEntry<T extends object, Key extends keyof T & string = keyof T & string> = {
   defaultTtl?: number;
-  /** IndexedDB creates these as `value.<field>` indexes; other stores filter in memory. */
+  /** IndexedDB only: created as `value.<field>` indexes for `getAllByIndex()`. Other adapters ignore them. */
   indexes?: readonly (keyof T & string)[];
   key: Key;
 };
@@ -28,45 +28,40 @@ export type KeyOf<S extends AnySchema, K extends keyof S> = K extends unknown
   ? Extract<S[K] extends SchemaEntry<infer R, infer Key> ? R[Key] : never, VaultKey>
   : never;
 
-/** A codec validates and decodes persisted values crossing a trust boundary. */
-export type RecordCodec<T> = {
-  decode(value: unknown): T;
-  encode(value: T): unknown;
-};
-
+/**
+ * Validates and decodes untrusted values into typed records. Writes are stored as the
+ * parser's canonical output, so a record that parses can always be read back. Records
+ * must be JSON-safe (use ISO strings for dates) to survive every adapter's serialization.
+ * Spell schemas satisfy this interface directly.
+ */
 export type RecordParser<T> = {
   parse(value: unknown): T;
 };
 
-export type CodecInput<T> = RecordCodec<T> | RecordParser<T>;
-
-export type TableCodecs<S extends AnySchema> = {
-  [K in keyof S]: CodecInput<RecordOf<S, K>>;
+export type TableParsers<S extends AnySchema> = {
+  [K in keyof S]: RecordParser<RecordOf<S, K>>;
 };
-
-/** A validator-only codec: encodes values as-is, validates on decode. */
-export function validatorCodec<T>(validator: RecordParser<T>): RecordCodec<T> {
-  return {
-    decode: (value) => validator.parse(value),
-    encode: (value) => value,
-  };
-}
 
 export type Observer<T> = (records: T[]) => void;
 export type Unsubscribe = () => void;
 
-/** Shared factory options for stores that do not require durable codecs. */
+/** Errors thrown by observer listeners are reported here instead of silently swallowed. */
+export type ObserverErrorHandler = (error: unknown) => void;
+
+/** Shared factory options for stores that do not require durable validation. */
 export type MemoryStoreOptions<S extends AnySchema> = {
   schema: S;
-  /** Optional per-table codecs. Memory values never cross a trust boundary, so codecs may be omitted. */
-  codecs?: TableCodecs<S>;
+  /** Optional per-table parsers. Memory values never cross a trust boundary, so parsers may be omitted. */
+  parsers?: TableParsers<S>;
+  onObserverError?: ObserverErrorHandler;
 };
 
 /** Shared factory options for durable stores whose values cross a trust boundary. */
 export type DurableStoreOptions<S extends AnySchema> = {
   schema: S;
-  /** Required per-table codecs. Persisted values are decoded through these before entering typed code. */
-  codecs: TableCodecs<S>;
+  /** Required per-table parsers. Stored values are validated through these before entering typed code. */
+  parsers: TableParsers<S>;
+  onObserverError?: ObserverErrorHandler;
 };
 
 export type VaultConveniences<S extends AnySchema, K extends keyof S & string = keyof S & string> = {

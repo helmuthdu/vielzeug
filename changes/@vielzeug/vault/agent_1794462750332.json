@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "replace codec ceremony with parse-only table parsers, add native SQLite count and onObserverError",
+      "packageName": "@vielzeug/vault",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/vault"
+}

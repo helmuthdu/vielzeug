@@ -25,7 +25,7 @@ const store = createSQLite({
   database: new DatabaseSync('events.db'),
   name: 'events',
   schema: { logs: table<{ id: number; message: string }>('id') },
-  codecs: { logs: LogSchema },
+  parsers: { logs: LogSchema },
 });
 
 await store.batch(['logs'], async (tx) => {

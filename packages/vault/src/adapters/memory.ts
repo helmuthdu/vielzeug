@@ -93,7 +93,6 @@ export function createMemory<S extends AnySchema>(options: MemoryStoreOptions<S>
   };
 
   return buildDocumentStore(schema, core, {
-    ...options,
     createBatch: (deps) => async (declaredTables, fn) => {
       assertBatchTables(declaredTables);
 
@@ -122,5 +121,7 @@ export function createMemory<S extends AnySchema>(options: MemoryStoreOptions<S>
         throw error;
       }
     },
+    onObserverError: options.onObserverError,
+    parsers: options.parsers,
   });
 }

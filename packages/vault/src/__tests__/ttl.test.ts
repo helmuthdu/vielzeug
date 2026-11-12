@@ -1,10 +1,10 @@
-import { table, ttl, validatorCodec } from '../index';
+import { table, ttl } from '../index';
 import { createLocalStorage } from '../local-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
 const userSchema = { users: table<User>('id') };
-const codecs = { users: validatorCodec({ parse: (v) => v as User }) };
+const parsers = { users: { parse: (v: unknown) => v as User } };
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -64,7 +64,7 @@ describe('ttl helpers', () => {
     test('can be used with put and causes expiration', async () => {
       window.localStorage.clear();
 
-      const db = createLocalStorage({ codecs, name: 'TtlHelper', schema: userSchema });
+      const db = createLocalStorage({ name: 'TtlHelper', parsers, schema: userSchema });
 
       await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1));
       await delay(5);
@@ -76,7 +76,7 @@ describe('ttl helpers', () => {
       window.localStorage.clear();
       vi.useFakeTimers({ toFake: ['Date'] });
 
-      const db = createLocalStorage({ codecs, name: 'TtlHelper', schema: userSchema });
+      const db = createLocalStorage({ name: 'TtlHelper', parsers, schema: userSchema });
 
       await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(100));
       expect(await db.count('users')).toBe(1);
@@ -91,7 +91,7 @@ describe('ttl helpers', () => {
     test('put rejects invalid ttl values', async () => {
       window.localStorage.clear();
 
-      const db = createLocalStorage({ codecs, name: 'TtlHelper', schema: userSchema });
+      const db = createLocalStorage({ name: 'TtlHelper', parsers, schema: userSchema });
 
       await expect(db.put('users', { id: 1, name: 'Alice' }, Number.NaN)).rejects.toThrow(
         'expected a finite positive number',

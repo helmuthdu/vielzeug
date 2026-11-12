@@ -20,7 +20,7 @@ const UserSchema = s.object({ id: s.number(), name: s.string() });
 const db = createIndexedDB({
   name: 'blog',
   schema: { users: table<{ id: number; name: string }>('id') },
-  codecs: { users: UserSchema },
+  parsers: { users: UserSchema },
 });
 
 await db.batch(['users'], async (tx) => {

@@ -63,7 +63,7 @@ describe('IndexedDB persisted-record boundary', () => {
     const store = createIndexedDbPostmasterStore({ name: `postmaster-write-${crypto.randomUUID()}` });
 
     await expect(store.transact((tx) => tx.put({ ...entry('bad'), attempts: -1 }))).rejects.toThrow(
-      'executing transaction failed',
+      'invalid stored job: attempts must be a non-negative integer',
     );
     await expect(store.list()).resolves.toEqual([]);
     await store.dispose();

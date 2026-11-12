@@ -341,3 +341,41 @@ Replace broad store access with the narrow store capability required by each ope
 Use `observe()` for reactive integrations instead of polling or application-managed storage subscriptions. Retain and invoke its unsubscribe handle during cleanup.
 
 Review the [Usage Guide](./usage.md), [API Reference](./api.md), and [plugin examples](./examples/plugins.md) for current store, adapter, migration, and observation contracts.
+
+---
+
+# Breaking Changes Since 26.11.11
+
+This train reduces validation to one parse-only concept and tightens adapter semantics.
+
+| Before                                                  | After                                                        |
+| ------------------------------------------------------- | ------------------------------------------------------------ |
+| `codecs: { users: UserSchema }`                         | `parsers: { users: UserSchema }`                             |
+| `RecordCodec { decode, encode }`, `validatorCodec()`    | Removed: `RecordParser { parse }` validates writes and reads |
+| Write validation via `decode(encode(value))`            | Writes store the parser's canonical output                   |
+| IndexedDB invariant that codecs preserve indexed fields | Indexes read the stored record directly                      |
+| SQLite prewalk rejecting class instances and non-finite numbers | Records must be JSON-safe; `JSON.stringify` failures throw |
+| `count()`/`isEmpty()` materializing and decoding tables | SQLite counts live records with a native query               |
+| Observer listener errors silently swallowed             | Optional `onObserverError` reports them                      |
+
+## Replace codecs with parsers
+
+Parsers have one job: turn an untrusted value into a typed record, or throw. The same function now validates writes and decodes reads, so encoders and identity wrappers are gone.
+
+```diff
+- import { table, validatorCodec } from '@vielzeug/vault';
++ import { table } from '@vielzeug/vault';
+
+  const store = createLocalStorage({
+-   codecs: { settings: validatorCodec({ parse: parseSettings }) },
++   parsers: { settings: { parse: parseSettings } },
+    name: 'app',
+    schema,
+  });
+```
+
+Spell schemas still plug in directly: `parsers: { settings: SettingsSchema }`. Because writes store the parser's output, records must be JSON-safe across adapters: model dates as ISO strings.
+
+## Expect native counts and observer reporting
+
+`count()` and `isEmpty()` on SQLite no longer decode every row; expired rows are excluded in SQL. Pass `onObserverError` to any factory to receive errors thrown by `observe()` listeners; without it the snapshot stream stays silent, as before.

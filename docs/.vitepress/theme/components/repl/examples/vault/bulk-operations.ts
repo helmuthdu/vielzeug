@@ -11,7 +11,7 @@ const schema = {
 const db = createLocalStorage({
   name: 'bulk-demo',
   schema,
-  codecs: { items: ItemSchema },
+  parsers: { items: ItemSchema },
 })
 
 const items = Array.from({ length: 10 }, (_, index) => ({

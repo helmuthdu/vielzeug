@@ -12,7 +12,7 @@ const schema = {
 const db = createIndexedDB({
   name: 'app-logs',
   schema,
-  codecs: { logs: LogSchema },
+  parsers: { logs: LogSchema },
   version: 1,
 })
 

@@ -15,9 +15,9 @@ const parseUser = (value: unknown): User => {
 test('persists a typed record through bun:sqlite', async () => {
   const database = new Database(':memory:');
   const store = createSQLite({
-    codecs: { users: { parse: parseUser } },
     database,
     name: 'bun-smoke',
+    parsers: { users: { parse: parseUser } },
     schema: { users: table<{ id: number; name: string }>('id') },
   });
 

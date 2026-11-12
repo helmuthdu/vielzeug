@@ -22,7 +22,7 @@ const LogSchema = s.object({ id: s.number(), message: s.string() });
 const db = createIndexedDB({
   name: 'diagnostics',
   schema: { logs: table<{ id: number; message: string }>('id') },
-  codecs: { logs: LogSchema },
+  parsers: { logs: LogSchema },
 });
 
 for await (const log of db.iterate('logs')) console.log(log.message);

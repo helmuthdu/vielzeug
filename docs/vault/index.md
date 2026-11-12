@@ -6,7 +6,7 @@ category: Storage
 keywords: [storage, indexeddb, localstorage, sessionstorage, sqlite, ttl, browser, node, deno]
 related: [courier, forge, ripple]
 exports:
-  [table, ttl, validatorCodec, createMemory, createLocalStorage, createSessionStorage, createIndexedDB, createSQLite]
+  [table, ttl, createMemory, createLocalStorage, createSessionStorage, createIndexedDB, createSQLite]
 environments: [browser, node, deno]
 ---
 
@@ -16,7 +16,7 @@ environments: [browser, node, deno]
 
 ## Why Vault?
 
-Vault gives browser and SQLite persistence one typed schema while keeping backend guarantees explicit. Use `KeyValueVaultStore` for portable CRUD and observation; choose IndexedDB or the opt-in SQLite subpath when you need atomic transactions or lazy iteration. Durable adapters require codecs so invalid stored data never enters typed code.
+Vault gives browser and SQLite persistence one typed schema while keeping backend guarantees explicit. Use `KeyValueVaultStore` for portable CRUD and observation; choose IndexedDB or the opt-in SQLite subpath when you need atomic transactions or lazy iteration. Durable adapters require parsers so invalid stored data never enters typed code.
 
 ```ts
 // Before
@@ -35,12 +35,12 @@ const theme = await store.get('preferences', 'theme');
 | Typed schema and keys        | <ore-icon name="check" size="16"></ore-icon> | Application-defined                                   | <ore-icon name="check" size="16"></ore-icon> |
 | Portable key-value store API | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | IndexedDB only                               |
 | Explicit atomic transactions | IndexedDB + SQLite capability                | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="check" size="16"></ore-icon> |
-| Required durable codecs      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>     |
+| Required durable parsers     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>     |
 | Driver-neutral SQLite        | Opt-in subpath                               | <ore-icon name="x" size="16"></ore-icon>              | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 
-**Use Vault when** you need typed browser persistence or application-owned SQLite with honest storage capabilities and required durable codecs.
+**Use Vault when** you need typed browser persistence or application-owned SQLite with honest storage capabilities and required durable parsers.
 
 **Consider raw Web Storage when** you only persist one or two unstructured values. **Consider Dexie when** you need a broader IndexedDB ecosystem.
 
@@ -66,7 +66,7 @@ yarn add @vielzeug/vault
 
 ## Quick Start
 
-Define a schema, create a key-value store with codecs, and dispose it with its owner.
+Define a schema, create a key-value store with parsers, and dispose it with its owner.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -77,7 +77,7 @@ const PreferenceSchema = s.object({ id: s.string(), theme: s.enum(['dark', 'ligh
 const store = createLocalStorage({
   name: 'app-v2',
   schema: { preferences: table<{ id: string; theme: 'dark' | 'light' }>('id') },
-  codecs: { preferences: PreferenceSchema },
+  parsers: { preferences: PreferenceSchema },
 });
 
 try {
@@ -93,12 +93,12 @@ try {
 <div class="features-grid">
 
 - `table()` defines typed records with portable string or number keys.
-- Spell and other parser schemas work directly as codecs; `validatorCodec()` creates an explicit identity-encoding codec.
-- `/memory` returns a portable `DocumentVaultStore` with `batch()` and `iterate()`: codecs optional (in-memory, no trust boundary).
-- `/local-storage` and `/session-storage` return `KeyValueVaultStore`: codecs required.
+- Spell and other parser schemas work directly as per-table parsers.
+- `/memory` returns a portable `DocumentVaultStore` with `batch()` and `iterate()`: parsers optional (in-memory, no trust boundary).
+- `/local-storage` and `/session-storage` return `KeyValueVaultStore`: parsers required.
 - `observe()` emits current and changed table snapshots.
 - `ttl` creates validated expiration durations.
-- `/indexeddb` and `/sqlite` return `DocumentVaultStore` with `batch()` and `iterate()`: codecs required. `/memory` shares the same contract without codecs.
+- `/indexeddb` and `/sqlite` return `DocumentVaultStore` with `batch()` and `iterate()`: parsers required. `/memory` shares the same contract without parsers.
 - `/indexeddb` accepts a `migrate` hook for schema upgrades the table schema cannot express.
 - `pruneExpired()` removes stale TTL entries on demand.
 - Bound helpers (`has`, `count`, `update`, `upsert`, `getMany`, `keys`, `deleteMany`) are available on every store and transaction context.

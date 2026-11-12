@@ -3,13 +3,13 @@
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { type KeyValueVaultStore, table, ttl, VaultError, validatorCodec } from '../index';
+import { type KeyValueVaultStore, table, ttl, VaultError } from '../index';
 import { createSQLite } from '../sqlite';
 
 type User = { id: number | string; name: string; role?: string };
 
 const schema = { users: table<User>('id') };
-const codecs = { users: validatorCodec({ parse: (v) => v as User }) };
+const parsers = { users: { parse: (v: unknown) => v as User } };
 const databases: DatabaseSync[] = [];
 
 function createDatabase(): DatabaseSync {
@@ -21,7 +21,7 @@ function createDatabase(): DatabaseSync {
 }
 
 function createStore(database = createDatabase()) {
-  return createSQLite({ codecs, database, name: 'app', schema });
+  return createSQLite({ database, name: 'app', parsers, schema });
 }
 
 afterEach(() => {
@@ -68,12 +68,9 @@ describe('SQLite DocumentVaultStore', () => {
 
     circular.self = circular;
 
-    await expect(store.put('users', circular as User)).rejects.toThrow('circular references');
+    await expect(store.put('users', circular as User)).rejects.toThrow('SQLite serialization failed');
     await expect(store.put('users', { id: 2, name: 'Ada', role: BigInt(1) as unknown as string })).rejects.toThrow(
-      'JSON-compatible',
-    );
-    await expect(store.put('users', { id: 3, name: 'Ada', role: new Date() as unknown as string })).rejects.toThrow(
-      'plain object',
+      'SQLite serialization failed',
     );
   });
 
@@ -209,9 +206,9 @@ describe('SQLite DocumentVaultStore', () => {
     const close = vi.fn(() => closable.close());
     const closingStore = createSQLite({
       closeOnDispose: true,
-      codecs,
       database: { close, exec: closable.exec.bind(closable), prepare: closable.prepare.bind(closable) },
       name: 'closing',
+      parsers,
       schema,
     });
 
@@ -247,20 +244,20 @@ describe('SQLite DocumentVaultStore', () => {
     await expect(store.getAll('users')).resolves.toEqual([]);
   });
 
-  test('surfaces codec rejections of readable stored data as a VaultError', async () => {
+  test('surfaces parser rejections of readable stored data as a VaultError', async () => {
     const database = createDatabase();
     const strict = createSQLite({
-      codecs: {
-        users: validatorCodec({
-          parse: (value) => {
+      database,
+      name: 'strict',
+      parsers: {
+        users: {
+          parse: (value: unknown) => {
             if (typeof value !== 'object' || value === null || !('name' in value)) throw new Error('schema mismatch');
 
             return value as User;
           },
-        }),
+        },
       },
-      database,
-      name: 'strict',
       schema,
     });
 
@@ -294,10 +291,10 @@ describe('SQLite DocumentVaultStore', () => {
 
   test('accepts records with shared subtree references (DAG, not circular)', async () => {
     const itemSchema = { items: table<{ id: number; a: { x: number }; b: { x: number } }>('id') };
-    const itemCodecs = {
-      items: validatorCodec({ parse: (v) => v as { id: number; a: { x: number }; b: { x: number } } }),
+    const itemParsers = {
+      items: { parse: (v: unknown) => v as { id: number; a: { x: number }; b: { x: number } } },
     };
-    const store = createSQLite({ codecs: itemCodecs, database: createDatabase(), name: 'dag', schema: itemSchema });
+    const store = createSQLite({ database: createDatabase(), name: 'dag', parsers: itemParsers, schema: itemSchema });
     const shared = { x: 1 };
 
     await store.put('items', { a: shared, b: shared, id: 1 });
@@ -306,8 +303,8 @@ describe('SQLite DocumentVaultStore', () => {
 
   test('deleteMany chunks correctly for >996 keys', async () => {
     const bigSchema = { items: table<{ id: number }>('id') };
-    const bigCodecs = { items: validatorCodec({ parse: (v) => v as { id: number } }) };
-    const store = createSQLite({ codecs: bigCodecs, database: createDatabase(), name: 'big', schema: bigSchema });
+    const bigParsers = { items: { parse: (v: unknown) => v as { id: number } } };
+    const store = createSQLite({ database: createDatabase(), name: 'big', parsers: bigParsers, schema: bigSchema });
     const items = Array.from({ length: 1000 }, (_, i) => ({ id: i }));
 
     await store.putAll('items', items);
@@ -361,28 +358,25 @@ describe('SQLite DocumentVaultStore', () => {
     await expect(store.get('users', 1)).resolves.toBeUndefined();
   });
 
-  test('supports codecs whose encoded representation is a JSON scalar', async () => {
-    type Item = { id: number };
-    const itemSchema = { items: table<Item>('id') };
-    const store = createSQLite({
-      codecs: {
-        items: {
-          decode: (value) => ({ id: Number(value) }),
-          encode: (value) => String(value.id),
-        },
-      },
-      database: createDatabase(),
-      name: 'scalar-codec',
-      schema: itemSchema,
-    });
+  test('counts live records with a native query', async () => {
+    const store = createStore();
+    await store.putAll('users', [
+      { id: 1, name: 'Ada' },
+      { id: 2, name: 'Grace' },
+    ]);
+    expect(await store.count('users')).toBe(2);
 
-    await store.put('items', { id: 1 });
-    await expect(store.get('items', 1)).resolves.toEqual({ id: 1 });
+    await store.delete('users', 1);
+    expect(await store.count('users')).toBe(1);
+
+    await store.put('users', { id: 3, name: 'Lin' }, ttl.ms(1));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(await store.count('users')).toBe(1);
   });
 
-  test('requires codecs for durable persistence', () => {
+  test('requires parsers for durable persistence', () => {
     expect(() => createSQLite({ database: createDatabase(), name: 'should-fail', schema } as never)).toThrow(
-      'codecs are required',
+      'parsers are required',
     );
   });
 });

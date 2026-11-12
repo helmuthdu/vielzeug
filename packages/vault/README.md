@@ -20,7 +20,7 @@ import { createLocalStorage } from '@vielzeug/vault/local-storage';
 type User = { id: number; name: string };
 const UserSchema = s.object({ id: s.number(), name: s.string() });
 const store = createLocalStorage({
-  codecs: { users: UserSchema },
+  parsers: { users: UserSchema },
   name: 'app',
   schema: { users: table<User>('id') },
 });

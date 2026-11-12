@@ -1,16 +1,16 @@
 import { describe, expect, test } from 'vitest';
 
-import { table, validatorCodec } from '../index';
+import { table } from '../index';
 import { createIndexedDB } from '../indexeddb';
 
 type User = { id: number | string; name: string };
 
 const schema = { users: table<User>('id', { indexes: ['name'] }) };
-const codecs = { users: validatorCodec({ parse: (v) => v as User }) };
+const parsers = { users: { parse: (v: unknown) => v as User } };
 
 describe('IndexedDB DocumentVaultStore', () => {
   test('provides atomic batch transactions and cursor iteration', async () => {
-    const db = createIndexedDB({ codecs, name: `vault-test-${crypto.randomUUID()}`, schema });
+    const db = createIndexedDB({ name: `vault-test-${crypto.randomUUID()}`, parsers, schema });
 
     await db.batch(['users'], async (tx) => {
       await tx.put('users', { id: 1, name: 'Ada' });
@@ -38,7 +38,7 @@ describe('IndexedDB DocumentVaultStore', () => {
   });
 
   test('does not drop records when cursor consumers pause', async () => {
-    const db = createIndexedDB({ codecs, name: `vault-test-${crypto.randomUUID()}`, schema });
+    const db = createIndexedDB({ name: `vault-test-${crypto.randomUUID()}`, parsers, schema });
     await db.putAll(
       'users',
       Array.from({ length: 5 }, (_, id) => ({ id, name: `User ${String(id)}` })),
@@ -55,7 +55,7 @@ describe('IndexedDB DocumentVaultStore', () => {
   });
 
   test('queries declared indexes without scanning the full table', async () => {
-    const db = createIndexedDB({ codecs, name: `vault-test-${crypto.randomUUID()}`, schema });
+    const db = createIndexedDB({ name: `vault-test-${crypto.randomUUID()}`, parsers, schema });
 
     await db.putAll('users', [
       { id: 1, name: 'Ada' },
@@ -71,55 +71,35 @@ describe('IndexedDB DocumentVaultStore', () => {
     await db.dispose();
   });
 
-  test('rejects cursor iteration when a codec cannot decode a stored record', async () => {
-    let rejectDecode = false;
+  test('rejects cursor iteration when a parser rejects a stored record', async () => {
+    let rejectParse = false;
     const strict = createIndexedDB({
-      codecs: {
+      name: `vault-test-${crypto.randomUUID()}`,
+      parsers: {
         users: {
-          decode(value) {
-            if (rejectDecode) throw new Error('decode failed');
+          parse(value) {
+            if (rejectParse) throw new Error('schema mismatch');
             return value as User;
           },
-          encode: (value) => value,
         },
       },
-      name: `vault-test-${crypto.randomUUID()}`,
       schema,
     });
     await strict.put('users', { id: 1, name: 'Ada' });
-    rejectDecode = true;
+    rejectParse = true;
 
     await expect(strict.iterate('users')[Symbol.asyncIterator]().next()).rejects.toThrow('validation failed');
     await strict.dispose();
   });
 
-  test('rejects codecs that do not preserve declared index fields', async () => {
-    const transformed = createIndexedDB({
-      codecs: {
-        users: {
-          decode(value) {
-            const record = value as { id: number | string; n?: string; name?: string };
-            return { id: record.id, name: record.name ?? record.n ?? '' };
-          },
-          encode: (value) => ({ id: value.id, n: value.name }),
-        },
-      },
-      name: `vault-test-${crypto.randomUUID()}`,
-      schema,
-    });
-
-    await expect(transformed.put('users', { id: 1, name: 'Ada' })).rejects.toThrow('indexed field');
-    await transformed.dispose();
-  });
-
   test('rejects empty batch scopes before opening an IndexedDB transaction', async () => {
-    const db = createIndexedDB({ codecs, name: `vault-test-${crypto.randomUUID()}`, schema });
+    const db = createIndexedDB({ name: `vault-test-${crypto.randomUUID()}`, parsers, schema });
 
     await expect(db.batch([], async () => undefined)).rejects.toThrow('declare at least one table');
     await db.dispose();
   });
 
-  test('requires codecs for durable persistence', () => {
-    expect(() => createIndexedDB({ name: 'should-fail', schema } as never)).toThrow('codecs are required');
+  test('requires parsers for durable persistence', () => {
+    expect(() => createIndexedDB({ name: 'should-fail', schema } as never)).toThrow('parsers are required');
   });
 });

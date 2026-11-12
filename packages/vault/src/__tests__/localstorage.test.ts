@@ -1,10 +1,10 @@
-import { type KeyValueVaultStore, table, ttl, VaultDisposedError, validatorCodec } from '../index';
+import { type KeyValueVaultStore, table, ttl, VaultDisposedError } from '../index';
 import { createLocalStorage } from '../local-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
 const userSchema = { users: table<User>('id') };
-const codecs = { users: validatorCodec({ parse: (v) => v as User }) };
+const parsers = { users: { parse: (v: unknown) => v as User } };
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -13,7 +13,7 @@ describe('LocalStorage adapter', () => {
 
   beforeEach(() => {
     window.localStorage.clear();
-    db = createLocalStorage({ codecs, name: 'LS', schema: userSchema });
+    db = createLocalStorage({ name: 'LS', parsers, schema: userSchema });
   });
 
   test('put/get and delete roundtrip', async () => {
@@ -96,7 +96,7 @@ describe('LocalStorage adapter', () => {
     // Simulate a corrupted entry from a *previous session* by writing it
     // before creating a fresh adapter: initOwnedKeys() will see it on startup.
     window.localStorage.setItem('LS\x00users\x0099', 'not valid json {{{');
-    db = createLocalStorage({ codecs, name: 'LS', schema: userSchema });
+    db = createLocalStorage({ name: 'LS', parsers, schema: userSchema });
 
     expect(await db.getAll('users')).toEqual([]);
     expect(window.localStorage.getItem('LS\x00users\x0099')).toBeNull();
@@ -190,7 +190,7 @@ describe('LocalStorage adapter', () => {
   });
 
   test('keeps table-wide reads synchronized across same-window store instances', async () => {
-    const second = createLocalStorage({ codecs, name: 'LS', schema: userSchema });
+    const second = createLocalStorage({ name: 'LS', parsers, schema: userSchema });
 
     await db.put('users', { id: 1, name: 'Alice' });
 
@@ -198,20 +198,19 @@ describe('LocalStorage adapter', () => {
     await expect(second.getAll('users')).resolves.toEqual([{ id: 1, name: 'Alice' }]);
   });
 
-  test('surfaces codec failures without deleting persisted data', async () => {
+  test('surfaces parser failures without deleting persisted data', async () => {
     const key = 'LS\x00users\x00n:1';
     const raw = JSON.stringify({ value: { id: 1, name: 'Alice' } });
     window.localStorage.setItem(key, raw);
     const strict = createLocalStorage({
-      codecs: {
+      name: 'LS',
+      parsers: {
         users: {
-          decode() {
+          parse() {
             throw new Error('schema mismatch');
           },
-          encode: (value) => value,
         },
       },
-      name: 'LS',
       schema: userSchema,
     });
 
@@ -219,19 +218,18 @@ describe('LocalStorage adapter', () => {
     expect(window.localStorage.getItem(key)).toBe(raw);
   });
 
-  test('clears persisted records that no longer satisfy the codec', async () => {
+  test('clears persisted records that no longer satisfy the parser', async () => {
     const key = 'LS\x00users\x00n:1';
     window.localStorage.setItem(key, JSON.stringify({ value: { id: 1, name: 'Alice' } }));
     const strict = createLocalStorage({
-      codecs: {
+      name: 'LS',
+      parsers: {
         users: {
-          decode() {
+          parse() {
             throw new Error('schema mismatch');
           },
-          encode: (value) => value,
         },
       },
-      name: 'LS',
       schema: userSchema,
     });
 

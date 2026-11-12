@@ -1,46 +1,22 @@
 import { s } from '@vielzeug/spell';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
-import { table, VaultError, validatorCodec } from '../index';
+import { table, VaultError } from '../index';
 import { createMemory } from '../memory';
 
 type User = { id: number; name: string };
 
 const schema = { users: table<User>('id') };
 
-describe('VaultStore codecs', () => {
-  test('supports transforming codecs without passing decoded values to decode()', async () => {
-    type Event = { at: Date; id: number };
-    const eventSchema = { events: table<Event>('id') };
+describe('record parsers', () => {
+  test('returns canonical parser values from mutations', async () => {
     const store = createMemory({
-      codecs: {
-        events: {
-          decode(value) {
-            const encoded = value as { at: string; id: number };
-            if (typeof encoded.at !== 'string') throw new Error('encoded date required');
-            return { at: new Date(encoded.at), id: encoded.id };
-          },
-          encode: (value) => ({ at: value.at.toISOString(), id: value.id }),
-        },
-      },
-      schema: eventSchema,
-    });
-    const at = new Date('2025-01-01T00:00:00.000Z');
-
-    await store.put('events', { at, id: 1 });
-
-    await expect(store.get('events', 1)).resolves.toEqual({ at, id: 1 });
-  });
-
-  test('returns canonical codec values from mutations', async () => {
-    const store = createMemory({
-      codecs: {
+      parsers: {
         users: {
-          decode: (value) => {
+          parse: (value) => {
             const user = value as User;
             return { ...user, name: user.name.trim() };
           },
-          encode: (value) => value,
         },
       },
       schema,
@@ -52,11 +28,12 @@ describe('VaultStore codecs', () => {
       id: 2,
       name: 'Lin',
     });
+    await expect(store.get('users', 1)).resolves.toEqual({ id: 1, name: 'Grace' });
   });
 
-  test('accepts Spell schemas directly as codecs', async () => {
+  test('accepts Spell schemas directly as parsers', async () => {
     const store = createMemory({
-      codecs: {
+      parsers: {
         users: s.object({ id: s.number(), name: s.string().min(1) }),
       },
       schema,
@@ -69,8 +46,8 @@ describe('VaultStore codecs', () => {
 
   test('validates records before storing them', async () => {
     const store = createMemory({
-      codecs: {
-        users: validatorCodec({
+      parsers: {
+        users: {
           parse(value) {
             const user = value as User;
 
@@ -78,12 +55,43 @@ describe('VaultStore codecs', () => {
 
             return user;
           },
-        }),
+        },
       },
       schema,
     });
 
     await expect(store.put('users', { id: 1, name: '' })).rejects.toBeInstanceOf(VaultError);
     await expect(store.get('users', 1)).resolves.toBeUndefined();
+  });
+
+  test('reports observer listener errors through onObserverError', async () => {
+    const errors: unknown[] = [];
+    const store = createMemory({ onObserverError: (error) => errors.push(error), schema });
+    store.observe(
+      'users',
+      () => {
+        throw new Error('listener exploded');
+      },
+      { immediate: false },
+    );
+
+    await store.put('users', { id: 1, name: 'Ada' });
+
+    await vi.waitFor(() => expect(errors).toHaveLength(1));
+    expect(errors[0]).toBeInstanceOf(Error);
+  });
+
+  test('keeps observer snapshots flowing when a listener throws without a handler', async () => {
+    const store = createMemory({ schema });
+    const seen: unknown[][] = [];
+    store.observe('users', () => {
+      throw new Error('listener exploded');
+    });
+    store.observe('users', (records) => seen.push(records));
+
+    await store.put('users', { id: 1, name: 'Ada' });
+
+    await vi.waitFor(() => expect(seen.length).toBeGreaterThan(1));
+    expect(seen.at(-1)).toEqual([{ id: 1, name: 'Ada' }]);
   });
 });

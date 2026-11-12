@@ -7,7 +7,7 @@ const CacheSchema = s.object({ data: s.string(), fetchedAt: s.number(), id: s.st
 const db = createLocalStorage({
   name: 'cache-demo',
   schema: { cache: table('id') },
-  codecs: { cache: CacheSchema },
+  parsers: { cache: CacheSchema },
 })
 
 async function getOrComputeConfig() {

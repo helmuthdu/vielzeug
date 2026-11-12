@@ -19,7 +19,7 @@ const SessionSchema = s.object({ id: s.string(), token: s.string() });
 const store = createLocalStorage({
   name: 'app-v2',
   schema: { sessions: table<Session>('id', { defaultTtl: ttl.hours(1) }) },
-  codecs: { sessions: SessionSchema },
+  parsers: { sessions: SessionSchema },
 });
 
 await store.put('sessions', { id: 'current', token: 'FAKE-TOKEN-FOR-DOCS' });
@@ -43,7 +43,7 @@ const EventSchema = s.object({ createdAt: s.number(), id: s.number(), type: s.st
 const db = createIndexedDB({
   name: 'events',
   schema: { events: table<Event>('id', { indexes: ['type'] }) },
-  codecs: { events: EventSchema },
+  parsers: { events: EventSchema },
 });
 
 await db.batch(['events'], async (tx) => {
@@ -76,7 +76,7 @@ const store = createSQLite({
   database,
   name: 'app',
   schema: { jobs: table<Job>('id') },
-  codecs: { jobs: JobSchema },
+  parsers: { jobs: JobSchema },
 });
 
 await store.batch(['jobs'], async (tx) => {
@@ -159,7 +159,7 @@ const db = createIndexedDB({
     }
   },
   schema: { users: table<{ id: number; email: string }>('id', { indexes: ['email'] }) },
-  codecs: { users: UserSchema },
+  parsers: { users: UserSchema },
 });
 ```
 

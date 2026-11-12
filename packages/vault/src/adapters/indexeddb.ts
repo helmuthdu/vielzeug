@@ -7,7 +7,6 @@ import {
   buildOperations,
   type StorageBackend,
 } from '../adapter-core';
-import { decodeRecord, encodeRecord } from '../codec';
 import { VaultDisposedError, VaultError, VaultMigrationError } from '../errors';
 import { encodeVaultKey, getRecordKey } from '../internal';
 import { isExpired, parseStored, type StoredRecord } from '../ttl';
@@ -312,10 +311,10 @@ type IndexedDbOptions<S extends AnySchema> = DurableStoreOptions<S> & {
 };
 
 export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): IndexedDbVaultStore<S> {
-  const { migrate, name, schema, codecs, version = 1 } = options;
+  const { migrate, name, schema, parsers, version = 1 } = options;
 
-  if (!codecs) {
-    throw new VaultError('createIndexedDB: codecs are required for durable persistence');
+  if (!parsers) {
+    throw new VaultError('createIndexedDB: parsers are required for durable persistence');
   }
 
   if (!Number.isInteger(version) || version < 1) {
@@ -323,7 +322,6 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   }
 
   // Fixed envelopes keep IndexedDB records and `value.<field>` indexes portable across adapters.
-  // Table-aware codec encode/decode is applied in the backend methods below.
 
   const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(`vault:${name}`) : undefined;
 
@@ -341,8 +339,8 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         store = tx.objectStore(tableName);
       }
 
-      // F5: Create secondary indexes for fields declared via .index() on the table() builder.
-      // Stored format is { value: T, expiresAt?: number } so IDB keyPath is `value.<field>`.
+      // Secondary indexes for fields declared on the table() builder.
+      // Stored format is { value: T, expiresAt?: number }, so the IDB keyPath is `value.<field>`.
       const indexes = (entry as { indexes?: readonly string[] }).indexes ?? [];
 
       for (const field of indexes) {
@@ -446,54 +444,36 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     channel?.postMessage({ table: String(table) });
   };
 
-  // Table-aware decode: unwrap envelope + apply codec.decode
-  const decodeWithCodec = <T extends object>(table: keyof S, raw: unknown): T | undefined => {
+  // Table-aware decode: unwrap the envelope and validate the record.
+  const decodeStored = <T extends object>(table: keyof S, raw: unknown): T | undefined => {
     const stored = parseStored<unknown>(raw);
 
     if (!stored || isExpired(stored.expiresAt)) return undefined;
 
     try {
-      return decodeRecord(codecs[table], stored.value) as unknown as T;
+      return parsers[table].parse(stored.value) as unknown as T;
     } catch (err) {
       throw new VaultError(`validation failed for table "${String(table)}"`, { cause: err });
     }
   };
 
-  // Table-aware encode: apply codec.encode + wrap in envelope
-  const encodeWithCodec = <T>(table: keyof S, value: T, ttl?: number): StoredRecord<unknown> => {
-    const record = value as RecordOf<S, typeof table>;
-    const encoded = encodeRecord(codecs[table], record);
-
-    for (const field of schema[table].indexes ?? []) {
-      const indexedValue = (record as Record<string, unknown>)[field];
-      if (indexedValue === undefined) continue;
-
-      if (
-        typeof encoded !== 'object' ||
-        encoded === null ||
-        !Object.hasOwn(encoded, field) ||
-        !Object.is((encoded as Record<string, unknown>)[field], indexedValue)
-      ) {
-        throw new VaultError(`codec output for table "${String(table)}" must preserve indexed field "${field}"`);
-      }
-    }
-
-    return ttl === undefined ? { value: encoded } : { expiresAt: Date.now() + ttl, value: encoded };
-  };
+  // Wrap the canonical record in the shared storage envelope.
+  const toStored = <T>(value: T, ttl?: number): StoredRecord<T> =>
+    ttl === undefined ? { value } : { expiresAt: Date.now() + ttl, value };
 
   const core: StorageBackend<S> = {
     clear: (table) => withStore(table, 'readwrite', (s) => idbReq(s.clear()).then(() => undefined)),
 
     delete: (table, key) =>
       withStore(table, 'readwrite', (s) => {
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
 
         return storeDelete<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode);
       }),
 
     deleteMany: (table, keys) =>
       withStore(table, 'readwrite', (s) => {
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
         return storeDeleteMany<RecordOf<S, typeof table>>(s, keys.map(encodeVaultKey), decode);
       }),
 
@@ -512,21 +492,21 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
 
     get: (table, key) =>
       withStore(table, 'readonly', (s) => {
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
 
         return storeGet<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode);
       }),
 
     getAll: (table) =>
       withStore(table, 'readonly', (s) => {
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
 
         return getAllFromStore<RecordOf<S, typeof table>>(s, decode);
       }),
 
     getMany: (table, keys) =>
       withStore(table, 'readonly', (s) => {
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
         return Promise.all(keys.map((key) => storeGet<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode)));
       }),
 
@@ -542,7 +522,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         const idb = db;
         const tx = idb.transaction(String(table), 'readonly');
         const store = tx.objectStore(String(table));
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
 
         return iterateStoreWithCursor<RecordOf<S, typeof table>>(
           store,
@@ -597,20 +577,18 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
 
     put(table, value, ttl) {
       const key = encodeVaultKey(getRecordKey(schema, table, value));
-      const encoded = encodeWithCodec(table, value, ttl);
 
-      return withStore(table, 'readwrite', (s) => idbReq(s.put(encoded, key)).then(() => undefined));
+      return withStore(table, 'readwrite', (s) => idbReq(s.put(toStored(value, ttl), key)).then(() => undefined));
     },
 
     putAll(table, values, ttl) {
-      const encodedValues = values.map((v) => {
-        const key = encodeVaultKey(getRecordKey(schema, table, v));
-
-        return { encoded: encodeWithCodec(table, v, ttl), key };
-      });
+      const entries = values.map((v) => ({
+        key: encodeVaultKey(getRecordKey(schema, table, v)),
+        record: toStored(v, ttl),
+      }));
 
       return withStore(table, 'readwrite', (s) =>
-        Promise.all(encodedValues.map(({ encoded, key }) => idbReq(s.put(encoded, key)))).then(() => undefined),
+        Promise.all(entries.map(({ record, key }) => idbReq(s.put(record, key)))).then(() => undefined),
       );
     },
   };
@@ -633,31 +611,31 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         await idbReq(storeOf(table).clear());
       },
       delete: (table, key) => {
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
 
         return storeDelete<RecordOf<S, K>>(storeOf(table), encodeVaultKey(key), decode);
       },
       deleteMany: (table, keys) => {
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
         return storeDeleteMany<RecordOf<S, K>>(storeOf(table), keys.map(encodeVaultKey), decode);
       },
       get: (table, key) => {
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
 
         return storeGet<RecordOf<S, typeof table>>(storeOf(table), encodeVaultKey(key), decode);
       },
       getAll: (table) => {
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
 
         return getAllFromStore<RecordOf<S, typeof table>>(storeOf(table), decode);
       },
       getMany: (table, keys) => {
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
         const store = storeOf(table);
         return Promise.all(keys.map((key) => storeGet<RecordOf<S, typeof table>>(store, encodeVaultKey(key), decode)));
       },
       iterate(table) {
-        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeStored<T>(table, raw);
 
         return iterateStoreWithCursor<RecordOf<S, typeof table>>(
           storeOf(table),
@@ -667,17 +645,15 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       pruneExpiredInTable: (table) => pruneExpiredInStore(storeOf(table)),
       put(table, value, ttl) {
         const key = encodeVaultKey(getRecordKey(schema, table, value));
-        const encoded = encodeWithCodec(table, value, ttl);
 
-        return idbReq(storeOf(table).put(encoded, key)).then(() => undefined);
+        return idbReq(storeOf(table).put(toStored(value, ttl), key)).then(() => undefined);
       },
       putAll(table, values, ttl) {
         return Promise.all(
           values.map((v) => {
             const key = encodeVaultKey(getRecordKey(schema, table, v));
-            const encoded = encodeWithCodec(table, v, ttl);
 
-            return idbReq(storeOf(table).put(encoded, key));
+            return idbReq(storeOf(table).put(toStored(v, ttl), key));
           }),
         ).then(() => undefined);
       },
@@ -704,7 +680,6 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   };
 
   const adapter = buildDocumentStore(schema, core, {
-    codecs,
     createBatch: (deps) => (tables, fn) => idbBatch(tables, fn, deps.notifyMutation, deps.validate),
     onCrossTabMessage(notify) {
       if (!channel) {
@@ -724,7 +699,8 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       };
     },
     onMutation: publish,
-    schema,
+    onObserverError: options.onObserverError,
+    parsers,
   });
 
   return Object.assign(adapter, {
@@ -736,7 +712,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       return withStore(table, 'readonly', (store) => {
         if (!store.indexNames.contains(field)) throw new VaultError(`Table "${table}" has no index "${field}"`);
 
-        const decode = (raw: unknown): RecordOf<S, K> | undefined => decodeWithCodec<RecordOf<S, K>>(table, raw);
+        const decode = (raw: unknown): RecordOf<S, K> | undefined => decodeStored<RecordOf<S, K>>(table, raw);
         return getAllFromStore(store.index(field), decode, value as IDBValidKey);
       });
     },

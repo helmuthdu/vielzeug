@@ -1,6 +1,6 @@
 ---
 title: 'Vault Examples: Validators and Error Handling'
-description: 'Codecs, migration, and error handling patterns for @vielzeug/vault.'
+description: 'Parsers, migration, and error handling patterns for @vielzeug/vault.'
 ---
 
 ## Validators and Error Handling
@@ -11,11 +11,11 @@ You need to validate records before they reach storage and handle quota, disposa
 
 ### Solution
 
-Durable Vault factories require one codec or parser schema per table. Memory may omit them. Spell schemas work directly; `validatorCodec()` remains available for explicit identity encoding.
+Durable Vault factories require one parser per table; Memory may omit them. Spell schemas work directly.
 
-#### Codecs
+#### Parsers
 
-Pass any object with a `parse(value): T` method directly in `codecs`. Custom codecs validate writes through `decode(encode(value))` and validate persisted values on reads.
+Pass any object with a `parse(value): T` method directly in `parsers`. Writes store the parser's canonical output, so a record that parses can always be read back.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -27,7 +27,7 @@ const schema = { users: table<User>('id') };
 
 const db = createMemory({
   schema,
-  codecs: {
+  parsers: {
     users: s.object({
       id: s.number(),
       name: s.string(),
@@ -64,7 +64,7 @@ const db = createIndexedDB({
   migrate,
   schema,
   version: 2,
-  codecs: { users: UserSchema },
+  parsers: { users: UserSchema },
 });
 void db;
 ```
@@ -107,8 +107,8 @@ try {
 
 ### Pitfalls
 
-- Parser schemas validate writes and persisted reads. Transforming codecs validate writes with `decode(encode(value))` and decode persisted values before they enter typed code.
-- IndexedDB codecs must preserve declared index field names and values in encoded objects.
+- Parsers validate writes and decode persisted reads through the same function. Records must be JSON-safe: use ISO strings for dates so every adapter's serialization round-trips.
+- IndexedDB indexes read the stored record directly, so canonical parser output is what secondary indexes match.
 - The `migrate` callback on IndexedDB runs synchronously inside `onupgradeneeded`. Do not call `await` or open a second transaction inside it: IDB will throw. Errors thrown from `migrate` surface as `VaultMigrationError` on the first operation.
 - A Web Storage write that exceeds the browser quota always rejects with `VaultQuotaError`; the failed write is simply not persisted.
 

@@ -5,17 +5,16 @@ import {
   buildOperations,
   type StorageBackend,
 } from '../adapter-core';
-import { decodeRecord, encodeRecord } from '../codec';
 import { VaultDisposedError, VaultError } from '../errors';
 import { encodeVaultKey, getRecordKey } from '../internal';
 import { isExpired } from '../ttl';
 import type {
   AnySchema,
-  CodecInput,
   DocumentVaultStore,
   DurableStoreOptions,
   KeyOf,
   RecordOf,
+  RecordParser,
   TransactionContext,
 } from '../types';
 
@@ -67,6 +66,7 @@ type ConnectionListener = (name: string, table: string) => void;
 type StoredRow = { expiresAt: number | undefined; json: string; rowId: number };
 /** The direct core implements every backend operation except lazy iteration. */
 type SqliteCore<S extends AnySchema, K extends keyof S & string> = StorageBackend<S, K> & {
+  count<T extends K>(table: T): Promise<number>;
   deleteMany<T extends K>(table: T, keys: readonly KeyOf<S, T>[]): Promise<number>;
   getMany<T extends K>(table: T, keys: readonly KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
   pruneAllExpired(): Promise<Record<string, number>>;
@@ -170,54 +170,12 @@ function assertName(name: string): void {
   if (name.length === 0) throw new VaultError('createSQLite: name must not be empty');
 }
 
-function assertJsonValue(value: unknown, seen: Set<object>, path: string): void {
-  if (value === null || typeof value === 'boolean' || typeof value === 'string') return;
-
-  if (typeof value === 'number') {
-    if (Number.isFinite(value)) return;
-
-    throw new VaultError(`SQLite serialization failed at ${path}: numbers must be finite`);
-  }
-
-  if (typeof value !== 'object') {
-    throw new VaultError(`SQLite serialization failed at ${path}: expected a JSON-compatible value`);
-  }
-
-  if (seen.has(value as object)) {
-    throw new VaultError(`SQLite serialization failed at ${path}: circular references are not supported`);
-  }
-
-  if (Array.isArray(value)) {
-    seen.add(value);
-
-    for (let index = 0; index < value.length; index += 1) {
-      assertJsonValue(value[index], seen, `${path}[${String(index)}]`);
-    }
-
-    seen.delete(value);
-
-    return;
-  }
-
-  const prototype = Object.getPrototypeOf(value);
-
-  if (prototype !== null && prototype !== Object.prototype) {
-    throw new VaultError(`SQLite serialization failed at ${path}: expected a plain object`);
-  }
-
-  seen.add(value as object);
-
-  for (const [key, nested] of Object.entries(value)) {
-    assertJsonValue(nested, seen, `${path}.${key}`);
-  }
-
-  seen.delete(value);
-}
-
 function encodeJson(value: unknown): string {
-  assertJsonValue(value, new Set(), 'record');
-
-  return JSON.stringify(value);
+  try {
+    return JSON.stringify(value) as string;
+  } catch (error) {
+    throw new VaultError('SQLite serialization failed: records must be JSON-compatible', { cause: error });
+  }
 }
 
 /** Returns `undefined` for unparseable JSON so callers can evict the corrupt row. */
@@ -271,13 +229,13 @@ function all(database: SQLiteDatabase, sql: string, parameters: SQLiteParameter[
 
 /**
  * Decodes a stored row, self-healing: expired or unparseable rows are deleted
- * and reported as missing, matching the Web Storage adapter. Codec rejections
+ * and reported as missing, matching the Web Storage adapter. Parser rejections
  * (schema drift on readable data) still throw so they stay visible.
  */
 function decodeRow<S extends AnySchema, K extends keyof S & string>(
   database: SQLiteDatabase,
   table: K,
-  codec: CodecInput<RecordOf<S, K>>,
+  parser: RecordParser<RecordOf<S, K>>,
   stored: StoredRow,
 ): RecordOf<S, K> | undefined {
   const decoded = isExpired(stored.expiresAt) ? undefined : decodeJson(stored.json);
@@ -289,7 +247,7 @@ function decodeRow<S extends AnySchema, K extends keyof S & string>(
   }
 
   try {
-    return decodeRecord(codec, decoded) as RecordOf<S, K>;
+    return parser.parse(decoded) as RecordOf<S, K>;
   } catch (err) {
     if (err instanceof VaultError) throw err;
 
@@ -312,7 +270,7 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
   database: SQLiteDatabase,
   name: string,
   schema: S,
-  codecs: NonNullable<DurableStoreOptions<S>['codecs']>,
+  parsers: NonNullable<DurableStoreOptions<S>['parsers']>,
   inTransaction = false,
 ): SqliteCore<S, K> {
   const getRecord = <T extends K>(table: T, key: KeyOf<S, T>): RecordOf<S, T> | undefined => {
@@ -326,12 +284,23 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
 
     if (row === undefined) return undefined;
 
-    return decodeRow(database, table, codecs[table], getStoredRow(row));
+    return decodeRow(database, table, parsers[table], getStoredRow(row));
   };
 
   const core: SqliteCore<S, K> = {
     async clear(table) {
       run(database, `DELETE FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ?`, [name, table]);
+    },
+    async count(table) {
+      const row = get(
+        database,
+        `SELECT COUNT(*) AS total
+         FROM ${RECORDS_TABLE}
+         WHERE namespace = ? AND table_name = ? AND (expires_at IS NULL OR expires_at > ?)`,
+        [name, table, Date.now()],
+      );
+
+      return (row?.total as number | undefined) ?? 0;
     },
     async delete(table, key) {
       const result = run(
@@ -380,7 +349,7 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
       );
 
       return records.flatMap((row) => {
-        const value = decodeRow(database, table, codecs[table], getStoredRow(row));
+        const value = decodeRow(database, table, parsers[table], getStoredRow(row));
 
         return value === undefined ? [] : [value];
       });
@@ -403,17 +372,14 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
     async put(table, value, ttl) {
       const key = getRecordKey(schema, table, value);
       const expiresAt = ttl === undefined ? null : Date.now() + ttl;
-      const encoded = encodeRecord(codecs[table], value as RecordOf<S, typeof table>);
 
-      run(database, UPSERT_SQL, [name, table, encodeVaultKey(key), encodeJson(encoded), expiresAt]);
+      run(database, UPSERT_SQL, [name, table, encodeVaultKey(key), encodeJson(value), expiresAt]);
     },
     async putAll(table, values, ttl) {
       if (values.length === 0) return;
 
       const expiresAt = ttl === undefined ? null : Date.now() + ttl;
-      const encodedJsonValues = values.map((v) =>
-        encodeJson(encodeRecord(codecs[table], v as RecordOf<S, typeof table>)),
-      );
+      const encodedJsonValues = values.map((v) => encodeJson(v));
       const encodedKeys = values.map((v) => encodeVaultKey(getRecordKey(schema, table, v)));
 
       const writeAll = () => {
@@ -450,12 +416,12 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
  * `closeOnDispose` is explicitly enabled.
  */
 export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>): DocumentVaultStore<S> {
-  const { closeOnDispose = false, database, name, schema, codecs } = options;
+  const { closeOnDispose = false, database, name, schema, parsers } = options;
 
   assertName(name);
 
-  if (!codecs) {
-    throw new VaultError('createSQLite: codecs are required for durable persistence');
+  if (!parsers) {
+    throw new VaultError('createSQLite: parsers are required for durable persistence');
   }
 
   const state = getConnectionState(database);
@@ -465,7 +431,7 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
   });
   let ownListener: ConnectionListener | undefined;
 
-  const directCore = createDirectCore(database, name, schema, codecs);
+  const directCore = createDirectCore(database, name, schema, parsers);
   const withConnection = <T>(work: () => Promise<T>): Promise<T> =>
     state.executor.run(async () => {
       await state.initialized;
@@ -490,6 +456,7 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
 
   const guardedCore: StorageBackend<S> = {
     clear: guard((table) => directCore.clear(table)),
+    count: guard((table) => directCore.count(table)),
     delete: guard((table, key) => directCore.delete(table, key)),
     deleteMany: guard((table, keys) => directCore.deleteMany(table, keys)),
     get: guard((table, key) => directCore.get(table, key)),
@@ -502,7 +469,6 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
   };
 
   const adapter = buildDocumentStore(schema, guardedCore, {
-    codecs,
     createBatch: (deps) => async (tables, fn) => {
       assertBatchTables(tables);
 
@@ -517,7 +483,7 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
         await namespaceReady;
 
         const dirtyTables = new Set<keyof S & string>();
-        const txCore = createDirectCore<S, keyof S & string>(database, name, schema, codecs, true);
+        const txCore = createDirectCore<S, keyof S & string>(database, name, schema, parsers, true);
         let contextActive = true;
         const tx = buildOperations(
           schema,
@@ -578,7 +544,8 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
         if (listener !== ownListener) listener(name, table);
       }
     },
-    schema,
+    onObserverError: options.onObserverError,
+    parsers,
   });
 
   const store = Object.assign(adapter, {
@@ -611,7 +578,7 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
                 const stored = getStoredRow(row);
                 lastRowId = stored.rowId;
 
-                const value = decodeRow(database, table, codecs[table], stored);
+                const value = decodeRow(database, table, parsers[table], stored);
 
                 if (value !== undefined) values.push(value);
               }

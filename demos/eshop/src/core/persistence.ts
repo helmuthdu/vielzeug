@@ -1,7 +1,7 @@
 import { effect } from '@vielzeug/ripple';
 import { s } from '@vielzeug/spell';
 import type { KeyValueVaultStore } from '@vielzeug/vault';
-import { table, validatorCodec } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
 import { currentUser } from './auth';
 import { appliedPromoCode, cartItems, compareModelIds, savedModelIds } from './cart-store';
@@ -76,11 +76,11 @@ const preferencesSchema = s.object({
 });
 
 const store: KeyValueVaultStore<typeof schema> = createLocalStorage({
-  codecs: {
-    cart: validatorCodec<CartRow>({ parse: (value) => cartSchema.parse(value) }),
-    preferences: validatorCodec<PreferencesRow>({ parse: (value) => preferencesSchema.parse(value) }),
-  },
   name: 'vielzeug-motors',
+  parsers: {
+    cart: cartSchema,
+    preferences: preferencesSchema,
+  },
   schema,
 });
 

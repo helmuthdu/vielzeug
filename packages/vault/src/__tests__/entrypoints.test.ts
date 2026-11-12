@@ -23,6 +23,7 @@ describe('adapter entry points', () => {
     expect('createSessionStorage' in core).toBe(false);
     expect('createSQLite' in core).toBe(false);
     expect('TransactionContext' in core).toBe(false);
+    expect('validatorCodec' in core).toBe(false);
     expect('MigrationFn' in core).toBe(false);
     expect('MigrationContext' in core).toBe(false);
   });

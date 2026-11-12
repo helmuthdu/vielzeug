@@ -1,5 +1,4 @@
 import { buildVaultStore, type StorageBackend } from '../adapter-core';
-import { decodeRecord, encodeRecord } from '../codec';
 import { VaultError, VaultQuotaError } from '../errors';
 import {
   decodeStorageTableFromKey,
@@ -24,10 +23,10 @@ function createWebStorageAdapter<S extends AnySchema>(
     storageLabel: string;
   },
 ): KeyValueVaultStore<S> {
-  const { getStorage, name, schema, storageLabel, codecs } = options;
+  const { getStorage, name, schema, storageLabel, parsers } = options;
 
-  if (!codecs) {
-    throw new VaultError(`${storageLabel} requires codecs for durable persistence`);
+  if (!parsers) {
+    throw new VaultError(`${storageLabel} requires parsers for durable persistence`);
   }
 
   let resolvedStorage: Storage;
@@ -104,7 +103,7 @@ function createWebStorageAdapter<S extends AnySchema>(
     if (!stored || isExpired(stored.expiresAt)) return undefined;
 
     try {
-      return decodeRecord(codecs[table], stored.value) as unknown as T;
+      return parsers[table].parse(stored.value) as unknown as T;
     } catch (error) {
       throw new VaultError(`validation failed for table "${String(table)}"`, { cause: error });
     }
@@ -219,9 +218,8 @@ function createWebStorageAdapter<S extends AnySchema>(
     async put<K extends keyof S & string>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void> {
       const storageKey = encodeStorageKey(name, table, getRecordKey(schema, table, value));
       const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
-      const encoded = encodeRecord(codecs[table], value);
 
-      writeItem(storageKey, expiresAt === undefined ? { value: encoded } : { expiresAt, value: encoded });
+      writeItem(storageKey, expiresAt === undefined ? { value } : { expiresAt, value });
       ownedKeys.add(storageKey);
     },
 
@@ -230,16 +228,14 @@ function createWebStorageAdapter<S extends AnySchema>(
 
       for (const value of values) {
         const storageKey = encodeStorageKey(name, table, getRecordKey(schema, table, value));
-        const encoded = encodeRecord(codecs[table], value);
 
-        writeItem(storageKey, expiresAt === undefined ? { value: encoded } : { expiresAt, value: encoded });
+        writeItem(storageKey, expiresAt === undefined ? { value } : { expiresAt, value });
         ownedKeys.add(storageKey);
       }
     },
   };
 
   return buildVaultStore(schema, core, {
-    codecs,
     onCrossTabMessage(notify) {
       if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') {
         return undefined;
@@ -276,7 +272,8 @@ function createWebStorageAdapter<S extends AnySchema>(
 
       return () => window.removeEventListener('storage', listener);
     },
-    schema,
+    onObserverError: options.onObserverError,
+    parsers,
   });
 }
 

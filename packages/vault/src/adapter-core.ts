@@ -1,4 +1,3 @@
-import { validateRecord } from './codec';
 import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
 import { createObserverHub, getRecordKey } from './internal';
 import { assertPositiveFinite } from './ttl';
@@ -7,9 +6,9 @@ import type {
   DocumentVaultStore,
   KeyOf,
   KeyValueVaultStore,
-  MemoryStoreOptions,
+  ObserverErrorHandler,
   RecordOf,
-  TableCodecs,
+  TableParsers,
   TransactionContext,
 } from './types';
 
@@ -22,6 +21,8 @@ import type {
  */
 export type StorageBackend<S extends AnySchema, K extends keyof S & string = keyof S & string> = {
   clear<T extends K>(table: T): Promise<void>;
+  /** Native live-record count. Falls back to counting the `getAll()` result. */
+  count?<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   /** Native multi-key delete in one transaction (IndexedDB). Falls back to per-key deletes. */
   deleteMany?<T extends K>(table: T, keys: readonly KeyOf<S, T>[]): Promise<number>;
@@ -99,18 +100,18 @@ function verifyKey<S extends AnySchema, K extends keyof S & string>(
   }
 }
 
-/* -------------------- Codec helpers -------------------- */
+/* -------------------- Parser helpers -------------------- */
 
 export function makeValidator<S extends AnySchema>(
-  codecs: TableCodecs<S> | undefined,
+  parsers: TableParsers<S> | undefined,
 ): <K extends keyof S & string>(table: K, value: RecordOf<S, K>) => RecordOf<S, K> {
   return <K extends keyof S & string>(table: K, value: RecordOf<S, K>): RecordOf<S, K> => {
-    const codec = codecs?.[table];
+    const parser = parsers?.[table];
 
-    if (!codec) return value;
+    if (!parser) return value;
 
     try {
-      return validateRecord(codec, value);
+      return parser.parse(value);
     } catch (err) {
       throw new VaultError(`validation failed for table "${table}"`, { cause: err });
     }
@@ -139,6 +140,8 @@ export function buildOperations<S extends AnySchema, K extends keyof S & string 
     },
     async count(table) {
       guard(table);
+
+      if (core.count) return core.count(table);
 
       return (await core.getAll(table)).length;
     },
@@ -249,9 +252,11 @@ export function buildOperations<S extends AnySchema, K extends keyof S & string 
 /* -------------------- buildVaultStore -------------------- */
 
 /** @internal Options shared by every store builder. */
-export type VaultStoreOptions<S extends AnySchema> = MemoryStoreOptions<S> & {
+export type VaultStoreOptions<S extends AnySchema> = {
   onCrossTabMessage?: (notify: (table: keyof S & string) => void) => (() => void) | undefined;
   onMutation?: (table: keyof S & string) => void;
+  onObserverError?: ObserverErrorHandler;
+  parsers?: TableParsers<S>;
 };
 
 /** @internal Options for document stores, which supply their own batch factory. */
@@ -271,7 +276,7 @@ function buildStoreCore<S extends AnySchema>(
   core: StorageBackend<S>,
   options: VaultStoreOptions<S>,
 ): StoreCore<S> {
-  const observers = createObserverHub<S>((table) => core.getAll(table));
+  const observers = createObserverHub<S>((table) => core.getAll(table), options.onObserverError);
 
   const notifyMutation = (table: keyof S & string): void => {
     observers.notify(table);
@@ -286,7 +291,7 @@ function buildStoreCore<S extends AnySchema>(
 
   const disconnectExternal = options.onCrossTabMessage?.(notifyExternal) ?? undefined;
 
-  const validate = makeValidator(options.codecs);
+  const validate = makeValidator(options.parsers);
   const pruneAll = core.pruneAllExpired?.bind(core);
 
   const disposeController = new AbortController();
@@ -365,7 +370,7 @@ function buildStoreCore<S extends AnySchema>(
 export function buildVaultStore<S extends AnySchema>(
   schema: S,
   core: StorageBackend<S>,
-  options: VaultStoreOptions<S> = { schema },
+  options: VaultStoreOptions<S> = {},
 ): KeyValueVaultStore<S> {
   return buildStoreCore(schema, core, options).store;
 }

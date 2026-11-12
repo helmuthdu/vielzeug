@@ -1,13 +1,13 @@
 ---
 title: 'Vault: Usage Guide'
-description: Persist typed browser or SQLite data, observe table snapshots, and use atomic transactions with required durable codecs.
+description: Persist typed browser or SQLite data, observe table snapshots, and use atomic transactions with required durable parsers.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Create a key-value store with a schema and codecs, then write a typed row.
+Create a key-value store with a schema and parsers, then write a typed row.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -23,7 +23,7 @@ const PreferenceSchema = s.object({ id: s.string(), theme: s.enum(['dark', 'ligh
 const store = createLocalStorage({
   name: 'app-v2',
   schema: { preferences: table<Preference>('id') },
-  codecs: { preferences: PreferenceSchema },
+  parsers: { preferences: PreferenceSchema },
 });
 
 await store.put('preferences', { id: 'theme', theme: 'dark' });
@@ -32,7 +32,7 @@ console.log(await store.get('preferences', 'theme'));
 
 ## Create a Key-Value Store
 
-LocalStorage and SessionStorage return `KeyValueVaultStore`; Memory returns a `DocumentVaultStore` (it adds `batch()` and `iterate()`). They share portable string/number keys, bound helpers, fluent queries, TTL, and `observe()`. Memory may omit codecs; Web Storage requires them. Malformed storage envelopes are evicted lazily, while codec validation failures are surfaced without deleting persisted data.
+LocalStorage and SessionStorage return `KeyValueVaultStore`; Memory returns a `DocumentVaultStore` (it adds `batch()` and `iterate()`). They share portable string/number keys, bound helpers, fluent queries, TTL, and `observe()`. Memory may omit parsers; Web Storage requires them. Malformed storage envelopes are evicted lazily, while parser validation failures are surfaced without deleting persisted data.
 
 The root entry is adapter-free. Import `createMemory` from `@vielzeug/vault/memory`, `createLocalStorage` from `@vielzeug/vault/local-storage`, or `createSessionStorage` from `@vielzeug/vault/session-storage`. Import each adapter from its focused subpath so unused backends stay out of the bundle.
 
@@ -42,7 +42,7 @@ Use a new storage name when upgrading from Vault 1. Old key and envelope formats
 const store = createLocalStorage({
   name: 'app-v2',
   schema: { preferences: table<Preference>('id') },
-  codecs: { preferences: PreferenceSchema },
+  parsers: { preferences: PreferenceSchema },
 });
 ```
 
@@ -124,7 +124,7 @@ const EventSchema = s.object({ id: s.number(), type: s.string() });
 const db = createIndexedDB({
   name: 'app-v2',
   schema: { events: table<{ id: number; type: string }>('id') },
-  codecs: { events: EventSchema },
+  parsers: { events: EventSchema },
 });
 
 await db.batch(['events'], async (tx) => {
@@ -152,7 +152,7 @@ const store = createSQLite({
   database,
   name: 'app-v2',
   schema: { events: table<{ id: number; type: string }>('id') },
-  codecs: { events: EventSchema },
+  parsers: { events: EventSchema },
 });
 
 await store.batch(['events'], async (tx) => {
@@ -167,13 +167,13 @@ SQLite stores serialize all access through the injected connection. `batch()` st
 
 ## Store SQLite Values and Observe Changes
 
-SQLite accepts any JSON-compatible codec output. Circular values, `bigint`, class instances, functions, and non-finite numbers must be transformed by the codec before writing. Number and string primary keys remain distinct.
+SQLite stores records as JSON, so records must be JSON-compatible: circular values, `bigint`, and functions fail serialization, and parsers should reject anything a schema cannot represent (use ISO strings for dates). Number and string primary keys remain distinct.
 
 `observe()` sees mutations written through Vault stores sharing the same injected connection after a commit. It cannot detect direct SQL changes, writes from another process, or writes through another connection. The connection belongs to the caller by default; use `closeOnDispose: true` only when the store owns it.
 
 ## Handle IndexedDB Schema Migrations
 
-Declare IndexedDB indexes in the schema. Codecs must preserve each indexed field name and value in their encoded object. Use `migrate` only for IndexedDB version upgrades and mirror Vault's fixed `value.<field>` index path.
+Declare IndexedDB indexes in the schema; other adapters ignore them and `getAllByIndex()` is IndexedDB-only. Because writes store the parser's canonical output, indexed fields always match what readers see. Use `migrate` only for IndexedDB version upgrades and mirror Vault's fixed `value.<field>` index path.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -193,7 +193,7 @@ createIndexedDB({
   migrate,
   schema,
   version: 2,
-  codecs: { users: UserSchema },
+  parsers: { users: UserSchema },
 });
 ```
 
@@ -248,7 +248,7 @@ Keep Ripple signals as application state and persist selected changes through Va
 
 - Define one schema per storage namespace.
 - Use string or finite-number primary keys only.
-- Provide codecs for every durable adapter; pass Spell or another parser schema directly when identity encoding is sufficient.
+- Provide parsers for every durable adapter; pass a Spell schema directly for validation or a bare `{ parse }` for passthrough.
 - Use `observe()` for table snapshots.
 - Use IndexedDB or SQLite for atomic work.
 - Keep external asynchronous work outside `batch()` callbacks.

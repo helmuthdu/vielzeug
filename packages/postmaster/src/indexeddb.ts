@@ -198,16 +198,10 @@ export function createIndexedDbPostmasterStore(options: IndexedDbPostmasterStore
     }),
   };
   const vault = createIndexedDB({
-    codecs: {
-      jobs: {
-        decode,
-        encode: (record) => {
-          if (!isValidRecord(record)) throw new PostmasterError('cannot persist a corrupt stored job');
-          return parseStoredJob(record);
-        },
-      },
-    },
     name: options.name,
+    // Lenient read policy: `decode` reports corrupt records once and marks them,
+    // readers filter them; the strict write check lives at the single put() site.
+    parsers: { jobs: { parse: decode } },
     schema,
   });
 
@@ -253,7 +247,8 @@ export function createIndexedDbPostmasterStore(options: IndexedDbPostmasterStore
       return entry && isValidRecord(entry) ? normalize(entry) : undefined;
     },
     async put(entry: StoredJob): Promise<void> {
-      await vaultTx.put('jobs', normalize(entry));
+      // parseStoredJob is the write validator: it rejects invalid records and canonicalizes them.
+      await vaultTx.put('jobs', parseStoredJob(entry));
     },
   });
 
