@@ -58,11 +58,26 @@ const lucideUmd = resolve(dirname(req.resolve('lucide')), '../../dist/umd/lucide
 function workspaceDepNames(pkg: string): string[] {
   const manifest = JSON.parse(readFileSync(resolve(pkgDir, pkg, 'package.json'), 'utf-8')) as {
     dependencies?: Record<string, string>;
+    peerDependencies?: Record<string, string>;
+    optionalPeerDependencies?: Record<string, string>;
   };
 
-  return Object.keys(manifest.dependencies ?? {})
-    .filter((dep) => dep.startsWith('@vielzeug/'))
-    .map((dep) => dep.slice('@vielzeug/'.length));
+  // `dependencies` alone is not enough: ore depends on ripple as a PEER dependency, and
+  // missing that edge topologically sorted Ore before Ripple — ore's IIFE then captured
+  // `undefined` for its ripple argument and every element threw "Cannot read properties of
+  // undefined (reading 'untrack')" in connectedCallback, invisible on the page because the
+  // sandbox bridge replaces window.onerror. Optional peers (test-only, e.g. ore→assay) are
+  // not runtime dependencies and have no global in the bundle, so they stay excluded.
+  const declared = new Set([
+    ...Object.keys(manifest.dependencies ?? {}),
+    ...Object.keys(manifest.peerDependencies ?? {}),
+  ]);
+
+  for (const dep of Object.keys(manifest.optionalPeerDependencies ?? {})) {
+    declared.delete(dep);
+  }
+
+  return [...declared].filter((dep) => dep.startsWith('@vielzeug/')).map((dep) => dep.slice('@vielzeug/'.length));
 }
 
 // Kahn topological sort over the @vielzeug/* dependency closure, alphabetical for determinism.

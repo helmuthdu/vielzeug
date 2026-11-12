@@ -31,11 +31,17 @@ describe('preview dependency derivation', () => {
   const depsOf = (pkg: string): string[] => {
     const manifest = JSON.parse(readFileSync(resolve(pkgDir, pkg, 'package.json'), 'utf-8')) as {
       dependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+      optionalPeerDependencies?: Record<string, string>;
     };
+    const declared = new Set([
+      ...Object.keys(manifest.dependencies ?? {}),
+      ...Object.keys(manifest.peerDependencies ?? {}),
+    ]);
 
-    return Object.keys(manifest.dependencies ?? {})
-      .filter((dep) => dep.startsWith('@vielzeug/'))
-      .map((dep) => dep.slice('@vielzeug/'.length));
+    for (const dep of Object.keys(manifest.optionalPeerDependencies ?? {})) declared.delete(dep);
+
+    return [...declared].filter((dep) => dep.startsWith('@vielzeug/')).map((dep) => dep.slice('@vielzeug/'.length));
   };
 
   it('loads an IIFE for every workspace dependency of refine', () => {
