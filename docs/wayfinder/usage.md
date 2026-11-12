@@ -461,6 +461,39 @@ const user = state.matches.at(-1)?.data;
 
 `waitFor` rejects immediately if the router is already in `status: 'error'`, and also rejects if `router.dispose()` is called while the promise is pending. Resolves immediately if the named route is already active and idle.
 
+## URL Query State
+
+Filter controls need a two-way binding with the URL. `createQueryState` declares the schema once; reads are ripple readables and writes merge into the current URL without disturbing params it does not declare:
+
+```ts
+import { computed } from '@vielzeug/ripple';
+import { createQueryState, param } from '@vielzeug/wayfinder';
+
+const queryState = createQueryState(router, {
+  q: param.string(),
+  sort: param.pick(['newest', 'price'] as const, 'newest'),
+  page: param.number(1),
+});
+
+// reads react to every navigation (back/forward included)
+const visibleItems = computed(() => {
+  const start = (queryState.params.page.value - 1) * pageSize;
+  return sortedItems.value.slice(start, start + pageSize);
+});
+
+// writes merge, replace the current entry by default, and dedupe same-URL navigations
+await queryState.set({ page: 1, q: term.value });
+```
+
+Create the state once beside the router (its route signals live for the app lifetime). For a control the user is actively editing, keep a local signal for the keystroke and persist through an effect: the URL stays the persistence layer while same-URL deduplication keeps the echo silent:
+
+```ts
+const search = signal(queryState.params.q.value); // initial value comes from the URL
+effect(() => void queryState.set({ q: search.value })); // persistence on every change
+```
+
+A codec's default is its param-absent state, so `?page=1` never appears in a clean URL, and malformed values decode back to the default instead of breaking the view.
+
 ## Testing
 
 Use `createMemoryHistory` to test routers without a browser:

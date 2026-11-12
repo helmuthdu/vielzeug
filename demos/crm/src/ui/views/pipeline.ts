@@ -18,10 +18,12 @@ import { createSortable, createSortableScope } from '@vielzeug/dnd/sortable';
 import { define, each, html, onCleanup, onMounted, ref, when } from '@vielzeug/ore';
 import { createSparkline } from '@vielzeug/prism';
 import { computed, effect, signal } from '@vielzeug/ripple';
+import { createQueryState, param } from '@vielzeug/wayfinder';
 import { can } from '../../core/auth';
 import { formatAmount, formatDate, formatRelativeDate } from '../../core/format';
 import { ledger, moveOpportunity } from '../../core/history';
 import { t } from '../../core/i18n';
+import { router } from '../../core/router';
 import { demoUsers } from '../../core/seed-data';
 import {
   activityBuckets,
@@ -45,17 +47,14 @@ const stages: Array<{ id: OpportunityStage; label: () => string }> = [
 ];
 const completedStages = new Set<OpportunityStage>(['closed-won', 'closed-lost']);
 const closingCutoff = Date.parse('2026-10-15T12:00:00Z');
-const pipelineSearchParams = (): URLSearchParams => {
-  const hashQuery = location.hash.includes('?') ? location.hash.slice(location.hash.indexOf('?') + 1) : '';
-  return new URLSearchParams(location.search || hashQuery);
-};
-const replacePipelineSearch = (params: URLSearchParams): void => {
-  const query = params.size ? `?${params}` : '';
-  if (location.hash.startsWith('#/')) {
-    const route = location.hash.split('?')[0];
-    history.replaceState(history.state, '', `${location.pathname}${location.search}${route}${query}`);
-  } else history.replaceState(history.state, '', `${location.pathname}${query}${location.hash}`);
-};
+// URL state lives beside the router: its route subscription spans the app lifetime, not the element's.
+const urlFilters = createQueryState(router, {
+  closing: param.boolean(),
+  owner: param.string('all'),
+  q: param.string(),
+  sort: param.pick(['close-date', 'value'] as const, 'close-date'),
+  stages: param.pick(['all'] as const),
+});
 const pipelineCompanies = computed(() => crmData.value.companies);
 const pipelineOpportunities = computed(() => crmData.value.opportunities);
 const opportunitiesForStage = (stage: OpportunityStage): Opportunity[] =>
@@ -99,20 +98,19 @@ function pipelineCard(opportunity: () => Opportunity, stage: () => string) {
 
 define('crm-pipeline-view', {
   setup() {
-    const initialFilters = pipelineSearchParams();
-    const initialOwner = initialFilters.get('owner') ?? 'all';
+    const initialOwner = urlFilters.params.owner.value;
     const board = ref<HTMLElement>();
     const ownerFilter = ref<HTMLElement & { options: Array<{ label: string; value: string }> }>();
     const searchInput = ref<HTMLElement>();
     const stageChangeChart = ref<HTMLElement>();
     const view = signal<'board' | 'changes' | 'forecast'>('board');
-    const query = signal((initialFilters.get('q') ?? '').slice(0, 100));
+    const query = signal(urlFilters.params.q.value.slice(0, 100));
     const owner = signal(
       initialOwner === 'all' || demoUsers.some((user) => user.id === initialOwner) ? initialOwner : 'all',
     );
-    const sort = signal<'close-date' | 'value'>(initialFilters.get('sort') === 'value' ? 'value' : 'close-date');
-    const closingOnly = signal(initialFilters.get('closing') === '1');
-    const showCompleted = signal(initialFilters.get('stages') === 'all');
+    const sort = signal<'close-date' | 'value'>(urlFilters.params.sort.value);
+    const closingOnly = signal(urlFilters.params.closing.value);
+    const showCompleted = signal(urlFilters.params.stages.value === 'all');
     const searchOpen = signal(query.value.length > 0);
     const filterOpen = signal(false);
     const sortOpen = signal(false);
@@ -223,13 +221,13 @@ define('crm-pipeline-view', {
         ];
       });
       const stopUrlSync = effect(() => {
-        const params = new URLSearchParams();
-        if (query.value) params.set('q', query.value);
-        if (owner.value !== 'all') params.set('owner', owner.value);
-        if (sort.value !== 'close-date') params.set('sort', sort.value);
-        if (closingOnly.value) params.set('closing', '1');
-        if (showCompleted.value) params.set('stages', 'all');
-        replacePipelineSearch(params);
+        void urlFilters.set({
+          closing: closingOnly.value,
+          owner: owner.value,
+          q: query.value,
+          sort: sort.value,
+          stages: showCompleted.value ? 'all' : undefined,
+        });
       });
       const stopBoardLayout = effect(() => {
         void showCompleted.value;

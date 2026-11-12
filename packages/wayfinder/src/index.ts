@@ -14,6 +14,15 @@ export {
   type HashHistoryOptions,
 } from './history';
 export { redirectTo } from './middleware';
+export type {
+  ParamSpec,
+  QueryState,
+  QueryStateOptions,
+  QueryStateSetOptions,
+  QueryStateSpec,
+  RawParamValue,
+} from './query-state';
+export { createQueryState, param } from './query-state';
 export type { RouteSignals } from './route-signals';
 export { createRouteSignals } from './route-signals';
 export type { Router } from './router';

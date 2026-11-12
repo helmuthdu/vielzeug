@@ -18,6 +18,9 @@ exports:
     WayfinderDisposedError,
     WayfinderRedirectLoopError,
     WayfinderRouteError,
+    createQueryState,
+    createRouteSignals,
+    param,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -143,6 +146,8 @@ router.dispose();
 - `createHashHistory()`: Runs browser routes on static hosts that cannot rewrite deep links.
 - `createMemoryHistory()`: Runs routers in tests and non-browser environments.
 - `subscribe()`: Reactive subscription to navigation state changes.
+- `createRouteSignals()`: Mirrors navigation into ripple readables.
+- `createQueryState()`: Typed reactive URL query params with merged, deduplicated writes.
 
 </div>
 

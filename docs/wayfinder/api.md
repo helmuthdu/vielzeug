@@ -11,6 +11,8 @@ description: Complete API reference for Wayfinder.
 | -------------------------------------------- | --------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `createRouter(options)`                      | Create a router from a route table                              | Sync                 | Initial navigation starts asynchronously in the constructor                                                  |
 | `createRouteSignals(router)`                 | Mirror a router into ripple readables (name/params/query/state) | Sync                 | `router.getSnapshot()` alone is not ripple-reactive: use this bridge                                         |
+| `createQueryState(router, spec, options?)`   | Bind typed reactive URL query params (read + merged writes)     | Sync (writes async)  | A codec's default must be its param-absent state                                                             |
+| `param.string/number/boolean/pick/list`      | Built-in query-param codecs                                     | Sync (returns codec) | Unknown URL values decode to the default, never throw                                                        |
 | `createBrowserHistory()`                     | Create the default browser history driver                       | Sync                 | Requires server-side SPA rewrites                                                                            |
 | `createHashHistory(options?)`                | Create a static-host-safe hash history driver                   | Sync                 | Pass the same `base` to the history and router                                                               |
 | `createHistoryForBase(base)`                 | Pick browser vs hash history for a deploy base                  | Sync                 | Returns the hash driver for any base other than `'/'`                                                        |
@@ -405,6 +407,49 @@ const activeName = computed(() => route.name.value); // re-computes on every nav
 Mirrors a router into ripple readables so templates and computeds react to navigation. `router.getSnapshot()` alone is **not** ripple-reactive: reading it inside a `computed()` computes once and never re-runs, because it registers no tracked dependency. This bridge wraps `subscribe()`/`getSnapshot()` with `fromSubscribable` once, for every consumer.
 
 **Returns:** `RouteSignals<TRoutes>`: `name` (deepest matched route name, `null` while nothing matches), `params` (its path params), `query` (raw string-valued query params of the current location), and `state` (the full `RouteState`, for deriving further computeds).
+
+## `createQueryState(router, spec, options?)`
+
+```ts
+import { createQueryState, param } from '@vielzeug/wayfinder';
+
+const filters = createQueryState(router, {
+  q: param.string(),
+  page: param.number(1),
+  sort: param.pick(['price', 'name'] as const, 'price'),
+  inStock: param.boolean(),
+  tags: param.list(),
+});
+
+filters.params.page.value; // 1 when ?page is absent or malformed
+filters.query.value; // the whole typed view as one computed
+await filters.set({ page: 2 }); // merged write; default values are omitted from the URL
+await filters.reset(); // clear every declared param
+```
+
+Binds a declared param schema to a router as reactive readables: reads recompute on every navigation, and writes merge into the current URL — params you did not declare, the hash, and the path are preserved. Each write issues one `router.navigate()` with `replace: true` by default (flip globally via `options.replace` or per write via `set(patch, { replace: false })`), so same-URL deduplication, back/forward, and leave guards keep working. Both option objects carry the router's full `NavigateOptions` and forward them untouched, so `viewTransition`, `force`, and `state` can be set for every write or overridden per write — for example `createQueryState(router, spec, { viewTransition: false })` keeps filter edits from animating on a router that transitions route changes. Setting a key outside the schema throws `WayfinderConfigError`.
+
+The codec contract is one invariant: **the default is the param-absent state**. `param.number(1)` writes `?page=2` but clears the param at `1`, keeping URLs canonical and round-trips stable. Decoding is lenient on purpose: a malformed URL value falls back to the default instead of throwing, because URLs carry untrusted input.
+
+Create query states once beside the router: their route signals live for the app lifetime, not the element's (same rule as `createRouteSignals`).
+
+**Returns:** `QueryState<S>`: `params` (per-key ripple `Readable`s), `query` (the full schema as one computed), `set(patch, options?)`, and `reset(options?)`.
+
+---
+
+## `param` codecs
+
+| Codec                          | Absent or unknown decodes to      | Wire format                       |
+| ------------------------------ | --------------------------------- | --------------------------------- |
+| `param.string(default?)`       | `default` (`''` when omitted)     | plain value                       |
+| `param.number(default?)`       | `default` (`0` when omitted)      | finite numeric string             |
+| `param.boolean(default?)`      | `default` (`false` when omitted)  | `1`/`true` and `0`/`false`        |
+| `param.pick(values, default?)` | `default`, or `undefined` if none | one of `values`                   |
+| `param.list()`                 | `[]`                              | repeated params (`tags=a&tags=b`) |
+
+For anything else, supply a custom `ParamSpec<T>` (`decode`, optional `default`, `encode`). Return `undefined` from `encode` to omit the param from the URL.
+
+---
 
 ## `redirectTo(target, options?)`
 

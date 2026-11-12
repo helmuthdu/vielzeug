@@ -6,6 +6,7 @@ import '@vielzeug/refine/switch';
 
 import { define, html, onCleanup, when } from '@vielzeug/ore';
 import { computed, effect, signal } from '@vielzeug/ripple';
+import { createQueryState, param } from '@vielzeug/wayfinder';
 import { compareModels } from '../../core/cart-store';
 import { formatPrice } from '../../core/currency';
 import { bus } from '../../core/events';
@@ -48,18 +49,8 @@ const SPEC_GROUPS: SpecGroup[] = [
   },
 ];
 
-function initialModelIds(): string[] {
-  const hashQuery = location.hash.includes('?') ? location.hash.slice(location.hash.indexOf('?') + 1) : '';
-  return (new URLSearchParams(location.search || hashQuery).get('models') ?? '').split(',').filter(Boolean);
-}
-
-function syncUrl(): void {
-  const models = compareModels.value.map(({ id }) => id).join(',');
-  const query = models ? `?models=${encodeURIComponent(models)}` : '';
-  if (location.hash.startsWith('#/'))
-    history.replaceState(history.state, '', `${location.pathname}${location.search}#/compare${query}`);
-  else history.replaceState(history.state, '', `${location.pathname}${query}${location.hash}`);
-}
+// URL state lives beside the router: its route subscription spans the app lifetime, not the element's.
+const queryState = createQueryState(router, { models: param.list() });
 
 function valueFor(row: SpecKey, model: Model): number | string | null {
   switch (row) {
@@ -126,7 +117,7 @@ define('compare-view', {
   setup() {
     const highlightDifferences = signal(true);
     const hideIdentical = signal(false);
-    const requestedIds = initialModelIds();
+    const requestedIds = [...queryState.params.models.value];
     if (requestedIds.length) replaceCompare(requestedIds);
 
     const visibleGroups = computed(() =>
@@ -137,8 +128,7 @@ define('compare-view', {
     );
     const visibleRowCount = computed(() => visibleGroups.value.reduce((count, group) => count + group.rows.length, 0));
     const urlSync = effect(() => {
-      void compareModels.value;
-      syncUrl();
+      void queryState.set({ models: compareModels.value.map(({ id }) => id) });
       return undefined;
     });
     onCleanup(() => urlSync.dispose());
