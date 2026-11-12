@@ -5,11 +5,13 @@ import { TavernPairingError } from './errors';
 /** Snapshots can be large; the default mesh frame cap is too tight for whole documents. */
 export const DEFAULT_MAX_MESSAGE_BYTES = 512 * 1024;
 
-/** What travels guest to host: a named command and its arguments, tagged for rejection. */
+/** What travels guest to host: a named command, its arguments, an optional subject
+ *  target, and an id tagging the reply. */
 export interface WireCommand {
   readonly args: unknown[];
   readonly id: string;
   readonly name: string;
+  readonly target?: string;
 }
 
 export interface WireProtocol extends MeshProtocol {
@@ -28,9 +30,10 @@ export const commandId = (): string => `cmd-${Math.random().toString(36).slice(2
 /** Runtime guard for the wire command shape: the protocol is Tavern's, so Tavern validates it. */
 export function parseWireCommand(raw: unknown): WireCommand | null {
   if (typeof raw !== 'object' || raw === null) return null;
-  const { args, id, name } = raw as Record<string, unknown>;
+  const { args, id, name, target } = raw as Record<string, unknown>;
   if (typeof id !== 'string' || typeof name !== 'string' || !Array.isArray(args)) return null;
-  return { args, id, name };
+  if (target !== undefined && typeof target !== 'string') return null;
+  return target === undefined ? { args, id, name } : { args, id, name, target };
 }
 
 /**

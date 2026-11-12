@@ -101,9 +101,14 @@ export async function joinTavern<Mounted>(options: TavernGuestOptions<Mounted>):
         get disposed() {
           return ended;
         },
-        sendCommand: (name: string, args: readonly unknown[] = []): void => {
+        sendCommand: (name: string, args: readonly unknown[] = [], target?: string): void => {
           if (ended) throw new TavernDisposedError('The session has ended.');
-          guest.send('command', { args: [...args], id: commandId(), name });
+          guest.send('command', {
+            args: [...args],
+            id: commandId(),
+            name,
+            ...(target === undefined ? undefined : { target }),
+          });
         },
         tap: tappers.tap,
         [Symbol.dispose]() {

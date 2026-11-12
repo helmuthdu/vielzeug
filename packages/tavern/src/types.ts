@@ -13,6 +13,13 @@ export type TavernCommands = Record<string, TavernCommand>;
 
 /** How the host reads and watches the single subject it is sharing. */
 export interface TavernSubject {
+  /**
+   * The subject's stable id. Declaring it turns every command into a checked request:
+   * a guest must name this id as {@link TavernGuest.sendCommand}'s `target`, and tavern
+   * rejects any command that omits or misses it before the command table ever runs.
+   * Omit it for anonymous sessions, where commands carry no target.
+   */
+  readonly id?: string;
   /** Subscribes to local changes of the hosted subject: the re-broadcast trigger. */
   onChanged(listener: () => void): () => void;
   /** Subscribes to the hosted subject's removal: hosting ends when it fires. */
@@ -120,9 +127,13 @@ export interface TavernGuest {
    * Forwards a command to the host's command table. The host rejects a name its table
    * does not hold, and a handler that throws rejects with its message; a successful
    * command needs no separate answer because its effect arrives with the next snapshot.
+   * When the host shares a named subject (its `subject.id`), `target` must name that
+   * subject id or the command is rejected before the table runs; pass it as the third
+   * argument for every command on a named session. For an anonymous host the argument
+   * is ignored.
    * Throws `TavernDisposedError` after the session has ended.
    */
-  sendCommand(name: string, args?: readonly unknown[]): void;
+  sendCommand(name: string, args?: readonly unknown[], target?: string): void;
   /** Subscribes to {@link TavernGuestEvent}s. Handler errors are swallowed; the
    *  subscription detaches when `signal` aborts or the session ends. */
   tap(handler: (event: TavernGuestEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;

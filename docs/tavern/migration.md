@@ -71,6 +71,8 @@ guest.sendCommand('doc-1', 'rename', ['Quarterly report']);
 guest.sendCommand('rename', ['Quarterly report']);
 ```
 
+A later release reintroduced an optional third argument for a different purpose. Declaring `subject.id` on the hosted subject makes the session _named_: every command must pass that id as `sendCommand(name, args, target)`, and a missing or mismatched target rejects before the table runs. On a named session the argument is mandatory, not optional: calling `sendCommand(name, args)` against a host that declares an id rejects every command. See "Name the Subject to Guard Command Targets" in `usage.md`.
+
 ## The command table is a plain record
 
 `TavernCommands` was a `{ has, apply }` seam you hand-wired over your own dispatch: now it is the dispatch itself, a `Record<string, (args) => void>`. A missing name rejects the guest the same way `has` returning false used to; a throwing handler rejects with its message. Omit `commands` entirely for a read-only session.

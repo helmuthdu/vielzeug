@@ -1,5 +1,4 @@
 import { MeshPairingError } from '@vielzeug/mesh';
-import { createFakeRtc } from '@vielzeug/mesh/testing';
 import { describe, expect, it, vi } from 'vitest';
 import {
   hostTavern,
@@ -10,6 +9,7 @@ import {
   type TavernHostEvent,
   TavernPairingError,
 } from '../index';
+import { createFakeRtc } from '../testing';
 
 interface BookHarness {
   applied: { args: readonly unknown[]; name: string }[];
@@ -26,6 +26,7 @@ async function tavernBook(
     onEnded?(subject: { id: string; title: string }): void;
     onNotice?(wire: unknown): void;
     serializeNotice?(notice: unknown): unknown | null;
+    subjectId?: string;
   } = {},
 ): Promise<BookHarness> {
   const { rtc } = createFakeRtc();
@@ -45,6 +46,7 @@ async function tavernBook(
     rtc,
     serializeNotice: options.serializeNotice,
     subject: {
+      ...(options.subjectId === undefined ? undefined : { id: options.subjectId }),
       onChanged: (listener) => {
         broadcast = listener;
         return () => undefined;
@@ -143,6 +145,61 @@ describe('tavern', () => {
     expect(rejected[0]).toMatchObject({ message: expect.stringContaining('erase'), type: 'rejected' });
     // The rejection carries the id of the command it answers.
     expect(rejected[0]!.type === 'rejected' && rejected[0]!.commandId).toMatch(/^cmd-/);
+
+    guest.dispose();
+    host.dispose();
+  });
+
+  it('applies a command that targets the named subject', async () => {
+    const { applied, guest, host, ready } = await tavernBook({ subjectId: 'book-1' });
+    await ready;
+
+    guest.sendCommand('rename', ['Final'], 'book-1');
+    await vi.waitFor(() => expect(applied).toEqual([{ args: ['Final'], name: 'rename' }]));
+
+    guest.dispose();
+    host.dispose();
+  });
+
+  it('rejects a command on a named session that omits its target, before the table runs', async () => {
+    const { applied, guest, host, ready } = await tavernBook({ subjectId: 'book-1' });
+    const rejected: TavernGuestEvent[] = [];
+    guest.tap((event) => rejected.push(event));
+    await ready;
+
+    guest.sendCommand('rename', ['Sneaky']);
+    await vi.waitFor(() => expect(rejected).toHaveLength(1));
+    expect(rejected[0]).toMatchObject({
+      message: 'That command does not target the hosted subject.',
+      type: 'rejected',
+    });
+    expect(applied).toEqual([]);
+
+    guest.dispose();
+    host.dispose();
+  });
+
+  it('rejects a command whose target misses the hosted subject', async () => {
+    const { applied, guest, host, ready } = await tavernBook({ subjectId: 'book-1' });
+    const rejected: TavernGuestEvent[] = [];
+    guest.tap((event) => rejected.push(event));
+    await ready;
+
+    guest.sendCommand('rename', ['Elsewhere'], 'book-2');
+    await vi.waitFor(() => expect(rejected).toHaveLength(1));
+    expect(rejected[0]).toMatchObject({ type: 'rejected' });
+    expect(applied).toEqual([]);
+
+    guest.dispose();
+    host.dispose();
+  });
+
+  it('ignores targets on a session whose subject declares no id', async () => {
+    const { applied, guest, host, ready } = await tavernBook();
+    await ready;
+
+    guest.sendCommand('rename', ['Whatever'], 'anything');
+    await vi.waitFor(() => expect(applied).toEqual([{ args: ['Whatever'], name: 'rename' }]));
 
     guest.dispose();
     host.dispose();

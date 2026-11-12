@@ -77,6 +77,16 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
       host.send(peerId, 'rejected', { commandId: '', message: 'That command could not be read.' });
       return;
     }
+    // A named session checks every command's target: missing and mismatched targets are
+    // rejected before the table runs, so a guest cannot opt out of naming its subject.
+    // (The command table stays the authorization boundary; this guards honest misrouting.)
+    if (options.subject.id !== undefined && command.target !== options.subject.id) {
+      host.send(peerId, 'rejected', {
+        commandId: command.id,
+        message: 'That command does not target the hosted subject.',
+      });
+      return;
+    }
     // Own-property lookup only: a guest must not reach Object.prototype members.
     const table = options.commands;
     const apply = table && Object.hasOwn(table, command.name) ? table[command.name] : undefined;

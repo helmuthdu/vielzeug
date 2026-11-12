@@ -24,15 +24,16 @@ description: Public API of @vielzeug/tavern.
 
 ## Package Entry Point
 
-| Import             | Purpose                    |
-| ------------------ | -------------------------- |
-| `@vielzeug/tavern` | Complete public Tavern API |
+| Import                     | Purpose                                         |
+| -------------------------- | ----------------------------------------------- |
+| `@vielzeug/tavern`         | Complete public Tavern API                      |
+| `@vielzeug/tavern/testing` | Test seam: the fake WebRTC factory for sessions |
 
 The `MeshPeer` type carried by host events and the `peers` getter is re-exported here, so a single import types everything.
 
 ## `hostTavern(options)`
 
-Creates a mesh host for one subject. Guest commands are validated against the wire shape (Tavern's own protocol) and checked against `commands`: a name the table does not hold rejects without applying, and a handler that throws rejects the guest with the error's message. Local changes (via `subject.onChanged`) re-broadcast `subject.snapshot()`: coalesced on a microtask; `subject.onRemoved` ends hosting. Presence and transport warnings are reported through `tap()` as `TavernHostEvent`s, and the live peer list is the `peers` getter; hosting ending: from removal or `dispose()`: fires `onEnded` exactly once. `relayNotice` serializes through `serializeNotice` and broadcasts to every guest.
+Creates a mesh host for one subject. Guest commands are validated against the wire shape (Tavern's own protocol) and checked against `commands`: a name the table does not hold rejects without applying, and a handler that throws rejects the guest with the error's message. Declaring `subject.id` makes the session _named_: every guest command must name that id as `sendCommand`'s `target`, and a command that omits or misses it rejects before the table runs. Local changes (via `subject.onChanged`) re-broadcast `subject.snapshot()`: coalesced on a microtask; `subject.onRemoved` ends hosting. Presence and transport warnings are reported through `tap()` as `TavernHostEvent`s, and the live peer list is the `peers` getter; hosting ending: from removal or `dispose()`: fires `onEnded` exactly once. `relayNotice` serializes through `serializeNotice` and broadcasts to every guest.
 
 **Returns:** `TavernHost`: the host handle.
 
@@ -117,14 +118,14 @@ await ready; // the mirror is live
 
 ### `TavernGuest` members
 
-| Member               | Type                             | Behavior                                                                                     |
-| -------------------- | -------------------------------- | -------------------------------------------------------------------------------------------- |
-| `disposalSignal`     | `AbortSignal`                    | Aborted when the session ends                                                                |
-| `dispose()`          | `() => void`                     | Leaves the session; `onEnded` fires exactly once                                             |
-| `disposed`           | `boolean`                        | Whether the session has ended                                                                |
-| `sendCommand()`      | `(name, args?) => void`          | Forwards a command to the host's table; throws `TavernDisposedError` after the session ended |
-| `tap()`              | `(handler, opts?) => () => void` | Subscribes to `TavernGuestEvent`s; handler errors are swallowed; detaches on abort or end    |
-| `[Symbol.dispose]()` | `() => void`                     | Delegates to `dispose()`; enables `using` declarations                                       |
+| Member               | Type                             | Behavior                                                                                                                              |
+| -------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `disposalSignal`     | `AbortSignal`                    | Aborted when the session ends                                                                                                         |
+| `dispose()`          | `() => void`                     | Leaves the session; `onEnded` fires exactly once                                                                                      |
+| `disposed`           | `boolean`                        | Whether the session has ended                                                                                                         |
+| `sendCommand()`      | `(name, args?, target?) => void` | Forwards a command to the host's table; `target` is required on a named session; throws `TavernDisposedError` after the session ended |
+| `tap()`              | `(handler, opts?) => () => void` | Subscribes to `TavernGuestEvent`s; handler errors are swallowed; detaches on abort or end                                             |
+| `[Symbol.dispose]()` | `() => void`                     | Delegates to `dispose()`; enables `using` declarations                                                                                |
 
 ## Types
 
@@ -141,13 +142,14 @@ The host's command table, keyed by name: the same functions the host's own UI ca
 
 ```ts
 interface TavernSubject {
+  readonly id?: string;
   onChanged(listener: () => void): () => void;
   onRemoved(listener: () => void): () => void;
   snapshot(): unknown;
 }
 ```
 
-How the host reads and watches the single subject it shares. `onChanged` is the re-broadcast trigger; `onRemoved` ends hosting; `snapshot()` returns the JSON-serializable state to broadcast, or `null` while the subject is missing (the broadcast skips). A throwing `snapshot` is reported as a `warning` tap event instead of crashing the host.
+How the host reads and watches the single subject it shares. `onChanged` is the re-broadcast trigger; `onRemoved` ends hosting; `snapshot()` returns the JSON-serializable state to broadcast, or `null` while the subject is missing (the broadcast skips). A throwing `snapshot` is reported as a `warning` tap event instead of crashing the host. `id` is the subject's stable identity: declaring it puts every command under target verification: guests must pass the id as `sendCommand`'s `target`, and a missing or mismatched target rejects with `That command does not target the hosted subject.` before the command table runs. The target is a guest claim, not a proof: the guard catches misrouted commands, while handlers and the command table stay the authorization boundary. Omit `id` for anonymous sessions, where targets carry no meaning.
 
 ### `TavernHostEvent`
 
@@ -179,3 +181,16 @@ The code the consumer pasted could not be used: garbage, the wrong kind, an expi
 ### `TavernDisposedError`
 
 A stopped host or ended guest was used again: control-plane calls throw it so leaked handles surface, and it rejects `ready` when the guest leaves before the first snapshot.
+
+## Testing
+
+`@vielzeug/tavern/testing` re-exports `createFakeRtc()` (and the `FakeRtc` type): an in-process fake WebRTC factory you pass as the `rtc` option of `hostTavern` and `joinTavern` to drive a real host/guest pair inside one test process, with no browser or network. Consuming this subpath keeps mesh, tavern's transport, out of your dev dependencies.
+
+```ts
+import { hostTavern, joinTavern } from '@vielzeug/tavern';
+import { createFakeRtc } from '@vielzeug/tavern/testing';
+
+const { rtc } = createFakeRtc();
+const host = hostTavern({ rtc, subject });
+const guest = await joinTavern({ invitationCode: await host.createInvitationCode(), mount, name, rtc });
+```

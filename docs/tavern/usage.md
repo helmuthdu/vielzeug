@@ -73,6 +73,27 @@ host.dispose(); // stop hosting: every guest disconnects
 
 Omit `commands` for a read-only session: guests mirror the subject, and every command rejects with `The host has no command named "..."`.
 
+## Name the Subject to Guard Command Targets
+
+A guest tab can mirror more than one subject, so a command alone does not say enough: it must name what it acts on. Declaring `subject.id` makes tavern verify that: every command needs the hosted subject's id as `sendCommand`'s third argument, and a missing or mismatched `target` rejects with a `rejected` tap event before the command table ever runs. Without `id`, the session stays anonymous and targets carry no meaning.
+
+```ts
+const host = hostTavern({
+  commands: { rename: (args) => myStore.rename(docId, args[0] as string) },
+  subject: {
+    id: docId, // named session: guests must target this id
+    onChanged: (listener) => myStore.onUpdated(docId, listener),
+    onRemoved: (listener) => myStore.onRemoved(docId, listener),
+    snapshot: () => myStore.read(docId),
+  },
+});
+
+// Guest side: the mirror knows which subject it is mirroring.
+guest.sendCommand('rename', ['Quarterly report'], docId);
+```
+
+The guard stops honest misrouting: a stray command meant for another subject in a guest tab fails loudly instead of silently mutating the hosted one. It cannot make a paired guest honest: the target is a claim, not a proof, so handlers must keep acting on their own subject and the command table remains the authorization boundary for what guests may do.
+
 ## Join as a Guest
 
 Joining consumes the invitation code and produces the answer code to show back. The session goes live once the host accepts the answer and the first snapshot mounts: that transition settles the `ready` promise, so there is no race between the handshake and your code attaching handlers.
