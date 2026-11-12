@@ -15,7 +15,6 @@ export class LinguaDisposedError extends LinguaError {
 export class LinguaInvalidCatalogError extends LinguaError {}
 export class LinguaInvalidLocaleError extends LinguaError {}
 export class LinguaInvalidPluralCountError extends LinguaError {}
-export class LinguaInvalidStateError extends LinguaError {}
 export class LinguaMissingCatalogError extends LinguaError {}
 export class LinguaMissingKeyError extends LinguaError {}
 export class LinguaMissingValueError extends LinguaError {}

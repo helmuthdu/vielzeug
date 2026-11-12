@@ -1,13 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import {
-  type Catalog,
-  createI18n,
-  LinguaDisposedError,
-  LinguaInvalidStateError,
-  LinguaMissingCatalogError,
-  LinguaMissingKeyError,
-} from '../';
+import { type Catalog, createI18n, LinguaDisposedError, LinguaMissingCatalogError, LinguaMissingKeyError } from '../';
 
 const enCatalog = {
   greeting: 'Hello {name}',
@@ -45,7 +38,7 @@ describe('createI18n', () => {
     const listener = vi.fn();
 
     i18n.subscribe(listener);
-    expect(() => i18n.translateDynamic('title')).toThrow(LinguaMissingCatalogError);
+    expect(() => i18n.translate('title')).toThrow(LinguaMissingCatalogError);
 
     await Promise.all([i18n.load(), i18n.load()]);
 
@@ -67,18 +60,17 @@ describe('createI18n', () => {
     expect(i18n.isLoaded()).toBe(true);
   });
 
-  test('keeps locale and snapshot unchanged when selected catalog loading fails', async () => {
+  test('keeps locale unchanged when selected catalog loading fails', async () => {
     const i18n = createI18n<Catalog>({
       catalogs: { en: enCatalog },
       loadCatalog: () => Promise.reject(new LinguaMissingCatalogError('Catalog unavailable.')),
       locale: 'en',
     });
-    const snapshot = i18n.getSnapshot();
 
     await expect(i18n.setLocale('de')).rejects.toBeInstanceOf(LinguaMissingCatalogError);
 
     expect(i18n.locale).toBe('en');
-    expect(i18n.getSnapshot()).toBe(snapshot);
+    expect(i18n.getSnapshot()).toBe('en');
     expect(i18n.translate('title')).toBe('Home');
   });
 
@@ -119,14 +111,14 @@ describe('createI18n', () => {
   test('reports catalog readiness before an asynchronous initial load completes', async () => {
     const i18n = createI18n<Catalog>({ loadCatalog: async () => enCatalog, locale: 'en' });
 
-    expect(() => i18n.translateDynamic('title')).toThrow(LinguaMissingCatalogError);
+    expect(() => i18n.translate('title')).toThrow(LinguaMissingCatalogError);
     await i18n.load();
     expect(i18n.translate('title')).toBe('Home');
   });
 
-  test('requires a catalog source or serialized state at compile time', () => {
+  test('requires a catalog source or loader at compile time', () => {
     const invalidConfigurations = (): void => {
-      // @ts-expect-error An i18n instance needs catalogs, a loader, or serialized state.
+      // @ts-expect-error An i18n instance needs catalogs or a loader.
       createI18n();
       // @ts-expect-error A locale alone cannot provide translations.
       createI18n({ locale: 'en' });
@@ -135,29 +127,38 @@ describe('createI18n', () => {
     expect(invalidConfigurations).toBeTypeOf('function');
   });
 
-  test('subscriptions receive stable immutable translator snapshots and support abort cleanup', async () => {
+  test('subscriptions receive the active locale and support abort cleanup', async () => {
     const i18n = createI18n<Catalog>({
       loadCatalog: (locale) => catalogs[locale] ?? enCatalog,
       locale: 'en',
     });
     const signal = new AbortController();
-    const snapshots: string[] = [];
+    const locales: string[] = [];
 
-    expect(i18n.getSnapshot()).toBe(i18n.getSnapshot());
-    i18n.subscribe((snapshot) => snapshots.push(`${snapshot.locale}:${snapshot.revision}`), { signal: signal.signal });
+    i18n.subscribe((next) => locales.push(next), { signal: signal.signal });
     await i18n.setLocale('fr');
     signal.abort();
     await i18n.setLocale('en');
 
-    expect(snapshots).toEqual(['fr:1']);
+    expect(locales).toEqual(['fr']);
+  });
+
+  test('immediate subscription receives the current locale', () => {
+    const i18n = createI18n<Catalog>({ catalogs, locale: 'fr' });
+    const seen: string[] = [];
+
+    i18n.subscribe((next) => seen.push(next), { immediate: true });
+
+    expect(seen).toEqual(['fr']);
   });
 
   test('serializes loaded catalogs and hydrates the serialized locale', async () => {
     const server = createI18n<Catalog>({ catalogs, locale: 'fr' });
-    const client = createI18n<Catalog>({ state: server.serialize() });
+    const state = server.serialize();
+    const client = createI18n<Catalog>({ catalogs: state.catalogs, locale: state.locale });
 
     expect(client.locale).toBe('fr');
-    expect(client.getSnapshot().locale).toBe('fr');
+    expect(client.getSnapshot()).toBe('fr');
     expect(client.translate('title')).toBe('Accueil');
   });
 
@@ -169,7 +170,7 @@ describe('createI18n', () => {
 
     expect(loadCatalog.mock.calls.map(([locale]) => locale)).toEqual(['fr', 'en']);
     expect(i18n.isLoaded({ locale: 'en' })).toBe(true);
-    expect(i18n.translateDynamic('empty')).toBe('Fallback');
+    expect(i18n.translate('empty')).toBe('Fallback');
   });
 
   test('isolates subscriber errors without rejecting a committed locale change', async () => {
@@ -203,14 +204,9 @@ describe('createI18n', () => {
 
     const state = i18n.serialize();
 
+    expect(state.locale).toBe('fr');
     expect(state.catalogs.fr).toEqual(frCatalog);
     expect(JSON.stringify(state)).not.toContain('async');
-  });
-
-  test('rejects unsupported serialized state versions with a lingua error', () => {
-    expect(() => createI18n({ state: { catalogs: {}, locale: 'en', version: 3 } as never })).toThrow(
-      LinguaInvalidStateError,
-    );
   });
 
   test('disposal aborts external work and rejects future state mutations', async () => {
@@ -228,13 +224,13 @@ describe('createI18n', () => {
     expect(() => i18n.subscribe(() => {})).toThrow(LinguaDisposedError);
   });
 
-  test('missing: "throw" propagates from translator snapshots', () => {
+  test('missing: "throw" propagates through the instance', () => {
     const i18n = createI18n<Catalog>({
       catalogs: { en: enCatalog },
       locale: 'en',
       missing: 'throw',
     });
 
-    expect(() => i18n.translateDynamic('unknown')).toThrow(LinguaMissingKeyError);
+    expect(() => i18n.translate('unknown' as never)).toThrow(LinguaMissingKeyError);
   });
 });

@@ -11,8 +11,8 @@ const i18n = createI18n({
   locale: 'en',
 })
 
-i18n.subscribe(({ locale, translator }) => {
-  console.log(locale, translator.translate('save'))
+i18n.subscribe((locale) => {
+  console.log(locale, i18n.translate('save'))
 }, { immediate: true })
 
 await i18n.setLocale('fr')`,

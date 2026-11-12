@@ -7,7 +7,7 @@ description: Transfer resolved locale catalogs from server instance to client in
 
 ### Problem
 
-You need server-rendered translation output and matching client state without shipping catalog loaders in page data. Use `serialize()` on the server and the `state` option on the client.
+You need server-rendered translation output and matching client state without shipping catalog loaders in page data. Use `serialize()` on the server and pass the payload back as `catalogs` plus `locale` on the client.
 
 ### Solution
 
@@ -23,8 +23,8 @@ const serverI18n = createI18n({
 
 try {
   const state = serverI18n.serialize();
-  const payload = JSON.stringify(state);
-  const clientI18n = createI18n({ state: JSON.parse(payload) as typeof state });
+  const payload = JSON.parse(JSON.stringify(state)) as typeof state;
+  const clientI18n = createI18n({ catalogs: payload.catalogs, locale: payload.locale });
 
   try {
     console.log(clientI18n.translate('title'));
@@ -39,7 +39,7 @@ try {
 ### Pitfalls
 
 - Serialize after each needed lazy catalog resolves.
-- Do not expect loader functions in hydrated state; state contains raw catalogs only.
+- Do not expect loader functions in the payload; `serialize()` returns raw catalogs and the locale only.
 - The client restores the serialized locale unless you pass an explicit override.
 - Pass fallback and missing-message options when client behavior differs from defaults.
 

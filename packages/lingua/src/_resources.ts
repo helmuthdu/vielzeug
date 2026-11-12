@@ -1,7 +1,7 @@
 import { type CompiledCatalog, compileCatalog } from './_catalog';
 import { canonicalLocale } from './_locale';
 import { LinguaMissingCatalogError } from './errors';
-import type { Catalog, Catalogs, Locale, TranslationState } from './types';
+import type { Catalog, Catalogs, Locale, SerializedI18n } from './types';
 
 type CatalogStoreOptions<C extends Catalog> = {
   readonly catalogs?: Catalogs<C>;
@@ -57,17 +57,16 @@ export function createCatalogStore<C extends Catalog>(options: CatalogStoreOptio
     catalogMap(): ReadonlyMap<Locale, CompiledCatalog> {
       return new Map([...loaded].map(([locale, { compiled }]) => [locale, compiled]));
     },
-    hydrate,
     isLoaded(locale: Locale): boolean {
       return loaded.has(canonicalLocale(locale));
     },
     load,
-    state(locale: Locale): TranslationState<C> {
+    serialized(locale: Locale): SerializedI18n<C> {
       const catalogs: Catalogs<C> = {};
 
       for (const [loadedLocale, { catalog }] of loaded) catalogs[loadedLocale] = catalog;
 
-      return { catalogs, locale, version: 1 };
+      return { catalogs, locale };
     },
   };
 }

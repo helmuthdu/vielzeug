@@ -1,56 +1,43 @@
 import { error as logError } from './_dev';
 import { canonicalLocale, localeChain } from './_locale';
 import { createCatalogStore } from './_resources';
-import { LinguaDisposedError, LinguaInvalidStateError, LinguaMissingCatalogError } from './errors';
-import { createTranslatorFromCompiled, type Translator } from './translator';
-import type { Catalog, I18nOptions, Locale, SubscribeOptions, TranslationState } from './types';
-
-export type I18nSnapshot<C extends Catalog = Catalog> = {
-  readonly locale: Locale;
-  readonly revision: number;
-  /**
-   * Translator for this snapshot's locale and loaded catalogs. Components can hold the
-   * snapshot and translate through it without importing the whole i18n instance; always
-   * re-read it after a notification instead of caching a translator across snapshots.
-   */
-  readonly translator: Translator<C>;
-};
+import { LinguaDisposedError, LinguaMissingCatalogError } from './errors';
+import { createTranslateEngine, type Translator } from './translator';
+import type {
+  Catalog,
+  I18nOptions,
+  Locale,
+  PluralOptions,
+  SerializedI18n,
+  SubscribeOptions,
+  TranslateOptions,
+} from './types';
 
 export type I18n<C extends Catalog = Catalog> = Translator<C> & {
   [Symbol.dispose](): void;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  getSnapshot(): I18nSnapshot<C>;
+  /** Current locale. Referentially stable until the locale changes, so frameworks can use it directly as a store snapshot. */
+  getSnapshot(): Locale;
   isLoaded(options?: { locale?: Locale }): boolean;
   load(options?: { locale?: Locale }): Promise<void>;
-  serialize(): TranslationState<C>;
+  serialize(): SerializedI18n<C>;
   setLocale(locale: Locale): Promise<void>;
-  subscribe(listener: (snapshot: I18nSnapshot<C>) => void, options?: SubscribeOptions): () => void;
+  subscribe(listener: (locale: Locale) => void, options?: SubscribeOptions): () => void;
 };
 
 export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> {
-  if (options.state && options.state.version !== 1) {
-    throw new LinguaInvalidStateError(`Unsupported lingua state version: ${String(options.state.version)}.`);
-  }
-
-  const fallback = options.fallback;
-  const fallbackLocales = (Array.isArray(fallback) ? fallback : fallback ? [fallback] : []).map(canonicalLocale);
+  const fallbackLocales = (
+    Array.isArray(options.fallback) ? options.fallback : options.fallback ? [options.fallback] : []
+  ).map(canonicalLocale);
   const controller = new AbortController();
-  const subscribers = new Set<(snapshot: I18nSnapshot<C>) => void>();
+  const subscribers = new Set<(locale: Locale) => void>();
   let disposed = false;
-  let locale = canonicalLocale(options.locale ?? options.state?.locale ?? 'en');
-  let revision = 0;
+  let locale = canonicalLocale(options.locale ?? 'en');
   let transition = 0;
 
   const catalogs = createCatalogStore<C>({ catalogs: options.catalogs, loadCatalog: options.loadCatalog });
-
-  // Hydrate from serialized state (SSR).
-  if (options.state) {
-    for (const [stateLocale, catalog] of Object.entries(options.state.catalogs)) {
-      catalogs.hydrate(stateLocale, catalog);
-    }
-  }
 
   const loadTargets = async (target: Locale): Promise<readonly Locale[]> => {
     const changed: Locale[] = [];
@@ -62,22 +49,18 @@ export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> 
     return changed;
   };
 
-  const buildTranslator = (): Translator<C> => {
+  const buildEngine = () => {
     const ready = localeChain(locale, fallbackLocales).some(catalogs.isLoaded);
-    const missing = ready
+    const effectiveMissing = ready
       ? options.missing
-      : () => {
+      : (): never => {
           throw new LinguaMissingCatalogError(
             `No catalog loaded for locale "${locale}". Call load() before translating.`,
           );
         };
 
-    return createTranslatorFromCompiled<C>(catalogs.catalogMap(), { fallback, locale, missing });
+    return createTranslateEngine(catalogs.catalogMap(), { ...options, locale, missing: effectiveMissing });
   };
-
-  const buildSnapshot = (): I18nSnapshot<C> => ({ locale, revision, translator: buildTranslator() });
-
-  let snapshot = buildSnapshot();
 
   const assertLive = (): void => {
     if (disposed) throw new LinguaDisposedError();
@@ -91,24 +74,23 @@ export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> 
     controller.abort();
   };
 
-  const dispatch = (listener: (next: I18nSnapshot<C>) => void): void => {
-    try {
-      listener(snapshot);
-    } catch (error) {
-      logError('subscriber error', error);
-    }
-  };
-
   const notify = (): void => {
-    revision++;
-    snapshot = buildSnapshot();
+    engine = buildEngine();
 
-    for (const listener of [...subscribers]) dispatch(listener);
+    for (const listener of [...subscribers]) {
+      try {
+        listener(locale);
+      } catch (error) {
+        logError('subscriber error', error);
+      }
+    }
   };
 
   const relevant = (candidate: Locale): boolean => localeChain(locale, fallbackLocales).includes(candidate);
 
-  return {
+  let engine = buildEngine();
+
+  const instance: I18n<C> = {
     get disposalSignal() {
       return controller.signal;
     },
@@ -117,7 +99,7 @@ export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> 
       return disposed;
     },
     getSnapshot() {
-      return snapshot;
+      return locale;
     },
     isLoaded(loadOptions) {
       return !disposed && catalogs.isLoaded(loadOptions?.locale ?? locale);
@@ -134,16 +116,10 @@ export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> 
     get locale() {
       return locale;
     },
-    parts(key: string, translateOptions) {
-      return snapshot.translator.partsDynamic(key, translateOptions);
-    },
-    partsDynamic(key, translateOptions) {
-      return snapshot.translator.partsDynamic(key, translateOptions);
-    },
     serialize() {
       assertLive();
 
-      return catalogs.state(locale);
+      return catalogs.serialized(locale);
     },
     async setLocale(nextLocale) {
       assertLive();
@@ -177,16 +153,20 @@ export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> 
       subscribeOptions?.signal?.addEventListener('abort', unsubscribe, { once: true });
       subscribers.add(listener);
 
-      if (subscribeOptions?.immediate) dispatch(listener);
+      if (subscribeOptions?.immediate) {
+        try {
+          listener(locale);
+        } catch (error) {
+          logError('subscriber error', error);
+        }
+      }
 
       return unsubscribe;
     },
+    translate: (key: string, translateOptions?: TranslateOptions | PluralOptions): string =>
+      engine.translate(key, translateOptions),
     [Symbol.dispose]: dispose,
-    translate(key: string, translateOptions = {}) {
-      return snapshot.translator.translateDynamic(key, translateOptions);
-    },
-    translateDynamic(key, translateOptions) {
-      return snapshot.translator.translateDynamic(key, translateOptions);
-    },
-  } as I18n<C>;
+  };
+
+  return instance;
 }

@@ -1,4 +1,4 @@
-import { createI18n } from '@vielzeug/lingua';
+import { createI18n, type TextKey } from '@vielzeug/lingua';
 import { createReactiveI18n } from '@vielzeug/lingua/ripple';
 import { computed } from '@vielzeug/ripple';
 
@@ -1453,9 +1453,9 @@ export function setLocale(locale: 'de' | 'en'): Promise<void> {
 export const currentLocale = computed<'de' | 'en'>(() => (reactive.locale.value === 'de' ? 'de' : 'en'));
 
 /**
- * Locale-reactive translate: `reactive.translateDynamic` reads the reactive locale first, so
+ * Locale-reactive translate: `reactive.translate` reads the reactive locale first, so
  * any template binding built on `t()` re-evaluates the instant `setLocale()` runs.
  */
 export function t(key: string, vars?: Record<string, unknown>): string {
-  return reactive.translateDynamic(key, vars ? { values: vars } : undefined);
+  return reactive.translate(key as TextKey<(typeof messages)['en']>, vars ? { values: vars } : undefined);
 }

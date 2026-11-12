@@ -14,7 +14,6 @@ exports:
     LinguaInvalidCatalogError,
     LinguaInvalidLocaleError,
     LinguaInvalidPluralCountError,
-    LinguaInvalidStateError,
     LinguaMissingCatalogError,
     LinguaMissingKeyError,
     LinguaMissingValueError,
@@ -102,11 +101,9 @@ try {
 - `createTranslator()` compiles one immutable fixed-locale catalog.
 - `createI18n()` manages eager catalogs, locale changes, and optional lazy loading.
 - `translate()` renders text and plural messages through explicit catalog nodes.
-- `translateDynamic()` makes runtime-key lookup explicit.
-- `parts()` returns typed discriminated parts for framework content.
 - `load()` deduplicates loading and resolves the active locale plus configured fallbacks.
-- `getSnapshot()` and `subscribe()` expose immutable translator revisions.
-- `serialize()` and `state` option transfer resolved SSR catalogs.
+- `getSnapshot()` and `subscribe()` expose a stable locale snapshot for framework stores.
+- `serialize()` transfers resolved SSR catalogs for client hydration.
 - `missing: 'throw' | 'key' | handler` controls failure behaviour.
 - `validateCatalog()` remains an isolated subpath tool.
 

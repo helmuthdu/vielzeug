@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Collapse translation surface: single translate(), locale snapshots, unversioned SSR hydration",
+      "packageName": "@vielzeug/lingua",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/lingua"
+}

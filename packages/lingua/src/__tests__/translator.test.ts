@@ -30,12 +30,25 @@ describe('createTranslator', () => {
     expect(translator.translate('error', { values: { retry: 'again' } })).toBe('Try again.');
   });
 
-  test('uses explicit plural nodes with zero override and CLDR categories', () => {
+  test('selects plural forms through Intl categories', () => {
     const translator = createTranslator(catalog, { locale: 'en' });
 
-    expect(translator.translate('inbox', { count: 0 })).toBe('No messages');
+    expect(translator.translate('inbox', { count: 0 })).toBe('0 messages');
     expect(translator.translate('inbox', { count: 1 })).toBe('One message');
     expect(translator.translate('inbox', { count: 3 })).toBe('3 messages');
+  });
+
+  test('uses the zero category when the locale defines it', () => {
+    const arabic = createTranslator(catalog, { locale: 'ar' });
+
+    expect(arabic.translate('inbox', { count: 0 })).toBe('No messages');
+    expect(arabic.translate('inbox', { count: 3 })).toBe('3 few');
+  });
+
+  test('falls back to the other form for categories the catalog omits', () => {
+    const plain = createTranslator({ inbox: { plural: { other: '{count} items' } } } as const, { locale: 'pl' });
+
+    expect(plain.translate('inbox', { count: 5 })).toBe('5 items');
   });
 
   test('canonicalizes configured locale and uses it for cardinal and ordinal forms', () => {
@@ -51,59 +64,24 @@ describe('createTranslator', () => {
     expect(translator.translate('placement', { count: 3, ordinal: true })).toBe('3rd');
   });
 
-  test('returns typed parts as a discriminated union', () => {
-    const retry = { href: '/retry' };
-    const translator = createTranslator(catalog, { locale: 'en' });
-
-    const textParts = translator.parts('error', { values: { retry } });
-
-    expect(textParts).toEqual([
-      { type: 'text', value: 'Try ' },
-      { type: 'value', value: retry },
-      { type: 'text', value: '.' },
-    ]);
-
-    const pluralParts = translator.parts('inbox', { count: 3 });
-
-    expect(pluralParts).toEqual([
-      { type: 'value', value: 3 },
-      { type: 'text', value: ' messages' },
-    ]);
-  });
-
-  test('preserves opaque part values by identity', () => {
-    const translator = createTranslator({ error: 'Try {retry}.' } as const);
-    const retry = { href: '/retry' };
-
-    const parts = translator.parts('error', { values: { retry } });
-
-    expect(parts[1]).toEqual({ type: 'value', value: retry });
-    expect(parts[1].type === 'value' && parts[1].value).toBe(retry);
-  });
-
   test('default missing strategy warns in dev and returns key / placeholder', () => {
     const translator = createTranslator(catalog, { locale: 'en' });
 
-    expect(translator.translateDynamic('unknown')).toBe('unknown');
+    expect(translator.translate('unknown' as never)).toBe('unknown');
     expect(translator.translate('error')).toBe('Try {retry}.');
-    expect(translator.parts('error', { values: {} })).toEqual([
-      { type: 'text', value: 'Try ' },
-      { type: 'text', value: '{retry}' },
-      { type: 'text', value: '.' },
-    ]);
   });
 
   test('missing: "key" returns key / placeholder silently', () => {
     const translator = createTranslator(catalog, { locale: 'en', missing: 'key' });
 
-    expect(translator.translateDynamic('unknown')).toBe('unknown');
+    expect(translator.translate('unknown' as never)).toBe('unknown');
     expect(translator.translate('error')).toBe('Try {retry}.');
   });
 
   test('missing: "throw" throws on missing keys and values', () => {
     const translator = createTranslator(catalog, { locale: 'en', missing: 'throw' });
 
-    expect(() => translator.translateDynamic('unknown')).toThrow(LinguaMissingKeyError);
+    expect(() => translator.translate('unknown' as never)).toThrow(LinguaMissingKeyError);
     expect(() => translator.translate('error')).toThrow(LinguaMissingValueError);
   });
 
@@ -113,7 +91,7 @@ describe('createTranslator', () => {
       missing: ({ key, name }) => (name ? `<${name}>` : `[${key}]`),
     });
 
-    expect(translator.translateDynamic('unknown')).toBe('[unknown]');
+    expect(translator.translate('unknown' as never)).toBe('[unknown]');
     expect(translator.translate('error')).toBe('Try <retry>.');
   });
 
@@ -130,12 +108,6 @@ describe('createTranslator', () => {
     source.greeting = 'Changed';
 
     expect(translator.translate('greeting')).toBe('Hello');
-  });
-
-  test('looks up dynamic keys only through the explicit escape hatch', () => {
-    const translator = createTranslator(catalog, { locale: 'en' });
-
-    expect(translator.translateDynamic('missing')).toBe('missing');
   });
 
   test('rejects malformed and unsafe catalog nodes at the resource boundary', () => {
@@ -187,6 +159,8 @@ describe('createTranslator', () => {
       translator.translate('inbox');
       // @ts-expect-error Text keys cannot receive plural-only options.
       translator.translate('nav.home', { count: 1 });
+      // @ts-expect-error Unknown keys are rejected without an escape hatch method.
+      translator.translate('unknown');
     };
 
     expectTypeOf(assertInvalidCalls).toBeFunction();

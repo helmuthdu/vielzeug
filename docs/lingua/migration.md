@@ -137,3 +137,54 @@ const allKeys = catalogKeys(state.catalogs[state.locale]);
 ```
 
 Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for the full catalog, translator, and i18n contracts.
+
+---
+
+# Breaking Changes Since 26.11.11
+
+This train collapses the translation surface to one method and removes the snapshot and serialized-state ceremony.
+
+| Before                                        | After                                                            |
+| --------------------------------------------- | ---------------------------------------------------------------- |
+| `translateDynamic(key, options?)`             | `translate(key as TextKey<C>, options?)`                         |
+| `parts()` / `partsDynamic()` / `Part<V>`       | Removed: translate strings; keep rich rendering in the framework |
+| `getSnapshot(): I18nSnapshot<C>`              | `getSnapshot(): Locale`                                          |
+| `subscribe((snapshot) => ...)`                | `subscribe((locale) => ...)`                                     |
+| `createI18n({ state })`                       | `createI18n({ catalogs: state.catalogs, locale: state.locale })` |
+| `TranslationState` / its `version` field      | `SerializedI18n`: `{ catalogs, locale }`, no version             |
+| `LinguaInvalidStateError`                     | Removed                                                          |
+| `count: 0` forcing the `zero` plural form     | `Intl.PluralRules` decides the category                          |
+| `TextKey<C>` including keys inside plurals    | Removed: plural messages expose no sub-keys                      |
+
+## One translate method
+
+`translateDynamic()` was a runtime-identical alias of `translate()` with a widened key. Pass runtime-assembled keys through a single cast at your wrapper boundary:
+
+```ts
+import type { TextKey } from '@vielzeug/lingua';
+
+function t(i18n: I18n<typeof messages.en>, key: string, values?: Values): string {
+  return i18n.translate(key as TextKey<typeof messages.en>, values ? { values } : undefined);
+}
+```
+
+## Rich content moved out
+
+`parts()` returned `{ type: 'text' | 'value' }` arrays for framework nodes. Lingua now only renders strings; map values to pre-translated strings or keep a framework-side template renderer beside the catalog.
+
+## Locale snapshots instead of translator snapshots
+
+`getSnapshot()` returns the current locale and is referentially stable until the locale changes; `subscribe()` listeners receive the new locale. Translate through the instance after each notification. The pair feeds `useSyncExternalStore`, `ripple.fromSubscribable`, and Svelte/Vue stores directly.
+
+## Hydration without `state`
+
+`serialize()` returns `{ catalogs, locale }`. Hydrate with the ordinary options:
+
+```ts
+const state = serverI18n.serialize();
+const clientI18n = createI18n({ catalogs: state.catalogs, locale: state.locale });
+```
+
+Serialized payloads are no longer versioned; `compileCatalog` validates every hydrated catalog shape and throws `LinguaInvalidCatalogError` on malformed data.
+
+Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for the full catalog, translator, and i18n contracts.

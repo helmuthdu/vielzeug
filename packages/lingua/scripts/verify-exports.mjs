@@ -45,7 +45,6 @@ const main = async () => {
       'LinguaInvalidCatalogError',
       'LinguaInvalidLocaleError',
       'LinguaInvalidPluralCountError',
-      'LinguaInvalidStateError',
       'LinguaMissingCatalogError',
       'LinguaMissingKeyError',
       'LinguaMissingValueError',

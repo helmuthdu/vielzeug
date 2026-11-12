@@ -1143,10 +1143,9 @@ export default defineConfig({
           items: [
             { link: '/lingua/usage#basic-usage', text: 'Basic Usage' },
             { link: '/lingua/usage#define-explicit-catalogs', text: 'Catalogs' },
-            { link: '/lingua/usage#render-framework-content', text: 'Segments' },
             { link: '/lingua/usage#use-a-fixed-locale-translator', text: 'Static Translator' },
             { link: '/lingua/usage#load-catalogs-and-switch-locales', text: 'Resources' },
-            { link: '/lingua/usage#subscribe-to-immutable-snapshots', text: 'Snapshots' },
+            { link: '/lingua/usage#subscribe-to-locale-changes', text: 'Locale Changes' },
             { link: '/lingua/usage#ssr-state', text: 'SSR State' },
             { link: '/lingua/usage#validation', text: 'Formatting and Validation' },
             { link: '/lingua/usage#framework-integration', text: 'Framework Integration' },

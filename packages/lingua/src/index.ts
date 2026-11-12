@@ -5,12 +5,11 @@ export {
   LinguaInvalidCatalogError,
   LinguaInvalidLocaleError,
   LinguaInvalidPluralCountError,
-  LinguaInvalidStateError,
   LinguaMissingCatalogError,
   LinguaMissingKeyError,
   LinguaMissingValueError,
 } from './errors';
-export { createI18n, type I18n, type I18nSnapshot } from './i18n';
+export { createI18n, type I18n } from './i18n';
 export { createTranslator, type Translator } from './translator';
 export type {
   Catalog,
@@ -22,17 +21,14 @@ export type {
   MissingHandler,
   MissingInfo,
   MissingStrategy,
-  Part,
   PluralCategory,
   PluralKey,
   PluralMessage,
   PluralOptions,
+  SerializedI18n,
   SubscribeOptions,
   TextKey,
-  TextPart,
   TranslateOptions,
-  TranslationState,
   TranslatorOptions,
-  ValuePart,
   Values,
 } from './types';

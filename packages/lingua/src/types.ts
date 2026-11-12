@@ -24,11 +24,13 @@ type CatalogPaths<
 > = Depth extends readonly [unknown, ...infer Rest]
   ? C extends Leaf
     ? Prefix
-    : C extends Catalog
-      ? {
-          [K in string & keyof C]: CatalogPaths<C[K], Leaf, Prefix extends '' ? K : `${Prefix}.${K}`, Rest>;
-        }[string & keyof C]
-      : never
+    : C extends PluralMessage
+      ? never
+      : C extends Catalog
+        ? {
+            [K in string & keyof C]: CatalogPaths<C[K], Leaf, Prefix extends '' ? K : `${Prefix}.${K}`, Rest>;
+          }[string & keyof C]
+        : never
   : never;
 
 export type MessageKey<C> = CatalogPaths<C, string | PluralMessage>;
@@ -45,14 +47,6 @@ export type PluralOptions = TranslateOptions & {
   count: number;
   ordinal?: boolean;
 };
-
-// ─── Rich parts (discriminated union) ─────────────────────────────────────────
-
-export type TextPart = { readonly type: 'text'; readonly value: string };
-
-export type ValuePart<V> = { readonly type: 'value'; readonly value: V };
-
-export type Part<V> = TextPart | ValuePart<V>;
 
 // ─── Missing strategy ─────────────────────────────────────────────────────────
 
@@ -73,40 +67,30 @@ export type TranslatorOptions = {
   readonly missing?: MissingStrategy;
 };
 
-type I18nCommonOptions = {
+type CatalogLoader<C extends Catalog> = (locale: Locale) => Promise<C> | C;
+
+export type I18nOptions<C extends Catalog = Catalog> = {
   readonly fallback?: Locale | readonly Locale[];
   readonly locale?: Locale;
   readonly missing?: MissingStrategy;
-};
-
-type CatalogLoader<C extends Catalog> = (locale: Locale) => Promise<C> | C;
-
-export type I18nOptions<C extends Catalog = Catalog> = I18nCommonOptions &
-  (
-    | {
-        readonly catalogs: Catalogs<C>;
-        readonly loadCatalog?: CatalogLoader<C>;
-        readonly state?: never;
-      }
-    | {
-        readonly catalogs?: never;
-        readonly loadCatalog?: CatalogLoader<C>;
-        readonly state: TranslationState<C>;
-      }
-    | {
-        readonly catalogs?: never;
-        readonly loadCatalog: CatalogLoader<C>;
-        readonly state?: never;
-      }
-  );
+} & (
+  | {
+      readonly catalogs: Catalogs<C>;
+      readonly loadCatalog?: CatalogLoader<C>;
+    }
+  | {
+      readonly catalogs?: Catalogs<C>;
+      readonly loadCatalog: CatalogLoader<C>;
+    }
+);
 
 export type SubscribeOptions = {
   immediate?: boolean;
   signal?: AbortSignal;
 };
 
-export type TranslationState<C extends Catalog = Catalog> = {
+/** Serialized loaded catalogs for SSR transfer. Hydrate by passing `catalogs` and `locale` to `createI18n`. */
+export type SerializedI18n<C extends Catalog = Catalog> = {
   readonly catalogs: Catalogs<C>;
   readonly locale: Locale;
-  readonly version: 1;
 };
