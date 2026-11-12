@@ -15,7 +15,7 @@ description: Immutable typed form state, flat validation issues, and optional in
 | `submit()`                  | Validate and submit one captured snapshot        | Async          | Concurrent submission rejects          |
 | `bindField()`               | Bind a field to an HTML element                  | Sync           | Caller owns returned cleanup           |
 | `schemaValidator()`         | Adapt Standard Schema validation                 | Async          | Transform output is not applied        |
-| `loadForm()` / `saveForm()` | Explicit structural draft persistence            | Async          | Loading will not overwrite newer edits |
+| `loadForm()` / `saveForm()` | Explicit key/value draft persistence             | Async          | Loading will not overwrite newer edits |
 | `toFormData()`              | Serialize supported values                       | Sync           | Dotted keys and object arrays reject   |
 
 ## Package Entry Point
@@ -194,11 +194,11 @@ Accepts any Standard Schema-compatible validator. Portable issues are copied int
 ```ts
 import { loadForm, saveForm } from '@vielzeug/forge/persist';
 
-await saveForm(form, store, 'drafts', codec);
-await loadForm(form, store, 'drafts', 'profile', codec, { signal });
+await saveForm(form, store, 'profile');
+await loadForm(form, store, 'profile', { signal });
 ```
 
-The store is structural: it only needs typed `get(table, key)` and `put(table, value)` methods. The codec owns record conversion. The optional signal and form disposal cancel pending work; a load returns `false` when values changed before the record arrived.
+The store is a structural key/value contract: `get(key)` and `put(key, value)`, sync or async. Saved drafts are the form values themselves; `loadForm` restores only plain objects and reports anything else as missing. The optional signal and form disposal cancel pending work; a load returns `false` when values changed before the draft arrived.
 
 ## FormData
 

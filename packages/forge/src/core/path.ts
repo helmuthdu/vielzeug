@@ -7,17 +7,13 @@ const unsafeKeys = new Set(['__proto__', 'constructor', 'prototype']);
 
 export { isRecord };
 
+/** Dots are reserved as path separators, so keys containing them are ambiguous. */
 export function isUnsafeKey(key: string): boolean {
-  return !key || unsafeKeys.has(key);
+  return !key || key.includes('.') || unsafeKeys.has(key);
 }
 
 type RecordValue = Record<string, unknown>;
 type TreeValue = RecordValue | readonly unknown[];
-type MetaTree = true | MetaNode;
-interface MetaNode {
-  readonly [key: string]: MetaTree;
-}
-export type MetaRoot = MetaNode;
 
 export function assertSafeKey(key: string): void {
   if (isUnsafeKey(key)) throw new ForgeConfigError(`Invalid field key '${key}'.`);
@@ -152,7 +148,9 @@ export function toPlainValues<T>(value: T, seen = new WeakSet<object>()): T {
   }
 }
 
-export function readAtPath<T>(value: unknown, path: readonly (string | number)[]): T | undefined {
+const notFound = Symbol('forge-path-not-found');
+
+function walk(value: unknown, path: readonly (string | number)[]): unknown | typeof notFound {
   let current: unknown = value;
 
   for (const key of path) {
@@ -164,42 +162,27 @@ export function readAtPath<T>(value: unknown, path: readonly (string | number)[]
         key >= current.length ||
         !Object.hasOwn(current, key)
       )
-        return undefined;
+        return notFound;
 
       current = current[key];
     } else {
-      if (!isRecord(current) || !Object.hasOwn(current, key)) return undefined;
+      if (!isRecord(current) || !Object.hasOwn(current, key)) return notFound;
 
       current = current[key];
     }
   }
 
-  return current as T | undefined;
+  return current;
+}
+
+export function readAtPath<T>(value: unknown, path: readonly (string | number)[]): T | undefined {
+  const found = walk(value, path);
+
+  return found === notFound ? undefined : (found as T);
 }
 
 export function hasAtPath(value: unknown, path: readonly (string | number)[]): boolean {
-  let current: unknown = value;
-
-  for (const key of path) {
-    if (typeof key === 'number') {
-      if (
-        !Array.isArray(current) ||
-        !Number.isSafeInteger(key) ||
-        key < 0 ||
-        key >= current.length ||
-        !Object.hasOwn(current, key)
-      )
-        return false;
-
-      current = current[key];
-    } else {
-      if (!isRecord(current) || !Object.hasOwn(current, key)) return false;
-
-      current = current[key];
-    }
-  }
-
-  return true;
+  return walk(value, path) !== notFound;
 }
 
 export function writeAtPath<T extends TreeValue>(
@@ -302,65 +285,6 @@ export function resetAtPath<T extends TreeValue>(value: T, baseline: T, path: re
   const childTree = (isRecord(currentChild) || Array.isArray(currentChild) ? currentChild : {}) as TreeValue;
 
   return Object.freeze({ ...value, [key]: resetAtPath(childTree, baselineChild as TreeValue, rest) }) as T;
-}
-
-export function writeMeta(meta: MetaRoot, path: readonly (string | number)[], next: boolean): MetaRoot {
-  const [key, ...rest] = path;
-  if (typeof key === 'number') assertArrayIndex(key);
-  const stringKey = String(key);
-  const copy: Record<string, MetaTree> = { ...meta };
-
-  if (rest.length === 0) {
-    if (next) copy[stringKey] = true;
-    else delete copy[stringKey];
-  } else {
-    const child = isRecord(meta[stringKey]) ? (meta[stringKey] as MetaRoot) : {};
-    const updated = writeMeta(child, rest, next);
-
-    if (Object.keys(updated).length === 0) delete copy[stringKey];
-    else copy[stringKey] = updated;
-  }
-
-  return Object.freeze(copy);
-}
-
-export function readMeta(meta: MetaRoot, path: readonly (string | number)[]): boolean {
-  let current: MetaTree | undefined = meta;
-
-  for (const key of path) {
-    if (typeof key === 'number' && (!Number.isSafeInteger(key) || key < 0)) return false;
-    const stringKey = String(key);
-
-    if (!isRecord(current) || !Object.hasOwn(current, stringKey)) return false;
-
-    current = current[stringKey] as MetaTree;
-  }
-
-  return current === true;
-}
-
-export function touchAll(value: unknown): MetaRoot {
-  if (Array.isArray(value)) {
-    return Object.freeze(
-      Object.fromEntries(
-        value.map((child, i) => [
-          String(i),
-          isRecord(child) || Array.isArray(child) ? touchAll(child) : (true as const),
-        ]),
-      ),
-    );
-  }
-
-  if (!isRecord(value)) return {};
-
-  return Object.freeze(
-    Object.fromEntries(
-      Object.entries(value).map(([key, child]) => [
-        key,
-        isRecord(child) || Array.isArray(child) ? touchAll(child) : (true as const),
-      ]),
-    ),
-  );
 }
 
 export function pathEquals(a: readonly (string | number)[], b: readonly (string | number)[]): boolean {

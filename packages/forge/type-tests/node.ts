@@ -1,7 +1,7 @@
 import { createForm, type ReadonlyDeep } from '@vielzeug/forge';
 import { bindField } from '@vielzeug/forge/dom';
 import { toFormData } from '@vielzeug/forge/form-data';
-import { loadForm, saveForm } from '@vielzeug/forge/persist';
+import { type FormDraftStore, loadForm, saveForm } from '@vielzeug/forge/persist';
 import { schemaValidator } from '@vielzeug/forge/schema';
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
@@ -20,6 +20,20 @@ patchForm.patch({ count: 1 });
 patchForm.patch((previous) => ({ name: previous.name.toUpperCase() }));
 // @ts-expect-error patch keys must exist on TValues
 patchForm.patch({ nope: 1 });
+
+const draftStore: FormDraftStore = {
+  get: (key) => ({ key, name: 'Ada' }),
+  put: (key, value) => {
+    const name: unknown = value.name;
+    void name;
+    void key;
+  },
+};
+void loadForm(form, draftStore, 'profile', { signal: new AbortController().signal });
+void saveForm(form, draftStore, 'profile');
+
+const rejectedDraft = loadForm(form, draftStore, 'profile');
+void rejectedDraft;
 
 void bindField;
 void form;

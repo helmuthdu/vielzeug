@@ -181,11 +181,17 @@ describe('form', () => {
       validate: (value) => (value.email ? undefined : [{ message: 'Required', path: ['email'] }]),
     });
 
+    expect(form.state.touched).toBe(false);
+
     await expect(form.submit(() => undefined)).resolves.toEqual({
       issues: [{ message: 'Required', path: ['email'] }],
       status: 'invalid',
     });
     expect(form.field('email').touched).toBe(true);
+    expect(form.state.touched).toBe(true);
+
+    form.reset();
+    expect(form.state.touched).toBe(false);
 
     let release!: () => void;
     const pending = new Promise<void>((resolve) => {

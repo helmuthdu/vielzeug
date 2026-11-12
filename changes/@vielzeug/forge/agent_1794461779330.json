@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "replace codec/table-keyed draft persistence with a key/value FormDraftStore and reject dotted object keys",
+      "packageName": "@vielzeug/forge",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/forge"
+}

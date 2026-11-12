@@ -66,7 +66,7 @@ pnpm add @vielzeug/forge
 - Explicit `validate()` and `submit()` timing
 - `/dom`: optional element binding
 - `/schema`: validator-agnostic Standard Schema adapter
-- `/persist`: explicit structural store integration
+- `/persist`: explicit key/value draft persistence
 - `/form-data`: browser submission serialization
 
 </div>

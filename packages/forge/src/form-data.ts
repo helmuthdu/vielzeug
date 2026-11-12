@@ -5,8 +5,8 @@ function flatten(obj: Record<string, unknown>, prefix: string): Record<string, u
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
-    if (isUnsafeKey(key)) continue;
     if (key.includes('.')) throw new ForgeConfigError(`FormData keys must not contain dots: '${key}'.`);
+    if (isUnsafeKey(key)) continue;
 
     const fullKey = prefix ? `${prefix}.${key}` : key;
 

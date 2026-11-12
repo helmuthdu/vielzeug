@@ -4,15 +4,14 @@ import { createField, type FieldAccess } from './_field.js';
 import { createNotifier } from './_notify.js';
 import {
   assertSafeKey,
+  formatValuePath,
   immutable,
   isRecord,
-  type MetaRoot,
   readAtPath,
   resetAtPath,
-  touchAll,
   writeAtPath,
-  writeMeta,
 } from './core/path.js';
+import { emptyTouched, pruneTouched, type TouchedPaths, touchAllPaths, withTouched } from './core/touched.js';
 import { ForgeConfigError, ForgeDisposedError, ForgeSubmitError, ForgeValidationError } from './errors.js';
 import type {
   Form,
@@ -34,7 +33,7 @@ type InternalState<TValues extends Record<string, unknown>> = Readonly<{
   isSubmitting: boolean;
   isValidating: boolean;
   submitCount: number;
-  touched: MetaRoot;
+  touched: TouchedPaths;
   validity: Validity;
   value: TValues;
 }>;
@@ -72,7 +71,7 @@ function makeFormState<TValues extends Record<string, unknown>>(current: Interna
     issues: current.issues,
     submitCount: current.submitCount,
     submitting: current.isSubmitting,
-    touched: Object.keys(current.touched).length > 0,
+    touched: current.touched.size > 0,
     validating: current.isValidating,
     validity: current.validity,
   });
@@ -97,7 +96,7 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
     issues: undefined,
     isValidating: false,
     submitCount: 0,
-    touched: {},
+    touched: emptyTouched,
     validity: 'unknown',
     value: initial,
   };
@@ -134,19 +133,21 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
     invokeListener: notifier.call,
     readState: () => current,
     resetValue(path) {
+      const touchedKey = formatValuePath(path);
       write((c) => {
         revision++;
         validatedSnapshot = undefined;
         return {
           ...c,
-          touched: writeMeta(c.touched, path, false),
+          touched: pruneTouched(c.touched, touchedKey),
           validity: 'unknown',
           value: resetAtPath(c.value, c.baseline, path),
         };
       });
     },
     setTouched(path, touched) {
-      write((c) => ({ ...c, touched: writeMeta(c.touched, path, touched) }));
+      const touchedKey = formatValuePath(path);
+      write((c) => ({ ...c, touched: withTouched(c.touched, touchedKey, touched) }));
     },
     setValue(path, next) {
       write((c) => {
@@ -170,12 +171,14 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
 
     const snapshot = current.value;
     const snapshotRevision = revision;
+    // This validation is stale once the value changed, a newer validation started, or it was cancelled.
+    const stale = (): boolean => signal.aborted || revision !== snapshotRevision || validationController !== controller;
     validationController = controller;
     validatedSnapshot = undefined;
     write((c) => ({ ...c, isValidating: true }));
 
     try {
-      if (signal.aborted || revision !== snapshotRevision) return Object.freeze({ status: 'aborted' });
+      if (stale()) return Object.freeze({ status: 'aborted' });
       const result: readonly ValidationIssue[] | undefined = options.validate
         ? await abortable(
             Promise.resolve(options.validate(snapshot as Parameters<FormValidator<TValues>>[0], signal)),
@@ -183,15 +186,15 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
           )
         : undefined;
 
-      if (signal.aborted || validationController !== controller || revision !== snapshotRevision) {
-        return Object.freeze({ status: 'aborted' });
-      }
+      if (stale()) return Object.freeze({ status: 'aborted' });
 
       const issues = normalizeIssues(result);
       const validity: Validity = issues === undefined ? 'valid' : 'invalid';
       validationController = undefined;
       write((c) => ({ ...c, issues, isValidating: false, validity }));
 
+      // A newer validation may have started while the issues were written; `stale()` cannot see
+      // that case because this run legitimately cleared `validationController` on completion.
       if (signal.aborted || revision !== snapshotRevision || validationController !== undefined) {
         return Object.freeze({ status: 'aborted' });
       }
@@ -258,7 +261,7 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
         const baseline = replacement ?? c.baseline;
         revision++;
         validatedSnapshot = undefined;
-        return { ...c, baseline, issues: undefined, touched: {}, validity: 'unknown', value: baseline };
+        return { ...c, baseline, issues: undefined, touched: emptyTouched, validity: 'unknown', value: baseline };
       });
     },
     set(next) {
@@ -296,7 +299,7 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
         ...c,
         isSubmitting: true,
         submitCount: c.submitCount + 1,
-        touched: touchAll(c.value),
+        touched: touchAllPaths(c.value),
       }));
 
       try {

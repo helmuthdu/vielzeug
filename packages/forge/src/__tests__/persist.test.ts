@@ -3,67 +3,63 @@ import { createMemory } from '@vielzeug/vault/memory';
 import { vi } from 'vitest';
 
 import { createForm } from '../index';
-import { loadForm, saveForm } from '../persist';
+import { type FormDraftStore, loadForm, saveForm } from '../persist';
 
 describe('form persistence', () => {
-  it('saves and restores through a structural store contract', async () => {
-    type Draft = { id: string; name: string };
-    let draft: Draft | undefined;
-    const store = {
-      get: async (_table: 'drafts', _key: string) => draft,
-      put: async (_table: 'drafts', value: Draft) => {
-        draft = value;
+  it('saves and restores drafts through a key/value store', async () => {
+    const drafts = new Map<string, unknown>();
+    const store: FormDraftStore = {
+      get: async (key) => drafts.get(key),
+      put: async (key, value) => {
+        drafts.set(key, value);
       },
-    };
-    const codec = {
-      fromRecord: (record: Draft) => ({ name: record.name }),
-      toRecord: (values: Readonly<{ name: string }>) => ({ id: 'profile', name: values.name }),
     };
     const form = createForm({ initialValues: { name: 'Ada' } });
 
-    await saveForm(form, store, 'drafts', codec);
+    await saveForm(form, store, 'profile');
     form.set({ name: 'Grace' });
-    await expect(loadForm(form, store, 'drafts', 'profile', codec)).resolves.toBe(true);
+
+    await expect(loadForm(form, store, 'profile')).resolves.toBe(true);
     expect(form.value.name).toBe('Ada');
   });
 
-  it('integrates with a typed Vault store', async () => {
+  it('integrates with a typed Vault store through a small adapter', async () => {
     type Values = { email: string };
-    type Draft = { id: string; values: Values };
-    const rawStore = createMemory({ schema: { drafts: table<Draft>('id') } });
-    const store = {
-      get: (table: 'drafts', key: string) => rawStore.get(table, key),
-      put: async (table: 'drafts', value: Draft) => {
-        await rawStore.put(table, value);
+    const raw = createMemory({ schema: { drafts: table<{ id: string; values: Values }>('id') } });
+    const store: FormDraftStore = {
+      get: async (key) => (await raw.get('drafts', key))?.values,
+      put: async (key, value) => {
+        await raw.put('drafts', { id: key, values: value as Values });
       },
-    };
-    const codec = {
-      fromRecord: (record: Draft) => record.values,
-      toRecord: (values: Readonly<Values>): Draft => ({ id: 'profile', values }),
     };
     const source = createForm<Values>({ initialValues: { email: 'ada@example.com' } });
     const target = createForm<Values>({ initialValues: { email: '' } });
 
-    await saveForm(source, store, 'drafts', codec);
-    await expect(loadForm(target, store, 'drafts', 'profile', codec)).resolves.toBe(true);
+    await saveForm(source, store, 'profile');
+
+    await expect(loadForm(target, store, 'profile')).resolves.toBe(true);
     expect(target.value.email).toBe('ada@example.com');
   });
 
+  it('reports unusable drafts as missing', async () => {
+    const store: FormDraftStore = { get: async () => 'not an object', put: async () => undefined };
+    const form = createForm({ initialValues: { name: 'Ada' } });
+
+    await expect(loadForm(form, store, 'profile')).resolves.toBe(false);
+    expect(form.value.name).toBe('Ada');
+  });
+
   it('does not overwrite edits made while a draft is loading', async () => {
-    let resolve!: (value: { id: string; name: string }) => void;
-    const store = {
-      get: () => new Promise<{ id: string; name: string }>((done) => (resolve = done)),
+    let resolve!: (value: { name: string }) => void;
+    const store: FormDraftStore = {
+      get: () => new Promise((done) => (resolve = done)),
       put: async () => undefined,
     };
     const form = createForm({ initialValues: { name: 'Ada' } });
-    const codec = {
-      fromRecord: (record: { id: string; name: string }) => ({ name: record.name }),
-      toRecord: (values: Readonly<{ name: string }>) => ({ id: 'profile', name: values.name }),
-    };
-    const loading = loadForm(form, store, 'drafts', 'profile', codec);
+    const loading = loadForm(form, store, 'profile');
 
     form.field('name').set('Grace');
-    resolve({ id: 'profile', name: 'Loaded' });
+    resolve({ name: 'Loaded' });
 
     await expect(loading).resolves.toBe(false);
     expect(form.value.name).toBe('Grace');
@@ -75,15 +71,11 @@ describe('form persistence', () => {
     const get = vi.fn(async () => undefined);
     const put = vi.fn(async () => undefined);
     const form = createForm({ initialValues: { name: 'Ada' } });
-    const codec = {
-      fromRecord: (record: { name: string }) => record,
-      toRecord: (values: Readonly<{ name: string }>) => values,
-    };
 
-    await expect(
-      loadForm(form, { get, put }, 'drafts', 'profile', codec, { signal: controller.signal }),
-    ).rejects.toMatchObject({ name: 'AbortError' });
-    await expect(saveForm(form, { put }, 'drafts', codec, { signal: controller.signal })).rejects.toMatchObject({
+    await expect(loadForm(form, { get, put }, 'profile', { signal: controller.signal })).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+    await expect(saveForm(form, { get, put }, 'profile', { signal: controller.signal })).rejects.toMatchObject({
       name: 'AbortError',
     });
     expect(get).not.toHaveBeenCalled();
@@ -91,16 +83,9 @@ describe('form persistence', () => {
   });
 
   it('cancels draft loading with its owner', async () => {
-    const store = {
-      get: () => new Promise<never>(() => undefined),
-      put: async () => undefined,
-    };
+    const store: FormDraftStore = { get: () => new Promise<never>(() => undefined), put: async () => undefined };
     const form = createForm({ initialValues: { name: 'Ada' } });
-    const codec = {
-      fromRecord: (record: { name: string }) => record,
-      toRecord: (values: Readonly<{ name: string }>) => values,
-    };
-    const loading = loadForm(form, store, 'drafts', 'profile', codec);
+    const loading = loadForm(form, store, 'profile');
 
     form.dispose();
 

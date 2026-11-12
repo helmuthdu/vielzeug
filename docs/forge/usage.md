@@ -128,18 +128,18 @@ Spell schemas implement Standard Schema directly. Forge uses the schema result o
 ## Persist a draft
 
 ```ts
-import { loadForm, saveForm } from '@vielzeug/forge/persist';
+import { type FormDraftStore, loadForm, saveForm } from '@vielzeug/forge/persist';
 
-const codec = {
-  fromRecord: (record) => record.value,
-  toRecord: (values) => ({ id: 'profile', value: values }),
+const store: FormDraftStore = {
+  get: async (key) => JSON.parse(await localStorage.getItem(key) ?? 'null'),
+  put: async (key, value) => localStorage.setItem(key, JSON.stringify(value)),
 };
 
-await saveForm(form, store, 'drafts', codec);
-await loadForm(form, store, 'drafts', 'profile', codec, { signal });
+await saveForm(form, store, 'profile');
+await loadForm(form, store, 'profile', { signal });
 ```
 
-Persistence remains explicit. The store owns durability and validation; the codec owns record shape. Loading returns `false` rather than overwriting edits made while storage was pending.
+Persistence remains explicit. The store owns durability and serialization format; Forge owns the draft shape, which is the form values themselves. Loading returns `false` rather than overwriting edits made while storage was pending, and it never restores a draft that is not a plain object.
 
 ## Serialize FormData
 
@@ -214,7 +214,7 @@ The owner that creates the form disposes it. Framework subscriptions own only th
 ## Working with Other Vielzeug Libraries
 
 - Pass Spell schemas to `schemaValidator()` through Standard Schema.
-- Pass Vault stores directly to `loadForm()` and `saveForm()`.
+- Wrap Vault stores in a small `FormDraftStore` adapter for `loadForm()` and `saveForm()`.
 - Bind Ore or native controls with `bindField()` and owner cleanup.
 
 ## Best Practices

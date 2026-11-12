@@ -88,3 +88,45 @@ Root and subpath declarations use explicit `.js` specifiers. Forge error names r
 # Forge 2.0 Migration
 
 Forge 2 introduced nested field handles, explicit validation and submission, terminal disposal, and immutable snapshots. Replace flat controller string paths with `form.field('name')` and dispose forms with their owner.
+
+---
+
+# Breaking Changes Since 26.11.11
+
+This train reduces draft persistence to a key/value contract and treats dotted keys as unsafe everywhere.
+
+| Before                                                     | After                                          |
+| ---------------------------------------------------------- | ---------------------------------------------- |
+| `FormDraftStore<Table, Key, RecordValue>`                  | `FormDraftStore`: `get(key)` / `put(key, value)` |
+| `FormDraftCodec`, `FormDraftWriteStore`, `FormPersistenceOptions` | Removed: drafts are the form values     |
+| `saveForm(form, store, table, codec, options?)`            | `saveForm(form, store, key, options?)`         |
+| `loadForm(form, store, table, key, codec, options?)`       | `loadForm(form, store, key, options?)`         |
+| Object keys containing `.` accepted in form values         | Rejected like `__proto__` with `ForgeConfigError` |
+
+## Persist drafts as plain key/value
+
+Codecs and table-keyed stores are gone. A draft is the form's own values, so stores only need to read and write one object under a string key:
+
+```diff
+- await saveForm(form, store, 'drafts', codec);
+- await loadForm(form, store, 'drafts', 'profile', codec, { signal });
++ await saveForm(form, store, 'profile');
++ await loadForm(form, store, 'profile', { signal });
+```
+
+```ts
+import { type FormDraftStore, loadForm, saveForm } from '@vielzeug/forge/persist';
+
+const store: FormDraftStore = {
+  get: async (key) => (await raw.get('drafts', key))?.values,
+  put: async (key, value) => {
+    await raw.put('drafts', { id: key, values: value as Values });
+  },
+};
+```
+
+A Vault store adapts in a few lines like this; serialization formats such as JSON live in the store. `loadForm` still returns `false` when no plain-object draft exists or the form changed while the draft was loading, and cancellation semantics are unchanged.
+
+## Dotted keys are now unsafe
+
+Object keys containing `.` are rejected by every Forge value operation, not just `toFormData()`, because they collide with the dot notation Forge uses for paths and issue keys. Rename affected fields to nested objects or dot-free keys.

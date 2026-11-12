@@ -13,8 +13,8 @@ export function bindField<Element extends HTMLElement, Value>(
 ): () => void {
   const event = options.event ?? 'input';
   let updatingFromElement = false;
-  let hasRendered = false;
-  let rendered = field.value;
+  // A unique sentinel: no form value can ever equal it, so the first notification always renders.
+  let lastRendered: unknown = Symbol('unrendered');
 
   const onInput = (): void => {
     updatingFromElement = true;
@@ -29,13 +29,11 @@ export function bindField<Element extends HTMLElement, Value>(
     ? field.subscribe(
         ({ value }) => {
           if (updatingFromElement) {
-            hasRendered = true;
-            rendered = value;
+            lastRendered = value;
             return;
           }
-          if (hasRendered && Object.is(value, rendered)) return;
-          hasRendered = true;
-          rendered = value;
+          if (Object.is(value, lastRendered)) return;
+          lastRendered = value;
           options.write?.(element, value);
         },
         { immediate: true },

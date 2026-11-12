@@ -14,11 +14,8 @@ import { toPlainValues as flattenValue } from './core/path.js';
  * arbitrary graphs. The type parameter is a convenience cast: the flattened shape differs
  * from the input type whenever class instances are present.
  *
- * This is a public wrapper so the emitted declaration does not name `@vielzeug/arsenal`
- * symbols: exporting the `core/path.ts` original directly pulls arsenal's extensionless
- * re-exports into the NodeNext declaration graph that `test:types` compiles. Keep the
- * implementation in `core/path.ts` beside the `immutable()` leaf rules it mirrors.
  */
+// Wrapper (not a re-export) so declarations never name @vielzeug/arsenal internals.
 export function toPlainValues<T>(value: T): T {
   return flattenValue(value);
 }

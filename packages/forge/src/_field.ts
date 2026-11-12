@@ -4,19 +4,19 @@ import {
   assertArrayIndex,
   assertSafeKey,
   findIssue,
+  formatValuePath,
   hasAtPath,
   isRecord,
-  type MetaRoot,
   readAtPath,
-  readMeta,
 } from './core/path.js';
+import type { TouchedPaths } from './core/touched.js';
 import { ForgeConfigError } from './errors.js';
 import type { Field, FieldState, SubscribeOptions, Unsubscribe, ValidationIssue } from './types.js';
 
 type FieldSourceState = {
   baseline: unknown;
   issues: readonly ValidationIssue[] | undefined;
-  touched: MetaRoot;
+  touched: TouchedPaths;
   value: unknown;
 };
 
@@ -31,25 +31,31 @@ export interface FieldAccess {
   setValue(path: readonly (string | number)[], next: unknown | ((previous: unknown) => unknown)): void;
 }
 
-function makeFieldState<V>(state: FieldSourceState, path: readonly (string | number)[]): FieldState<V> {
+function makeFieldState<V>(
+  state: FieldSourceState,
+  path: readonly (string | number)[],
+  touchedKey: string,
+): FieldState<V> {
   const value = readAtPath<V>(state.value, path);
   const baseline = readAtPath<V>(state.baseline, path);
 
   return Object.freeze({
     dirty: !isEqual(value, baseline) || hasAtPath(state.value, path) !== hasAtPath(state.baseline, path),
     error: findIssue(state.issues, path),
-    touched: readMeta(state.touched, path),
+    touched: state.touched.has(touchedKey),
     value: value as FieldState<V>['value'],
   });
 }
 
 export function createField<V>(path: readonly (string | number)[], access: FieldAccess): Field<V> {
+  const touchedKey = formatValuePath(path);
+  const readField = (): FieldState<V> => makeFieldState<V>(access.readState(), path, touchedKey);
   const common = {
     get dirty() {
-      return makeFieldState<V>(access.readState(), path).dirty;
+      return readField().dirty;
     },
     get error() {
-      return makeFieldState<V>(access.readState(), path).error;
+      return readField().error;
     },
     reset() {
       access.ensureActive('field().reset');
@@ -63,17 +69,17 @@ export function createField<V>(path: readonly (string | number)[], access: Field
       access.setValue(path, next as unknown | ((previous: unknown) => unknown));
     },
     get state() {
-      return makeFieldState<V>(access.readState(), path);
+      return readField();
     },
     subscribe(listener: (state: FieldState<V>) => void, subscribeOptions: SubscribeOptions = {}): Unsubscribe {
       access.ensureActive('field().subscribe');
 
-      let previous = makeFieldState<V>(access.readState(), path);
+      let previous = readField();
 
       if (subscribeOptions.immediate) access.invokeListener(() => listener(previous));
 
-      const filtered = (state: FieldSourceState) => {
-        const next = makeFieldState<V>(state, path);
+      const filtered = (source: FieldSourceState) => {
+        const next = makeFieldState<V>(source, path, touchedKey);
 
         if (
           next.value === previous.value &&
@@ -95,10 +101,10 @@ export function createField<V>(path: readonly (string | number)[], access: Field
       access.setTouched(path, true);
     },
     get touched() {
-      return makeFieldState<V>(access.readState(), path).touched;
+      return readField().touched;
     },
     get value() {
-      return makeFieldState<V>(access.readState(), path).value;
+      return readField().value;
     },
   };
 
