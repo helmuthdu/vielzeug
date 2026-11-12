@@ -1,3 +1,4 @@
+import { detectConsumer } from '../consumer.js';
 import { DOC_PAGES } from '../types.js';
 import { EMPTY_SCHEMA, PACKAGE_SLUG_PROPERTY, parseArgs, type ToolSchema } from './schema.js';
 import type { ToolDefinition } from './shared.js';
@@ -39,6 +40,18 @@ const signature = {
     symbol: { description: 'Exported symbol name', maxLength: 200, minLength: 1, type: 'string' },
   },
   required: ['slug', 'symbol'],
+  type: 'object',
+} satisfies ToolSchema;
+const drift = {
+  additionalProperties: false,
+  properties: {
+    projectDir: {
+      description: 'Project directory to inspect; defaults to the server working directory',
+      maxLength: 500,
+      minLength: 1,
+      type: 'string',
+    },
+  },
   type: 'object',
 } satisfies ToolSchema;
 
@@ -103,5 +116,45 @@ export const packageTools: readonly ToolDefinition[] = [
     },
     inputSchema: signature,
     name: 'get-type-signature',
+  },
+  {
+    description:
+      'Compare the snapshot versions with the @vielzeug/* versions installed in a consumer project. Snapshot docs may lag the install.',
+    execute: (args, catalog) => {
+      const input = parseArgs(drift, args);
+      const consumer = detectConsumer(input.projectDir);
+
+      if (!consumer) {
+        return { note: 'No package.json with @vielzeug/* dependencies was found.', packages: [], projectDir: null };
+      }
+
+      const snapshot = new Map(catalog.listPackages().map((meta) => [meta.name, meta.version]));
+
+      return {
+        packages: consumer.packages.map((entry) => {
+          const snapshotVersion = snapshot.get(entry.name);
+          // Link/workspace specifiers track a checkout; the snapshot cannot match them.
+          const linked = !/^[~^0-9*]/.test(entry.declared);
+
+          let status: string;
+
+          if (linked) status = 'linked';
+          else if (!snapshotVersion) status = 'not-in-snapshot';
+          else if (entry.installed) status = entry.installed === snapshotVersion ? 'match' : 'drift';
+          else status = entry.declared === snapshotVersion ? 'match' : 'unresolved';
+
+          return {
+            declared: entry.declared,
+            installed: entry.installed ?? null,
+            name: entry.name,
+            snapshotVersion: snapshotVersion ?? null,
+            status,
+          };
+        }),
+        projectDir: consumer.projectDir,
+      };
+    },
+    inputSchema: drift,
+    name: 'check-install',
   },
 ];

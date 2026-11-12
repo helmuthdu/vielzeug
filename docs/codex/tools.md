@@ -8,16 +8,17 @@ description: Generic and Refine tool tables generated from the compiled tool reg
 ## Generic Tools
 
 <!-- TOOLS:GENERIC:START -->
-| Tool                 | Input                      | Description                                          |
-| -------------------- | -------------------------- | ---------------------------------------------------- |
-| `list-packages`      | N/A                        | List every Vielzeug package.                         |
-| `get-package`        | `packageSlug`              | Read metadata for one package.                       |
-| `get-docs`           | `packageSlug`, `page?`     | Read one documentation page as Markdown.             |
-| `get-source`         | `packageSlug`              | Read bundled public source for one package.          |
-| `list-examples`      | `packageSlug`              | List runnable REPL examples for one package.         |
-| `get-example`        | `exampleId`, `packageSlug` | Read one runnable REPL example.                      |
-| `search-packages`    | `query`                    | Search package metadata, docs, examples, and source. |
-| `get-type-signature` | `slug`, `symbol`           | Read one exported TypeScript declaration.            |
+| Tool                 | Input                      | Description                                                                                  |
+| -------------------- | -------------------------- | -------------------------------------------------------------------------------------------- |
+| `list-packages`      | N/A                        | List every Vielzeug package.                                                                 |
+| `get-package`        | `packageSlug`              | Read metadata for one package.                                                               |
+| `get-docs`           | `packageSlug`, `page?`     | Read one documentation page as Markdown.                                                     |
+| `get-source`         | `packageSlug`              | Read bundled public source for one package.                                                  |
+| `list-examples`      | `packageSlug`              | List runnable REPL examples for one package.                                                 |
+| `get-example`        | `exampleId`, `packageSlug` | Read one runnable REPL example.                                                              |
+| `search-packages`    | `query`                    | Search package metadata, docs, examples, and source.                                         |
+| `get-type-signature` | `slug`, `symbol`           | Read one exported TypeScript declaration.                                                    |
+| `check-install`      | `projectDir?`              | Compare the snapshot versions with the @vielzeug/* versions installed in a consumer project. |
 <!-- TOOLS:GENERIC:END -->
 
 ## Refine Tools

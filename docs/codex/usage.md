@@ -80,6 +80,7 @@ await createMcpServer(catalog, { version: snapshot.manifest.version }).connect(n
 
 - Use `search-packages` for capability discovery before loading broad source.
 - Use `get-type-signature` before loading full source.
+- Call `check-install` when working inside a project that depends on `@vielzeug/*`: it compares the served snapshot with the versions that project declares and its lockfile resolves, so agents can tell whether snapshot docs may lag the install.
 - Every snapshot is one flat directory (manifest, catalog, content chunks, optional Refine metadata); `--snapshot` points at it directly.
 - Pass `validateContents: true` to `loadSnapshot()` for artifact verification; normal startup keeps package chunks lazy.
 - Return a fresh configured server from `startHttpHost`'s `createServer` factory.
