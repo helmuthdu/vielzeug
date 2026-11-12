@@ -200,6 +200,20 @@ describe('parseProse: inline', () => {
     ]);
   });
 
+  it('autolinks angle-bracket emails as mailto links', () => {
+    const [, link] = inlineOf('mail <a.b+c@sub.example.co.uk> now');
+    expect(link).toEqual({
+      children: [{ text: 'a.b+c@sub.example.co.uk', type: 'text' }],
+      href: 'mailto:a.b+c@sub.example.co.uk',
+      type: 'link',
+    });
+  });
+
+  it('leaves emails literal when mailto is not an allowed protocol', () => {
+    const doc = parseProse('<a@b.co>', { linkProtocols: ['https'] });
+    expect(doc.blocks[0]).toEqual({ children: [{ text: '<a@b.co>', type: 'text' }], type: 'paragraph' });
+  });
+
   it('parses images with alt text from the label', () => {
     expect(inlineOf('![a **b**](/i.png)')).toEqual([{ alt: 'a b', src: '/i.png', type: 'image' }]);
   });

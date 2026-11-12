@@ -54,7 +54,7 @@ describe('parser limits', () => {
   });
 
   it('rejects block nesting beyond the depth limit', () => {
-    expect(() => parseProse('> '.repeat(40) + 'x')).toThrow(ScribeLimitError);
+    expect(() => parseProse(`${'> '.repeat(40)}x`)).toThrow(ScribeLimitError);
   });
 
   it('routes limit failures through the ScribeError hierarchy', () => {

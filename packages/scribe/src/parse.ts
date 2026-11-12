@@ -1,5 +1,6 @@
 import { warn } from './_dev';
-import { inlineText, sanitizeDestination } from './_policy';
+import { sanitizeDestination } from './_policy';
+import { inlineText } from './_text';
 import { ScribeLimitError } from './errors';
 import type {
   ProseAlignment,
@@ -453,6 +454,21 @@ function parseInline(src: string, ctx: Ctx): ProseInline[] {
     }
 
     if (char === '<') {
+      const email = /^<([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>/.exec(src.slice(i));
+      if (email !== null) {
+        const mailto = `mailto:${email[1]}`;
+        if (sanitizeDestination(mailto, ctx.protocols) !== null) {
+          flush();
+          tokens.push({
+            children: [{ text: email[1], type: 'text' }],
+            href: mailto,
+            type: 'link',
+          } satisfies ProseLink);
+          i += email[0].length;
+          continue;
+        }
+        warn(`rejected autolink destination "${mailto}"`);
+      }
       const autolink = /^<([A-Za-z][A-Za-z0-9+.-]*:[^<>\n]*)>/.exec(src.slice(i));
       if (autolink !== null) {
         const href = sanitizeDestination(autolink[1], ctx.protocols);
@@ -653,7 +669,7 @@ function deepFreeze<T>(value: T): T {
  *
  * The profile is a fixed GFM-flavored subset: ATX headings, paragraphs, fenced and indented
  * code, blockquotes, ordered/unordered lists, GFM pipe tables, thematic breaks, code spans,
- * emphasis/strong, strikethrough, inline links and images, autolinks (angle and bare `http(s)`),
+ * emphasis/strong, strikethrough, inline links and images, autolinks (angle-bracket URIs, angle-bracket emails as `mailto:`, and bare `http(s)`),
  * and hard/soft breaks. Raw HTML, reference links, setext headings, HTML entities, footnotes,
  * and task lists are **not** part of the profile: they render as literal text. Tabs are
  * expanded to four spaces. Blockquotes and list items require every line to carry its marker

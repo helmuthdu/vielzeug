@@ -30,16 +30,16 @@ proseOutline(doc); // [{ level: 1, text: 'Hello', id: 'hello' }]
 Scribe implements a fixed CommonMark + GFM subset — the same on every platform and every
 release:
 
-| Feature      | Notes                                                                                                      |
-| ------------ | ---------------------------------------------------------------------------------------------------------- |
-| Headings     | ATX (`#`–`######`) only; setext underlines render literally                                                |
-| Emphasis     | `*`, `**`, `***`, `_`, `__` with CommonMark flanking rules (`snake_case` is safe); `~~strikethrough~~`     |
-| Code         | Fenced (``` / `~~~`, info string preserved as `lang`), indented (4 spaces), backtick spans                 |
-| Blocks       | Paragraphs, blockquotes, thematic breaks, hard breaks (`two spaces` or `\`)                                |
-| Lists        | `-`/`+`/`*` bullets and `1.` ordered; strict last-marker nesting; simplified tight/loose rule              |
-| Tables       | GFM pipes with alignment row; a table must start on its own line                                           |
-| Links/images | Inline links with optional titles, images with alt text; autolinks and bare www URLs; GFM autoliteral URLs |
-| Task lists   | `[ ]`/`[x]` items render a **disabled** checkbox (never interactive)                                       |
+| Feature      | Notes                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Headings     | ATX (`#`–`######`) only; setext underlines render literally                                                                     |
+| Emphasis     | `*`, `**`, `***`, `_`, `__` with CommonMark flanking rules (`snake_case` is safe); `~~strikethrough~~`                          |
+| Code         | Fenced (``` / `~~~`, info string preserved as `lang`), indented (4 spaces), backtick spans                                      |
+| Blocks       | Paragraphs, blockquotes, thematic breaks, hard breaks (`two spaces` or `\`)                                                     |
+| Lists        | `-`/`+`/`*` bullets and `1.` ordered; strict last-marker nesting; simplified tight/loose rule                                   |
+| Tables       | GFM pipes with alignment row; a table must start on its own line                                                                |
+| Links/images | Inline links with optional titles, images with alt text; angle-bracket URI and email (`mailto:`) autolinks; bare `http(s)` URLs |
+| Task lists   | `[ ]`/`[x]` items render a **disabled** checkbox (never interactive)                                                            |
 
 Deliberately absent: raw HTML and entities (rendered as inert text), reference link
 definitions, setext headings, lazy list continuation, definition lists, footnotes, math.

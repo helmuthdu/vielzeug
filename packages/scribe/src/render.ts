@@ -1,4 +1,5 @@
-import { collectOutline, createSlugger, escapeHtml, inlineText, type ProseSlugger } from './_policy';
+import { escapeHtml } from './_policy';
+import { collectOutline, createSlugger, inlineText, type ProseSlugger } from './_text';
 import type {
   ProseBlock,
   ProseDoc,
@@ -124,8 +125,8 @@ function blocksHtml(
  * Requires a browser (or DOM) environment for {@link renderProseDom}; Node can use this
  * string renderer directly.
  */
-export function renderProseHtml(doc: ProseDoc, options: ProseRenderOptions = {}): string {
-  return blocksHtml(doc.blocks, createSlugger(), options.headingIds === true, false);
+export function renderProseHtml(prose: ProseDoc, options: ProseRenderOptions = {}): string {
+  return blocksHtml(prose.blocks, createSlugger(), options.headingIds === true, false);
 }
 
 function inlineDom(doc: Document, nodes: readonly ProseInline[]): (Element | Text)[] {
@@ -273,8 +274,8 @@ function blocksDom(
  * sourced from Markdown beyond `href`/`src`/`alt`/`title`/slug `id`s, and those already passed
  * the parse-time protocol policy. Requires a DOM environment.
  */
-export function renderProseDom(doc: ProseDoc, options: ProseRenderOptions = {}): DocumentFragment {
-  return blocksDom(document, doc.blocks, createSlugger(), options.headingIds === true, false);
+export function renderProseDom(prose: ProseDoc, options: ProseRenderOptions = {}): DocumentFragment {
+  return blocksDom(document, prose.blocks, createSlugger(), options.headingIds === true, false);
 }
 
 function blockText(block: ProseBlock): string {
@@ -307,8 +308,8 @@ function blockText(block: ProseBlock): string {
  * Render the document as plain text: for notifications, search indexing, and previews.
  * Links keep their label text, images their alt text.
  */
-export function proseToText(doc: ProseDoc): string {
-  return doc.blocks
+export function proseToText(prose: ProseDoc): string {
+  return prose.blocks
     .map(blockText)
     .filter((text) => text !== '')
     .join('\n\n');
@@ -319,6 +320,6 @@ export function proseToText(doc: ProseDoc): string {
  * `headingIds` (including headings nested in blockquotes and lists), so outline ids always
  * match the rendered document. Use for tables of contents.
  */
-export function proseOutline(doc: ProseDoc, options: ProseOutlineOptions = {}): readonly ProseOutlineEntry[] {
-  return collectOutline(doc.blocks, createSlugger(), options.maxLevel ?? 6);
+export function proseOutline(prose: ProseDoc, options: ProseOutlineOptions = {}): readonly ProseOutlineEntry[] {
+  return collectOutline(prose.blocks, createSlugger(), options.maxLevel ?? 6);
 }

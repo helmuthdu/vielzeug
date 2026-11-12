@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "autolink angle-bracket emails as mailto links; split slug/text helpers out of _policy",
+      "packageName": "@vielzeug/scribe",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/scribe"
+}

@@ -4,7 +4,7 @@ description: 'Safe Markdown prose: deterministic parser, XSS-safe DOM and HTML r
 package: scribe
 category: utilities
 keywords: [markdown, prose, rendering, xss, sanitizer, content, chat, streaming, table-of-contents]
-exports: [parseProse, renderProseHtml, renderProseDom, proseToText, proseOutline]
+exports: [parseProse, renderProseHtml, renderProseDom, proseToText, proseOutline, ScribeError, ScribeLimitError]
 related: [refine, archive]
 environments: [browser, node]
 ---
