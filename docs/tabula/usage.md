@@ -31,9 +31,9 @@ A few parser behaviors worth knowing because every hand-rolled parser gets them 
 
 ## Delimiter Detection
 
-`detectDelimiter` counts `,`, `;`, and tab occurrences outside quotes on the first line and
-returns the winner (ties go to `,`). Every parse entry point defaults to it, so a paste box
-and an uploaded `.csv` both just work:
+Every parse entry point auto-detects the delimiter unless you pin one: the scanner counts `,`,
+`;`, and tab occurrences outside quotes on the first line and takes the winner (ties go to `,`).
+A paste box and an uploaded `.csv` both just work:
 
 ```ts
 import { parseGrid } from '@vielzeug/tabula';

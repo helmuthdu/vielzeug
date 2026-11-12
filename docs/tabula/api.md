@@ -11,12 +11,11 @@ description: 'Public API of @vielzeug/tabula: parsers, serializer, delimiter det
 | --------------------- | ---------------------------------------------------- | --------- | -------------------------------------------------------------------- |
 | `parseGrid`           | RFC 4180 text → string grid                          | Sync      | Blank lines skipped unless `skipEmptyLines: false`                   |
 | `parseRecords`        | First row (or `headers`) as keys                     | Sync      | Short rows omit keys; extra cells are dropped                        |
-| `detectDelimiter`     | Count `,` `;` tab outside quotes on the first line   | Sync      | Ties resolve to `,`; pin `delimiter` when the source is known        |
 | `toCsv`               | Grid → CSV text                                      | Sync      | CRLF by default; pass `newline: '\n'` for LF output                  |
 | `recordsToCsv`        | Records → CSV text with column union                 | Sync      | Without `columns`, order comes from first-seen keys                  |
 | `createCsvGridStream` | `TransformStream<string, string[]>` for chunked text | Async     | The header row is emitted like any other row                         |
 | `parseTypedRecords`   | Records through a standard schema                    | Sync      | Async schemas throw; failures aggregate into `TabulaValidationError` |
-| `CsvScanner`          | Push-based state machine behind every parser         | Sync      | Call `finish()` after the last `push()`                              |
+| `CsvScanner`          | Push-based state machine behind every parser         | Sync      | Call `finish()` after the last `push()`; auto-detects when unpinned  |
 
 ## Package Entry Point
 
@@ -34,8 +33,9 @@ function parseGrid(text: string, options?: TabulaParseOptions): string[][];
 
 Parses CSV text into rows of cells. A leading BOM is stripped; `\r\n`, `\r`, and `\n` all
 terminate records; `""` inside quoted fields is an escaped quote; quotes inside unquoted
-fields are literal (spreadsheet producers emit them constantly). `delimiter` defaults to
-`detectDelimiter(text)`.
+fields are literal (spreadsheet producers emit them constantly). `delimiter` must be a single
+character and defaults to auto-detection: the scanner counts `,`, `;`, and tab outside quotes on
+the first line and takes the winner (ties go to `,`).
 
 ### parseRecords
 
@@ -46,15 +46,6 @@ function parseRecords(text: string, options?: TabulaRecordOptions): Record<strin
 Reads the first row as headers unless `headers` is supplied (then the first row is data).
 Extra cells beyond the header are dropped; missing cells leave the key off the record.
 Empty `headers` throws `TabulaParseError`.
-
-### detectDelimiter
-
-```ts
-function detectDelimiter(text: string): string;
-```
-
-Counts `,`, `;`, and tab outside quoted regions of the first line and returns the most
-frequent; ties go to `,`.
 
 ### toCsv
 
@@ -83,8 +74,8 @@ function createCsvGridStream(options?: TabulaParseOptions): TransformStream<stri
 ```
 
 Transforms streamed text into completed rows. Until the first newline arrives (needed for
-delimiter auto-detection unless `delimiter` is pinned) input is buffered; after that rows are
-emitted as they complete.
+delimiter auto-detection unless `delimiter` is pinned) input is buffered by the scanner; after
+that rows are emitted as they complete.
 
 ### parseTypedRecords
 
@@ -104,14 +95,16 @@ as a spreadsheet would show it. All rows are attempted, then failures throw as o
 
 ```ts
 class CsvScanner {
-  constructor(delimiter?: string, skipEmptyLines?: boolean);
+  constructor(options?: TabulaParseOptions);
   push(text: string, onRow: (row: string[], line: number) => void): void;
   finish(onRow: (row: string[], line: number) => void): void;
 }
 ```
 
 The push-based state machine every parser shares — split a fetch body however you like and
-semantics stay identical. `push` may be called with any chunk boundary, mid-quote included.
+semantics stay identical. Without a pinned `delimiter` it holds input until the first line
+completes, auto-detects, and starts emitting. `push` may be called with any chunk boundary,
+mid-quote included.
 Each row arrives with the 1-based physical line it started on (quoted newlines and blank
 lines included), which is what `TabulaRowError.line` reports.
 
@@ -127,9 +120,9 @@ lines included), which is what `TabulaRowError.line` reports.
 
 ## Errors
 
-| Error                   | Thrown when                                                             |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `TabulaError`           | Base class for every tabula error                                       |
-| `TabulaParseError`      | A request cannot be honored (e.g. `headers: []`)                        |
-| `TabulaRowError`        | One row failed schema validation (`line`, `issues`)                     |
-| `TabulaValidationError` | Typed parse finished with any invalid rows (`errors: TabulaRowError[]`) |
+| Error                   | Thrown when                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------- |
+| `TabulaError`           | Base class for every tabula error                                                 |
+| `TabulaParseError`      | A request cannot be honored (`headers: []`, multi-char `delimiter`, async schema) |
+| `TabulaRowError`        | One row failed schema validation (`line`, `issues`)                               |
+| `TabulaValidationError` | Typed parse finished with any invalid rows (`errors: TabulaRowError[]`)           |

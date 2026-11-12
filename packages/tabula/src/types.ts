@@ -24,7 +24,7 @@ export type TabulaSerializeOptions = TabulaOptions & {
   newline?: string;
 };
 
-/** Options for record serialization; insertion order of the first record defines columns unless overridden. */
+/** Options for record serialization; columns default to every record's keys in first-seen order. */
 export type TabulaRecordSerializeOptions = TabulaSerializeOptions & {
   /** Explicit column order. */
   columns?: readonly string[];

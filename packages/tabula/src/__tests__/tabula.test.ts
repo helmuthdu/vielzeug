@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { TabulaParseError } from '../errors';
 
 import {
+  CsvScanner,
   createCsvGridStream,
-  detectDelimiter,
   parseGrid,
   parseRecords,
   parseTypedRecords,
@@ -28,13 +28,21 @@ describe('parseGrid', () => {
   });
 
   it('auto-detects semicolons and tabs, pinned delimiter wins', () => {
-    expect(detectDelimiter('a;b;c\n1;2;3')).toBe(';');
-    expect(detectDelimiter('a\tb')).toBe('\t');
+    expect(parseGrid('a;b;c\n1;2;3')).toEqual([
+      ['a', 'b', 'c'],
+      ['1', '2', '3'],
+    ]);
+    expect(parseGrid('a\tb')).toEqual([['a', 'b']]);
     expect(parseGrid('a;b\n1;2', { delimiter: ';' })).toEqual([
       ['a', 'b'],
       ['1', '2'],
     ]);
     expect(parseGrid('a;b;c', { delimiter: ',' })).toEqual([['a;b;c']]);
+  });
+
+  it('rejects a multi-character delimiter instead of misreading every row', () => {
+    expect(() => parseGrid('a||b', { delimiter: '||' })).toThrow(TabulaParseError);
+    expect(() => toCsv([['a', 'b']], { delimiter: '||' })).toThrow(TabulaParseError);
   });
 });
 
@@ -104,6 +112,29 @@ describe('createCsvGridStream', () => {
   });
 });
 
+describe('CsvScanner', () => {
+  it('auto-detects on the first complete line and emits from there', () => {
+    const scanner = new CsvScanner();
+    const rows: string[][] = [];
+    scanner.push('id;na', (row) => rows.push(row));
+    expect(rows).toEqual([]); // holds until the header line completes
+    scanner.push('me\n1;Fe', (row) => rows.push(row));
+    scanner.push('lix\n', (row) => rows.push(row));
+    scanner.finish((row) => rows.push(row));
+    expect(rows).toEqual([
+      ['id', 'name'],
+      ['1', 'Felix'],
+    ]);
+  });
+
+  it('pins a delimiter through the options object', () => {
+    const scanner = new CsvScanner({ delimiter: '\t' });
+    const rows: string[][] = [];
+    scanner.push('a\tb\n', (row) => rows.push(row));
+    expect(rows).toEqual([['a', 'b']]);
+  });
+});
+
 describe('parseTypedRecords', () => {
   const Order = s.object({
     id: s.string().min(1),
@@ -117,6 +148,17 @@ describe('parseTypedRecords', () => {
       { id: 'A1', shipped: true, total: 19.9 },
       { id: 'A2', shipped: false, total: 0 },
     ]);
+  });
+
+  it('rejects an async schema instead of half-validating', async () => {
+    const asyncSchema = {
+      '~standard': {
+        validate: async (value: unknown) => ({ value: value as Record<string, string> }),
+        vendor: 'test',
+        version: 1,
+      },
+    };
+    expect(() => parseTypedRecords('a\n1\n', asyncSchema as never)).toThrow(TabulaParseError);
   });
 
   it('aggregates one row error per invalid line with 1-based line numbers', () => {

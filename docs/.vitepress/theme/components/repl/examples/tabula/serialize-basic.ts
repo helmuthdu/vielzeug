@@ -1,9 +1,10 @@
 export const serializeBasicExample = {
-  code: `import { detectDelimiter, toCsv } from '@vielzeug/tabula'
-
-console.log(detectDelimiter('a\\tb\\tc\\n1\\t2\\t3'))
+  code: `import { toCsv } from '@vielzeug/tabula'
 
 const csv = toCsv([['note', 'value'], ['said "hi"', 'a,b'], ['plain', 42]], { newline: '\\n' })
-console.log(csv)`,
-  name: 'Serialize - Safe quoting and detection',
+console.log(csv)
+
+const tsv = toCsv([['note', 'value'], ['tab\\there', 42]], { delimiter: '\\t', newline: '\\n' })
+console.log(tsv)`,
+  name: 'Serialize - Safe quoting and delimiters',
 };

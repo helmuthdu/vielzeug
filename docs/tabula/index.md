@@ -4,7 +4,7 @@ description: 'Typed CSV and TSV: RFC 4180 parser with schema-validated rows, str
 package: tabula
 category: utilities
 keywords: [csv, tsv, delimiter, spreadsheet, import, export, parser, serializer, rfc-4180, data-exchange]
-exports: [detectDelimiter, parseGrid, parseRecords, toCsv, recordsToCsv, createCsvGridStream, parseTypedRecords]
+exports: [parseGrid, parseRecords, toCsv, recordsToCsv, createCsvGridStream, parseTypedRecords, CsvScanner]
 related: [spell, archive]
 environments: [browser, node]
 ---
@@ -73,7 +73,7 @@ console.log(recordsToCsv([{ a: 1, b: 'x,y' }]));
 
 - **`parseGrid`**: RFC 4180 scanner into a string grid — BOM stripped, CRLF/CR/LF endings, `""` escapes, configurable delimiter.
 - **`parseRecords`**: first row as keys (or your own `headers`), short rows omit keys instead of inventing `undefined`.
-- **`detectDelimiter`**: counts `,` `;` and tabs outside quotes on the first line — auto-detect with no content sniffing.
+- **Delimiter auto-detection**: `,`, `;`, and tab are counted outside quotes on the first line — no content sniffing, and pinning `delimiter` skips it.
 - **`toCsv` / `recordsToCsv`**: quotes only when needed, `quoteAll` for spreadsheet paranoia, CRLF by default.
 - **`createCsvGridStream`**: a `TransformStream` of rows for uploads and Node streams; even delimiter auto-detection buffers at most one line.
 - **`parseTypedRecords`**: rows through any Spell/standard-schema validator — one `TabulaValidationError` with every row's line number and issues.

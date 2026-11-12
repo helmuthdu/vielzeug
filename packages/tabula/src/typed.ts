@@ -1,7 +1,7 @@
 import type { StandardSchemaV1 } from '@vielzeug/spell';
 
-import { parseRecordsWithLines } from './csv';
-import { TabulaRowError, TabulaValidationError } from './errors';
+import { parseTrackedRecords } from './csv';
+import { TabulaParseError, TabulaRowError, TabulaValidationError } from './errors';
 import type { TabulaRecordOptions } from './types';
 
 /**
@@ -22,10 +22,10 @@ export function parseTypedRecords<T>(
 ): T[] {
   const values: T[] = [];
   const errors: TabulaRowError[] = [];
-  for (const { line, record } of parseRecordsWithLines(text, options)) {
+  for (const { line, record } of parseTrackedRecords(text, options)) {
     const result = schema['~standard'].validate(record);
     if (result instanceof Promise) {
-      throw new TypeError('tabula: async schemas are not supported; use a sync schema');
+      throw new TabulaParseError('async schemas are not supported; use a sync schema');
     }
     if (result.issues === undefined) {
       values.push(result.value as T);
