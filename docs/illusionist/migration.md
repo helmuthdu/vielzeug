@@ -5,9 +5,9 @@ description: Migrate to Illusionist 3 resource-free instances and validated cust
 
 [[toc]]
 
-## Illusionist 3.1
+## Illusionist 26.10
 
-Illusionist 3.1 removes the per-category import subpaths. Every category function was already re-exported from the root entry, and the standalone subpaths had no consumers outside the package's own build.
+Illusionist 26.10 removes the per-category import subpaths. Every category function was already re-exported from the root entry, and the standalone subpaths had no consumers outside the package's own build.
 
 ### Category subpaths removed
 

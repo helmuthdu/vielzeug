@@ -1,13 +1,13 @@
 ---
 title: Gesture Migration
-description: Migrate through Gesture 3.1 typed configuration errors and Gesture 3 two-dimensional drag recognition.
+description: Migrate through Gesture 26.10 typed configuration errors and Gesture 3 two-dimensional drag recognition.
 ---
 
 # Gesture Migration
 
-## 3.1
+## 26.10
 
-Gesture 3.1 replaces raw `RangeError` throws with typed errors. `createGesture()`, `createPanGesture()`, and `createDragGesture()` calls with valid options continue to work without changes.
+Gesture 26.10 replaces raw `RangeError` throws with typed errors. `createGesture()`, `createPanGesture()`, and `createDragGesture()` calls with valid options continue to work without changes.
 
 ### Typed configuration errors
 

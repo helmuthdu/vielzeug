@@ -6,7 +6,7 @@ description: Migrate collection state and commands, and adopt page reconciliatio
 Breaking changes ship in CalVer trains. Sourcerer replaces package-defined query fields with
 consumer-owned params, standardizes source state and commands, and removes the query-cache subpath.
 
-## Sourcerer 3.0
+## Breaking Changes Since 26.11.11
 
 - Params equality is structural in every source, not just `PageSource.apply()`. All sources compare a reference fast path with `Object.is` first, so `setParams()` with a freshly built but structurally identical value is now a no-op instead of a page reset and refetch. Replace params with a genuinely different value when you want a refetch, or call `reload()`.
 - A failed current request rolls the source back to its last committed request. Previously, a failed `goTo()` or `next()` left the requested page advanced, so a second `next()` skipped a page and a failed `previous()` became inert; a failed cursor `setParams()` could pair new params with stale committed cursors; a failed infinite `setPageSize()` could append at a stale page. Now navigation after a failure retries the same move. Retry a failed request with `reload()`.

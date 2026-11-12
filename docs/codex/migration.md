@@ -34,7 +34,7 @@ await startHttpHost({
 });
 ```
 
-## Codex 3.2
+## Codex 26.10
 
 The `@vielzeug/codex/advanced` subpath is removed. It had no consumers outside the package's own build tooling, which imports the parsers relatively. Snapshot parsing stays internal; use `loadSnapshot()` (with `validateContents: true` for full artifact verification) from the root entry.
 
@@ -61,7 +61,7 @@ The generic `Catalog` and `SnapshotCatalog` no longer expose component methods. 
 ## Move snapshot internals to `/advanced`
 
 > [!NOTE]
-> The `/advanced` subpath was removed in Codex 3.2. The historical steps below describe the 3.0 layout only.
+> The `/advanced` subpath was removed in Codex 26.10. The historical steps below describe the 3.0 layout only.
 
 The supported root keeps `loadSnapshot()` and `LoadedSnapshot`. Import lower-level parsers, full validation, raw snapshot types, and schema constants from `@vielzeug/codex/advanced`:
 

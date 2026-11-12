@@ -5,9 +5,9 @@ description: Migrate to the narrowed Wayfinder routing core API.
 
 [[toc]]
 
-## Wayfinder 3.2
+## Wayfinder 26.10
 
-Wayfinder 3.2 separates definition errors from navigation errors and hardens state notification.
+Wayfinder 26.10 separates definition errors from navigation errors and hardens state notification.
 
 ### `WayfinderConfigError` for malformed route tables
 

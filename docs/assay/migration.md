@@ -4,9 +4,9 @@ title: Assay Migration
 
 # Assay Migration
 
-## Assay 3.1
+## Assay 26.10
 
-Assay 3.1 removes surfaces with no consumers outside their own tests.
+Assay 26.10 removes surfaces with no consumers outside their own tests.
 
 ### Removed `nextTick()`
 

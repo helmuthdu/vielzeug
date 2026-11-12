@@ -5,9 +5,9 @@ description: Migrate Scout index configuration and corpus updates to Scout.
 
 [[toc]]
 
-## Scout 3.1 Changes
+## Scout 26.10 Changes
 
-Scout 3.1 trims the observation surface and aligns error naming with the rest of the monorepo.
+Scout 26.10 trims the observation surface and aligns error naming with the rest of the monorepo.
 
 ### `tap()` no longer emits `dispose`
 

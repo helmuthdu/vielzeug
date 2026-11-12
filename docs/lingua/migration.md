@@ -115,9 +115,9 @@ Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for the full 
 
 ---
 
-# Lingua 3.1 Migration
+# Lingua 26.10 Migration
 
-Lingua 3.1 resets serialized-state versioning and narrows `catalogKeys()` to catalogs only.
+Lingua 26.10 resets serialized-state versioning and narrows `catalogKeys()` to catalogs only.
 
 ## State version is 1
 

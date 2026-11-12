@@ -195,7 +195,7 @@ function parseWith<T>(schema: Schema<T, unknown>) {}
 
 `@vielzeug/spell/predicates` no longer exports the type guards and range helpers (`isString`, `isNumber`, `isInRange`, `hasMinLength`, …). Use `typeof` checks or the guards from `@vielzeug/arsenal/guards`. The format predicates (`isEmail`, `isUuid`, `isIsoDate`, …) are unchanged.
 
-## Spell 3.2
+## Spell 26.10
 
 ### Schema traversal removed
 

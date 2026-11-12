@@ -1,13 +1,13 @@
 ---
 title: 'Scroll: Migration'
-description: Migrate through Scroll 3.1 keyboard-handler removal and Scroll 3 framework-neutral external-store contract.
+description: Migrate through Scroll 26.10 keyboard-handler removal and Scroll 3 framework-neutral external-store contract.
 ---
 
 [[toc]]
 
-## Scroll 3.1 Changes
+## Scroll 26.10 Changes
 
-Scroll 3.1 removes the `keyboardScroll` option and renames `ScrollConfigurationError` to `ScrollConfigError`, matching the `<Pkg>ConfigError` convention used across the monorepo. Catch the base `ScrollError` to stay version-agnostic:
+Scroll 26.10 removes the `keyboardScroll` option and renames `ScrollConfigurationError` to `ScrollConfigError`, matching the `<Pkg>ConfigError` convention used across the monorepo. Catch the base `ScrollError` to stay version-agnostic:
 
 ```ts
 // Before
@@ -141,7 +141,7 @@ Scroll 2 removed `createReactiveVirtualizer()`, `createReactiveGroupedVirtualize
 
 Scroll 2 also added:
 
-- `keyboardScroll?: boolean` (removed in Scroll 3.1: compose keyboard scrolling from `scrollToIndex()` and your own key handling)
+- `keyboardScroll?: boolean` (removed in Scroll 26.10: compose keyboard scrolling from `scrollToIndex()` and your own key handling)
 - `autoMeasure?: boolean`
 - `dispose()` and `[Symbol.dispose]()` lifecycle consistency
 

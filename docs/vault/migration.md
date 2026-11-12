@@ -3,9 +3,9 @@ title: Vault Migration
 description: Move Vault adapter imports to focused entry points, adopt required codecs, and use bound store methods.
 ---
 
-# Vault 3.1 Migration
+# Vault 26.10 Migration
 
-Vault 3.1 removes the standalone helper functions, the fluent query builder, the declarative IndexedDB migration builder, the root `isExpired()` export, and the `onQuotaExceeded` hook. It also upgrades the SQLite storage format. Bound store methods are the single surface for `has`, `count`, `isEmpty`, `getMany`, `keys`, `deleteMany`, `update`, and `upsert`.
+Vault 26.10 removes the standalone helper functions, the fluent query builder, the declarative IndexedDB migration builder, the root `isExpired()` export, and the `onQuotaExceeded` hook. It also upgrades the SQLite storage format. Bound store methods are the single surface for `has`, `count`, `isEmpty`, `getMany`, `keys`, `deleteMany`, `update`, and `upsert`.
 
 ## Standalone helpers removed
 

@@ -1,13 +1,13 @@
 ---
 title: 'Keymap: Migration Guide'
-description: Migrate to Keymap 3.1 strict option validation and the shared matchKey matcher, on top of Keymap 3 ordered bindings and parser subpath.
+description: Migrate to Keymap 26.10 strict option validation and the shared matchKey matcher, on top of Keymap 3 ordered bindings and parser subpath.
 ---
 
 [[toc]]
 
-## Keymap 3.1
+## Keymap 26.10
 
-Keymap 3.1 makes invalid configuration fail loudly and exports the shortcut matcher from the root entry point so other packages can share one key vocabulary.
+Keymap 26.10 makes invalid configuration fail loudly and exports the shortcut matcher from the root entry point so other packages can share one key vocabulary.
 
 ### `chordTimeout` throws instead of warning
 

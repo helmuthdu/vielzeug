@@ -3,7 +3,7 @@ title: Ward Migration
 description: Migrate to Ward's immutable ordered decision model, declarative roles, and typed attributes.
 ---
 
-# Ward 3.1 Migration
+# Ward 26.10 Migration
 
 ## Roles are declarative data
 

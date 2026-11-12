@@ -1,13 +1,13 @@
 ---
 title: 'Focus: Migration'
-description: Migrate through Focus 3.1 typed configuration errors and Focus 3 pure in-memory list navigation.
+description: Migrate through Focus 26.10 typed configuration errors and Focus 3 pure in-memory list navigation.
 ---
 
 # Focus Migration
 
-## 3.1
+## 26.10
 
-Focus 3.1 replaces raw `RangeError` throws with typed errors and matches navigation keys through `@vielzeug/keymap`.
+Focus 26.10 replaces raw `RangeError` throws with typed errors and matches navigation keys through `@vielzeug/keymap`.
 
 ### Typed configuration errors
 
@@ -93,7 +93,7 @@ The layer that attaches `keydown` owns listener removal. Framework adapters that
 ### Validate navigation configuration
 
 - `set(index)` accepts only integer indexes; invalid or disabled indexes reset to `-1`.
-- Conflicting custom key assignments throw `RangeError` (replaced by `FocusConfigError` in Focus 3.1).
+- Conflicting custom key assignments throw `RangeError` (replaced by `FocusConfigError` in Focus 26.10).
 - `typeahead.delayMs` must be a positive finite number.
 - Typeahead timing uses a monotonic clock and ignores IME composition.
 

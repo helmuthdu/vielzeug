@@ -2,7 +2,7 @@
 title: Postmaster Migration
 ---
 
-# Postmaster 4.0 Migration
+# Breaking Changes Since 26.11.11
 
 - `defineJobs()` is replaced by per-job `defineJob()`. The old registry erased every payload to `unknown` (a `JobDefinition<T>` is not assignable to `JobDefinition<unknown>`), so `execute`/`key` had to be written against `unknown` and re-validate inside. `defineJob<T>` infers the payload type from `validate` (a plain function or a `{ parse }` validator object such as a Spell schema), or from an annotated `execute` payload, and the type flows into `key`, `execute`, and `enqueue(name, payload)`. The single-call mapped-type variant does not type-check; inference requires the per-job call.
 - Job configuration (versions, `execute`/`key`, retry `maxAttempts`, migration ranges) is validated by `createPostmaster()` instead of `defineJobs()`. The error messages and conditions are unchanged; construction of the processor is now the failure point.

@@ -5,13 +5,13 @@ description: Migrate to Herald's focused synchronous event bus, tracing, waits, 
 
 [[toc]]
 
-## Herald 4.0
+## Breaking Changes Since 26.11.11
 
 - `waitAny()` with an empty event list now throws a synchronous `TypeError` instead of returning a promise that never settles. Non-empty behavior is unchanged: it still resolves once with the winning `{ event, payload }` and rejects with the signal or disposal reason.
 - `SubscribeOptions` is now the declared options type for every subscription-shaped method (`on`, `once`, `onAny`, `tap`, `wait`, `waitAny`). The shape is unchanged (`{ signal?: AbortSignal }`), so existing calls compile as-is.
 - `eventNames()` keeps its contract (keys with active listeners only) via filtering instead of eager bookkeeping; no caller-visible change.
 
-## Herald 3.1
+## Herald 26.10
 
 - The `once` option is removed from `SubscribeOptions`. `bus.once(event, listener, { signal })` is the only once-API; `bus.on(event, listener, { once: true })` becomes `bus.once(event, listener)`.
 - `waitAny()` accepts one or more event keys. The minimum-two-keys runtime guard and its `HeraldConfigError` are removed, and `HeraldConfigError` no longer exists.

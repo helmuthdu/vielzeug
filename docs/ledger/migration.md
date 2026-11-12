@@ -5,9 +5,9 @@ description: Migrate Ledger runtime injection, reactive state, reversible comman
 
 [[toc]]
 
-## Ledger 3.1
+## Ledger 26.10
 
-Ledger 3.1 unifies the observable-state contract, removes redundant state, and tightens disposal behavior.
+Ledger 26.10 unifies the observable-state contract, removes redundant state, and tightens disposal behavior.
 
 ### `state` is now `Subscribable`
 
