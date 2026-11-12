@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "add @vielzeug/patchwork/merge subpath: three-way JSON merge with conflicts as data",
+      "packageName": "@vielzeug/patchwork",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/patchwork"
+}

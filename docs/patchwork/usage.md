@@ -67,13 +67,40 @@ server `tryApply`s, and a failed test means someone else moved first.
 ## What diff Emits
 
 - **Objects**: per-key `remove`s, `add`s, and recursive descent — changed fields cost one small operation each, regardless of document size.
-- **Arrays**: the common suffix is trimmed and the head walked positionally; appends become a single `{ op: 'add', path: '/x/-' }`, tail removals become ordered index removes.
+- **Arrays**: the common prefix and suffix are aligned and the middle walked positionally; appends become a single `{ op: 'add', path: '/x/-' }`, prepends and middle inserts a single indexed `add`, and surplus entries become ordered index removes.
 - **Different types or root changes**: one `replace` at the shared ancestor — patches stay short and always apply cleanly.
 
 `diff` optimizes for apply-safety and small steady-state payloads (edit-one-field,
 append-one-row), which is exactly the traffic of form autosaves, live documents, and audit
 trails. It is not an attempt at minimal-edit-count: reordering an array yields positional
 replaces, which are correct, just not clever.
+
+## Three-Way Merge (Subpath)
+
+When two copies of a document diverge from a common ancestor, `@vielzeug/patchwork/merge`
+reconciles them field-by-field instead of one side overwriting the other:
+
+```ts
+import { merge } from '@vielzeug/patchwork/merge';
+
+const base = { price: 10, title: 'Doc', tags: ['a'] };
+const local = { price: 10, title: 'My edit', tags: ['a', 'mine'] };
+const remote = { price: 12, title: 'Doc', tags: ['a', 'theirs'] };
+
+const { doc, conflicts } = merge(base, local, remote);
+// doc:      { price: 12, title: 'My edit', tags: ['a', 'mine', 'theirs'] }
+// conflicts: []  — only same-field collisions conflict
+```
+
+The policy is deliberately conservative: objects merge key-by-key to any depth, a delete
+beats an untouched copy, both sides only appending an array concatenates (local first), and
+both sides only truncating takes the shorter result. Anything else — a mid-list array edit,
+an append versus a truncate, different additions to the same key — is reported in
+`conflicts` and resolved by `options.resolution` (`'remote'` default, `'local'` opt-in),
+never guessed. Ship the merged doc back to either side as an ordinary patch with
+`diff(side, doc)`.
+
+This module is policy, not RFC 6902: the core entry point stays spec-only on purpose.
 
 ## The JSON Domain
 
@@ -96,3 +123,4 @@ that is the `from` location when the source was missing.
 - Prefix state-changing patches with a `{ op: 'test', path: '/rev', … }` operation instead of shipping whole documents; the patch is the lock.
 - Keep patches in your logs as data (they are JSON): replaying `apply` over an old snapshot reconstructs exactly what was sent.
 - Do not feed non-JSON values (functions, `undefined`, `Date`) through `apply`; validate documents with [Vault](/vault/) schemas at the edge and the domain stays clean.
+- In a sync engine, merge on the server with `{ resolution: 'remote' }` and show the `conflicts` array to the user — silent wins are how sync tools lose trust.

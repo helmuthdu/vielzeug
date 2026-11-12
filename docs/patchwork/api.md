@@ -20,6 +20,7 @@ description: 'Public API of @vielzeug/patchwork: apply, tryApply, diff, pointer 
 
 ```ts
 import { apply, diff, getIn, parsePointer, tryApply } from '@vielzeug/patchwork';
+import { merge } from '@vielzeug/patchwork/merge'; // three-way merge subpath
 ```
 
 ## Functions
@@ -47,8 +48,8 @@ function tryApply(doc: JsonValue, patch: JsonPatch): ApplyResult;
 ```
 
 Never throws for patch failures: returns `{ ok: true, doc }` or
-`{ ok: false, error: { index, path, reason: 'path' | 'test', message } }`, where `path` is
-the failing operation's `path` (or `from` for `move`/`copy`).
+`{ ok: false, error: { index, path, reason: 'path' | 'test', message } }`, where `path` is the
+exact pointer that failed — for `move`/`copy`, whichever side (source or target) was bad.
 
 ### diff
 
@@ -56,10 +57,11 @@ the failing operation's `path` (or `from` for `move`/`copy`).
 function diff(from: JsonValue, to: JsonValue): JsonPatch;
 ```
 
-Computes a patch that turns `from` into `to`. Objects diff per key; arrays trim their common
-suffix, recurse positionally over the shared head, and emit tail removals followed by `-`
-appends; anything else becomes one `replace` at the deepest shared pointer. The result always
-applies via `apply` (`apply(from, diff(from, to))` deep-equals `to`).
+Computes a patch that turns `from` into `to`. Objects diff per key; arrays align on their
+common prefix and suffix, recurse positionally through the middle, and emit ordered removals
+and indexed inserts around it (`-` only for true appends); anything else becomes one
+`replace` at the deepest shared pointer. The result always round-trips
+(`apply(from, diff(from, to))` deep-equals `to`) — verified by a seeded round-trip test.
 
 ### getIn / parsePointer / formatPointer
 
@@ -71,6 +73,21 @@ function formatPointer(tokens: readonly string[]): JsonPointer;
 
 RFC 6901 throughout: `~1` decodes to `/`, `~0` to `~`; the empty pointer is the whole
 document. `parsePointer('x')` throws — pointers start with `/` or are empty.
+
+### merge (subpath `@vielzeug/patchwork/merge`)
+
+```ts
+function merge(base: JsonValue, local: JsonValue, remote: JsonValue, options?: MergeOptions): MergeResult;
+```
+
+Reconciles two diverged copies of `base` field-by-field. Returns `{ doc, conflicts }`:
+`doc` applies both sides where they do not collide, and `conflicts` lists every location
+where both sides changed the base differently (`{ base, local, path, remote }`, with
+`undefined` marking a deleted or never-present side). `options.resolution` picks the winner
+(`'remote'` default; `'local'` available) — conflicts are reported either way. Arrays: pure
+appends concatenate (local first), pure truncations take the shorter, anything else
+conflicts as a whole array. Types `MergeConflict`, `MergeOptions`, and `MergeResult` are
+exported from the subpath.
 
 ## Types
 
@@ -90,8 +107,8 @@ builders.
 
 ## Errors
 
-| Error            | Thrown when                                                                      |
-| ---------------- | -------------------------------------------------------------------------------- |
-| `PatchError`     | Base class for every patchwork error                                             |
-| `PatchPathError` | A pointer does not resolve, an index is out of bounds, or a pointer is malformed |
-| `PatchTestError` | A `test` operation did not match the document                                    |
+| Error            | Thrown when                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `PatchError`     | Base class for every patchwork error                                                                                          |
+| `PatchPathError` | A pointer does not resolve, an index is out of bounds, or a pointer is malformed; `error.pointer` names the offending pointer |
+| `PatchTestError` | A `test` operation did not match the document                                                                                 |

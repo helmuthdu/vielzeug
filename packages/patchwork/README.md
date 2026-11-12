@@ -27,7 +27,10 @@ tryApply(doc, [{ op: 'test', path: '/title', value: 'Other' }]);
 
 Zero runtime dependencies. `apply` is copy-on-write, so memoized selectors recompute only
 over the branches a patch actually touched; `tryApply` turns a failed `test` into data you
-can log and reply to, which is what conflict handling in sync protocols needs.
+can log and reply to, which is what conflict handling in sync protocols needs. The optional
+`@vielzeug/patchwork/merge` subpath adds three-way, field-level reconciliation
+(`merge(base, local, remote)` → `{ doc, conflicts }`) while the core entry point stays
+RFC 6902-only.
 
 ## Documentation
 

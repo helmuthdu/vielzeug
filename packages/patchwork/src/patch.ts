@@ -1,3 +1,4 @@
+import { deepEqual, isPlainObject } from './_equality';
 import { PatchPathError, PatchTestError } from './errors';
 import type { ApplyResult, JsonObject, JsonPatch, JsonPointer, JsonValue, PatchOperation } from './types';
 
@@ -18,10 +19,6 @@ export function parsePointer(pointer: JsonPointer): string[] {
 /** Escape and join reference tokens into a JSON Pointer. */
 export function formatPointer(tokens: readonly string[]): JsonPointer {
   return tokens.map((token) => `/${token.replaceAll('~', '~0').replaceAll('/', '~1')}`).join('');
-}
-
-function isPlainObject(value: JsonValue | undefined): value is JsonObject {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isArrayIndex(token: string): number {
@@ -52,26 +49,6 @@ function resolve(doc: JsonValue, tokens: readonly string[]): { exists: boolean; 
 /** Read the value a pointer targets; returns `undefined` when it does not resolve. */
 export function getIn(doc: JsonValue, pointer: JsonPointer): JsonValue | undefined {
   return resolve(doc, parsePointer(pointer)).value;
-}
-
-// ---------------------------------------------------------------------------
-// Structural equality (JSON domain: no NaN/undefined/prototype concerns)
-// ---------------------------------------------------------------------------
-
-function deepEqual(a: JsonValue, b: JsonValue): boolean {
-  if (a === b) return true;
-  if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && a.every((item, index) => deepEqual(item, b[index] as JsonValue));
-  }
-  if (isPlainObject(a) && isPlainObject(b)) {
-    const aKeys = Object.keys(a);
-    const bKeys = Object.keys(b);
-    return (
-      aKeys.length === bKeys.length &&
-      aKeys.every((key) => Object.hasOwn(b, key) && deepEqual(a[key] as JsonValue, b[key] as JsonValue))
-    );
-  }
-  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -162,8 +139,20 @@ function removeIn(doc: JsonValue, tokens: readonly string[]): JsonValue {
 
 function requireValue(doc: JsonValue, tokens: readonly string[], pointer: JsonPointer): JsonValue {
   const found = resolve(doc, tokens);
-  if (!found.exists) throw new PatchPathError(`pointer "${pointer}" does not resolve`);
+  if (!found.exists) throw new PatchPathError(`pointer "${pointer}" does not resolve`, { pointer });
   return found.value as JsonValue;
+}
+
+/** Attributes path failures thrown inside `run` to `pointer` (the caller's full pointer). */
+function at<T>(pointer: JsonPointer, run: () => T): T {
+  try {
+    return run();
+  } catch (error) {
+    if (error instanceof PatchPathError && error.pointer === undefined) {
+      throw new PatchPathError(error.message, { cause: error, pointer });
+    }
+    throw error;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -173,18 +162,19 @@ function requireValue(doc: JsonValue, tokens: readonly string[], pointer: JsonPo
 function applyOperation(doc: JsonValue, operation: PatchOperation): JsonValue {
   switch (operation.op) {
     case 'add':
-      return addIn(doc, parsePointer(operation.path), structuredClone(operation.value));
+      return at(operation.path, () => addIn(doc, parsePointer(operation.path), structuredClone(operation.value)));
     case 'remove':
-      return removeIn(doc, parsePointer(operation.path));
+      return at(operation.path, () => removeIn(doc, parsePointer(operation.path)));
     case 'replace':
-      return replaceIn(doc, parsePointer(operation.path), structuredClone(operation.value));
+      return at(operation.path, () => replaceIn(doc, parsePointer(operation.path), structuredClone(operation.value)));
     case 'move': {
-      const value = requireValue(doc, parsePointer(operation.from), operation.from);
-      return addIn(removeIn(doc, parsePointer(operation.from)), parsePointer(operation.path), value);
+      const value = at(operation.from, () => requireValue(doc, parsePointer(operation.from), operation.from));
+      const removed = at(operation.from, () => removeIn(doc, parsePointer(operation.from)));
+      return at(operation.path, () => addIn(removed, parsePointer(operation.path), value));
     }
     case 'copy': {
-      const value = requireValue(doc, parsePointer(operation.from), operation.from);
-      return addIn(doc, parsePointer(operation.path), structuredClone(value));
+      const value = at(operation.from, () => requireValue(doc, parsePointer(operation.from), operation.from));
+      return at(operation.path, () => addIn(doc, parsePointer(operation.path), structuredClone(value)));
     }
     case 'test': {
       const found = resolve(doc, parsePointer(operation.path));
@@ -218,7 +208,7 @@ export function tryApply(doc: JsonValue, patch: JsonPatch): ApplyResult {
       current = applyOperation(current, operation);
     } catch (error) {
       const reason = error instanceof PatchTestError ? 'test' : 'path';
-      const path = operation.op === 'move' || operation.op === 'copy' ? operation.from : operation.path;
+      const path = error instanceof PatchPathError ? (error.pointer ?? operation.path) : operation.path;
       return { error: { index, message: (error as Error).message, path, reason }, ok: false };
     }
   }
@@ -232,24 +222,31 @@ export function tryApply(doc: JsonValue, patch: JsonPatch): ApplyResult {
 function diffNode(path: string, from: JsonValue, to: JsonValue, ops: PatchOperation[]): void {
   if (deepEqual(from, to)) return;
   if (Array.isArray(from) && Array.isArray(to)) {
-    // Trim the common suffix, then walk positionally: equal entries skip,
-    // changed entries recurse, surplus tails add or remove in apply-safe order.
-    let common = 0;
+    // Align on the common prefix and (non-overlapping) common suffix, recurse positionally
+    // through the middle, then let surplus removals fall off the middle's tail (descending)
+    // and surplus inserts land in ascending index order. True appends keep the `-` token.
+    const shared = Math.min(from.length, to.length);
+    let head = 0;
+    while (head < shared && deepEqual(from[head] as JsonValue, to[head] as JsonValue)) head += 1;
+    let tail = 0;
     while (
-      common < Math.min(from.length, to.length) &&
-      deepEqual(from[from.length - 1 - common] as JsonValue, to[to.length - 1 - common] as JsonValue)
+      tail < shared - head &&
+      deepEqual(from[from.length - 1 - tail] as JsonValue, to[to.length - 1 - tail] as JsonValue)
     ) {
-      common += 1;
+      tail += 1;
     }
-    const headLength = Math.min(from.length, to.length) - common;
-    for (let i = 0; i < headLength; i += 1) {
+    const fromMiddle = from.length - tail; // exclusive end of from's middle
+    const toMiddle = to.length - tail; // exclusive end of to's middle
+    const overlap = Math.min(fromMiddle, toMiddle) - head;
+    for (let i = head; i < head + overlap; i += 1) {
       diffNode(`${path}/${i}`, from[i] as JsonValue, to[i] as JsonValue, ops);
     }
-    for (let i = from.length - 1 - common; i >= headLength; i -= 1) {
+    for (let i = fromMiddle - 1; i >= head + overlap; i -= 1) {
       ops.push({ op: 'remove', path: `${path}/${i}` });
     }
-    for (let i = headLength; i < to.length - common; i += 1) {
-      ops.push({ op: 'add', path: `${path}/-`, value: to[i] as JsonValue });
+    const appends = tail === 0; // surplus only ever lands at the end when no tail is shared
+    for (let i = head + overlap; i < toMiddle; i += 1) {
+      ops.push({ op: 'add', path: appends ? `${path}/-` : `${path}/${i}`, value: to[i] as JsonValue });
     }
     return;
   }
@@ -273,9 +270,12 @@ function diffNode(path: string, from: JsonValue, to: JsonValue, ops: PatchOperat
 
 /**
  * Compute an RFC 6902 patch that transforms `from` into `to`. Object keys
- * diff field-by-field (the payload win sync protocols want); arrays trim
- * their common suffix and emit ordered add/remove tails, so append-only
- * lists stay small. The result applies cleanly via {@link apply}.
+ * diff field-by-field (the payload win sync protocols want); arrays align
+ * on their common prefix and suffix and emit ordered removals and indexed
+ * inserts around a positionally diffed middle, so appends, prepends, and
+ * middle inserts each stay one operation. Not minimal-edit: a reorder
+ * diffs positionally. The result always round-trips:
+ * `apply(from, diff(from, to))` deep-equals `to`.
  */
 export function diff(from: JsonValue, to: JsonValue): JsonPatch {
   const ops: PatchOperation[] = [];

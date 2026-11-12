@@ -23,6 +23,18 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
+    },
+    "./merge": {
+      "import": "./dist/merge.js",
+      "require": "./dist/merge.cjs",
+      "types": "./dist/merge.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "merge": [
+        "dist/merge.d.ts"
+      ]
     }
   },
   "sideEffects": false,

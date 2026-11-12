@@ -91,6 +91,29 @@ describe('tryApply', () => {
     if (result.ok) expect((result.doc as { x: number }).x).toBe(1);
   });
 
+  it('attributes move and copy failures to the right pointer', () => {
+    const badTarget = tryApply(doc, [{ from: '/title', op: 'move', path: '/nope/deep' }]);
+    expect(badTarget.ok).toBe(false);
+    if (!badTarget.ok) expect(badTarget.error.path).toBe('/nope/deep');
+
+    const badSource = tryApply(doc, [{ from: '/missing', op: 'copy', path: '/x' }]);
+    expect(badSource.ok).toBe(false);
+    if (!badSource.ok) expect(badSource.error.path).toBe('/missing');
+  });
+
+  it('exposes the offending pointer on the thrown error', () => {
+    const thrown = (() => {
+      try {
+        apply(doc, [{ op: 'add', path: '/address/zip/deep', value: 1 }]);
+        return undefined;
+      } catch (error) {
+        return error;
+      }
+    })();
+    expect(thrown).toBeInstanceOf(PatchPathError);
+    expect((thrown as PatchPathError).pointer).toBe('/address/zip/deep');
+  });
+
   it('reports the failing operation without throwing', () => {
     const result = tryApply(doc, [
       { op: 'add', path: '/x', value: 1 },
@@ -134,6 +157,45 @@ describe('diff', () => {
       { op: 'remove', path: '/tags/2' },
       { op: 'remove', path: '/tags/1' },
     ]);
+  });
+
+  it('inserts at the front and middle with a single operation', () => {
+    expect(roundTrip([1, 2, 3, 4], [9, 1, 2, 3, 4])).toEqual([{ op: 'add', path: '/0', value: 9 }]);
+    expect(roundTrip({ tags: ['a', 'c'] }, { tags: ['a', 'b', 'c'] })).toEqual([
+      { op: 'add', path: '/tags/1', value: 'b' },
+    ]);
+    expect(roundTrip({ a: [1, 2, 3] }, { a: [1, 9, 2, 3] })).toEqual([{ op: 'add', path: '/a/1', value: 9 }]);
+  });
+
+  it('mixes positional replaces with ordered surplus removals and inserts', () => {
+    roundTrip([1, 2, 3, 4, 5], [1, 9, 8, 7, 5]);
+    roundTrip([1, 2, 3], [9, 0, 1, 2, 3]);
+    roundTrip(['a', 'x', 'b'], ['a', 'b', 'new']);
+    roundTrip([1, 2, 3, 4], [2, 3]);
+  });
+
+  it('round-trips seeded random documents', () => {
+    let seed = 42;
+    const rnd = (n: number): number => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed % n;
+    };
+    const value = (depth: number): JsonValue => {
+      const r = rnd(depth > 2 ? 5 : 8);
+      if (r < 3) return rnd(10);
+      if (r === 3) return (['x', 'y', 'z'] as const)[rnd(3)] as JsonValue;
+      if (r === 4) return rnd(2) === 0;
+      if (r === 5) return null;
+      if (r === 6) return Array.from({ length: rnd(5) }, () => value(depth + 1));
+      const out: Record<string, JsonValue> = {};
+      for (const key of ['a', 'b', 'c', 'd'].slice(0, rnd(4))) out[key] = value(depth + 1);
+      return out;
+    };
+    for (let n = 0; n < 500; n += 1) {
+      const from = value(0);
+      const to = value(0);
+      expect(apply(from, diff(from, to))).toEqual(to);
+    }
   });
 
   it('recurses into changed array entries', () => {

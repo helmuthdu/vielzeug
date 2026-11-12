@@ -21,7 +21,7 @@ clobber concurrent edits. JSON Patch is the wire format for the honest answer, a
 implements it with the two properties sync code actually needs: `apply` is **immutable with
 structural sharing** (untouched subtrees keep their object identity, so React and every memo
 layer work for free), and `diff` is **structural** (objects diff field-by-field, append-only
-arrays stay one operation).
+arrays stay one operation, and inserts land at exactly the right index).
 
 ```ts
 import { apply, diff } from '@vielzeug/patchwork';
@@ -74,11 +74,12 @@ tryApply(doc, [{ op: 'test', path: '/title', value: 'Other' }, ...patch]);
 
 - **`apply`**: immutable RFC 6902 — all six operations, copy-on-write with structural sharing.
 - **`tryApply`**: the same engine as data; a failed `test` or bad pointer returns a structured rejection with the failing operation index.
-- **`diff`**: per-field object patches, suffix-trimmed arrays (appends cost a single `add`), pointer-escaped keys.
+- **`diff`**: per-field object patches, prefix/suffix-aligned arrays (appends, prepends, and middle inserts cost a single `add`), pointer-escaped keys.
 - **Pointer API**: `parsePointer`/`formatPointer` with `~0`/`~1` escaping and `getIn` for reads.
 - **Spec-exact edges**: `null` is a value not an absence, `replace` requires an existing target, array `add` inserts, `-` appends.
 - **Input isolation**: `add`/`copy` values are cloned in, so the caller's objects can never mutate a document afterwards.
 - **Hard JSON domain**: numbers, strings, booleans, null, arrays, objects — no functions, no prototypes, nothing to inherit.
+- **`@vielzeug/patchwork/merge`**: opt-in three-way merge — field-level reconciliation of diverged copies with `conflicts` as data.
 
 </div>
 
