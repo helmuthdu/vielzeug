@@ -21,6 +21,7 @@ export type {
   CourierCacheOptions,
   CourierReadCache,
   GetRequestConfig,
+  HttpRequestConfig,
   Params,
   PrefetchConfig,
   RequestConfig,

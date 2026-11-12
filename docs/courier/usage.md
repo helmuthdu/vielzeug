@@ -95,7 +95,7 @@ await courier.prefetch<User>('/users/{id}', { cache, params: { id: userId } });
 const user = await courier.get<User>('/users/{id}', { cache, params: { id: userId } });
 ```
 
-`prefetch()` returns a promise that settles when warming finishes. Request failures are not cached or rejected from that promise; the physical request emits `request-error` through `tap()`. Cache, key, and URL configuration errors still throw before prefetch starts.
+`prefetch()` returns a promise that settles when warming finishes. Request failures are not cached or rejected from that promise; the physical request emits `request-error` through `tap()`. Cache, key, and URL configuration errors reject before prefetch dispatches a request.
 
 Invalidate a structured prefix after writes. Every matching settled or pending key becomes ineligible for caching, while unrelated entries remain available.
 
@@ -156,7 +156,7 @@ await courier.get('/health', { timeout: 2_000 });
 
 ## Error Handling
 
-Courier classifies URL, request-construction, fetch, cancellation, HTTP, response-parsing, and schema failures into distinct error classes. Errors thrown directly by custom middleware are preserved.
+Courier classifies URL, request-construction, fetch, cancellation, HTTP, response-parsing, and schema failures into distinct error classes. Errors thrown directly by custom middleware are preserved. Every request method reports failures as a rejected promise; only `createCourier()` throws synchronously, for invalid timeout and cache options.
 
 ```ts
 import {

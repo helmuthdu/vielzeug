@@ -1,4 +1,4 @@
-import { CourierParseError } from './errors.js';
+import { CourierConfigError } from './errors.js';
 import type { ResponseType } from './response.js';
 
 type QueryScalar = string | number | boolean | null;
@@ -60,11 +60,9 @@ type HttpOptions = {
   signal?: AbortSignal;
 };
 
-export type CourierRequestConfig<P extends string = string, T = unknown> = PathConfig<P> &
+export type HttpRequestConfig<P extends string = string, T = unknown> = PathConfig<P> &
   (ParsedResponseConfig<T> | RawResponseConfig) &
-  RequestOptions;
-
-export type HttpRequestConfig<P extends string = string, T = unknown> = CourierRequestConfig<P, T> &
+  RequestOptions &
   HttpOptions & { cache?: never };
 
 export type GetRequestConfig<P extends string = string, T = unknown> = PathConfig<P> &
@@ -84,7 +82,7 @@ export function buildUrl(base: string, path: string, params?: Params, query?: Pa
   pathClean = pathClean.replace(/\{([^}]+)\}/g, (_, key: string) => {
     const val = params?.[key];
 
-    if (val === undefined || val === null) throw new CourierParseError(`unresolved path param {${key}} in '${path}'`);
+    if (val === undefined || val === null) throw new CourierConfigError(`unresolved path param {${key}} in '${path}'`);
 
     return encodeURIComponent(String(val));
   });

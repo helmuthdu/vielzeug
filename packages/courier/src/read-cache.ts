@@ -19,11 +19,11 @@ type Pending = {
   controller: AbortController;
   id: string;
   key: CourierCacheKey;
-  owners: number;
   promise: Promise<unknown>;
+  /** Live prefetch/read references; when the last one leaves an unsettled load, the fetch is aborted. */
+  refs: number;
   settled: boolean;
   ttlMs: number;
-  waiters: number;
 };
 
 type LoadOptions<T> = {
@@ -111,10 +111,9 @@ export function createReadCache(options?: CourierCacheOptions) {
     return stored;
   };
 
-  const release = (entry: Pending, owner: 'prefetch' | 'waiter'): void => {
-    if (owner === 'prefetch') entry.owners--;
-    else entry.waiters--;
-    if (entry.settled || entry.owners > 0 || entry.waiters > 0) return;
+  const release = (entry: Pending): void => {
+    entry.refs--;
+    if (entry.settled || entry.refs > 0) return;
     entry.cacheable = false;
     if (pending.get(entry.id) === entry) pending.delete(entry.id);
     entry.controller.abort();
@@ -132,11 +131,10 @@ export function createReadCache(options?: CourierCacheOptions) {
       controller,
       id,
       key,
-      owners: 0,
       promise: undefined as unknown as Promise<unknown>,
+      refs: 0,
       settled: false,
       ttlMs,
-      waiters: 0,
     };
     let loaded: Promise<T>;
     try {
@@ -210,13 +208,13 @@ export function createReadCache(options?: CourierCacheOptions) {
       const result = obtain(config, load);
       if ('stored' in result) return Promise.resolve();
 
-      result.entry.owners++;
+      result.entry.refs++;
       return result.entry.promise
         .then(
           () => undefined,
           () => undefined,
         )
-        .finally(() => release(result.entry, 'prefetch'));
+        .finally(() => release(result.entry));
     },
     read<T>({ cache: config, load, signal, timeout, url }: LoadOptions<T>): Promise<T> {
       validateTimeout(timeout);
@@ -228,10 +226,8 @@ export function createReadCache(options?: CourierCacheOptions) {
       const result = obtain(config, load);
       if ('stored' in result) return Promise.resolve(result.stored.data as T);
 
-      result.entry.waiters++;
-      return waitFor(result.entry.promise as Promise<T>, callerSignal, url).finally(() =>
-        release(result.entry, 'waiter'),
-      );
+      result.entry.refs++;
+      return waitFor(result.entry.promise as Promise<T>, callerSignal, url).finally(() => release(result.entry));
     },
   };
 }

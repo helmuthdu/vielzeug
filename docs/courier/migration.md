@@ -252,3 +252,39 @@ Replace prior query and mutation integration points with the 2.0 query-handle an
 Update streaming consumers to iterate over the 2.0 stream API with `for await...of`. Ensure application cleanup still handles abort and disposal.
 
 The sections above describe the historical 1.x → 2.x transition. For the current HTTP and explicit-cache contract, follow the Courier 3.0 section and the [API Reference](./api.md).
+
+---
+
+# Breaking Changes Since 26.11.11
+
+This train tightens the error taxonomy and makes failure timing uniform across request methods.
+
+| Before                                                            | After                                                                       |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Unresolved path param threw `CourierParseError`                   | `CourierConfigError`: a caller bug, not a wire failure                      |
+| Non-JSON-serializable body surfaced as `CourierParseError`        | `CourierConfigError`                                                        |
+| `prefetch()` threw config and disposal errors synchronously       | Every request method reports failures as a rejected promise                 |
+| Verb configs were unnameable                                      | `HttpRequestConfig` is exported                                             |
+
+## Config bugs report as `CourierConfigError`
+
+Courier's own taxonomy separates caller bugs (`CourierConfigError`, "fixed by editing code") from malformed data arriving over the wire (`CourierParseError`). Two caller bugs were misreported as parse failures and now match their class:
+
+```diff
+  try {
+    await courier.get('/users/{id}', { params: {} });
+- } catch (error) {
+-   if (error instanceof CourierParseError) { /* ambiguous */ }
++ } catch (error) {
++   if (error instanceof CourierConfigError) { /* missing path param or bad body */ }
+  }
+```
+
+## Prefetch failures reject
+
+`prefetch()` previously threw cache-key, URL, and disposal errors synchronously while `get()` rejected equivalent problems. Every request method now rejects; only `createCourier()` throws synchronously for invalid timeout and cache options:
+
+```diff
+- expect(() => courier.prefetch('/users', { cache: { key: [] } })).toThrow('non-empty');
++ await expect(courier.prefetch('/users', { cache: { key: [] } })).rejects.toThrow('non-empty');
+```

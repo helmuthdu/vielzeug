@@ -1,4 +1,4 @@
-import { mediaTypeOf } from './mediaType.js';
+import { mediaTypeOf } from './media-type.js';
 
 /**
  * RFC 9457 (obsoleting RFC 7807) problem details, as carried by an

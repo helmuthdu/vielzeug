@@ -1,6 +1,4 @@
 import { tapper } from '@vielzeug/arsenal';
-
-import { createReadCache } from './_cache.js';
 import {
   CourierConfigError,
   CourierDisposedError,
@@ -10,7 +8,8 @@ import {
   CourierSchemaValidationError,
   classifyRequestError,
 } from './errors.js';
-import { isJsonMediaType } from './mediaType.js';
+import { isJsonMediaType } from './media-type.js';
+import { createReadCache } from './read-cache.js';
 import { parseResponse, trackRawResponse } from './response.js';
 import { buildRequestInit } from './serialize.js';
 import {
@@ -169,7 +168,8 @@ export function createCourier(options: CourierOptions = {}) {
       try {
         requestInit = buildRequestInit(m, transport.mergeHeaders(headers), body, signal, fetchInit ?? {});
       } catch (error) {
-        throw new CourierParseError(error instanceof Error ? error.message : String(error), { cause: error });
+        // A body that cannot be serialized is a caller bug, not a wire failure.
+        throw new CourierConfigError(error instanceof Error ? error.message : String(error), { cause: error });
       }
 
       const { headers: initHeaders, ...restInit } = requestInit;
@@ -202,36 +202,32 @@ export function createCourier(options: CourierOptions = {}) {
   const requestWithMethod = <T, P extends string>(method: string, path: P, config?: HttpRequestConfig<P, T>) =>
     request<T, P>(path, { ...config, method } as RequestConfig<P, T>);
 
-  function get<T, P extends string = string>(path: P, config?: GetRequestConfig<P, T>): Promise<T> {
-    try {
-      const resolved = config ?? ({} as GetRequestConfig<P, T>);
-      const { cache, signal, timeout, ...sharedConfig } = resolved;
-      if (!cache) {
-        return requestWithMethod<T, P>('GET', path, {
-          ...sharedConfig,
-          signal,
-          timeout,
-        } as HttpRequestConfig<P, T>);
-      }
-
-      const url = resolveUrl(path, resolved);
-      return readCache.read({
-        cache,
-        load: (internalSignal) =>
-          requestWithMethod<T, P>('GET', path, {
-            ...sharedConfig,
-            signal: internalSignal,
-          } as HttpRequestConfig<P, T>),
+  async function get<T, P extends string = string>(path: P, config?: GetRequestConfig<P, T>): Promise<T> {
+    const resolved = config ?? ({} as GetRequestConfig<P, T>);
+    const { cache, signal, timeout, ...sharedConfig } = resolved;
+    if (!cache) {
+      return requestWithMethod<T, P>('GET', path, {
+        ...sharedConfig,
         signal,
-        timeout: timeout ?? transport.timeout,
-        url,
-      });
-    } catch (error) {
-      return Promise.reject(error);
+        timeout,
+      } as HttpRequestConfig<P, T>);
     }
+
+    const url = resolveUrl(path, resolved);
+    return readCache.read({
+      cache,
+      load: (internalSignal) =>
+        requestWithMethod<T, P>('GET', path, {
+          ...sharedConfig,
+          signal: internalSignal,
+        } as HttpRequestConfig<P, T>),
+      signal,
+      timeout: timeout ?? transport.timeout,
+      url,
+    });
   }
 
-  function prefetch<T, P extends string = string>(path: P, config: PrefetchConfig<P, T>): Promise<void> {
+  async function prefetch<T, P extends string = string>(path: P, config: PrefetchConfig<P, T>): Promise<void> {
     if (transport.disposed) throw new CourierDisposedError('Courier');
     const { cache, ...sharedConfig } = config;
     resolveUrl(path, config);

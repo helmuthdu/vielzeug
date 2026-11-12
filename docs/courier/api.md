@@ -140,7 +140,7 @@ const user = await courier.get<User>('/users/{id}', {
 prefetch<T, P extends string>(path: P, config: PrefetchConfig<P, T>): Promise<void>;
 ```
 
-Starts the same cached GET used by `get()`. `config.cache` is required; `signal`, per-call `timeout`, and `responseType: 'raw'` are unavailable. Fresh values and pending loads are reused. The promise settles when the attempt finishes. Request failures emit `request-error` through `tap()` and resolve without caching data.
+Starts the same cached GET used by `get()`. `config.cache` is required; `signal`, per-call `timeout`, and `responseType: 'raw'` are unavailable. Fresh values and pending loads are reused. The promise settles when the attempt finishes. Request failures emit `request-error` through `tap()` and resolve without caching data. Cache, key, and URL configuration errors reject before any request is dispatched.
 
 ### `invalidateCache()` and `clearCache()`
 
@@ -256,6 +256,13 @@ type GetRequestConfig<P extends string = string, T = unknown> = Omit<
     body?: never;
   };
 
+// The verbs (`post`, `put`, `patch`, `delete`) accept `HttpRequestConfig`:
+// request options without `method` or `cache`, exported for typing wrappers.
+type HttpRequestConfig<P extends string = string, T = unknown> = Omit<
+  RequestConfig<P, T>,
+  'cache' | 'method'
+> & { cache?: never };
+
 type PrefetchConfig<P extends string = string, T = unknown> = Omit<
   GetRequestConfig<P, T>,
   'cache' | 'responseType' | 'signal' | 'timeout'
@@ -278,10 +285,10 @@ type PrefetchConfig<P extends string = string, T = unknown> = Omit<
 | `CourierAbortError`            | Caller or client cancellation                        | `method`, `url`, `cause`                                                                                     |
 | `CourierSchemaValidationError` | Response schema fails                                | `data`, `cause`                                                                                              |
 | `CourierParseError`            | Response body cannot parse                           | N/A                                                                                                          |
-| `CourierConfigError`           | Invalid request config (GET/HEAD body, raw + schema) | N/A                                                                                                          |
+| `CourierConfigError`           | Caller bug in the request (GET/HEAD body, raw + schema, unresolved path param, non-JSON-serializable body) | N/A                                                                                                          |
 | `CourierDisposedError`         | Work starts after disposal                           | N/A                                                                                                          |
 
-Errors thrown directly by custom middleware are preserved rather than reclassified.
+Errors thrown directly by custom middleware are preserved rather than reclassified. Every request method (`request`, `get`, `prefetch`, and the verbs) reports failures as a rejected promise; only `createCourier()` throws synchronously, for invalid timeout and cache options.
 
 ### Problem details
 

@@ -206,13 +206,13 @@ describe('Courier HTTP transport', () => {
     expect(fetch).toHaveBeenCalledWith('/api/users', expect.any(Object));
   });
 
-  it('reports URL and response decoding failures as parse errors', async () => {
+  it('separates caller config bugs from response decoding failures', async () => {
     const courier = createCourier({
       fetch: vi.fn(async () => new Response('{bad', { headers: { 'content-type': 'application/json' } })),
     });
 
     await expect(courier.get('/users/{id}', { params: {} as { id: string } })).rejects.toBeInstanceOf(
-      CourierParseError,
+      CourierConfigError,
     );
     await expect(courier.get('/users')).rejects.toBeInstanceOf(CourierParseError);
   });
@@ -311,7 +311,7 @@ describe('Courier HTTP transport', () => {
     const body: Record<string, unknown> = {};
     body.self = body;
 
-    await expect(courier.post('/users', { body })).rejects.toBeInstanceOf(CourierParseError);
+    await expect(courier.post('/users', { body })).rejects.toBeInstanceOf(CourierConfigError);
     courier.cancelAll();
 
     expect(abort).not.toHaveBeenCalled();
@@ -497,12 +497,14 @@ describe('Courier HTTP transport', () => {
     const courier = createCourier({ fetch: vi.fn(async () => Response.json([])) });
 
     await expect(courier.get('/users', { cache: { key: ['users'] } })).resolves.toEqual([]);
-    expect(() => courier.prefetch('/users', { cache: { key: [] as never } })).toThrow('non-empty');
-    expect(() => courier.prefetch('/users', { cache: { key: 'users' as never } })).toThrow('non-empty');
-    expect(() => courier.prefetch('/users', { cache: { key: ['users', Number.NaN] } })).toThrow('must be finite');
-    expect(() => courier.prefetch('/users/{id}', { cache: { key: ['user'] }, params: {} as { id: string } })).toThrow(
-      'unresolved path param',
+    await expect(courier.prefetch('/users', { cache: { key: [] as never } })).rejects.toThrow('non-empty');
+    await expect(courier.prefetch('/users', { cache: { key: 'users' as never } })).rejects.toThrow('non-empty');
+    await expect(courier.prefetch('/users', { cache: { key: ['users', Number.NaN] } })).rejects.toThrow(
+      'must be finite',
     );
+    await expect(
+      courier.prefetch('/users/{id}', { cache: { key: ['user'] }, params: {} as { id: string } }),
+    ).rejects.toThrow('unresolved path param');
   });
 
   it('deduplicates concurrent cached GETs and reuses the parsed value', async () => {
@@ -803,7 +805,7 @@ describe('Courier HTTP transport', () => {
 
     expect((requestSignal as AbortSignal | null)?.aborted).toBe(true);
     await expect(prefetched).resolves.toBeUndefined();
-    expect(() => courier.prefetch('/slow', { cache: { key: ['slow'] } })).toThrow('Courier disposed');
+    await expect(courier.prefetch('/slow', { cache: { key: ['slow'] } })).rejects.toThrow('Courier disposed');
   });
 });
 

@@ -1,7 +1,7 @@
 import { abortError } from '@vielzeug/arsenal';
 
 import { CourierParseError } from './errors.js';
-import { isJsonMediaType, mediaTypeOf } from './mediaType.js';
+import { isJsonMediaType, mediaTypeOf } from './media-type.js';
 
 /** Response parsing strategy. 'raw' returns the Response object directly. */
 export type ResponseType = 'auto' | 'json' | 'text' | 'blob' | 'arrayBuffer' | 'raw';
