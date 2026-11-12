@@ -51,7 +51,7 @@ console.log(source.state.params);
 source.dispose();
 ```
 
-A non-optional parameter type requires an initial `params` value. `setParams()` compares values with `Object.is`; `apply()` compares structurally, avoiding redundant requests from a router or reactive effect. Both can load an inert source or retry an uncommitted request. See [Apply Page and Filter Together](#apply-page-and-filter-together).
+A non-optional parameter type requires an initial `params` value. Every params comparison is structural after a reference fast path, so a freshly built but equal filter object never refetches, from `setParams()` or `apply()`. Idle sources load on the next command; retry a failed request with `reload()`. See [Apply Page and Filter Together](#apply-page-and-filter-together).
 
 While replacement parameters load, `state.params` continues to describe the committed items and `state.pendingParams` contains the requested value. Page-only navigation does not set `pendingParams`.
 
@@ -69,7 +69,7 @@ await source.last();
 await source.setPageSize(50);
 ```
 
-After the first successful load, navigation is clamped to the known `pageCount`. Before that load, `goTo()` accepts any positive page because the total is unknown.
+After the first successful load, navigation is clamped to the known `pageCount`. Before that load, `goTo()` accepts any positive page because the total is unknown. `next()` on an inert source loads page one. A failed navigation command rolls back to the committed page, so retrying `next()` moves to the same next page instead of skipping ahead.
 
 ## Apply Page and Filter Together
 
@@ -102,8 +102,8 @@ try {
 ```
 
 Parameters are compared structurally, so a freshly built object with the same contents does not
-refetch a committed result or duplicate active work. An inert source still loads, and an unchanged
-request can retry after failure. When parameters change,
+refetch a committed result or duplicate active work. An inert source still loads; retry a failed
+request with `reload()`. When parameters change,
 `page` is validated but never clamped: the page count still describes the previous filter set, so
 clamping against it would silently move the reader elsewhere. Omit `page` in that case and the
 source returns to page one. When parameters are unchanged, `apply()` routes through `goTo()` and

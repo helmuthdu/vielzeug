@@ -58,6 +58,39 @@ describe('createCursorSource', () => {
     expect(source.state.pendingParams).toBeUndefined();
   });
 
+  it('rolls a failed setParams back so navigation keeps the committed params', async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce({ items: ['first'], nextCursor: 'next' })
+      .mockRejectedValueOnce('offline')
+      .mockResolvedValue({ items: ['second'], nextCursor: undefined });
+    const source = createCursorSource<string, string>({ load, params: 'base' });
+    await source.reload();
+
+    await expect(source.setParams('needle')).rejects.toThrow('offline');
+    expect(source.state.params).toBe('base');
+    expect(source.state.pendingParams).toBeUndefined();
+
+    // The committed cursor pairs with the committed params, never the failed ones.
+    await source.next();
+    expect(load).toHaveBeenLastCalledWith({
+      after: 'next',
+      pageSize: 20,
+      params: 'base',
+      signal: expect.any(AbortSignal),
+    });
+  });
+
+  it('treats structurally equal params and replacement loads without refetching', async () => {
+    const load = vi.fn(async () => ({ items: ['a'], nextCursor: 'next' }));
+    const source = createCursorSource<string, { q: string }>({ load, params: { q: 'x' } });
+
+    await source.setParams({ q: 'x' });
+
+    expect(load).toHaveBeenCalledOnce();
+    expect(source.state.params).toEqual({ q: 'x' });
+  });
+
   it('rejects conflicting initial cursor directions', () => {
     expect(() =>
       createCursorSource({

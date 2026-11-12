@@ -62,6 +62,22 @@ describe('createLocalSource', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it('keeps position for structurally equal params and equal replacement items', () => {
+    const source = createLocalSource<{ id: number }[], { tag: string }>([{ id: 1 }, { id: 2 }], {
+      pageSize: 1,
+      params: { tag: 'a' },
+    });
+    source.next();
+    const listener = vi.fn();
+    source.subscribe(listener);
+
+    source.setParams({ tag: 'a' });
+    source.setItems([{ id: 1 }, { id: 2 }]);
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(source.state.pagination.page).toBe(2);
+  });
+
   it('clamps the current page after replacing items', () => {
     const source = createLocalSource([1, 2, 3], { pageSize: 1 });
     source.last();

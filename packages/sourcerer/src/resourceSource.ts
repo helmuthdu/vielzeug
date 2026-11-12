@@ -1,5 +1,4 @@
 import { createAsyncSource } from './asyncSource';
-import { SourcererDisposedError } from './errors';
 import type { Resource, ResourceConfig, ResourceState } from './types';
 
 const initialResourceState = <T>(start: boolean): ResourceState<T> => ({
@@ -41,11 +40,7 @@ export function createResource<T>(config: ResourceConfig<T>): Resource<T> {
       return asyncSource.disposed;
     },
 
-    reload() {
-      if (asyncSource.disposed) return Promise.reject(new SourcererDisposedError());
-
-      return fetchResource();
-    },
+    reload: fetchResource,
 
     get state() {
       return asyncSource.state;

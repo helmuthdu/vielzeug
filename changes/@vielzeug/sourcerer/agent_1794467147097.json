@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Structural params equality across all sources; failed requests roll back to committed state",
+      "packageName": "@vielzeug/sourcerer",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/sourcerer"
+}

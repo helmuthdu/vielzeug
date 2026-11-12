@@ -1,5 +1,12 @@
+import { isEqual } from '@vielzeug/arsenal';
+
 import { SourcererConfigurationError } from './errors';
 import type { PagePagination } from './types';
+
+/** The params equality rule for every source: reference fast path, then structural comparison. */
+export function sameParams<T>(left: T, right: T): boolean {
+  return Object.is(left, right) || isEqual(left, right);
+}
 
 export function positiveInteger(value: number, name: string): number {
   if (!Number.isInteger(value) || value < 1)

@@ -9,7 +9,7 @@ description: Public API for @vielzeug/sourcerer.
 
 | Symbol                        | Purpose                             | Execution mode | Common gotcha                                               |
 | ----------------------------- | ----------------------------------- | -------------- | ----------------------------------------------------------- |
-| `createLocalSource()`         | Filter and paginate in-memory items | Sync           | `params` replacement uses `Object.is`                       |
+| `createLocalSource()`         | Filter and paginate in-memory items | Sync           | `params` replacement compares structurally                  |
 | `createPageSource()`          | Load numbered pages                 | Async          | Construction is inert                                       |
 | `createCursorSource()`        | Load server-issued cursor pages     | Async          | `after` and `before` cannot coexist initially               |
 | `createInfiniteSource()`      | Append numbered pages               | Async          | `loadMore()` is a no-op while loading or exhausted          |
@@ -66,7 +66,7 @@ source.setParams('Ada');
 | `previous()`            | `void`       | Move backward when available                                  |
 | `setItems(items)`       | `void`       | Replace the collection and recompute state                    |
 | `setPageSize(pageSize)` | `void`       | Replace page size and reset to page one                       |
-| `setParams(params)`     | `void`       | Replace params and reset to page one                          |
+| `setParams(params)`     | `void`       | Replace params structurally and reset to page one             |
 | `subscribe(listener)`   | `() => void` | Register a state listener and return its unsubscribe function |
 | `dispose()`             | `void`       | Stop notifications and reject later mutations                 |
 
@@ -111,13 +111,18 @@ await source.reload();
 | `subscribe(listener)`   | `() => void`    | Register a state listener and return its unsubscribe function                 |
 | `dispose()`             | `void`          | Abort work and stop notifications                                             |
 
-`apply(update: PageSourceUpdate<TParams>): Promise<void>` compares params structurally with
-`isEqual`. Changed params use the supplied positive page without clamping, or page one when omitted.
-Unchanged params with a page use `goTo()` and clamp after the first successful load.
-An unchanged request does not refetch a committed result or duplicate an active request; it loads
-an inert source or retries an uncommitted request after failure. Omitted or `undefined` params
-preserve the requested value; use `setParams(undefined)` when `undefined` is a valid replacement.
-The update does not include page size; use `setPageSize()` separately.
+`apply(update: PageSourceUpdate<TParams>): Promise<void>` compares params structurally after a
+reference fast path, the same rule every params comparison in the package uses. Changed params use
+the supplied positive page without clamping, or page one when omitted. Unchanged params with a page
+use `goTo()` and clamp after the first successful load. An unchanged request does not refetch a
+committed result or duplicate an active request; it loads an inert source. Omitted or `undefined`
+params preserve the requested value; use `setParams(undefined)` when `undefined` is a valid
+replacement. The update does not include page size; use `setPageSize()` separately.
+
+All async sources share a rollback rule: a failed current request reverts the requested page, size,
+params, and (for infinite feeds) continuation position to the last committed values, so navigation
+after a failure retries the same move. Superseded work never rolls anything back. Retry with
+`reload()`.
 
 ---
 

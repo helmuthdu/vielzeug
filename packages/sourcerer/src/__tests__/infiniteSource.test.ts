@@ -91,6 +91,59 @@ describe('createInfiniteSource', () => {
     await next;
   });
 
+  it('treats a structurally equal setParams as unchanged', async () => {
+    const load = vi.fn(async () => ({ items: ['a'], totalItems: 5 }));
+    const source = createInfiniteSource<string, { q: string }>({ load, params: { q: 'x' } });
+    await source.reload();
+
+    await source.setParams({ q: 'x' });
+
+    expect(load).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the committed feed when an append fails', async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce({ items: ['first'], totalItems: 4 })
+      .mockRejectedValueOnce('offline')
+      .mockResolvedValue({ items: ['second'], totalItems: 4 });
+    const source = createInfiniteSource({ load, pageSize: 1 });
+    await source.reload();
+
+    await expect(source.loadMore()).rejects.toThrow('offline');
+    expect(source.state.items).toEqual(['first']);
+
+    await source.loadMore();
+    expect(load).toHaveBeenLastCalledWith({
+      page: 2,
+      pageSize: 1,
+      params: undefined,
+      signal: expect.any(AbortSignal),
+    });
+    expect(source.state.items).toEqual(['first', 'second']);
+  });
+
+  it('rolls a failed page size back so appends keep the committed size', async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce({ items: ['a'], totalItems: 4 })
+      .mockRejectedValueOnce('offline')
+      .mockResolvedValue({ items: ['b'], totalItems: 4 });
+    const source = createInfiniteSource({ load, pageSize: 1 });
+    await source.reload();
+
+    await expect(source.setPageSize(10)).rejects.toThrow('offline');
+    expect(source.state.pagination.pageSize).toBe(1);
+
+    await source.loadMore();
+    expect(load).toHaveBeenLastCalledWith({
+      page: 2,
+      pageSize: 1,
+      params: undefined,
+      signal: expect.any(AbortSignal),
+    });
+  });
+
   it('rejects invalid totals and commands after disposal', async () => {
     const source = createInfiniteSource({ load: async () => ({ items: [], totalItems: -1 }) });
 

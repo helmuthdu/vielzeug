@@ -1,19 +1,19 @@
-import { isEqual } from '@vielzeug/arsenal';
-
 import { createAsyncSource } from './asyncSource';
 import { SourcererDisposedError } from './errors';
-import { createPagePagination, positiveInteger, totalItems } from './pagination';
+import { createPagePagination, positiveInteger, sameParams, totalItems } from './pagination';
 import type { PageSource, PageSourceConfig, PageSourceState } from './types';
 
 type Request<TParams> = Readonly<{ page: number; pageSize: number; params: TParams }>;
 
 /** Page sources retain committed items while replacement work is pending. */
 export function createPageSource<T, TParams = undefined>(config: PageSourceConfig<T, TParams>): PageSource<T, TParams> {
-  let requested: Request<TParams> = {
+  const initial: Request<TParams> = {
     page: 1,
     pageSize: positiveInteger(config.pageSize ?? 20, 'pageSize'),
     params: config.params as TParams,
   };
+  let requested: Request<TParams> = initial;
+  let committed: Request<TParams> = initial;
   let hasLoaded = false;
   const asyncSource = createAsyncSource<PageSourceState<T, TParams>>({
     error: null,
@@ -25,24 +25,31 @@ export function createPageSource<T, TParams = undefined>(config: PageSourceConfi
   const assertLive = (): void => {
     if (asyncSource.disposed) throw new SourcererDisposedError();
   };
-  const isCommitted = (request: Request<TParams>): boolean =>
-    asyncSource.state.pagination.page === request.page &&
-    asyncSource.state.pagination.pageSize === request.pageSize &&
-    Object.is(asyncSource.state.params, request.params);
+  const ensureLoaded = async (): Promise<void> => {
+    // While idle, `requested` always matches the committed request, so the only
+    // missing work is the first load (which a failure rolls back to).
+    if (!asyncSource.state.loading && !hasLoaded) await fetch(requested);
+  };
 
   const fetch = (request: Request<TParams>): Promise<void> =>
     asyncSource.fetch({
       commit: () => {
         hasLoaded = true;
+        committed = request;
         requested = request;
       },
-      failure: (previous, error) => ({ ...previous, error, loading: false, pendingParams: undefined }),
+      // Only the current request reaches `failure` (superseded work settles silently),
+      // so the desired request rolls back to what the published state still shows.
+      failure: (previous, error) => {
+        requested = committed;
+        return { ...previous, error, loading: false, pendingParams: undefined };
+      },
       load: (signal) => config.load({ ...request, signal }),
       pending: (previous) => ({
         ...previous,
         error: null,
         loading: true,
-        ...(Object.is(request.params, previous.params) ? {} : { pendingParams: request.params }),
+        ...(sameParams(request.params, previous.params) ? {} : { pendingParams: request.params }),
       }),
       success: (result) => ({
         error: null,
@@ -62,7 +69,7 @@ export function createPageSource<T, TParams = undefined>(config: PageSourceConfi
     assertLive();
     const normalized = normalizePage(page);
     if (normalized === requested.page) {
-      if (!asyncSource.state.loading && (!hasLoaded || !isCommitted(requested))) await fetch(requested);
+      await ensureLoaded();
       return;
     }
     requested = { ...requested, page: normalized };
@@ -76,7 +83,7 @@ export function createPageSource<T, TParams = undefined>(config: PageSourceConfi
       // TParams genuinely allows undefined keeps its params: use setParams for that.
       const params = update.params === undefined ? requested.params : update.params;
 
-      if (!isEqual(params, requested.params)) {
+      if (!sameParams(params, requested.params)) {
         // The committed page count belongs to the previous params, so clamping here
         // would clamp to a stale bound. The requested page is validated and sent as
         // given; the response recomputes pagination from real totals.
@@ -94,7 +101,7 @@ export function createPageSource<T, TParams = undefined>(config: PageSourceConfi
         return;
       }
 
-      if (!asyncSource.state.loading && (!hasLoaded || !isCommitted(requested))) await fetch(requested);
+      await ensureLoaded();
     },
 
     get disposalSignal() {
@@ -119,7 +126,8 @@ export function createPageSource<T, TParams = undefined>(config: PageSourceConfi
 
     async next() {
       assertLive();
-      if (!hasLoaded || requested.page < asyncSource.state.pagination.pageCount) await goTo(requested.page + 1);
+      if (!hasLoaded) await goTo(1);
+      else if (requested.page < asyncSource.state.pagination.pageCount) await goTo(requested.page + 1);
     },
 
     async previous() {
@@ -135,7 +143,7 @@ export function createPageSource<T, TParams = undefined>(config: PageSourceConfi
       assertLive();
       const normalized = positiveInteger(pageSize, 'pageSize');
       if (normalized === requested.pageSize && requested.page === 1) {
-        if (!asyncSource.state.loading && !isCommitted(requested)) await fetch(requested);
+        await ensureLoaded();
         return;
       }
       requested = { ...requested, page: 1, pageSize: normalized };
@@ -144,8 +152,8 @@ export function createPageSource<T, TParams = undefined>(config: PageSourceConfi
 
     async setParams(params) {
       assertLive();
-      if (Object.is(params, requested.params)) {
-        if (!asyncSource.state.loading && !isCommitted(requested)) await fetch(requested);
+      if (sameParams(params, requested.params)) {
+        await ensureLoaded();
         return;
       }
       requested = { ...requested, page: 1, params };

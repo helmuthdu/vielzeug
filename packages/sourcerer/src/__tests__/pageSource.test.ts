@@ -153,6 +153,57 @@ describe('createPageSource', () => {
     expect(source.state.error?.message).toBe('totalItems must be a non-negative integer');
   });
 
+  it('rolls navigation back to the committed page when the current load fails', async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [1], totalItems: 9 })
+      .mockRejectedValueOnce('offline')
+      .mockResolvedValue({ items: [2], totalItems: 9 });
+    const source = createPageSource<number>({ load, pageSize: 2 });
+    await source.reload();
+
+    await expect(source.next()).rejects.toThrow('offline');
+    expect(source.state.pagination.page).toBe(1);
+
+    // The retry moves to page two, not past it.
+    await source.next();
+    expect(load).toHaveBeenLastCalledWith({
+      page: 2,
+      pageSize: 2,
+      params: undefined,
+      signal: expect.any(AbortSignal),
+    });
+    expect(source.state.pagination.page).toBe(2);
+  });
+
+  it('treats a structurally equal setParams as unchanged', async () => {
+    const load = vi.fn(async () => ({ items: ['a'], totalItems: 5 }));
+    const source = createPageSource<string, { search: string }>({ load, params: { search: '' } });
+    await source.goTo(3);
+    expect(load).toHaveBeenCalledOnce();
+
+    await source.setParams({ search: '' });
+    await source.setParams({ search: '' });
+
+    expect(load).toHaveBeenCalledOnce();
+    expect(source.state.pagination.page).toBe(3);
+  });
+
+  it('loads page one from next() before anything is committed', async () => {
+    const load = vi.fn(async ({ page }: { page: number }) => ({ items: [page], totalItems: 5 }));
+    const source = createPageSource({ load, pageSize: 2 });
+
+    await source.next();
+
+    expect(load).toHaveBeenCalledOnce();
+    expect(load).toHaveBeenLastCalledWith({
+      page: 1,
+      pageSize: 2,
+      params: undefined,
+      signal: expect.any(AbortSignal),
+    });
+  });
+
   describe('apply', () => {
     const makeSource = (load: ReturnType<typeof vi.fn>) =>
       createPageSource<string, { search: string }>({ load, pageSize: 2, params: { search: '' } });

@@ -1,43 +1,14 @@
-import { abortError } from '@vielzeug/arsenal';
+import { abortable } from '@vielzeug/arsenal';
 
 import { SourcererDisposedError } from './errors';
 import { createRequestController, toError } from './requestController';
 import { createSourceStore } from './sourceStore';
 
-const loadWithSignal = <T>(load: (signal: AbortSignal) => Promise<T>, signal: AbortSignal): Promise<T> =>
-  new Promise((resolve, reject) => {
-    const abort = (): void => reject(abortError(signal, 'The operation was aborted.'));
-    if (signal.aborted) {
-      abort();
-      return;
-    }
-
-    signal.addEventListener('abort', abort, { once: true });
-    let result: Promise<T>;
-    try {
-      result = load(signal);
-    } catch (error) {
-      signal.removeEventListener('abort', abort);
-      reject(error);
-      return;
-    }
-
-    result.then(
-      (value) => {
-        signal.removeEventListener('abort', abort);
-        resolve(value);
-      },
-      (error: unknown) => {
-        signal.removeEventListener('abort', abort);
-        reject(error);
-      },
-    );
-  });
-
 type FetchOptions<TState, TResult> = {
   load(signal: AbortSignal): Promise<TResult>;
   success(result: TResult): TState;
-  commit?(state: TState, result: TResult): void;
+  /** Runs right before the successful state commits; only for the current request. */
+  commit?(): void;
   pending(previous: TState): TState;
   failure(previous: TState, error: Error): TState;
 };
@@ -78,11 +49,11 @@ export function createAsyncSource<TState>(initial: TState): AsyncSource<TState> 
       store.set(options.pending(previous));
 
       try {
-        const result = await loadWithSignal(options.load, request.signal);
+        const result = await abortable(options.load(request.signal), request.signal);
         if (!request.isCurrent() || store.disposed) return;
 
         const state = options.success(result);
-        options.commit?.(state, result);
+        options.commit?.();
         store.set(state);
       } catch (reason: unknown) {
         if (!request.isCurrent() || store.disposed) return;

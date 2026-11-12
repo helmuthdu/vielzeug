@@ -1,7 +1,9 @@
+import { isEqual } from '@vielzeug/arsenal';
+
 import { SourcererDisposedError } from './errors';
-import { createPagePagination, positiveInteger } from './pagination';
+import { createPagePagination, positiveInteger, sameParams } from './pagination';
 import { createSourceStore } from './sourceStore';
-import type { LocalSource, LocalSourceConfig, LocalSourceState, PagePagination } from './types';
+import type { LocalSource, LocalSourceConfig, LocalSourceState } from './types';
 
 /** Local sources filter and paginate an in-memory collection synchronously. */
 export function createLocalSource<T>(items: readonly T[]): LocalSource<T>;
@@ -40,17 +42,9 @@ export function createLocalSource<T, TParams = undefined>(
   const assertLive = (): void => {
     if (store.disposed) throw new SourcererDisposedError();
   };
-  const samePagination = (left: PagePagination, right: PagePagination): boolean =>
-    Object.keys(left).every((key) => left[key as keyof PagePagination] === right[key as keyof PagePagination]);
   const commit = (): void => {
     const next = buildState();
-    const current = store.value;
-    const sameItems =
-      next.items.length === current.items.length &&
-      next.items.every((item, index) => Object.is(item, current.items[index]));
-
-    if (Object.is(next.params, current.params) && sameItems && samePagination(next.pagination, current.pagination))
-      return;
+    if (isEqual(next, store.value)) return;
     store.set(next);
   };
   const goTo = (nextPage: number): void => {
@@ -110,7 +104,7 @@ export function createLocalSource<T, TParams = undefined>(
 
     setParams(nextParams) {
       assertLive();
-      if (Object.is(nextParams, params)) return;
+      if (sameParams(nextParams, params)) return;
       page = 1;
       params = nextParams;
       commit();

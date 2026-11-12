@@ -1,6 +1,6 @@
 import { createAsyncSource } from './asyncSource';
 import { SourcererConfigurationError, SourcererDisposedError } from './errors';
-import { positiveInteger, totalItems } from './pagination';
+import { positiveInteger, sameParams, totalItems } from './pagination';
 import type { CursorPagination, CursorResult, CursorSource, CursorSourceConfig, CursorSourceState } from './types';
 
 type Request<TParams, TCursor> = Readonly<{
@@ -28,12 +28,15 @@ export function createCursorSource<T, TParams = undefined, TCursor = string>(
     throw new SourcererConfigurationError('Cursor source cannot start with both after and before');
   }
 
-  let requested: Request<TParams, TCursor> = {
+  const initial: Request<TParams, TCursor> = {
     ...(config.after !== undefined && { after: config.after }),
     ...(config.before !== undefined && { before: config.before }),
     pageSize: positiveInteger(config.pageSize ?? 20, 'pageSize'),
     params: config.params as TParams,
   };
+  let requested: Request<TParams, TCursor> = initial;
+  let committed: Request<TParams, TCursor> = initial;
+  let hasLoaded = false;
   const asyncSource = createAsyncSource<CursorSourceState<T, TParams, TCursor>>({
     error: null,
     items: [],
@@ -44,16 +47,31 @@ export function createCursorSource<T, TParams = undefined, TCursor = string>(
   const assertLive = (): void => {
     if (asyncSource.disposed) throw new SourcererDisposedError();
   };
+  const ensureLoaded = async (): Promise<void> => {
+    // While idle, `requested` always matches the committed request, so the only
+    // missing work is the first load (which a failure rolls back to).
+    if (!asyncSource.state.loading && !hasLoaded) await fetch(requested);
+  };
 
   const fetch = (request: Request<TParams, TCursor>): Promise<void> =>
     asyncSource.fetch({
-      failure: (previous, error) => ({ ...previous, error, loading: false, pendingParams: undefined }),
+      commit: () => {
+        hasLoaded = true;
+        committed = request;
+        requested = request;
+      },
+      // Only the current request reaches `failure` (superseded work settles silently),
+      // so the desired request rolls back and never mixes new params with stale cursors.
+      failure: (previous, error) => {
+        requested = committed;
+        return { ...previous, error, loading: false, pendingParams: undefined };
+      },
       load: (signal) => config.load({ ...request, signal }),
       pending: (previous) => ({
         ...previous,
         error: null,
         loading: true,
-        ...(Object.is(request.params, previous.params) ? {} : { pendingParams: request.params }),
+        ...(sameParams(request.params, previous.params) ? {} : { pendingParams: request.params }),
       }),
       success: (result) => ({
         error: null,
@@ -98,14 +116,9 @@ export function createCursorSource<T, TParams = undefined, TCursor = string>(
     async setPageSize(pageSize) {
       assertLive();
       const normalized = positiveInteger(pageSize, 'pageSize');
-      if (normalized === requested.pageSize && requested.after === undefined && requested.before === undefined) {
-        if (
-          asyncSource.state.loading ||
-          (asyncSource.state.pagination.pageSize === normalized &&
-            Object.is(asyncSource.state.params, requested.params))
-        )
-          return;
-        await fetch(requested);
+      const onFirstPage = requested.after === undefined && requested.before === undefined;
+      if (normalized === requested.pageSize && onFirstPage) {
+        await ensureLoaded();
         return;
       }
       requested = { pageSize: normalized, params: requested.params };
@@ -114,8 +127,8 @@ export function createCursorSource<T, TParams = undefined, TCursor = string>(
 
     async setParams(params) {
       assertLive();
-      if (Object.is(params, requested.params)) {
-        if (!asyncSource.state.loading && !Object.is(params, asyncSource.state.params)) await fetch(requested);
+      if (sameParams(params, requested.params)) {
+        await ensureLoaded();
         return;
       }
       requested = { pageSize: requested.pageSize, params };
