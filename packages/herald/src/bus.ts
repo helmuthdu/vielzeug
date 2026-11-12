@@ -1,4 +1,4 @@
-import { warn as _internalWarn } from './_dev';
+import { warn } from './_dev';
 import { BusDisposedError } from './errors';
 import type {
   Bus,
@@ -13,18 +13,10 @@ import type {
 } from './types';
 
 // Module-scoped noop: shared across all bus instances to avoid per-bus allocation.
-/** @internal */
-export const noop = () => {};
+const noop = () => {};
 
 type Entry = { fn: Listener<unknown>; unsub: () => void };
 type WildcardEntry = { fn: (event: string, payload: unknown) => void; unsub: () => void };
-
-type RegisterEntryOpts<T extends EventMap> = {
-  event?: EventKey<T>;
-  onLog: string;
-  onRemove?: () => void;
-  wildcard?: boolean;
-};
 
 export function createBus<T extends EventMap = Record<string, unknown>>(options?: BusOptions): Bus<T> {
   const listeners = new Map<string, Set<Entry>>();
@@ -36,7 +28,6 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
   const busTag = busName ? ` (${busName})` : '';
 
   function emitTap(event: HeraldEvent<T>): void {
-    if (tappers.size === 0) return;
     for (const tapper of tappers) {
       try {
         tapper(event);
@@ -46,59 +37,46 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
     }
   }
 
-  function doWarn(msg: string): void {
-    _internalWarn(msg);
-  }
-
-  function createSubscriptionScope(signal?: AbortSignal): AbortSignal {
+  function subscriptionSignal(signal?: AbortSignal): AbortSignal {
     return signal ? AbortSignal.any([disposeController.signal, signal]) : disposeController.signal;
   }
 
-  function registerEntry<E extends { unsub: () => void }>(
+  function register<E extends { unsub: () => void }>(
     container: Set<E>,
     makeEntry: (unsub: () => void) => E,
     signal: AbortSignal,
-    { event, onLog, onRemove, wildcard }: RegisterEntryOpts<T>,
-  ): () => void {
+    label: string,
+    tapEvents: { readonly subscribe: HeraldEvent<T>; readonly unsubscribe: HeraldEvent<T> },
+  ): Unsubscribe {
     if (signal.aborted) return noop;
 
     let called = false;
 
-    function unsub() {
+    function unsub(): void {
       if (called) return;
 
       called = true;
       container.delete(entry);
-      onRemove?.();
       signal.removeEventListener('abort', unsub);
-
-      if (event !== undefined) emitTap({ event, type: 'unsubscribe' });
-      else if (wildcard) emitTap({ type: 'unsubscribe-any' });
+      emitTap(tapEvents.unsubscribe);
     }
 
     const entry = makeEntry(unsub);
 
     container.add(entry);
     signal.addEventListener('abort', unsub, { once: true });
-
-    if (event !== undefined) emitTap({ event, type: 'subscribe' });
-    else if (wildcard) emitTap({ type: 'subscribe-any' });
+    emitTap(tapEvents.subscribe);
 
     if (maxListeners !== undefined && container.size > maxListeners) {
-      doWarn(
-        `${onLog} has ${container.size} listeners, exceeding maxListeners (${maxListeners}). Possible memory leak.${busTag}`,
+      warn(
+        `${label} has ${container.size} listeners, exceeding maxListeners (${maxListeners}). Possible memory leak.${busTag}`,
       );
     }
 
     return unsub;
   }
 
-  function onWithSignal<K extends EventKey<T>>(
-    event: K,
-    listener: Listener<T[K]>,
-    signal: AbortSignal,
-    onRemove?: () => void,
-  ): () => void {
+  function onScoped<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal: AbortSignal): Unsubscribe {
     let set = listeners.get(event);
 
     if (!set) {
@@ -106,82 +84,62 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
       listeners.set(event, set);
     }
 
-    const capturedSet = set;
-
-    return registerEntry(capturedSet, (unsub) => ({ fn: listener as Listener<unknown>, unsub }), signal, {
-      event,
-      onLog: `on("${event}")`,
-      onRemove: () => {
-        if (capturedSet.size === 0) listeners.delete(event);
-
-        onRemove?.();
-      },
+    return register(set, (unsub) => ({ fn: listener as Listener<unknown>, unsub }), signal, `on("${event}")`, {
+      subscribe: { event, type: 'subscribe' },
+      unsubscribe: { event, type: 'unsubscribe' },
     });
   }
 
-  function onAnyWithSignal(
-    listener: (event: EventKey<T>, payload: unknown) => void,
-    signal: AbortSignal,
-    onRemove?: () => void,
-  ): () => void {
-    return registerEntry(
+  function onAnyScoped(listener: (event: EventKey<T>, payload: unknown) => void, signal: AbortSignal): Unsubscribe {
+    return register(
       wildcards,
       (unsub) => ({ fn: listener as (event: string, payload: unknown) => void, unsub }),
       signal,
-      { onLog: 'onAny', onRemove, wildcard: true },
+      'onAny',
+      {
+        subscribe: { type: 'subscribe-any' },
+        unsubscribe: { type: 'unsubscribe-any' },
+      },
     );
   }
 
-  function onceWithSignal<K extends EventKey<T>>(
-    event: K,
-    listener: Listener<T[K]>,
-    signal: AbortSignal,
-    onRemove?: () => void,
-  ): () => void {
-    const ref = { unsub: noop as Unsubscribe };
-
-    ref.unsub = onWithSignal(
+  // The wrapper calls `unsub` only when the listener runs, which is always after the
+  // assignment completed; no indirection object is needed.
+  function onceScoped<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal: AbortSignal): Unsubscribe {
+    const unsub = onScoped(
       event,
       (payload) => {
-        ref.unsub();
+        unsub();
         listener(payload);
       },
       signal,
-      onRemove,
     );
 
-    return ref.unsub;
+    return unsub;
   }
 
-  function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): () => void {
-    return onWithSignal(event, listener, createSubscriptionScope(opts?.signal));
+  function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe {
+    return onScoped(event, listener, subscriptionSignal(opts?.signal));
   }
 
-  function once<K extends EventKey<T>>(
-    event: K,
-    listener: Listener<T[K]>,
-    opts?: { signal?: AbortSignal },
-  ): () => void {
-    const signal = createSubscriptionScope(opts?.signal);
-
-    return onceWithSignal(event, listener, signal);
+  function once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe {
+    return onceScoped(event, listener, subscriptionSignal(opts?.signal));
   }
 
-  function onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): () => void {
-    return onAnyWithSignal(listener, createSubscriptionScope(opts?.signal));
+  function onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): Unsubscribe {
+    return onAnyScoped(listener, subscriptionSignal(opts?.signal));
   }
 
-  function wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]> {
-    const signal = createSubscriptionScope(opts?.signal);
-
+  // `signal` must already combine bus disposal with any caller-provided signal.
+  function waitScoped<K extends EventKey<T>>(event: K, signal: AbortSignal): Promise<T[K]> {
     if (signal.aborted) return Promise.reject(signal.reason);
 
     return new Promise<T[K]>((resolve, reject) => {
-      const onAbort = () => {
+      const onAbort = (): void => {
         reject(signal.reason);
       };
 
-      onceWithSignal(
+      onceScoped(
         event,
         (payload) => {
           signal.removeEventListener('abort', onAbort);
@@ -191,6 +149,34 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
       );
 
       signal.addEventListener('abort', onAbort, { once: true });
+    });
+  }
+
+  function wait<K extends EventKey<T>>(event: K, opts?: SubscribeOptions): Promise<T[K]> {
+    return waitScoped(event, subscriptionSignal(opts?.signal));
+  }
+
+  function waitAny<const K extends readonly EventKey<T>[]>(
+    eventList: K,
+    opts?: SubscribeOptions,
+  ): Promise<WaitAnyResult<T, K>> {
+    if (eventList.length === 0) {
+      throw new TypeError('waitAny() requires at least one event name');
+    }
+
+    // One-shot `wait()` per event sharing one signal: an internal controller aborts the
+    // loser subscriptions once one resolves, and `Promise.race` provides the settled-once
+    // winner/loser semantics, rejection with the composite signal's reason included.
+    const raceController = new AbortController();
+    const raceSignal = AbortSignal.any([subscriptionSignal(opts?.signal), raceController.signal]);
+    const waiters = eventList.map((event) => waitScoped(event, raceSignal).then((payload) => ({ event, payload })));
+
+    // Losers reject through the cleanup abort: keep every rejection observed.
+    for (const waiter of waiters) waiter.catch(noop);
+
+    return Promise.race(waiters).then((result) => {
+      raceController.abort();
+      return result as WaitAnyResult<T, K>;
     });
   }
 
@@ -252,20 +238,28 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
     return wildcards.size;
   }
 
+  // Empty sets stay in `listeners` after their last listener leaves (removing them eagerly
+  // on unsubscribe is what previously corrupted re-registered listeners); filter here instead.
   function eventNames(): EventKey<T>[] {
-    return [...listeners.keys()] as EventKey<T>[];
+    const active: EventKey<T>[] = [];
+
+    for (const [event, set] of listeners) {
+      if (set.size > 0) active.push(event as EventKey<T>);
+    }
+
+    return active;
   }
 
-  function tap(handler: (event: HeraldEvent<T>) => void, opts?: { signal?: AbortSignal }): () => void {
-    if (disposeController.signal.aborted) return noop;
-
-    const signal = createSubscriptionScope(opts?.signal);
+  function tap(handler: (event: HeraldEvent<T>) => void, opts?: SubscribeOptions): Unsubscribe {
+    const signal = subscriptionSignal(opts?.signal);
 
     if (signal.aborted) return noop;
 
     tappers.add(handler);
 
-    const onAbort = () => tappers.delete(handler);
+    const onAbort = (): void => {
+      tappers.delete(handler);
+    };
 
     signal.addEventListener('abort', onAbort, { once: true });
 
@@ -273,54 +267,6 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
       tappers.delete(handler);
       signal.removeEventListener('abort', onAbort);
     };
-  }
-
-  function waitAny<K extends readonly EventKey<T>[]>(
-    eventList: K,
-    opts?: { signal?: AbortSignal },
-  ): Promise<WaitAnyResult<T, K>> {
-    const activeSignal = createSubscriptionScope(opts?.signal);
-
-    if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
-
-    return new Promise<WaitAnyResult<T, K>>((resolve, reject) => {
-      const raceController = new AbortController();
-      const raceSignal = AbortSignal.any([activeSignal, raceController.signal]);
-      const unsubs: Unsubscribe[] = [];
-      let settled = false;
-
-      function cleanup(): void {
-        activeSignal.removeEventListener('abort', onAbort);
-        raceController.abort();
-        for (const unsub of unsubs) unsub();
-      }
-
-      function onAbort(): void {
-        if (settled) return;
-
-        settled = true;
-        cleanup();
-        reject(activeSignal.reason);
-      }
-
-      activeSignal.addEventListener('abort', onAbort, { once: true });
-
-      for (const event of eventList) {
-        unsubs.push(
-          onceWithSignal(
-            event as EventKey<T>,
-            (payload) => {
-              if (settled) return;
-
-              settled = true;
-              cleanup();
-              resolve({ event, payload } as WaitAnyResult<T, K>);
-            },
-            raceSignal,
-          ),
-        );
-      }
-    });
   }
 
   function dispose(): void {

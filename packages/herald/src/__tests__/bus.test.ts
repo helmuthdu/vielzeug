@@ -910,6 +910,31 @@ describe('createBus - waitAny() edge cases', () => {
 
     bus.dispose();
   });
+
+  it('throws a TypeError when the event list is empty', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(() => bus.waitAny([])).toThrow(TypeError);
+
+    bus.dispose();
+  });
+
+  it('unsubscribes every losing listener once a waiter wins', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.onAny(vi.fn()); // keep listenerCount() meaningful: only waitAny subscriptions active
+    const pending = bus.waitAny(['count', 'greet']);
+
+    expect(bus.listenerCount()).toBe(2);
+
+    bus.emit('count', 1);
+
+    return pending.then(() => {
+      expect(bus.listenerCount()).toBe(0);
+      expect(bus.eventNames()).toEqual([]);
+      bus.dispose();
+    });
+  });
 });
 
 describe('createBus - maxListeners warning', () => {

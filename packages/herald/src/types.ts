@@ -4,10 +4,11 @@ export type Listener<T> = (payload: T) => void;
 export type Unsubscribe = () => void;
 
 /**
- * Options for a single-event subscription. Passed as the third argument to `bus.on()`.
+ * Options accepted by every subscription-shaped method: `on`, `once`, `onAny`,
+ * `tap`, `wait`, and `waitAny`.
  */
 export type SubscribeOptions = {
-  /** Auto-remove the listener when this signal aborts. */
+  /** End the subscription or pending wait when this signal aborts. */
   signal?: AbortSignal;
 };
 
@@ -81,22 +82,20 @@ export type Bus<T extends EventMap> = {
   /**
    * Subscribe once: auto-unsubscribes after the first emit. Stops early when the signal aborts.
    */
-  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: { signal?: AbortSignal }): Unsubscribe;
+  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe;
   /**
    * Resolve on the next emit of the given event.
    * Rejects with `BusDisposedError` if the bus is disposed before the event fires,
    * or with the signal's reason if the signal aborts.
    */
-  wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]>;
+  wait<K extends EventKey<T>>(event: K, opts?: SubscribeOptions): Promise<T[K]>;
   /**
    * Resolve when any of the listed events fires first. Accepts one or more event keys.
    * Returns a typed `{ event, payload }` discriminated union.
    * Rejects with `BusDisposedError` if the bus is disposed, or with the signal's reason if the signal aborts.
+   * Throws a synchronous `TypeError` when the list is empty.
    */
-  waitAny<const K extends readonly EventKey<T>[]>(
-    events: K,
-    opts?: { signal?: AbortSignal },
-  ): Promise<WaitAnyResult<T, K>>;
+  waitAny<const K extends readonly EventKey<T>[]>(events: K, opts?: SubscribeOptions): Promise<WaitAnyResult<T, K>>;
   /**
    * Number of active wildcard (`onAny`) listeners.
    */
@@ -105,5 +104,5 @@ export type Bus<T extends EventMap> = {
    * Observe runtime events (emit, subscribe, unsubscribe, error, dispose) without
    * affecting bus behavior. Handler errors are swallowed. Returns an unsubscribe function.
    */
-  tap(handler: (event: HeraldEvent<T>) => void, options?: { signal?: AbortSignal }): Unsubscribe;
+  tap(handler: (event: HeraldEvent<T>) => void, options?: SubscribeOptions): Unsubscribe;
 };

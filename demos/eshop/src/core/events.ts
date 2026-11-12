@@ -2,9 +2,6 @@ import { createBus } from '@vielzeug/herald';
 
 import type { OrderStatus } from './types';
 
-// A `type` alias (not `interface`): herald's `createBus<T extends EventMap>()` constrains T to
-// `Record<string, unknown>`, which only type literals satisfy structurally. Same convention as
-// demos/crm/src/core/events.ts.
 export type AppEvents = {
   'cart:item-added': { modelId: string };
   'cart:item-removed': { itemId: string };

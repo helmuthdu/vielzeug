@@ -73,12 +73,12 @@ type Bus<T extends EventMap> = {
   listenerCount(event?: EventKey<T>): number;
   on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, options?: SubscribeOptions): Unsubscribe;
   onAny(listener: (event: EventKey<T>, payload: unknown) => void, options?: SubscribeOptions): Unsubscribe;
-  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, options?: { signal?: AbortSignal }): Unsubscribe;
-  tap(handler: (event: HeraldEvent<T>) => void, options?: { signal?: AbortSignal }): Unsubscribe;
-  wait<K extends EventKey<T>>(event: K, options?: { signal?: AbortSignal }): Promise<T[K]>;
+  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, options?: SubscribeOptions): Unsubscribe;
+  tap(handler: (event: HeraldEvent<T>) => void, options?: SubscribeOptions): Unsubscribe;
+  wait<K extends EventKey<T>>(event: K, options?: SubscribeOptions): Promise<T[K]>;
   waitAny<const K extends readonly EventKey<T>[]>(
     events: K,
-    options?: { signal?: AbortSignal },
+    options?: SubscribeOptions,
   ): Promise<WaitAnyResult<T, K>>;
   wildcardCount(): number;
 };
@@ -98,7 +98,7 @@ type SubscribeOptions = { signal?: AbortSignal };
 type Unsubscribe = () => void;
 ```
 
-`on()` returns an idempotent unsubscribe function. `once()` is the one-shot variant: it unsubscribes before invoking the listener. An already-aborted signal creates no subscription.
+`SubscribeOptions` is the single options type for every subscription-shaped method: `on`, `once`, `onAny`, `tap`, `wait`, and `waitAny`. `on()` returns an idempotent unsubscribe function. `once()` is the one-shot variant: it unsubscribes before invoking the listener. An already-aborted signal creates no subscription.
 
 ### `onAny()`
 
@@ -110,7 +110,7 @@ Resolves with the next payload for one event. It rejects with the external signa
 
 ### `waitAny()`
 
-Accepts one or more event keys. It resolves once with a typed `{ event, payload }` discriminated union and removes every losing subscription.
+Accepts one or more event keys. It resolves once with a typed `{ event, payload }` discriminated union and removes every losing subscription. An empty list throws a synchronous `TypeError`.
 
 ```ts
 const result = await bus.waitAny(['count', 'ready']);

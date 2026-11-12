@@ -69,7 +69,7 @@ const result = await bus.waitAny(['cart:updated', 'user:logout'], {
 if (result.event === 'cart:updated') console.log(result.payload.count);
 ```
 
-These methods do not replay earlier events. External cancellation rejects with the signal reason. Bus disposal rejects pending waits with `BusDisposedError`.
+These methods do not replay earlier events. External cancellation rejects with the signal reason. Bus disposal rejects pending waits with `BusDisposedError`. `waitAny()` with an empty event list throws a synchronous `TypeError`.
 
 ## Handle Listener Failures
 
