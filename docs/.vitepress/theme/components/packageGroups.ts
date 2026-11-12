@@ -16,23 +16,33 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
       { id: 'flux', tagline: 'Reactive streams & operators' },
       { id: 'herald', tagline: 'Typed event bus' },
       { id: 'ripple', tagline: 'Signals, computed, effects' },
+      { id: 'sentinel', tagline: 'Reactive environment state' },
     ],
   },
   {
     icon: 'database',
     id: 'data',
-    name: 'Data & Connectivity',
+    name: 'Data & Formats',
     packages: [
       { id: 'archive', tagline: 'Community archive core' },
+      { id: 'patchwork', tagline: 'RFC 6902 JSON Patch' },
+      { id: 'scout', tagline: 'Trigram fuzzy search' },
+      { id: 'tabula', tagline: 'Typed CSV & TSV' },
+      { id: 'vault', tagline: 'Browser storage' },
+    ],
+  },
+  {
+    icon: 'network',
+    id: 'connectivity',
+    name: 'Network & Sync',
+    packages: [
       { id: 'courier', tagline: 'HTTP client & caching' },
       { id: 'mesh', tagline: 'Backendless P2P sessions' },
       { id: 'postmaster', tagline: 'Durable job outbox' },
       { id: 'pulse', tagline: 'WebSocket client & presence' },
-      { id: 'scout', tagline: 'Trigram fuzzy search' },
+      { id: 'sourcerer', tagline: 'Reactive data sources' },
       { id: 'tandem', tagline: 'Offline-first sync engine' },
       { id: 'tavern', tagline: 'Table session replication over mesh' },
-      { id: 'sourcerer', tagline: 'Reactive data sources' },
-      { id: 'vault', tagline: 'Browser storage' },
     ],
   },
   {
@@ -44,29 +54,47 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
       { id: 'familiar', tagline: 'Web Worker pool' },
       { id: 'ledger', tagline: 'Async undo / redo history' },
       { id: 'sandbox', tagline: 'Sandboxed iframe runtime' },
-      { id: 'ward', tagline: 'RBAC & permissions' },
       { id: 'wayfinder', tagline: 'Client-side routing' },
+      { id: 'ward', tagline: 'RBAC & permissions' },
+    ],
+  },
+  {
+    icon: 'check-square',
+    id: 'domain',
+    name: 'Forms & Domain Logic',
+    packages: [
+      { id: 'coins', tagline: 'Monetary arithmetic' },
+      { id: 'forge', tagline: 'Form state & validation' },
+      { id: 'lingua', tagline: 'i18n & pluralization' },
+      { id: 'spell', tagline: 'Schema validation' },
+      { id: 'tempo', tagline: 'Date & time' },
+    ],
+  },
+  {
+    icon: 'layout-grid',
+    id: 'ui',
+    name: 'UI Components',
+    packages: [
+      { id: 'beacon', tagline: 'Product tours & onboarding' },
+      { id: 'necromancer', tagline: 'Web Animations API primitives' },
+      { id: 'ore', tagline: 'Web component primitives' },
+      { id: 'prism', tagline: 'SVG charts' },
+      { id: 'refine', tagline: 'Accessible components' },
+      { id: 'scribe', tagline: 'Safe Markdown prose' },
+      { id: 'sigil', tagline: 'QR generation & scanning' },
     ],
   },
   {
     icon: 'mouse-pointer-click',
     id: 'interaction',
-    name: 'Interaction & UI',
+    name: 'Interaction',
     packages: [
-      { id: 'beacon', tagline: 'Product tours & onboarding' },
       { id: 'dnd', tagline: 'Drag & drop' },
       { id: 'focus', tagline: 'Keyboard nav & focus restoration' },
       { id: 'gesture', tagline: 'Swipe gesture recognition' },
       { id: 'keymap', tagline: 'Keyboard shortcuts & chords' },
-      { id: 'necromancer', tagline: 'Web Animations API primitives' },
       { id: 'orbit', tagline: 'Floating positioning' },
       { id: 'scroll', tagline: 'Virtual lists' },
-      { id: 'ore', tagline: 'Web component primitives' },
-      { id: 'prism', tagline: 'SVG charts' },
-      { id: 'refine', tagline: 'Accessible components' },
-      { id: 'scribe', tagline: 'Safe Markdown prose' },
-      { id: 'sentinel', tagline: 'Reactive environment state' },
-      { id: 'sigil', tagline: 'QR generation & scanning' },
     ],
   },
   {
@@ -78,20 +106,6 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
       { id: 'codex', tagline: 'AI / MCP server' },
       { id: 'illusionist', tagline: 'Fake data generator' },
       { id: 'rune', tagline: 'Structured logging' },
-    ],
-  },
-  {
-    icon: 'check-square',
-    id: 'domain',
-    name: 'Forms & Domain Logic',
-    packages: [
-      { id: 'coins', tagline: 'Monetary arithmetic' },
-      { id: 'forge', tagline: 'Form state & validation' },
-      { id: 'lingua', tagline: 'i18n & pluralization' },
-      { id: 'patchwork', tagline: 'RFC 6902 JSON Patch' },
-      { id: 'spell', tagline: 'Schema validation' },
-      { id: 'tabula', tagline: 'Typed CSV & TSV' },
-      { id: 'tempo', tagline: 'Date & time' },
     ],
   },
 ];
@@ -109,8 +123,8 @@ const requirePackageGroup = (id: string): PackageGroup => {
 // Explicit navbar column layout: keeps each column balanced as packages are added.
 // Columns render left-to-right; the menu's CSS grid places them in order.
 export const NAVBAR_COLUMNS: PackageGroup[][] = [
-  [requirePackageGroup('foundations'), requirePackageGroup('data')], // Foundations · Data & Connectivity
-  [requirePackageGroup('runtime'), requirePackageGroup('domain')], // Runtime & Architecture · Forms & Domain Logic
-  [requirePackageGroup('interaction')], // Interaction & UI
-  [requirePackageGroup('devtools')], // Developer Tools
+  [requirePackageGroup('foundations'), requirePackageGroup('data')], // Foundations · Data & Formats
+  [requirePackageGroup('connectivity'), requirePackageGroup('domain')], // Network & Sync · Forms & Domain Logic
+  [requirePackageGroup('runtime'), requirePackageGroup('interaction')], // Runtime & Architecture · Interaction
+  [requirePackageGroup('ui'), requirePackageGroup('devtools')], // UI Components · Developer Tools
 ];
