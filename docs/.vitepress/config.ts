@@ -1131,6 +1131,7 @@ export default defineConfig({
           items: [
             { link: '/ledger/examples/text-editor', text: 'Text Editor History' },
             { link: '/ledger/examples/form-history', text: 'Form History' },
+            { link: '/ledger/examples/json-delta-history', text: 'JSON Delta History' },
           ],
           link: '/ledger/examples',
           text: 'Examples',
