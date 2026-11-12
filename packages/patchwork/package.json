@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/patchwork",
-  "version": "26.11.14",
+  "version": "26.11.15",
   "description": "RFC 6902 JSON Patch: structural diff, immutable apply, and guarded tryApply for sync protocols.",
   "repository": {
     "type": "git",

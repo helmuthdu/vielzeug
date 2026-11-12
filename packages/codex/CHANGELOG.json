@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "chore(codex): refresh bundled docs data",
+            "commit": "658734318a8dd89bb6e821d22a63f0fee7fb8e16"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 23:04:49 GMT",
+      "tag": "@vielzeug/codex_v26.11.15",
+      "version": "26.11.15"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",
