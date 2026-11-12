@@ -13,7 +13,7 @@ import {
   KWD,
   money,
   sum,
-  toDecimal,
+  toDecimalString,
   toJSON,
   USD,
 } from '../index';
@@ -31,7 +31,7 @@ describe('currency definitions', () => {
   it('constructs immutable custom currencies from definitions', () => {
     const points = currency({ code: 'PTS', minorUnit: 0 });
 
-    expect(toDecimal(money('10', points))).toBe('10');
+    expect(toDecimalString(money('10', points))).toBe('10');
     expect(Object.isFrozen(points)).toBe(true);
     expect(currency({ code: 'PTS', minorUnit: 0 })).not.toBe(points);
     expect(() => currency({ code: 'lower', minorUnit: 0 })).toThrow(/uppercase/);
@@ -81,7 +81,7 @@ describe('aggregation', () => {
   it('uses count allocation and explicit clamp bounds', () => {
     expect(allocate(money(5n, USD, { unit: 'minor' }), 2).map((part) => part.amount)).toEqual([3n, 2n]);
     expect(allocate(money(-5n, USD, { unit: 'minor' }), 2).map((part) => part.amount)).toEqual([-3n, -2n]);
-    expect(toDecimal(clamp(money('12', USD), { max: money('10', USD), min: money('0', USD) }))).toBe('10.00');
+    expect(toDecimalString(clamp(money('12', USD), { max: money('10', USD), min: money('0', USD) }))).toBe('10.00');
   });
 
   it('rejects clamp min exceeding max with INVALID_RANGE', () => {

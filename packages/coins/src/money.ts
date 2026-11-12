@@ -1,6 +1,6 @@
-import { decimal, roundDivision, toDecimalString } from './_decimal';
+import { decimal, toDecimalString as minorToDecimalString, roundDivision } from './_decimal';
 import { currency, isCurrency } from './currency';
-import { CoinsError, CurrencyMismatchError } from './errors';
+import { CoinsError, currencyMismatch } from './errors';
 import type { Currency, Money, RoundingMode } from './types';
 
 const canonicalMoney = new WeakSet<object>();
@@ -210,10 +210,10 @@ export function round<C extends Currency>(
   return createMoney(roundDivision(value.amount, factor, rounding) * factor, value.currency);
 }
 
-export function toDecimal(value: Money): string {
+export function toDecimalString(value: Money): string {
   assertMoney(value);
 
-  return toDecimalString(value.amount, value.currency.minorUnit);
+  return minorToDecimalString(value.amount, value.currency.minorUnit);
 }
 
 export function createMoney<C extends Currency>(amount: bigint, currency: C): Money<C> {
@@ -235,7 +235,7 @@ function assertSameCurrency(left: Money, right: Money): void {
   assertMoney(right);
 
   if (left.currency !== right.currency) {
-    throw new CurrencyMismatchError(left.currency.code, right.currency.code);
+    throw currencyMismatch(left.currency.code, right.currency.code);
   }
 }
 

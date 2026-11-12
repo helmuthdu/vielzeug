@@ -1,6 +1,6 @@
 import type { Currency } from '@vielzeug/coins';
 
-import { EUR, exchange, exchangeRate, format as formatMoney, GBP, money, toDecimal, USD } from '@vielzeug/coins';
+import { EUR, exchange, exchangeRate, format as formatMoney, GBP, money, toDecimalString, USD } from '@vielzeug/coins';
 import { signal } from '@vielzeug/ripple';
 
 const RATES = {
@@ -38,7 +38,7 @@ export function toDisplayCurrency(usdAmount: string) {
 }
 
 export function displayAmount(usdAmount: string): string {
-  return toDecimal(convertUsd(usdAmount));
+  return toDecimalString(convertUsd(usdAmount));
 }
 
 export function displayAmountToUsd(amount: string): string {
@@ -46,11 +46,11 @@ export function displayAmountToUsd(amount: string): string {
 
   switch (currentCurrency.value.code) {
     case EUR.code:
-      return toDecimal(exchange(value, USD_RATES.EUR));
+      return toDecimalString(exchange(value, USD_RATES.EUR));
     case GBP.code:
-      return toDecimal(exchange(value, USD_RATES.GBP));
+      return toDecimalString(exchange(value, USD_RATES.GBP));
     default:
-      return toDecimal(value);
+      return toDecimalString(value);
   }
 }
 

@@ -1,4 +1,4 @@
-import { CoinsError, InvalidCurrencyError } from './errors';
+import { CoinsError, invalidCurrency } from './errors';
 import type { Currency, CurrencyCode } from './types';
 
 const builtins = new Map<string, Currency>();
@@ -37,7 +37,7 @@ export function currency<C extends string>(input: C | { code: C; minorUnit: numb
   if (typeof input === 'string') {
     const definition = builtins.get(input);
 
-    if (!definition) throw new InvalidCurrencyError(input);
+    if (!definition) throw invalidCurrency(input);
 
     return definition as Currency<C>;
   }

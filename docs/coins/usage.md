@@ -10,11 +10,11 @@ description: Construct exact money, aggregate values, convert currencies, and fo
 Construct decimal values with a currency definition. Coins stores minor units internally and never accepts implicit floating-point input.
 
 ```ts
-import { USD, add, money, toDecimal } from '@vielzeug/coins';
+import { USD, add, money, toDecimalString } from '@vielzeug/coins';
 
 const subtotal = add(money('12.50', USD), money('7.25', USD));
 
-console.log(toDecimal(subtotal)); // '19.75'
+console.log(toDecimalString(subtotal)); // '19.75'
 ```
 
 Use bigint only when data is already in minor units:
@@ -44,7 +44,7 @@ money('500', rewards);
 Pass plain decimal strings to scaling operations; exponent notation, signs such as `+1`, whitespace, and numeric inputs are rejected. `multiply()`, `divide()`, `exchange()`, `round()`, and visible formatting default to `halfAwayFromZero`; pass a named mode when accounting policy requires another rule.
 
 ```ts
-import { USD, divide, money, multiply, round, toDecimal } from '@vielzeug/coins';
+import { USD, divide, money, multiply, round, toDecimalString } from '@vielzeug/coins';
 
 const subtotal = money('19.99', USD);
 const taxed = multiply(subtotal, '1.08', { rounding: 'halfEven' });
@@ -54,7 +54,7 @@ const roundedInput = money('19.999', USD, { rounding: 'halfAwayFromZero' });
 const split = divide(taxed, '3', { rounding: 'floor' });
 const displayed = round(taxed, { fractionDigits: 0, rounding: 'halfAwayFromZero' });
 
-console.log(toDecimal(split), toDecimal(displayed));
+console.log(toDecimalString(split), toDecimalString(displayed));
 ```
 
 ## Aggregate and Allocate
@@ -62,15 +62,15 @@ console.log(toDecimal(split), toDecimal(displayed));
 `sum()` infers currency from non-empty values. Pass a canonical `{ currency }` for possibly empty iterables. `allocate()` preserves every minor unit, distributes remainders by largest fractional share with stable index ties, and applies the same allocation symmetrically to negative values. Counts and dense weight arrays are limited to 100,000 shares.
 
 ```ts
-import { USD, allocate, money, sum, toDecimal } from '@vielzeug/coins';
+import { USD, allocate, money, sum, toDecimalString } from '@vielzeug/coins';
 
 const total = sum([money('10.00', USD), money('5.00', USD)]);
 const zero = sum([], { currency: USD });
 const weighted = allocate(money('10.00', USD), ['1', '2', '1']);
 const even = allocate(money(5n, USD, { unit: 'minor' }), 2);
 
-console.log(toDecimal(total));
-console.log(weighted.map(toDecimal));
+console.log(toDecimalString(total));
+console.log(weighted.map(toDecimalString));
 console.log(even.map((value) => value.amount)); // [3n, 2n]
 ```
 

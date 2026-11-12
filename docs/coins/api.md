@@ -98,7 +98,7 @@ function round<C extends Currency>(
   value: Money<C>,
   options: { fractionDigits: number; rounding?: RoundingMode },
 ): Money<C>;
-function toDecimal(value: Money): string;
+function toDecimalString(value: Money): string;
 ```
 
 `factor` and `divisor` are plain decimal strings; exponent notation, whitespace, and a leading plus are invalid. Matching currency identity is required for binary operations. `round()` requires integer `fractionDigits` from 0 through the currency's `minorUnit`. Scaling and rounding default to `halfAwayFromZero`.
@@ -250,15 +250,6 @@ Every Coins failure extends `CoinsError` and exposes `code`.
 class CoinsError extends Error {
   readonly code: CoinsErrorCode;
 }
-
-class CurrencyMismatchError extends CoinsError {
-  readonly expected: string;
-  readonly received: string;
-}
-
-class InvalidCurrencyError extends CoinsError {
-  readonly value: unknown;
-}
 ```
 
-`CurrencyMismatchError` and `InvalidCurrencyError` are specialized `CoinsError` subclasses. Use `instanceof CoinsError` to narrow any value to the Coins error hierarchy.
+Every failure is a `CoinsError`; branch on the literal `code` union, not on subclasses, and read `message` (and `cause` when present) for details.

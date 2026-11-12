@@ -4,6 +4,36 @@ title: Coins Migration
 
 # Coins Migration
 
+## Breaking Changes Since 26.11.11
+
+The error surface was flattened and one function was renamed to match what it returns.
+
+### Single error class
+
+`CurrencyMismatchError` and `InvalidCurrencyError` were removed. Every Coins failure is now a `CoinsError` carrying the same literal `code` union (`'CURRENCY_MISMATCH'`, `'INVALID_CURRENCY'`, ...) that already covered the other eight failure kinds; mismatch details remain in `message`.
+
+```ts
+// Before
+import { CurrencyMismatchError } from '@vielzeug/coins';
+if (error instanceof CurrencyMismatchError) ...
+
+// After
+import { CoinsError } from '@vielzeug/coins';
+if (error instanceof CoinsError && error.code === 'CURRENCY_MISMATCH') ...
+```
+
+### `toDecimal()` becomes `toDecimalString()`
+
+The function always returned a plain decimal string; the old name collided with the public `Decimal` type (the bigint fraction behind `ExchangeRate.value`).
+
+```ts
+// Before
+toDecimal(total); // '19.75'
+
+// After
+toDecimalString(total); // '19.75'
+```
+
 ## Coins 3.0
 
 Coins 3.0 consolidates trust-boundary decoding and hardens runtime exactness, canonical currency invariants, allocation, exchange rates, and locale formatting. `USD`, `EUR`, `GBP`, `JPY`, `KRW`, `BHD`, and `KWD` remain canonical built-ins. The public `Decimal` type remains available because `ExchangeRate.value` exposes it.
@@ -69,13 +99,13 @@ const POINTS = currency({ code: 'PTS', minorUnit: 0 });
 
 ### Custom currencies must be shared
 
-Currency equality is reference-based. Two independently created custom currencies with the same code and scale are **not interchangeable**: `add()`, `sum()`, `subtract()`, `compare()`, `clamp()`, and `exchange()` will throw `CurrencyMismatchError` when mixing values created with different instances.
+Currency equality is reference-based. Two independently created custom currencies with the same code and scale are **not interchangeable**: `add()`, `sum()`, `subtract()`, `compare()`, `clamp()`, and `exchange()` will throw a `CURRENCY_MISMATCH` `CoinsError` when mixing values created with different instances.
 
 ```ts
 // Wrong: two distinct PTS instances
 const ptsA = currency({ code: 'PTS', minorUnit: 0 });
 const ptsB = currency({ code: 'PTS', minorUnit: 0 });
-add(money('1', ptsA), money('1', ptsB)); // throws CurrencyMismatchError
+add(money('1', ptsA), money('1', ptsB)); // throws CoinsError (CURRENCY_MISMATCH)
 
 // Right: single source of truth
 // currencies.ts

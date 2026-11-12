@@ -1,6 +1,6 @@
 import { decimal, lcm } from './_decimal';
 import { isCurrency } from './currency';
-import { CoinsError, CurrencyMismatchError } from './errors';
+import { CoinsError, currencyMismatch } from './errors';
 import { assertMoney, createMoney } from './money';
 import type { Currency, Money } from './types';
 
@@ -22,7 +22,7 @@ export function sum<C extends Currency>(values: Iterable<Money<C>>, options?: { 
     if (currency === undefined) {
       currency = value.currency;
     } else if (value.currency !== currency) {
-      throw new CurrencyMismatchError(currency.code, value.currency.code);
+      throw currencyMismatch(currency.code, value.currency.code);
     }
 
     amount += value.amount;

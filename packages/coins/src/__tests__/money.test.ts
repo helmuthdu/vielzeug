@@ -15,7 +15,7 @@ import {
   negate,
   round,
   subtract,
-  toDecimal,
+  toDecimalString,
   USD,
 } from '../index';
 
@@ -40,25 +40,25 @@ describe('money', () => {
   it('rejects ambiguous bigint and over-precise decimal construction', () => {
     expect(() => money(1999n as never, USD)).toThrow(/unit/);
     expect(() => money('19.999', USD)).toThrow(/provide rounding/);
-    expect(toDecimal(money('19.999', USD, { rounding: 'halfAwayFromZero' }))).toBe('20.00');
-    expect(toDecimal(money('-0.005', USD, { rounding: 'halfEven' }))).toBe('0.00');
+    expect(toDecimalString(money('19.999', USD, { rounding: 'halfAwayFromZero' }))).toBe('20.00');
+    expect(toDecimalString(money('-0.005', USD, { rounding: 'halfEven' }))).toBe('0.00');
   });
 
   it('preserves currency through arithmetic and all directed signs', () => {
     const subtotal = add(money('10.00', USD), money('2.50', USD));
 
-    expect(toDecimal(subtract(subtotal, money('0.50', USD)))).toBe('12.00');
-    expect(toDecimal(multiply(subtotal, '1.08'))).toBe('13.50');
-    expect(toDecimal(divide(subtotal, '2'))).toBe('6.25');
-    expect(toDecimal(divide(money('-0.05', USD), '2', { rounding: 'floor' }))).toBe('-0.03');
-    expect(toDecimal(divide(money('-0.05', USD), '2', { rounding: 'ceil' }))).toBe('-0.02');
+    expect(toDecimalString(subtract(subtotal, money('0.50', USD)))).toBe('12.00');
+    expect(toDecimalString(multiply(subtotal, '1.08'))).toBe('13.50');
+    expect(toDecimalString(divide(subtotal, '2'))).toBe('6.25');
+    expect(toDecimalString(divide(money('-0.05', USD), '2', { rounding: 'floor' }))).toBe('-0.03');
+    expect(toDecimalString(divide(money('-0.05', USD), '2', { rounding: 'ceil' }))).toBe('-0.02');
   });
 
   it('applies floor and ceil correctly with negative divisors', () => {
-    expect(toDecimal(divide(money('1', USD), '-3', { rounding: 'floor' }))).toBe('-0.34');
-    expect(toDecimal(divide(money('1', USD), '-3', { rounding: 'ceil' }))).toBe('-0.33');
-    expect(toDecimal(divide(money('-1', USD), '-3', { rounding: 'floor' }))).toBe('0.33');
-    expect(toDecimal(divide(money('-1', USD), '-3', { rounding: 'ceil' }))).toBe('0.34');
+    expect(toDecimalString(divide(money('1', USD), '-3', { rounding: 'floor' }))).toBe('-0.34');
+    expect(toDecimalString(divide(money('1', USD), '-3', { rounding: 'ceil' }))).toBe('-0.33');
+    expect(toDecimalString(divide(money('-1', USD), '-3', { rounding: 'floor' }))).toBe('0.33');
+    expect(toDecimalString(divide(money('-1', USD), '-3', { rounding: 'ceil' }))).toBe('0.34');
   });
 
   it('rejects division by zero', () => {
@@ -66,10 +66,10 @@ describe('money', () => {
   });
 
   it('abs and negate preserve currency and reject forgeries', () => {
-    expect(toDecimal(abs(money('-5.00', USD)))).toBe('5.00');
-    expect(toDecimal(abs(money('5.00', USD)))).toBe('5.00');
-    expect(toDecimal(negate(money('5.00', USD)))).toBe('-5.00');
-    expect(toDecimal(negate(money('-5.00', USD)))).toBe('5.00');
+    expect(toDecimalString(abs(money('-5.00', USD)))).toBe('5.00');
+    expect(toDecimalString(abs(money('5.00', USD)))).toBe('5.00');
+    expect(toDecimalString(negate(money('5.00', USD)))).toBe('-5.00');
+    expect(toDecimalString(negate(money('-5.00', USD)))).toBe('5.00');
     expect(() => abs(Object.freeze({ amount: 100n, currency: USD }) as never)).toThrow(/canonical/);
     expect(() => negate(Object.freeze({ amount: 100n, currency: USD }) as never)).toThrow(/canonical/);
   });
@@ -77,8 +77,8 @@ describe('money', () => {
   it('uses named rounding policy', () => {
     const value = money('1.55', USD);
 
-    expect(toDecimal(round(value, { fractionDigits: 1, rounding: 'halfEven' }))).toBe('1.60');
-    expect(toDecimal(round(value, { fractionDigits: 1, rounding: 'towardZero' }))).toBe('1.50');
+    expect(toDecimalString(round(value, { fractionDigits: 1, rounding: 'halfEven' }))).toBe('1.60');
+    expect(toDecimalString(round(value, { fractionDigits: 1, rounding: 'towardZero' }))).toBe('1.50');
   });
 
   it('compares canonical matching currencies and rejects forged values', () => {

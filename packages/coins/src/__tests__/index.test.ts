@@ -7,10 +7,8 @@ describe('public API', () => {
     expect(Object.keys(coins).sort()).toEqual([
       'BHD',
       'CoinsError',
-      'CurrencyMismatchError',
       'EUR',
       'GBP',
-      'InvalidCurrencyError',
       'JPY',
       'KRW',
       'KWD',
@@ -36,7 +34,7 @@ describe('public API', () => {
       'round',
       'subtract',
       'sum',
-      'toDecimal',
+      'toDecimalString',
       'toJSON',
     ]);
   });

@@ -1,6 +1,6 @@
 import { decimal, roundDivision } from './_decimal';
 import { isCurrency } from './currency';
-import { CoinsError, CurrencyMismatchError } from './errors';
+import { CoinsError, currencyMismatch } from './errors';
 import { assertMoney, createMoney } from './money';
 import type { Currency, ExchangeRate, Money, RoundingMode } from './types';
 
@@ -44,7 +44,7 @@ export function exchange<From extends Currency, To extends Currency>(
     throw new CoinsError('INVALID_EXCHANGE_RATE', 'Exchange requires a canonical exchange rate');
   }
 
-  if (value.currency !== rate.from) throw new CurrencyMismatchError(value.currency.code, rate.from.code);
+  if (value.currency !== rate.from) throw currencyMismatch(value.currency.code, rate.from.code);
 
   const numerator = value.amount * rate.value.numerator * 10n ** BigInt(rate.to.minorUnit);
   const denominator = rate.value.denominator * 10n ** BigInt(rate.from.minorUnit);

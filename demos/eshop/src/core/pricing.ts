@@ -1,4 +1,4 @@
-import { add, type Money, money, multiply, subtract, sum, toDecimal, USD } from '@vielzeug/coins';
+import { add, type Money, money, multiply, subtract, sum, toDecimalString, USD } from '@vielzeug/coins';
 
 import type { Configuration, Model, PriceBreakdown } from './types';
 
@@ -52,14 +52,14 @@ export function computePriceBreakdown(model: Model, configuration: Configuration
   const total = add(subtotal, tax);
 
   return {
-    base: toDecimal(base),
-    color: toDecimal(colorAmount),
-    packages: toDecimal(packagesAmount),
-    subtotal: toDecimal(subtotal),
-    tax: toDecimal(tax),
-    total: toDecimal(total),
-    trim: toDecimal(trimAmount),
-    wheels: toDecimal(wheelsAmount),
+    base: toDecimalString(base),
+    color: toDecimalString(colorAmount),
+    packages: toDecimalString(packagesAmount),
+    subtotal: toDecimalString(subtotal),
+    tax: toDecimalString(tax),
+    total: toDecimalString(total),
+    trim: toDecimalString(trimAmount),
+    wheels: toDecimalString(wheelsAmount),
   };
 }
 
@@ -70,16 +70,16 @@ export function summarizeCartPrice(breakdown: PriceBreakdown, discountRate = '0'
   const tax = multiply(discountedSubtotal, TAX_RATE);
 
   return {
-    discount: toDecimal(discount),
-    subtotal: toDecimal(subtotal),
-    tax: toDecimal(tax),
-    total: toDecimal(add(discountedSubtotal, tax)),
+    discount: toDecimalString(discount),
+    subtotal: toDecimalString(subtotal),
+    tax: toDecimalString(tax),
+    total: toDecimalString(add(discountedSubtotal, tax)),
   };
 }
 
 export function scaleBreakdown(breakdown: PriceBreakdown, quantity: number): PriceBreakdown {
   const factor = String(quantity);
-  const scale = (key: keyof PriceBreakdown): string => toDecimal(multiply(usd(breakdown[key]), factor));
+  const scale = (key: keyof PriceBreakdown): string => toDecimalString(multiply(usd(breakdown[key]), factor));
 
   return {
     base: scale('base'),
@@ -101,21 +101,21 @@ export function combineBreakdowns(breakdowns: PriceBreakdown[]): PriceBreakdown 
     );
 
   return {
-    base: toDecimal(pick('base')),
-    color: toDecimal(pick('color')),
-    packages: toDecimal(pick('packages')),
-    subtotal: toDecimal(pick('subtotal')),
-    tax: toDecimal(pick('tax')),
-    total: toDecimal(pick('total')),
-    trim: toDecimal(pick('trim')),
-    wheels: toDecimal(pick('wheels')),
+    base: toDecimalString(pick('base')),
+    color: toDecimalString(pick('color')),
+    packages: toDecimalString(pick('packages')),
+    subtotal: toDecimalString(pick('subtotal')),
+    tax: toDecimalString(pick('tax')),
+    total: toDecimalString(pick('total')),
+    trim: toDecimalString(pick('trim')),
+    wheels: toDecimalString(pick('wheels')),
   };
 }
 
 export function applyTradeInCredit(totalUsd: string, estimatedValueUsd: string): string {
   const remaining = subtract(usd(totalUsd), usd(estimatedValueUsd));
 
-  return toDecimal(remaining.amount < 0n ? money('0', USD) : remaining);
+  return toDecimalString(remaining.amount < 0n ? money('0', USD) : remaining);
 }
 
 export function estimateMonthlyPayment(

@@ -12,13 +12,13 @@ Split a monetary value while preserving every minor unit.
 ### Solution
 
 ```ts
-import { USD, allocate, money, sum, toDecimal } from '@vielzeug/coins';
+import { USD, allocate, money, sum, toDecimalString } from '@vielzeug/coins';
 
 const total = money('10.00', USD);
 const shares = allocate(total, ['1', '2', '1']);
 
-console.log(shares.map(toDecimal));
-console.log(toDecimal(sum(shares)));
+console.log(shares.map(toDecimalString));
+console.log(toDecimalString(sum(shares)));
 ```
 
 ### Pitfalls

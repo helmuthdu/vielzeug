@@ -16,35 +16,17 @@ export class CoinsError extends Error {
   constructor(code: CoinsErrorCode, message: string, options?: ErrorOptions) {
     super(message, options);
     this.code = code;
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
+    this.name = 'CoinsError';
   }
 }
 
-export class CurrencyMismatchError extends CoinsError {
-  readonly expected: string;
-  readonly received: string;
-
-  constructor(expected: string, received: string) {
-    super('CURRENCY_MISMATCH', `Currency mismatch: canonical ${expected} and ${received} definitions differ`);
-    this.expected = expected;
-    this.received = received;
-  }
+export function currencyMismatch(expected: string, received: string): CoinsError {
+  return new CoinsError(
+    'CURRENCY_MISMATCH',
+    `Currency mismatch: canonical ${expected} and ${received} definitions differ`,
+  );
 }
 
-function describe(value: unknown): string {
-  try {
-    return String(value);
-  } catch {
-    return '<unprintable>';
-  }
-}
-
-export class InvalidCurrencyError extends CoinsError {
-  readonly value: unknown;
-
-  constructor(value: unknown) {
-    super('INVALID_CURRENCY', `Unsupported currency: "${describe(value)}"`);
-    this.value = value;
-  }
+export function invalidCurrency(value: unknown): CoinsError {
+  return new CoinsError('INVALID_CURRENCY', `Unsupported currency: "${String(value)}"`);
 }

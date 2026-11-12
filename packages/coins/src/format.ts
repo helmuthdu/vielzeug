@@ -1,6 +1,6 @@
 import { assertRoundingMode } from './_decimal';
 import { CoinsError } from './errors';
-import { assertMoney, toDecimal } from './money';
+import { assertMoney, toDecimalString } from './money';
 import type { FormatOptions, Money, MoneyFormatPart, RoundingMode } from './types';
 
 const MAX_FRACTION_DIGITS = 20;
@@ -38,7 +38,7 @@ export function formatParts(value: Money, options: FormatOptions = {}): MoneyFor
       useGrouping: true,
     });
 
-    return normalizeParts(formatter.formatToParts(toDecimal(value) as unknown as number));
+    return normalizeParts(formatter.formatToParts(toDecimalString(value) as unknown as number));
   } catch (error) {
     if (error instanceof CoinsError) throw error;
 

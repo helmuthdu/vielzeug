@@ -27,7 +27,7 @@ exports:
     abs,
     negate,
     round,
-    toDecimal,
+    toDecimalString,
     sum,
     allocate,
     exchangeRate,

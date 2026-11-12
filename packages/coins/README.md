@@ -13,11 +13,11 @@ yarn add @vielzeug/coins
 ## Quick Start
 
 ```ts
-import { USD, add, money, toDecimal } from '@vielzeug/coins';
+import { USD, add, money, toDecimalString } from '@vielzeug/coins';
 
 const subtotal = add(money('12.50', USD), money('7.25', USD));
 
-console.log(toDecimal(subtotal)); // '19.75'
+console.log(toDecimalString(subtotal)); // '19.75'
 ```
 
 ## Documentation
