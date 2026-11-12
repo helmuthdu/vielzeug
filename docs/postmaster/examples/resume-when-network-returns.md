@@ -15,13 +15,13 @@ Subscribe to Sentinel's network state and call `flush()` when `online` becomes t
 
 ```ts
 import { createNetwork } from '@vielzeug/sentinel';
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 
 const store = createIndexedDbPostmasterStore({ name: 'outbox' });
 const postmaster = createPostmaster({
-  jobs: defineJobs({
-    sync: {
+  jobs: {
+    sync: defineJob({
       version: 1,
       validate: (v: unknown) => v as { id: string },
       key: (p) => p.id,
@@ -32,8 +32,8 @@ const postmaster = createPostmaster({
         });
       },
       retry: { maxAttempts: 20, shouldRetry: (error) => error instanceof TypeError },
-    },
-  }),
+    }),
+  },
   store,
 });
 

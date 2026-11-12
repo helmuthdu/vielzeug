@@ -1,4 +1,4 @@
-import { createPostmaster, defineJobs, type JobContext } from '../index.ts';
+import { createPostmaster, defineJob, type JobContext } from '../index.ts';
 import type { StoredJob } from '../store.ts';
 import { claimJob } from '../store-ops.ts';
 import { createMemoryPostmasterStore } from '../testing.ts';
@@ -13,14 +13,14 @@ function stallUntilAbort(signal: AbortSignal): Promise<void> {
 }
 
 function createJobs(execute: (payload: string, context: JobContext) => Promise<void>) {
-  return defineJobs({
-    send: {
-      execute: execute as (payload: unknown, context: JobContext) => Promise<void>,
-      key: (payload: unknown) => `send:${payload}`,
+  return {
+    send: defineJob({
+      execute,
+      key: (payload) => `send:${payload}`,
       validate: textValidator,
       version: 1,
-    },
-  });
+    }),
+  };
 }
 
 const stallingJobs = createJobs(async (_payload, context) => {

@@ -18,10 +18,7 @@ const CORRUPT = Symbol('corrupt');
 
 type CorruptRecord = {
   readonly [CORRUPT]: CorruptStoredJob;
-  readonly availableAt?: number;
   readonly id: string;
-  readonly leaseExpiresAt?: number;
-  readonly status?: EntryStatus;
 };
 
 type DatabaseJob = CorruptRecord | StoredJob;
@@ -183,19 +180,11 @@ export function createIndexedDbPostmasterStore(options: IndexedDbPostmasterStore
           options.onCorruptRecord?.(issue);
         } catch {}
       }
-      return {
-        [CORRUPT]: issue,
-        id: id ?? '',
-        ...(isPlainObject(value) && isTimestamp(value.availableAt) ? { availableAt: value.availableAt } : {}),
-        ...(isPlainObject(value) && isTimestamp(value.leaseExpiresAt) ? { leaseExpiresAt: value.leaseExpiresAt } : {}),
-        ...(isPlainObject(value) && isEntryStatus(value.status) ? { status: value.status } : {}),
-      };
+      return { [CORRUPT]: issue, id: id ?? '' };
     }
   };
   const schema: PostmasterSchema = {
-    jobs: table<DatabaseJob, 'id'>('id', {
-      indexes: ['availableAt', 'leaseExpiresAt', 'status'],
-    }),
+    jobs: table<DatabaseJob, 'id'>('id'),
   };
   const vault = createIndexedDB({
     name: options.name,
@@ -264,12 +253,10 @@ export function createIndexedDbPostmasterStore(options: IndexedDbPostmasterStore
     },
     list(filter?: EntryFilter): Promise<StoredJob[]> {
       return wrap('listing jobs', async () => {
-        const entries =
-          filter?.status === undefined
-            ? await vault.getAll('jobs')
-            : await vault.getAllByIndex('jobs', 'status', filter.status);
+        const entries = await vault.getAll('jobs');
         return entries
           .filter(isValidRecord)
+          .filter((entry) => filter?.status === undefined || entry.status === filter.status)
           .sort((a, b) => a.createdAt - b.createdAt)
           .map(normalize);
       });

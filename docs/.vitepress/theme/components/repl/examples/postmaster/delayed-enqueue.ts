@@ -1,17 +1,17 @@
 export const delayedEnqueueExample = {
-  code: `import { createPostmaster, defineJobs } from '@vielzeug/postmaster'
+  code: `import { createPostmaster, defineJob } from '@vielzeug/postmaster'
 import { createMemoryPostmasterStore } from '@vielzeug/postmaster/testing'
 
-const jobs = defineJobs({
-  send: {
+const jobs = {
+  send: defineJob({
     version: 1,
     validate: (v) => String(v),
     key: (p) => \`send:\${p}\`,
     execute: async (payload, { key, attempt }) => {
       console.log(\`delivering "\${payload}" (attempt \${attempt}, key \${key})\`)
     },
-  },
-})
+  }),
+}
 
 let now = 0
 const store = createMemoryPostmasterStore()

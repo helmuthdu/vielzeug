@@ -58,8 +58,29 @@ function validateJob(name: string, job: JobDefinition<unknown>): void {
   validateMigrations(name, job);
 }
 
-export function defineJobs<const J extends JobDefinitions>(jobs: J): J {
+/** Checks every registered job definition. Runs while a Postmaster is constructed. */
+export function validateJobs(jobs: JobDefinitions): void {
   for (const [name, job] of Object.entries(jobs)) validateJob(name, job);
+}
 
-  return jobs;
+/**
+ * Types one job definition. The payload type is inferred from `validate` when present
+ * (a plain function or a `{ parse }` validator object such as a Spell schema), or
+ * from an annotated `execute` payload. Without either, payloads stay `unknown`.
+ *
+ * Configuration (versions, migrations, retry) is validated by `createPostmaster`.
+ *
+ * ```ts
+ * const jobs = {
+ *   syncStage: defineJob({
+ *     version: 1,
+ *     validate: (value): { id: string } => value as { id: string },
+ *     key: (payload) => payload.id,
+ *     execute: async (payload) => sync(payload.id),
+ *   }),
+ * };
+ * ```
+ */
+export function defineJob<T>(spec: JobDefinition<T>): JobDefinition<T> {
+  return spec;
 }

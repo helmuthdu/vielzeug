@@ -1,9 +1,10 @@
 import {
   createPostmaster,
-  defineJobs,
+  defineJob,
   type JobContext,
   PostmasterDisposedError,
   PostmasterError,
+  type PostmasterEvent,
   PostmasterJobError,
 } from '../index.ts';
 import { createMemoryPostmasterStore } from '../testing.ts';
@@ -11,14 +12,14 @@ import { createMemoryPostmasterStore } from '../testing.ts';
 const textValidator = (value: unknown) => String(value);
 
 function createJobs(execute: (payload: string, context: JobContext) => Promise<void>) {
-  return defineJobs({
-    send: {
-      execute: execute as (payload: unknown, context: JobContext) => Promise<void>,
-      key: (payload: unknown) => `send:${payload}`,
+  return {
+    send: defineJob({
+      execute,
+      key: (payload) => `send:${payload}`,
       validate: textValidator,
       version: 1,
-    },
-  });
+    }),
+  };
 }
 
 describe('Postmaster', () => {
@@ -42,6 +43,38 @@ describe('Postmaster', () => {
     await expect(postmaster.list()).resolves.toEqual([]);
   });
 
+  it('publishes the stored failure on retry-scheduled and dead-lettered events', async () => {
+    const events: PostmasterEvent[] = [];
+    const postmaster = createPostmaster({
+      clock: () => 100,
+      jobs: {
+        send: defineJob({
+          execute: async () => {
+            throw new Error('offline');
+          },
+          key: (payload) => String(payload),
+          retry: { delay: () => 0, maxAttempts: 2 },
+          validate: textValidator,
+          version: 1,
+        }),
+      },
+      store: createMemoryPostmasterStore(),
+    });
+    postmaster.tap((event) => events.push(event));
+    await postmaster.enqueue('send', 'hello');
+    await postmaster.flush();
+
+    const retry = events.find((event) => event.type === 'retry-scheduled');
+    const dead = events.find((event) => event.type === 'dead-lettered');
+    expect(retry).toMatchObject({
+      entry: { attempts: 1, availableAt: 100, failure: { message: 'offline' }, status: 'queued' },
+    });
+    expect(dead).toMatchObject({
+      entry: { attempts: 2, failure: { message: 'offline' }, status: 'dead-letter' },
+    });
+    await postmaster.dispose();
+  });
+
   it('reschedules only explicitly classified failures', async () => {
     let now = 100;
     const execute = vi
@@ -50,15 +83,15 @@ describe('Postmaster', () => {
       .mockResolvedValueOnce(undefined);
     const postmaster = createPostmaster({
       clock: () => now,
-      jobs: defineJobs({
-        send: {
+      jobs: {
+        send: defineJob({
           execute,
-          key: (payload: unknown) => String(payload),
+          key: (payload) => String(payload),
           retry: { delay: () => 50, maxAttempts: 2, shouldRetry: () => true },
           validate: textValidator,
           version: 1,
-        },
-      }),
+        }),
+      },
       store: createMemoryPostmasterStore(),
     });
     await postmaster.enqueue('send', 'hello');
@@ -86,14 +119,14 @@ describe('Postmaster', () => {
       .mockRejectedValueOnce(new Error('transient'))
       .mockResolvedValueOnce(undefined);
     const postmaster = createPostmaster({
-      jobs: defineJobs({
-        send: {
+      jobs: {
+        send: defineJob({
           execute,
-          key: (payload: unknown) => String(payload),
+          key: (payload) => String(payload),
           retry: { delay: () => 0, maxAttempts: 2 },
           version: 1,
-        },
-      }),
+        }),
+      },
       store: createMemoryPostmasterStore(),
     });
 
@@ -219,15 +252,15 @@ describe('tap()', () => {
     let now = 100;
     const postmaster = createPostmaster({
       clock: () => now,
-      jobs: defineJobs({
-        send: {
+      jobs: {
+        send: defineJob({
           execute,
-          key: (payload: unknown) => String(payload),
+          key: (payload) => String(payload),
           retry: { delay: () => 50, maxAttempts: 2, shouldRetry: () => true },
           validate: textValidator,
           version: 1,
-        },
-      }),
+        }),
+      },
       store: createMemoryPostmasterStore(),
     });
     postmaster.tap(handler);
@@ -508,18 +541,18 @@ describe('version migrations', () => {
       });
     });
 
-    const jobs = defineJobs({
-      createTodo: {
-        execute: execute as (payload: unknown, context: JobContext) => Promise<void>,
-        key: (p: unknown) => (p as { id: string }).id,
+    const jobs = {
+      createTodo: defineJob({
+        execute,
+        key: (p) => p.id,
         migrate: {
           1: (payload) => ({ ...(payload as { id: string; title: string }), priority: 0 }),
           2: (payload) => ({ ...(payload as { id: string; title: string; priority: number }), priority: 5 }),
         },
         validate: (v: unknown) => v as { id: string; title: string; priority: number },
         version: 3,
-      },
-    });
+      }),
+    };
 
     const postmaster = createPostmaster({ clock: () => 0, jobs, store });
     await postmaster.flush();
@@ -530,27 +563,33 @@ describe('version migrations', () => {
 
   it('accepts a contiguous migration range that starts after version 1', () => {
     expect(() =>
-      defineJobs({
-        send: {
-          execute: async () => {},
-          key: (p: unknown) => String(p),
-          migrate: {
-            2: (payload) => payload,
-          },
-          version: 3,
+      createPostmaster({
+        jobs: {
+          send: defineJob({
+            execute: async () => {},
+            key: (p) => String(p),
+            migrate: {
+              2: (payload) => payload,
+            },
+            version: 3,
+          }),
         },
+        store: createMemoryPostmasterStore(),
       }),
     ).not.toThrow();
   });
 
   it('accepts a current-version-only definition without migrations', () => {
     expect(() =>
-      defineJobs({
-        send: {
-          execute: async () => {},
-          key: (p: unknown) => String(p),
-          version: 3,
+      createPostmaster({
+        jobs: {
+          send: defineJob({
+            execute: async () => {},
+            key: (p) => String(p),
+            version: 3,
+          }),
         },
+        store: createMemoryPostmasterStore(),
       }),
     ).not.toThrow();
   });
@@ -571,14 +610,14 @@ describe('version migrations', () => {
         version: 1,
       },
     ]);
-    const jobs = defineJobs({
-      send: {
+    const jobs = {
+      send: defineJob({
         execute,
-        key: (payload: unknown) => String(payload),
+        key: (payload) => String(payload),
         migrate: { 2: (payload) => payload },
         version: 3,
-      },
-    });
+      }),
+    };
     const postmaster = createPostmaster({ clock: () => 0, jobs, store });
 
     await expect(postmaster.flush()).resolves.toMatchObject({ deadLettered: 1, processed: 1 });
@@ -591,45 +630,54 @@ describe('version migrations', () => {
 
   it('rejects migration ranges with gaps', () => {
     expect(() =>
-      defineJobs({
-        send: {
-          execute: async () => {},
-          key: (p: unknown) => String(p),
-          migrate: {
-            1: (payload) => payload,
-            3: (payload) => payload,
-          },
-          version: 4,
+      createPostmaster({
+        jobs: {
+          send: defineJob({
+            execute: async () => {},
+            key: (p) => String(p),
+            migrate: {
+              1: (payload) => payload,
+              3: (payload) => payload,
+            },
+            version: 4,
+          }),
         },
+        store: createMemoryPostmasterStore(),
       }),
     ).toThrow(PostmasterError);
   });
 
-  it('rejects defineJobs when version 1 has migrations', () => {
+  it('rejects job maps where version 1 has migrations', () => {
     expect(() =>
-      defineJobs({
-        send: {
-          execute: async () => {},
-          key: (p: unknown) => String(p),
-          migrate: { 1: (payload) => payload },
-          version: 1,
+      createPostmaster({
+        jobs: {
+          send: defineJob({
+            execute: async () => {},
+            key: (p) => String(p),
+            migrate: { 1: (payload) => payload },
+            version: 1,
+          }),
         },
+        store: createMemoryPostmasterStore(),
       }),
     ).toThrow(PostmasterError);
   });
 
-  it('rejects defineJobs with out-of-range migration keys', () => {
+  it('rejects job maps with out-of-range migration keys', () => {
     expect(() =>
-      defineJobs({
-        send: {
-          execute: async () => {},
-          key: (p: unknown) => String(p),
-          migrate: {
-            1: (payload) => payload,
-            2: (payload) => payload,
-          },
-          version: 2,
+      createPostmaster({
+        jobs: {
+          send: defineJob({
+            execute: async () => {},
+            key: (p) => String(p),
+            migrate: {
+              1: (payload) => payload,
+              2: (payload) => payload,
+            },
+            version: 2,
+          }),
         },
+        store: createMemoryPostmasterStore(),
       }),
     ).toThrow(PostmasterError);
   });
@@ -650,14 +698,14 @@ describe('version migrations', () => {
         version: 1,
       },
     ]);
-    const jobs = defineJobs({
-      send: {
+    const jobs = {
+      send: defineJob({
         execute,
-        key: (payload: unknown) => String(payload),
+        key: (payload) => String(payload),
         migrate: { 1: () => undefined },
         version: 2,
-      },
-    });
+      }),
+    };
     const postmaster = createPostmaster({ clock: () => 0, jobs, store });
 
     await expect(postmaster.flush()).resolves.toMatchObject({ deadLettered: 1, processed: 1 });

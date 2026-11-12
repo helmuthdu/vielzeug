@@ -10,11 +10,11 @@ description: Define durable jobs, process them with leases, retry failures, and 
 Define typed jobs, create a durable store, enqueue work, and start the processor. Dispose both handles when the owner ends.
 
 ```ts
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 
-const jobs = defineJobs({
-  createTodo: {
+const jobs = {
+  createTodo: defineJob({
     version: 1,
     validate: (v: unknown) => v as { id: string; title: string },
     key: (p) => p.id,
@@ -26,8 +26,8 @@ const jobs = defineJobs({
         signal,
       });
     },
-  },
-});
+  }),
+};
 
 const store = createIndexedDbPostmasterStore({ name: 'my-app-outbox' });
 const postmaster = createPostmaster({ jobs, store });
@@ -47,8 +47,8 @@ The store is borrowed by `createPostmaster()` and is not disposed with the proce
 Postmaster provides **at-least-once delivery**. A crash after the remote write but before local completion can repeat the job. Every job must derive a stable idempotency key, and handlers must send or otherwise enforce that key.
 
 ```ts
-const jobs = defineJobs({
-  createTodo: {
+const jobs = {
+  createTodo: defineJob({
     version: 1,
     validate: (v: unknown) => v as { id: string; title: string },
     key: (p) => p.id,
@@ -60,8 +60,8 @@ const jobs = defineJobs({
         signal,
       });
     },
-  },
-});
+  }),
+};
 ```
 
 Never assume exactly-once execution. Design handlers so a repeated delivery is safe.
@@ -72,12 +72,12 @@ Courier performs immediate HTTP transport. Postmaster coordinates durable delive
 
 ```ts
 import { createCourier, CourierNetworkError } from '@vielzeug/courier';
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 
 const courier = createCourier({ baseUrl: 'https://api.example.com' });
 
-const jobs = defineJobs({
-  createTodo: {
+const jobs = {
+  createTodo: defineJob({
     version: 1,
     validate: (v: unknown) => v as { id: string; title: string },
     key: (p) => p.id,
@@ -90,8 +90,8 @@ const jobs = defineJobs({
       });
     },
     retry: { maxAttempts: 5, shouldRetry: (error) => error instanceof CourierNetworkError },
-  },
-});
+  }),
+};
 ```
 
 Postmaster does not import Courier. The integration happens in your job definitions.
@@ -103,8 +103,8 @@ Each job declares a `version` and an optional `validate` function. When a stored
 ```ts
 import { s } from '@vielzeug/spell';
 
-const jobs = defineJobs({
-  createTodo: {
+const jobs = {
+  createTodo: defineJob({
     version: 2,
     validate: s.object({ id: s.string(), title: s.string(), priority: s.number().optional() }),
     key: (p) => p.id,
@@ -119,8 +119,8 @@ const jobs = defineJobs({
         signal,
       });
     },
-  },
-});
+  }),
+};
 ```
 
 Unknown job names, unsupported versions, failed migrations, `undefined` migration output, and invalid migrated payloads move to dead-letter rather than being executed.
@@ -143,8 +143,8 @@ The callback may omit `id` when the persisted value has no usable identifier. Ha
 Retries are opt-in and explicitly classified. No `retry` block means one attempt followed by dead-letter.
 
 ```ts
-const jobs = defineJobs({
-  syncTodo: {
+const jobs = {
+  syncTodo: defineJob({
     version: 1,
     validate: (v: unknown) => v as { id: string },
     key: (p) => p.id,
@@ -155,8 +155,8 @@ const jobs = defineJobs({
       maxAttempts: 5,
       shouldRetry: (error) => error instanceof TypeError, // network errors only
     },
-  },
-});
+  }),
+};
 ```
 
 - `maxAttempts` means total executions, including the first.
@@ -244,19 +244,19 @@ controller.abort(); // stops tapping
 Use the in-memory store for deterministic tests.
 
 ```ts
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { createMemoryPostmasterStore } from '@vielzeug/postmaster/testing';
 
 const store = createMemoryPostmasterStore();
 const postmaster = createPostmaster({
-  jobs: defineJobs({
-    send: {
+  jobs: {
+    send: defineJob({
       version: 1,
       validate: (v: unknown) => String(v),
       key: (p) => p,
       execute: async () => {},
-    },
-  }),
+    }),
+  },
   store,
 });
 
@@ -280,19 +280,19 @@ Create the Postmaster after the component mounts, start processing, and dispose 
 
 ```tsx [React]
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
-import { createPostmaster, defineJobs, type Postmaster } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob, type Postmaster } from '@vielzeug/postmaster';
 import { useEffect } from 'react';
 
-const jobs = defineJobs({
-  sync: {
+const jobs = {
+  sync: defineJob({
     version: 1,
     validate: (v: unknown) => v as { id: string },
     key: (p) => p.id,
     execute: async (payload, { signal }) => {
       await fetch(`/api/sync/${payload.id}`, { signal });
     },
-  },
-});
+  }),
+};
 
 export function OutboxProvider() {
   useEffect(() => {
@@ -313,19 +313,19 @@ export function OutboxProvider() {
 ```vue [Vue 3]
 <script setup lang="ts">
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { onMounted, onUnmounted } from 'vue';
 
-const jobs = defineJobs({
-  sync: {
+const jobs = {
+  sync: defineJob({
     version: 1,
     validate: (v: unknown) => v as { id: string },
     key: (p) => p.id,
     execute: async (payload, { signal }) => {
       await fetch(`/api/sync/${payload.id}`, { signal });
     },
-  },
-});
+  }),
+};
 
 let postmaster: ReturnType<typeof createPostmaster> | undefined;
 let store: ReturnType<typeof createIndexedDbPostmasterStore> | undefined;
@@ -350,19 +350,19 @@ onUnmounted(() => {
 ```svelte [Svelte]
 <script lang="ts">
   import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
-  import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+  import { createPostmaster, defineJob } from '@vielzeug/postmaster';
   import { onMount } from 'svelte';
 
-  const jobs = defineJobs({
-    sync: {
+  const jobs = {
+    sync: defineJob({
       version: 1,
       validate: (v: unknown) => v as { id: string },
       key: (p) => p.id,
       execute: async (payload, { signal }) => {
         await fetch(`/api/sync/${payload.id}`, { signal });
       },
-    },
-  });
+    }),
+  };
 
   onMount(() => {
     const store = createIndexedDbPostmasterStore({ name: 'outbox' });
@@ -389,12 +389,12 @@ Use Courier inside job handlers for HTTP transport. Postmaster coordinates deliv
 
 ```ts
 import { createCourier, CourierNetworkError } from '@vielzeug/courier';
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 
 const courier = createCourier({ baseUrl: 'https://api.example.com' });
 
-const jobs = defineJobs({
-  createTodo: {
+const jobs = {
+  createTodo: defineJob({
     version: 1,
     validate: (v: unknown) => v as { id: string; title: string },
     key: (p) => p.id,
@@ -407,8 +407,8 @@ const jobs = defineJobs({
       });
     },
     retry: { maxAttempts: 5, shouldRetry: (e) => e instanceof CourierNetworkError },
-  },
-});
+  }),
+};
 ```
 
 ### Postmaster + Sentinel

@@ -14,11 +14,11 @@ A job must survive reloads but should not run immediately: a digest, reminder, o
 Pass `availableAt` to `enqueue()`. Postmaster persists the job immediately but will not claim it before the requested time. The same mechanism already backs retry delays, so no new state or store primitive is required.
 
 ```ts
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 
-const jobs = defineJobs({
-  sendDigest: {
+const jobs = {
+  sendDigest: defineJob({
     version: 1,
     validate: (v) => v as { userId: string },
     key: (p) => `digest:${p.userId}`,
@@ -30,8 +30,8 @@ const jobs = defineJobs({
         signal,
       });
     },
-  },
-});
+  }),
+};
 
 const store = createIndexedDbPostmasterStore({ name: 'postmaster-outbox' });
 const postmaster = createPostmaster({ jobs, store });

@@ -15,13 +15,13 @@ Wrap the Courier request in a Postmaster job. The job payload, idempotency key, 
 
 ```ts
 import { createCourier, CourierNetworkError } from '@vielzeug/courier';
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 
 const courier = createCourier({ baseUrl: 'https://api.example.com' });
 
-const jobs = defineJobs({
-  createTodo: {
+const jobs = {
+  createTodo: defineJob({
     version: 1,
     validate: (v: unknown) => v as { id: string; title: string },
     key: (p) => p.id,
@@ -34,8 +34,8 @@ const jobs = defineJobs({
       });
     },
     retry: { maxAttempts: 10, shouldRetry: (error) => error instanceof CourierNetworkError },
-  },
-});
+  }),
+};
 
 const store = createIndexedDbPostmasterStore({ name: 'todos-outbox' });
 const postmaster = createPostmaster({ jobs, store });

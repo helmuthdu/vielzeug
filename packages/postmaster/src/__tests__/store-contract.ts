@@ -163,7 +163,7 @@ export function describePostmasterStore(label: string, factory: StoreFactory): v
       const failure = { message: 'offline', name: 'Error', occurredAt: 100 };
       await expect(
         tx((t) => rescheduleJob(t, { availableAt: 150, failure, id: 'one', now: 100, ownerId: 'a' })),
-      ).resolves.toBe(true);
+      ).resolves.toMatchObject({ availableAt: 150, failure, status: 'queued' });
 
       await expect(store.list()).resolves.toMatchObject([{ availableAt: 150, failure, id: 'one', status: 'queued' }]);
       const [rescheduled] = await store.list();
@@ -185,7 +185,7 @@ export function describePostmasterStore(label: string, factory: StoreFactory): v
             ownerId: 'b',
           }),
         ),
-      ).resolves.toBe(false);
+      ).resolves.toBeUndefined();
     });
 
     it('moves a running job to dead-letter and clears ownership', async () => {
@@ -193,7 +193,10 @@ export function describePostmasterStore(label: string, factory: StoreFactory): v
       await tx((t) => claimJob(t, { leaseDuration: 1000, now: 0, ownerId: 'a' }));
 
       const failure = { message: 'bad', name: 'Error', occurredAt: 100 };
-      await expect(tx((t) => deadLetterJob(t, { failure, id: 'one', now: 100, ownerId: 'a' }))).resolves.toBe(true);
+      await expect(tx((t) => deadLetterJob(t, { failure, id: 'one', now: 100, ownerId: 'a' }))).resolves.toMatchObject({
+        failure,
+        status: 'dead-letter',
+      });
 
       await expect(store.list()).resolves.toMatchObject([{ failure, id: 'one', status: 'dead-letter' }]);
       const [deadLettered] = await store.list();

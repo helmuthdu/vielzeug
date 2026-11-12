@@ -15,11 +15,11 @@ Use `flush()` inside a `sync` event handler: the application owns the service wo
 
 ```ts
 // sw.ts: bundled as your service worker entry
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 
-const jobs = defineJobs({
-  createTodo: {
+const jobs = {
+  createTodo: defineJob({
     version: 1,
     validate: (v) => v as { id: string; title: string },
     key: (p) => p.id,
@@ -35,8 +35,8 @@ const jobs = defineJobs({
       maxAttempts: 5,
       shouldRetry: (error) => error instanceof TypeError, // network errors only
     },
-  },
-});
+  }),
+};
 
 self.addEventListener('sync', (event) => {
   if (event.tag !== 'postmaster:outbox') return;

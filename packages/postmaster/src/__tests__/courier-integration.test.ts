@@ -1,5 +1,5 @@
 import { CourierNetworkError, createCourier } from '@vielzeug/courier';
-import { createPostmaster, defineJobs } from '../index.ts';
+import { createPostmaster, defineJob } from '../index.ts';
 import { createMemoryPostmasterStore } from '../testing.ts';
 
 const objectValidator = (value: unknown) => {
@@ -17,8 +17,8 @@ describe('Postmaster ecosystem integration', () => {
     );
     const courier = createCourier({ baseUrl: 'https://api.example.com', fetch: fetchMock as unknown as typeof fetch });
 
-    const jobs = defineJobs({
-      createTodo: {
+    const jobs = {
+      createTodo: defineJob({
         execute: async (payload, { key, signal }) => {
           await courier.request('/todos', {
             body: payload,
@@ -27,12 +27,12 @@ describe('Postmaster ecosystem integration', () => {
             signal,
           });
         },
-        key: (payload: unknown) => (payload as { id: string }).id,
+        key: (payload) => payload.id,
         retry: { maxAttempts: 3, shouldRetry: (error) => error instanceof CourierNetworkError },
         validate: objectValidator,
         version: 1,
-      },
-    });
+      }),
+    };
 
     const store = createMemoryPostmasterStore();
     const postmaster = createPostmaster({ jobs, store });
@@ -60,8 +60,8 @@ describe('Postmaster ecosystem integration', () => {
     });
     const courier = createCourier({ baseUrl: 'https://api.example.com', fetch: fetchMock as unknown as typeof fetch });
 
-    const jobs = defineJobs({
-      createTodo: {
+    const jobs = {
+      createTodo: defineJob({
         execute: async (payload, { key, signal }) => {
           await courier.request('/todos', {
             body: payload,
@@ -70,12 +70,12 @@ describe('Postmaster ecosystem integration', () => {
             signal,
           });
         },
-        key: (payload: unknown) => (payload as { id: string }).id,
+        key: (payload) => payload.id,
         retry: { delay: () => 1000, maxAttempts: 3, shouldRetry: (error) => error instanceof CourierNetworkError },
         validate: objectValidator,
         version: 1,
-      },
-    });
+      }),
+    };
 
     let now = 0;
     const store = createMemoryPostmasterStore();

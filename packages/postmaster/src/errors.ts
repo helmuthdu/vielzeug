@@ -6,5 +6,9 @@ export class PostmasterError extends Error {
   }
 }
 
-export class PostmasterDisposedError extends PostmasterError {}
+export class PostmasterDisposedError extends PostmasterError {
+  constructor(message = 'Postmaster is disposed') {
+    super(message);
+  }
+}
 export class PostmasterJobError extends PostmasterError {}

@@ -1,4 +1,4 @@
-export { defineJobs } from './definitions.ts';
+export { defineJob } from './definitions.ts';
 export { PostmasterDisposedError, PostmasterError, PostmasterJobError } from './errors.ts';
 export { createPostmaster } from './postmaster.ts';
 export type {

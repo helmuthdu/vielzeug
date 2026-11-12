@@ -9,7 +9,7 @@ description: Job definitions, processor, store contracts, events, errors, and en
 
 | Symbol                             | Purpose                                | Execution mode | Common gotcha                                                          |
 | ---------------------------------- | -------------------------------------- | -------------- | ---------------------------------------------------------------------- |
-| `defineJobs()`                     | Typed job registry with validation     | Sync           | Throws on invalid version, missing fields, or bad retry config         |
+| `defineJob()`                      | Types one job definition               | Sync           | Configuration is validated by `createPostmaster()`                     |
 | `createPostmaster()`               | Processor with leased claims and retry | Sync           | Store is borrowed, not disposed with the processor                     |
 | `createIndexedDbPostmasterStore()` | Durable browser store                  | Sync           | Skips corrupt records and reports each issue through `onCorruptRecord` |
 | `createMemoryPostmasterStore()`    | Deterministic in-memory store          | Sync           | Use for tests only                                                     |
@@ -26,27 +26,27 @@ description: Job definitions, processor, store contracts, events, errors, and en
 
 ## Factories
 
-### `defineJobs()`
+### `defineJob()`
 
 ```ts
-function defineJobs<const J extends JobDefinitions>(jobs: J): J;
+function defineJob<T>(spec: JobDefinition<T>): JobDefinition<T>;
 ```
 
-Returns the job registry after validating each definition. Rejects invalid versions, missing `execute`/`key`, retry configurations with non-positive `maxAttempts`, and migration ranges that contain gaps or do not lead into the current version.
+Types a single job definition. The payload type is inferred from `validate` when present: either a function returning the payload type or a `{ parse(value) }` validator object such as a Spell schema. Without `validate`, an annotated `execute` payload provides the type; with neither, payloads stay `unknown`. `createPostmaster()` validates every registered definition (versions, `execute`/`key`, retry `maxAttempts`, migration ranges) when it is constructed.
 
-| Parameter | Type                       | Description                   |
-| --------- | -------------------------- | ----------------------------- |
-| `jobs`    | `J extends JobDefinitions` | Map of job name to definition |
+| Parameter | Type                  | Description                       |
+| --------- | --------------------- | --------------------------------- |
+| `spec`    | `JobDefinition<T>`    | Definition with contextual typing |
 
-**Returns:** `J`: the same registry, typed for payload inference.
+**Returns:** the same definition, typed for payload inference.
 
 **Example**
 
 ```ts
-import { defineJobs } from '@vielzeug/postmaster';
+import { defineJob } from '@vielzeug/postmaster';
 
-const jobs = defineJobs({
-  createTodo: {
+const jobs = {
+  createTodo: defineJob({
     version: 1,
     validate: (v) => v as { id: string; title: string },
     key: (p) => p.id,
@@ -58,8 +58,8 @@ const jobs = defineJobs({
         signal,
       });
     },
-  },
-});
+  }),
+};
 ```
 
 ---
@@ -74,7 +74,7 @@ Returns a Postmaster processor that claims, executes, retries, and dead-letters 
 
 | Parameter               | Type              | Description                                        |
 | ----------------------- | ----------------- | -------------------------------------------------- |
-| `options.jobs`          | `J`               | Job registry from `defineJobs()`                   |
+| `options.jobs`          | `J`               | Map of job name to `defineJob()` definition        |
 | `options.store`         | `PostmasterStore` | Borrowed store; not disposed with the processor    |
 | `options.leaseDuration` | `number`          | Lease duration in ms (default 30000, minimum 1000) |
 | `options.clock`         | `() => number`    | Deterministic clock for tests (default `Date.now`) |
@@ -104,7 +104,7 @@ await store.dispose();
 function createIndexedDbPostmasterStore(options: IndexedDbPostmasterStoreOptions): PostmasterStore;
 ```
 
-Returns a durable Postmaster store backed by Vault IndexedDB. Uses one internal table indexed by `status`, `availableAt`, and `leaseExpiresAt`. All operations run inside Vault transactions. Persisted records are validated before use; invalid records are skipped so they cannot block valid work.
+Returns a durable Postmaster store backed by Vault IndexedDB. Uses one internal `jobs` table keyed by id; all operations run inside Vault transactions. Persisted records are validated before use; invalid records are skipped so they cannot block valid work.
 
 | Parameter                 | Type                                 | Description                                                                                        |
 | ------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------- |

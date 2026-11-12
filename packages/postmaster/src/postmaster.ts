@@ -1,5 +1,6 @@
 import { backoff, tapper } from '@vielzeug/arsenal';
 import { asJsonValue, failureFrom, isAbortError, runValidate } from './_json.ts';
+import { validateJobs } from './definitions.ts';
 import { PostmasterDisposedError, PostmasterError, PostmasterJobError } from './errors.ts';
 import {
   claimJob,
@@ -19,7 +20,6 @@ import type {
   EntryFilter,
   FlushResult,
   InferJobPayload,
-  JobContext,
   JobDefinition,
   JobDefinitions,
   Postmaster,
@@ -53,6 +53,7 @@ function assertAvailableAt(value: number | undefined, defaultValue: number): num
 export function createPostmaster<J extends JobDefinitions>(options: CreatePostmasterOptions<J>): Postmaster<J> {
   const { clock = Date.now, jobs, leaseDuration = 30_000, signal, store } = options;
   assertLeaseDuration(leaseDuration);
+  validateJobs(jobs);
 
   const controller = new AbortController();
   const ownerId = crypto.randomUUID();
@@ -74,7 +75,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
   };
 
   const assertLive = (): void => {
-    if (disposed) throw new PostmasterDisposedError('Postmaster is disposed');
+    if (disposed) throw new PostmasterDisposedError();
   };
 
   const clearWakeTimer = (): void => {
@@ -95,7 +96,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
     wakeTimer = setTimeout(wake, delay);
   };
 
-  const resolveJob = (entry: StoredJob): JobDefinition<unknown> => {
+  const resolveJob = (entry: StoredJob): JobDefinition<any> => {
     const job = jobs[entry.name];
     if (!job) throw new PostmasterJobError(`no job definition is registered for "${entry.name}"`);
     return job;
@@ -111,12 +112,12 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
       return { completed: 0, deadLettered: 0, processed: true, retryScheduled: 0 };
     }
 
-    emitTap({ entry: toEntry({ ...entry, status: 'dead-letter' }), type: 'dead-lettered' });
+    emitTap({ entry: toEntry(finalized), type: 'dead-lettered' });
     return { completed: 0, deadLettered: 1, processed: true, retryScheduled: 0 };
   };
 
   const execute = async (entry: StoredJob, externalSignal?: AbortSignal): Promise<ExecutionResult> => {
-    let job: JobDefinition<unknown>;
+    let job: JobDefinition<any>;
     let payload: unknown;
 
     try {
@@ -177,7 +178,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
         entryId: entry.id,
         key: entry.key,
         signal: taskSignal,
-      } as JobContext);
+      });
 
       if (taskSignal.aborted) {
         await store.transact((tx) => releaseJob(tx, { id: entry.id, now: clock(), ownerId }));
@@ -221,7 +222,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
         emitTap({ id: entry.id, type: 'lease-lost' });
         return { completed: 0, deadLettered: 0, processed: true, retryScheduled: 0 };
       }
-      emitTap({ entry: toEntry({ ...entry, availableAt, status: 'queued' }), type: 'retry-scheduled' });
+      emitTap({ entry: toEntry(rescheduled), type: 'retry-scheduled' });
       return { completed: 0, deadLettered: 0, processed: true, retryScheduled: 1 };
     } finally {
       clearInterval(heartbeat);

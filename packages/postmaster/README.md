@@ -15,11 +15,11 @@ For browser persistence, also install `@vielzeug/vault`.
 ## Quick Start
 
 ```ts
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 
-const jobs = defineJobs({
-  createTodo: {
+const jobs = {
+  createTodo: defineJob({
     version: 1,
     validate: (v: unknown) => v as { id: string; title: string },
     key: (p) => p.id,
@@ -32,8 +32,8 @@ const jobs = defineJobs({
       });
     },
     retry: { maxAttempts: 5, shouldRetry: (error) => error instanceof TypeError },
-  },
-});
+  }),
+};
 
 const store = createIndexedDbPostmasterStore({ name: 'my-app-outbox' });
 const postmaster = createPostmaster({ jobs, store });

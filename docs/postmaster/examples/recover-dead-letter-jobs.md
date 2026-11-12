@@ -14,13 +14,13 @@ Jobs that exhaust retries or hit a terminal failure move to dead-letter. The app
 List dead-letter jobs, inspect the bounded failure, and call `retry()` or `remove()`.
 
 ```ts
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 
 const store = createIndexedDbPostmasterStore({ name: 'outbox' });
 const postmaster = createPostmaster({
-  jobs: defineJobs({
-    createTodo: {
+  jobs: {
+    createTodo: defineJob({
       version: 1,
       validate: (v: unknown) => v as { id: string; title: string },
       key: (p) => p.id,
@@ -33,8 +33,8 @@ const postmaster = createPostmaster({
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       },
-    },
-  }),
+    }),
+  },
   store,
 });
 

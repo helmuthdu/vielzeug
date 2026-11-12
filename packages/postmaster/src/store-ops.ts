@@ -61,10 +61,10 @@ export async function releaseJob(tx: StoreTx, params: OwnedParams): Promise<bool
   return true;
 }
 
-/** Reschedule a running job back to queued with a future availableAt. Returns false if stale. */
-export async function rescheduleJob(tx: StoreTx, params: RescheduleParams): Promise<boolean> {
+/** Reschedule a running job back to queued with a future availableAt. Returns undefined if stale. */
+export async function rescheduleJob(tx: StoreTx, params: RescheduleParams): Promise<StoredJob | undefined> {
   const entry = await tx.get(params.id);
-  if (!entry || entry.status !== 'running' || entry.ownerId !== params.ownerId) return false;
+  if (!entry || entry.status !== 'running' || entry.ownerId !== params.ownerId) return undefined;
   await tx.put({
     ...entry,
     availableAt: params.availableAt,
@@ -74,13 +74,13 @@ export async function rescheduleJob(tx: StoreTx, params: RescheduleParams): Prom
     status: 'queued',
     updatedAt: params.now,
   });
-  return true;
+  return tx.get(params.id);
 }
 
-/** Move a running job to dead-letter. Returns false if stale. */
-export async function deadLetterJob(tx: StoreTx, params: DeadLetterParams): Promise<boolean> {
+/** Move a running job to dead-letter. Returns the finalized record, or undefined if stale. */
+export async function deadLetterJob(tx: StoreTx, params: DeadLetterParams): Promise<StoredJob | undefined> {
   const entry = await tx.get(params.id);
-  if (!entry || entry.status !== 'running' || entry.ownerId !== params.ownerId) return false;
+  if (!entry || entry.status !== 'running' || entry.ownerId !== params.ownerId) return undefined;
   await tx.put({
     ...entry,
     failure: params.failure,
@@ -89,7 +89,7 @@ export async function deadLetterJob(tx: StoreTx, params: DeadLetterParams): Prom
     status: 'dead-letter',
     updatedAt: params.now,
   });
-  return true;
+  return tx.get(params.id);
 }
 
 /** Renew a lease for the current owner. Returns false if stale. */

@@ -1,5 +1,5 @@
 import { CourierNetworkError } from '@vielzeug/courier';
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 import { createNetwork } from '@vielzeug/sentinel';
 import { syncOpportunity } from './api';
@@ -24,16 +24,12 @@ function validateStageChange(value: unknown): StageChangePayload {
 
 const outboxStore = createIndexedDbPostmasterStore({ name: 'vielzeug-crm-outbox' });
 const postmaster = createPostmaster({
-  jobs: defineJobs({
-    syncStage: {
-      execute: async (value: unknown) => {
-        const payload = validateStageChange(value);
+  jobs: {
+    syncStage: defineJob({
+      execute: async (payload) => {
         await syncOpportunity(payload.id, { stage: payload.stage });
       },
-      key: (value: unknown) => {
-        const payload = validateStageChange(value);
-        return `${payload.id}:${payload.stage}`;
-      },
+      key: (payload) => `${payload.id}:${payload.stage}`,
       retry: {
         delay: () => 800,
         maxAttempts: 20,
@@ -41,8 +37,8 @@ const postmaster = createPostmaster({
       },
       validate: validateStageChange,
       version: 1,
-    },
-  }),
+    }),
+  },
   store: outboxStore,
 });
 const network = createNetwork();

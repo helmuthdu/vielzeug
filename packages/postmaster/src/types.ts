@@ -35,7 +35,8 @@ export interface JobDefinition<T> {
   readonly version: number;
 }
 
-export type JobDefinitions = Record<string, JobDefinition<unknown>>;
+/** Constraint alias for job-definition maps; `any` keeps per-job payload types intact. */
+export type JobDefinitions = Record<string, JobDefinition<any>>;
 export type InferJobPayload<J> = J extends JobDefinition<infer T> ? T : never;
 
 export type EntryStatus = 'dead-letter' | 'queued' | 'running';

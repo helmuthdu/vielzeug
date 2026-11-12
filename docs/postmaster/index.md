@@ -8,7 +8,7 @@ related: [courier, vault, sentinel, familiar, ripple]
 exports:
   [
     createPostmaster,
-    defineJobs,
+    defineJob,
     createIndexedDbPostmasterStore,
     createMemoryPostmasterStore,
     PostmasterError,
@@ -34,12 +34,12 @@ async function createTodo(payload: { id: string; title: string }) {
 }
 
 // After
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 import { s } from '@vielzeug/spell';
 
-const jobs = defineJobs({
-  createTodo: {
+const jobs = {
+  createTodo: defineJob({
     version: 1,
     validate: s.object({ id: s.string(), title: s.string() }),
     key: (p) => p.id,
@@ -51,8 +51,8 @@ const jobs = defineJobs({
         signal,
       });
     },
-  },
-});
+  }),
+};
 
 const store = createIndexedDbPostmasterStore({ name: 'my-app-outbox' });
 const postmaster = createPostmaster({ jobs, store });
@@ -119,11 +119,11 @@ yarn add @vielzeug/postmaster @vielzeug/vault
 Define typed jobs, create a durable store, enqueue work, and start the processor. Dispose both the processor and the store when the page lifetime ends.
 
 ```ts
-import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
+import { createPostmaster, defineJob } from '@vielzeug/postmaster';
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 
-const jobs = defineJobs({
-  createTodo: {
+const jobs = {
+  createTodo: defineJob({
     version: 1,
     validate: (v: unknown) => v as { id: string; title: string },
     key: (p) => p.id,
@@ -136,8 +136,8 @@ const jobs = defineJobs({
       });
     },
     retry: { maxAttempts: 5, shouldRetry: () => true },
-  },
-});
+  }),
+};
 
 const store = createIndexedDbPostmasterStore({ name: 'my-app-outbox' });
 const postmaster = createPostmaster({ jobs, store });
@@ -154,7 +154,7 @@ await store.dispose();
 
 ## Features
 
-- `defineJobs()`: Typed job registry with payload inference and validation.
+- `defineJob()`: Types one job definition; payloads infer from the validator into `execute`, `key`, and `enqueue`.
 - `createPostmaster()`: Processor with leased claims, heartbeat renewal, and crash recovery.
 - `enqueue()`: Persist a job and wake the processor, with optional delayed eligibility via `availableAt`.
 - `flush()`: Process every available job until the queue is empty.
