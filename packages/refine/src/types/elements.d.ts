@@ -32,6 +32,7 @@ import type { OreKeyboardKeyProps, OreKeyboardShortcutProps } from '../content/k
 import type { OreListEvents, OreListProps } from '../content/list/list';
 import type { OreListItemEvents, OreListItemProps } from '../content/list/list-item';
 import type { OreMarqueeProps } from '../content/marquee/marquee';
+import type { OreProseEvents, OreProseProps } from '../content/prose/prose';
 import type { OreQrCodeElement, OreQrCodeEvents, OreQrCodeProps } from '../content/qr-code/qr-code';
 import type { OreRankItemProps } from '../content/rank-list/rank-item';
 import type { OreRankListProps } from '../content/rank-list/rank-list';
@@ -206,6 +207,7 @@ export interface RefineElementMap {
   'ore-password-strength': HTMLElement & OrePasswordStrengthProps;
   'ore-popover': HTMLElement & OrePopoverProps & AddEventListeners<OrePopoverEvents>;
   'ore-progress': HTMLElement & OreProgressProps;
+  'ore-prose': HTMLElement & OreProseProps & AddEventListeners<OreProseEvents>;
   'ore-pull-to-refresh': PullToRefreshElement & OrePullToRefreshProps & AddEventListeners<OrePullToRefreshEvents>;
   'ore-qr-code': OreQrCodeElement & OreQrCodeProps & AddEventListeners<OreQrCodeEvents>;
   'ore-qr-scanner': HTMLElement & OreQrScannerProps & AddEventListeners<OreQrScannerEvents>;

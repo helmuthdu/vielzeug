@@ -20,7 +20,7 @@ export default defineConfig(
     {
       build: {
         rolldownOptions: {
-          output: { globals: { '@vielzeug/dnd/drop': 'Dnd' } },
+          output: { globals: { '@vielzeug/dnd/drop': 'Dnd', '@vielzeug/scribe': 'Scribe' } },
         },
       },
       css: {

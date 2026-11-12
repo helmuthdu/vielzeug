@@ -24,6 +24,7 @@ import { rippleExamples } from './ripple';
 import { runeExamples } from './rune';
 import { sandboxExamples } from './sandbox';
 import { scoutExamples } from './scout';
+import { scribeExamples } from './scribe';
 import { scrollExamples } from './scroll';
 import { sentinelExamples } from './sentinel';
 import { sigilExamples } from './sigil';
@@ -63,6 +64,7 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   rune: runeExamples,
   sandbox: sandboxExamples,
   scout: scoutExamples,
+  scribe: scribeExamples,
   scroll: scrollExamples,
   sentinel: sentinelExamples,
   sigil: sigilExamples,

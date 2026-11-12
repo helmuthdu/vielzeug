@@ -48,6 +48,7 @@ export const REFINE_CATEGORIES: RefineCategory[] = [
       'keyboard-key',
       'list',
       'marquee',
+      'prose',
       'qr-code',
       'rank-list',
       'speech-player',

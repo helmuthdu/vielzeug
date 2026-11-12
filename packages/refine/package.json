@@ -381,6 +381,11 @@
       "require": "./dist/progress.cjs",
       "types": "./dist/feedback/progress/progress.d.ts"
     },
+    "./prose": {
+      "import": "./dist/prose.js",
+      "require": "./dist/prose.cjs",
+      "types": "./dist/content/prose/prose.d.ts"
+    },
     "./pull-to-refresh": {
       "import": "./dist/pull-to-refresh.js",
       "require": "./dist/pull-to-refresh.cjs",
@@ -744,6 +749,9 @@
       "progress": [
         "dist/feedback/progress/progress.d.ts"
       ],
+      "prose": [
+        "dist/content/prose/prose.d.ts"
+      ],
       "pull-to-refresh": [
         "dist/feedback/pull-to-refresh/pull-to-refresh.d.ts"
       ],
@@ -888,6 +896,7 @@
     "@vielzeug/orbit": "workspace:*",
     "@vielzeug/ore": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
+    "@vielzeug/scribe": "workspace:*",
     "@vielzeug/sentinel": "workspace:*",
     "@vielzeug/sigil": "workspace:*",
     "@vielzeug/tempo": "workspace:*"

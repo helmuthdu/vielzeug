@@ -1808,6 +1808,33 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
+      '/scribe/': [
+        { link: '/scribe/', text: 'Overview' },
+        { link: '/scribe/migration', text: 'Migration' },
+        {
+          items: [
+            { link: '/scribe/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/scribe/usage#html-and-dom-rendering', text: 'HTML and DOM Rendering' },
+            { link: '/scribe/usage#outline-and-plain-text', text: 'Outline and Plain Text' },
+            { link: '/scribe/usage#link-policy', text: 'Link Policy' },
+            { link: '/scribe/usage#error-handling', text: 'Error Handling' },
+            { link: '/scribe/usage#refine-integration', text: 'Refine Integration' },
+          ],
+          text: 'Guide',
+        },
+        {
+          items: [{ link: '/scribe/api', text: 'API Reference' }],
+          text: 'Reference',
+        },
+        {
+          items: [
+            { link: '/scribe/examples', text: 'All Examples' },
+            { link: '/scribe/examples/getting-started', text: 'Getting Started' },
+            { link: '/scribe/examples/safe-rendering', text: 'Safe Rendering' },
+          ],
+          text: 'Examples',
+        },
+      ],
       '/scroll/': [
         { link: '/scroll/', text: 'Overview' },
         { link: '/scroll/migration', text: 'Migration' },

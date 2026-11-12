@@ -69,6 +69,7 @@ exports:
     ore-pagination,
     ore-password-strength,
     ore-popover,
+    ore-prose,
     ore-progress,
     ore-pull-to-refresh,
     ore-qr-code,
@@ -234,7 +235,7 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 
 Each entry below is a component with its own documentation page and registration subpath. Sub-element tags (`ore-accordion-item`, `ore-card-picker-item`, `ore-tab-item`, `ore-avatar-group`, and the rest) are documented on their parent's page and registered with it.
 
-**Content:** `ore-accordion`, `ore-avatar`, `ore-card`, `ore-card-picker`, `ore-carousel`, `ore-chat-message`, `ore-chat-panel`, `ore-code-window`, `ore-copy-command`, `ore-icon`, `ore-keyboard-key`, `ore-list`, `ore-marquee`, `ore-qr-code`, `ore-rank-list`, `ore-speech-player`, `ore-speed-reading`, `ore-stats`, `ore-table`, `ore-text`
+**Content:** `ore-accordion`, `ore-avatar`, `ore-card`, `ore-card-picker`, `ore-carousel`, `ore-chat-message`, `ore-chat-panel`, `ore-code-window`, `ore-copy-command`, `ore-icon`, `ore-keyboard-key`, `ore-list`, `ore-marquee`, `ore-prose`, `ore-qr-code`, `ore-rank-list`, `ore-speech-player`, `ore-speed-reading`, `ore-stats`, `ore-table`, `ore-text`
 
 **Feedback:** `ore-alert`, `ore-badge`, `ore-chip`, `ore-cookie-banner`, `ore-password-strength`, `ore-progress`, `ore-pull-to-refresh`, `ore-skeleton`, `ore-state`, `ore-toast`, `ore-typing-indicator`
 

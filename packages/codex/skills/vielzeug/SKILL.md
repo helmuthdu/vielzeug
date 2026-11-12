@@ -77,6 +77,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/rune`: Structured scoped logger with remote transport
 - `@vielzeug/sandbox`: Sandboxed iframe runtime with typed postMessage state bridge
 - `@vielzeug/scout`: Trigram fuzzy-search index with highlighting and reactive layer
+- `@vielzeug/scribe`: Safe Markdown prose: deterministic parser, XSS-safe DOM and HTML renderers, outline and plain-text extraction.
 - `@vielzeug/scroll`: Virtual list engine for large datasets
 - `@vielzeug/sentinel`: Subscribable snapshots for external browser environment state
 - `@vielzeug/sigil`: QR code generation and scanning: pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning

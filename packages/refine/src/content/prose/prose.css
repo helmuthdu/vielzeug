@@ -1,0 +1,149 @@
+/* ========================================
+     Prose typography: every value through Refine tokens (4-point grid, type scale,
+     semantic colors). The rendered tree is scribe's fixed tag set, so each rule here
+     matches a tag the renderer can actually emit.
+     ======================================== */
+
+:host {
+  --_color: var(--prose-color, var(--text-color-body));
+  --_link: var(--prose-link-color, var(--color-primary));
+  --_code-bg: var(--prose-code-bg, var(--color-neutral-backdrop));
+  --_border: var(--prose-border-color, var(--color-divider));
+  --_radius: var(--prose-radius, var(--rounded-md));
+
+  display: block;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--_color);
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+.prose > :first-child {
+  margin-block-start: 0;
+}
+
+.prose > :last-child {
+  margin-block-end: 0;
+}
+
+/* Headings: the shared heading scale and header tracking. */
+.prose :is(h1, h2, h3, h4, h5, h6) {
+  margin-block: var(--size-6) var(--size-3);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
+  color: var(--text-color-heading);
+  letter-spacing: var(--tracking-header);
+}
+
+.prose h1 {
+  font-size: var(--heading-2xl);
+}
+
+.prose h2 {
+  font-size: var(--heading-xl);
+}
+
+.prose h3 {
+  font-size: var(--heading-lg);
+}
+
+.prose h4 {
+  font-size: var(--heading-md);
+}
+
+.prose h5 {
+  font-size: var(--heading-sm);
+}
+
+.prose h6 {
+  font-size: var(--heading-xs);
+}
+
+.prose p {
+  margin-block: var(--size-4);
+}
+
+.prose a {
+  color: var(--_link);
+  text-decoration: underline;
+  text-underline-offset: var(--size-0-5);
+}
+
+.prose :is(ul, ol) {
+  padding-inline-start: var(--size-6);
+  margin-block: var(--size-4);
+}
+
+.prose li {
+  margin-block: var(--size-1);
+}
+
+.prose li > ul,
+.prose li > ol {
+  margin-block: 0;
+}
+
+.prose blockquote {
+  padding-inline-start: var(--size-4);
+  margin-block: var(--size-4);
+  margin-inline-start: 0;
+  color: var(--text-color-tertiary);
+  border-inline-start: var(--border-2) solid var(--_border);
+}
+
+.prose code {
+  padding: var(--size-0-5) var(--size-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background: var(--_code-bg);
+  border-radius: var(--_radius);
+}
+
+.prose pre {
+  padding: var(--size-4);
+  margin-block: var(--size-4);
+  overflow-x: auto;
+  background: var(--_code-bg);
+  border-radius: var(--_radius);
+}
+
+.prose pre code {
+  padding: 0;
+  background: none;
+}
+
+.prose hr {
+  margin-block: var(--size-6);
+  border: none;
+  border-block-start: var(--border) solid var(--_border);
+}
+
+.prose img {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+.prose table {
+  inline-size: 100%;
+  margin-block: var(--size-4);
+  text-align: start;
+  border-collapse: collapse;
+}
+
+.prose :is(th, td) {
+  padding: var(--size-2) var(--size-3);
+  border-block-end: var(--border) solid var(--_border);
+}
+
+.prose th {
+  font-weight: var(--font-semibold);
+  color: var(--text-color-heading);
+}
+
+.prose del {
+  color: var(--text-color-tertiary);
+}

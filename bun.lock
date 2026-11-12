@@ -500,6 +500,7 @@
         "@vielzeug/orbit": "workspace:*",
         "@vielzeug/ore": "workspace:*",
         "@vielzeug/ripple": "workspace:*",
+        "@vielzeug/scribe": "workspace:*",
         "@vielzeug/sentinel": "workspace:*",
         "@vielzeug/sigil": "workspace:*",
         "@vielzeug/tempo": "workspace:*",
@@ -565,6 +566,16 @@
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
+      "devDependencies": {
+        "@types/node": "^26.6.6",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.6",
+        "vitest": "^5.1.0",
+      },
+    },
+    "packages/scribe": {
+      "name": "@vielzeug/scribe",
+      "version": "0.1.0",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -1115,6 +1126,8 @@
     "@vielzeug/sandbox": ["@vielzeug/sandbox@workspace:packages/sandbox"],
 
     "@vielzeug/scout": ["@vielzeug/scout@workspace:packages/scout"],
+
+    "@vielzeug/scribe": ["@vielzeug/scribe@workspace:packages/scribe"],
 
     "@vielzeug/scroll": ["@vielzeug/scroll@workspace:packages/scroll"],
 

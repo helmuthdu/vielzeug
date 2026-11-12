@@ -64,6 +64,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
       { id: 'ore', tagline: 'Web component primitives' },
       { id: 'prism', tagline: 'SVG charts' },
       { id: 'refine', tagline: 'Accessible components' },
+      { id: 'scribe', tagline: 'Safe Markdown prose' },
       { id: 'sentinel', tagline: 'Reactive environment state' },
       { id: 'sigil', tagline: 'QR generation & scanning' },
     ],

@@ -55,6 +55,8 @@ export type { ListItemRevealSide, OreListItemEvents, OreListItemProps } from './
 export { LIST_ITEM_TAG } from './list/list-item';
 export type { MarqueeDirection, OreMarqueeProps } from './marquee/marquee';
 export { MARQUEE_TAG } from './marquee/marquee';
+export type { OreProseEvents, OreProseProps } from './prose/prose';
+export { PROSE_TAG } from './prose/prose';
 export type { OreQrCodeElement, OreQrCodeEvents, OreQrCodeProps } from './qr-code/qr-code';
 export { QR_CODE_TAG } from './qr-code/qr-code';
 export type { OreRankItemProps } from './rank-list/rank-item';

@@ -33,11 +33,12 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/postmaster` | Typed durable job outbox with leased processing, retries, and dead-letter recovery | `arsenal`, `vault` | N/A | N/A |
 | `@vielzeug/prism` | Responsive SVG charts with explicit updates: line, bar, area, scatter, pie, radar, heatmap, sparkline | `orbit` | N/A | N/A |
 | `@vielzeug/pulse` | Typed WebSocket client with channels, rooms, presence, reconnect | `arsenal` | N/A | N/A |
-| `@vielzeug/refine` | Accessible, themeable web components built on ore | `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `necromancer`, `orbit`, `ore`, `ripple`, `sentinel`, `sigil`, `tempo` | N/A | N/A |
+| `@vielzeug/refine` | Accessible, themeable web components built on ore | `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `necromancer`, `orbit`, `ore`, `ripple`, `scribe`, `sentinel`, `sigil`, `tempo` | N/A | N/A |
 | `@vielzeug/ripple` | Reactive runtime primitives: signals, derived values, effects, scopes, watchers, and async resources | N/A | N/A | N/A |
 | `@vielzeug/rune` | Structured scoped logger with remote transport | N/A | N/A | N/A |
 | `@vielzeug/sandbox` | Sandboxed iframe runtime with typed postMessage state bridge | N/A | N/A | N/A |
 | `@vielzeug/scout` | Trigram fuzzy-search index with highlighting and reactive layer | `arsenal` | N/A | N/A |
+| `@vielzeug/scribe` | Safe Markdown prose: deterministic parser, XSS-safe DOM and HTML renderers, outline and plain-text extraction. | N/A | N/A | N/A |
 | `@vielzeug/scroll` | Virtual list engine for large datasets | N/A | N/A | N/A |
 | `@vielzeug/sentinel` | Subscribable snapshots for external browser environment state | `arsenal` | N/A | N/A |
 | `@vielzeug/sigil` | QR code generation and scanning: pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning | N/A | N/A | N/A |

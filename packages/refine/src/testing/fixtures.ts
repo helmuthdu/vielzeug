@@ -37,13 +37,14 @@ const TEMPORAL_UMD = path.join(path.dirname(tempoRequire.resolve('@js-temporal/p
 // argument list, not from package.json.
 //   sentinel ← Arsenal · focus ← Keymap · ore ← Ripple · orbit ← Arsenal · tempo ← Temporal
 //   dnd ← Keymap, Gesture · refine ← Ore, Ripple, Tempo, Focus, Arsenal, Orbit,
-//          Gesture, Sigil, Sentinel, Necromancer, Dnd, Keymap
+//          Gesture, Sigil, Sentinel, Necromancer, Dnd, Keymap, Scribe
 const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
   { path: TEMPORAL_UMD, shim: 'if(typeof temporal!=="undefined"){window.Temporal=temporal;}' },
   { path: path.join(PKG, 'ripple/dist/ripple.iife.js') },
   { path: path.join(PKG, 'arsenal/dist/arsenal.iife.js') },
   { path: path.join(PKG, 'keymap/dist/keymap.iife.js') },
   { path: path.join(PKG, 'sigil/dist/sigil.iife.js') },
+  { path: path.join(PKG, 'scribe/dist/scribe.iife.js') },
   { path: path.join(PKG, 'gesture/dist/gesture.iife.js') },
   { path: path.join(PKG, 'sentinel/dist/sentinel.iife.js') },
   { path: path.join(PKG, 'focus/dist/focus.iife.js') },
