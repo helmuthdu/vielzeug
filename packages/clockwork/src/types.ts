@@ -126,7 +126,13 @@ export type Actor<State extends string, Context extends Record<string, unknown>,
   readonly disposed: boolean;
   send(event: Event): void;
   readonly snapshot: MachineSnapshot<State, Context>;
-  subscribe(listener: (snapshot: MachineSnapshot<State, Context>) => void): () => void;
+  /**
+   * Observe committed snapshots. `options.signal` auto-unsubscribes when the signal aborts.
+   */
+  subscribe(
+    listener: (snapshot: MachineSnapshot<State, Context>) => void,
+    options?: { readonly signal?: AbortSignal },
+  ): () => void;
   /**
    * Observe actor lifecycle without affecting machine behavior.
    * Handler errors are swallowed. Returns an unsubscribe function.

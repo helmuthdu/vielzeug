@@ -78,10 +78,13 @@ Throws `ClockworkDefinitionError` when a definition carries a timer delay outsid
 ### `Actor.subscribe()`
 
 ```ts
-subscribe(listener: (snapshot: MachineSnapshot<State, Context>) => void): () => void;
+subscribe(
+  listener: (snapshot: MachineSnapshot<State, Context>) => void,
+  options?: { readonly signal?: AbortSignal },
+): () => void;
 ```
 
-Subscribes to future committed actor snapshots. It does not run immediately; read `actor.snapshot` for the initial value. Returns an unsubscribe function. Subscriber failures are reported through `tap()` as `error` events with `phase: 'subscriber'` without stopping remaining subscribers, declared effects, or the actor.
+Subscribes to future committed actor snapshots. It does not run immediately; read `actor.snapshot` for the initial value. `options.signal` auto-unsubscribes when the signal aborts; an already-aborted signal creates no subscription. Returns an unsubscribe function. Subscriber failures are reported through `tap()` as `error` events with `phase: 'subscriber'` without stopping remaining subscribers, declared effects, or the actor.
 
 **Example:**
 
@@ -189,10 +192,13 @@ Returns whether the current actor snapshot accepts an event. A guard failure is 
 ### `actor.subscribe()`
 
 ```ts
-subscribe(listener: (snapshot: MachineSnapshot<State, Context>) => void): () => void;
+subscribe(
+  listener: (snapshot: MachineSnapshot<State, Context>) => void,
+  options?: { readonly signal?: AbortSignal },
+): () => void;
 ```
 
-Registers a listener for committed snapshots. The listener does not run immediately.
+Registers a listener for committed snapshots. The listener does not run immediately. `options.signal` auto-unsubscribes on abort; an already-aborted signal creates no subscription.
 
 **Returns:** An unsubscribe function.
 
@@ -258,7 +264,7 @@ type MachineConfig<
 };
 ```
 
-A flat machine definition. State nodes cannot contain child states. The `StateNode`, `Transition`, `After`, `Invoke`, `Effect`, `Guard`, and `Reducer` shapes are inferred inline and exported for reusable helpers. `After.delay` must be finite and between 0 and 2,147,483,647 milliseconds; delayed guards and reducers receive `event: undefined`.
+A flat machine definition. State nodes cannot contain child states. The `StateNode`, `Transition`, `After`, `Invoke`, `Effect`, `Guard`, and `Reducer` shapes are inferred inline and exported for reusable helpers. `After.delay` must be finite and between 0 and 2,147,483,647 milliseconds; delayed guards and reducers receive `event: undefined`. `Invoke` inside a state node fixes its `Result` to `unknown`, so `onDone` receives `result: unknown`; narrow or cast where the result enters your mapped event.
 
 ### `Actor<State, Context, Event>`
 

@@ -38,7 +38,7 @@ const machine = defineMachine<{ items: string[] }, Event>()({
       invoke: [
         {
           src: ({ signal }) => fetch('/api/items', { signal }).then((response) => response.json() as Promise<string[]>),
-          onDone: ({ result }) => ({ items: result, type: 'DONE' }),
+          onDone: ({ result }) => ({ items: result as string[], type: 'DONE' }),
         },
       ],
       on: { DONE: { reduce: ({ event }) => ({ items: event.items }), target: 'ready' } },

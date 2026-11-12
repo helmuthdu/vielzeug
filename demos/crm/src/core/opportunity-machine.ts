@@ -49,10 +49,6 @@ const machine = defineMachine<Context, OpportunityEvent>()({
 export function canTransition(id: string, from: OpportunityStage, to: OpportunityStage): boolean {
   const event = eventForTransition[`${from}:${to}`];
   if (!event) return false;
-  const actor = machine.createActor({ snapshot: { context: { opportunityId: id }, state: from } });
-  try {
-    return actor.can(event);
-  } finally {
-    actor.dispose();
-  }
+  // Pure decision on an arbitrary snapshot: no actor, timers, or effects are involved.
+  return machine.can({ context: { opportunityId: id }, state: from }, event);
 }

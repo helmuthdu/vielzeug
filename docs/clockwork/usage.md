@@ -127,6 +127,8 @@ Effects receive `context`, the triggering `event` (or `undefined` for initial en
 
 Invokes start on state entry. `src` gets readonly entry context, the triggering event or `undefined`, and an `AbortSignal`. `onDone` or `onError` map settlement to ordinary events. All invokes are cancelled when the actor exits the state or disposes.
 
+`onDone` receives `result: unknown`: without a schema system the machine cannot tie one callback's parameter to each `src`'s concrete return type, so narrow or cast explicitly where the result enters your event.
+
 ```ts
 type LoadEvent =
   | { type: 'FETCH' }
@@ -147,7 +149,7 @@ const loader = defineMachine<{ error: string; items: string[] }, LoadEvent>()({
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json() as Promise<string[]>;
           },
-          onDone: ({ result }) => ({ items: result, type: 'SUCCESS' }),
+          onDone: ({ result }) => ({ items: result as string[], type: 'SUCCESS' }),
           onError: ({ error }) => ({ message: String(error), type: 'FAILURE' }),
         },
       ],
@@ -183,7 +185,7 @@ const notification = defineMachine<{ message: string }, NotificationEvent>()({
 
 ## Snapshot observation and persistence
 
-`actor.snapshot` is the current shallow-frozen `MachineSnapshot`; read it directly rather than calling a snapshot method. Use `subscribe()` to integrate a state library or persist future committed snapshots. Fresh actors run their initial entry effects and resources; restored actors start only the restored state's invokes and timers, not its entry effects.
+`actor.snapshot` is the current shallow-frozen `MachineSnapshot`; read it directly rather than calling a snapshot method. Use `subscribe()` to integrate a state library or persist future committed snapshots; pass `{ signal }` to auto-unsubscribe when an owner's lifetime ends. Fresh actors run their initial entry effects and resources; restored actors start only the restored state's invokes and timers, not its entry effects.
 
 ```ts
 const stored = sessionStorage.getItem('wizard');

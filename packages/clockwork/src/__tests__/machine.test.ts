@@ -691,6 +691,34 @@ describe('actor.subscribe', () => {
     expect(actor.disposed).toBe(true);
   });
 
+  it('auto-unsubscribes when the signal aborts and skips an already-aborted signal', () => {
+    type Event = { readonly type: 'GO' };
+
+    const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
+      initial: 'idle',
+      states: { idle: { on: { GO: { target: 'idle' } } } },
+    });
+    const actor = machine.createActor();
+    const controller = new AbortController();
+    const afterAbort = vi.fn();
+    const listener = vi.fn();
+
+    actor.subscribe(listener, { signal: controller.signal });
+    actor.send({ type: 'GO' });
+    expect(listener).toHaveBeenCalledOnce();
+
+    controller.abort();
+    actor.send({ type: 'GO' });
+    expect(listener).toHaveBeenCalledOnce();
+
+    actor.subscribe(afterAbort, { signal: controller.signal });
+    actor.send({ type: 'GO' });
+    expect(afterAbort).not.toHaveBeenCalled();
+
+    actor.dispose();
+  });
+
   it('uses a stable listener snapshot for each notification', () => {
     type Event = { readonly type: 'GO' };
     const machine = defineMachine<Record<string, never>, Event>()({

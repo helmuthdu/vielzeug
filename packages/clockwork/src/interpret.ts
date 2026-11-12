@@ -447,12 +447,23 @@ const createActor = <State extends string, Context extends Record<string, unknow
     get snapshot() {
       return current;
     },
-    subscribe(listener) {
-      if (disposed) return () => undefined;
+    subscribe(listener, subscribeOptions) {
+      const signal = subscribeOptions?.signal;
+
+      if (disposed || signal?.aborted) return () => undefined;
 
       listeners.add(listener);
 
-      return () => listeners.delete(listener);
+      const onAbort = (): void => {
+        listeners.delete(listener);
+      };
+
+      signal?.addEventListener('abort', onAbort, { once: true });
+
+      return () => {
+        listeners.delete(listener);
+        signal?.removeEventListener('abort', onAbort);
+      };
     },
     tap(handler, tapOptions) {
       if (disposed) return () => undefined;
