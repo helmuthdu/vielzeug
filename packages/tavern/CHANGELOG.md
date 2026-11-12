@@ -1,7 +1,15 @@
 # Change Log - @vielzeug/tavern
 
-This log was last generated on Thu, 12 Nov 2026 15:13:50 GMT and should not be manually modified.
+This log was last generated on Thu, 12 Nov 2026 20:00:45 GMT and should not be manually modified.
 
+## 26.11.14
+
+Thu, 12 Nov 2026 20:00:45 GMT
+
+### Minor changes
+
+- New `@vielzeug/tavern/testing` subpath: `createFakeRtc()` and the `FakeRtc` type, so session tests pair a real host and guest through the fake WebRTC factory without depending on `@vielzeug/mesh` directly.
+- Named sessions: `TavernSubject` gained an optional stable `id`, and `sendCommand` a third `target` argument. Declaring the id makes tavern verify every guest command against it before the command table runs, closing the gap where a command meant for another subject silently reached the hosted one.
 ## 26.11.13
 
 Thu, 12 Nov 2026 15:13:50 GMT

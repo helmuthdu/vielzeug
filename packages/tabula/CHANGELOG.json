@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Remove `detectDelimiter`, `parseRecordsWithLines`, and `LineRow` from the public surface; `CsvScanner` now takes the shared options object and owns chunk buffering with lazy delimiter auto-detection (`createCsvGridStream` is a thin adapter); single-character delimiters are enforced with `TabulaParseError`; async schemas in `parseTypedRecords` now raise `TabulaParseError`.",
+            "commit": "883c8c62f031004bfa3d651c6e4e17f573055544"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 20:00:45 GMT",
+      "tag": "@vielzeug/tabula_v26.11.14",
+      "version": "26.11.14"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",

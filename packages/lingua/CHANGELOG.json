@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "`translateUnkeyed(key, options?)` joins `Translator` and `I18n`: the runtime-identical translate for keys outside the typed key set, so runtime-assembled keys cross the typed surface without each consumer hand-rolling a cast.",
+            "commit": "883c8c62f031004bfa3d651c6e4e17f573055544"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 20:00:45 GMT",
+      "tag": "@vielzeug/lingua_v26.11.14",
+      "version": "26.11.14"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "agent@vielzeug",

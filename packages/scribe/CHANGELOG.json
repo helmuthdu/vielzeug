@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "autolink angle-bracket emails as mailto links; split slug/text helpers out of _policy",
+            "commit": "883c8c62f031004bfa3d651c6e4e17f573055544"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 20:00:45 GMT",
+      "tag": "@vielzeug/scribe_v26.11.14",
+      "version": "26.11.14"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "feat(scribe): initial release — safe Markdown prose pipeline with deterministic parser, XSS-safe HTML/DOM renderers, outline and plain-text extraction",
             "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
           }

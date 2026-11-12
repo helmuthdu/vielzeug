@@ -5,6 +5,25 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "add @vielzeug/patchwork/merge subpath: three-way JSON merge with conflicts as data",
+            "commit": "883c8c62f031004bfa3d651c6e4e17f573055544"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "fix array diff to align on prefix and suffix so non-tail inserts round-trip; attribute path errors to the exact pointer",
+            "commit": "883c8c62f031004bfa3d651c6e4e17f573055544"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 20:00:45 GMT",
+      "tag": "@vielzeug/patchwork_v26.11.14",
+      "version": "26.11.14"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "feat(patchwork): initial release — RFC 6901 pointers, RFC 6902 apply/tryApply with structural sharing, and structural diff",
             "commit": "5f6c6ae7d0fd0503911f4a23c8d446efafa9b934"
           }

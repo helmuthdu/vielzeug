@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "add createQueryState: typed reactive URL query bindings with param codecs",
+            "commit": "883c8c62f031004bfa3d651c6e4e17f573055544"
+          }
+        ]
+      },
+      "date": "Thu, 12 Nov 2026 20:00:45 GMT",
+      "tag": "@vielzeug/wayfinder_v26.11.14",
+      "version": "26.11.14"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "agent@vielzeug",
