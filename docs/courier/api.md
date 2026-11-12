@@ -258,10 +258,9 @@ type GetRequestConfig<P extends string = string, T = unknown> = Omit<
 
 // The verbs (`post`, `put`, `patch`, `delete`) accept `HttpRequestConfig`:
 // request options without `method` or `cache`, exported for typing wrappers.
-type HttpRequestConfig<P extends string = string, T = unknown> = Omit<
-  RequestConfig<P, T>,
-  'cache' | 'method'
-> & { cache?: never };
+type HttpRequestConfig<P extends string = string, T = unknown> = Omit<RequestConfig<P, T>, 'cache' | 'method'> & {
+  cache?: never;
+};
 
 type PrefetchConfig<P extends string = string, T = unknown> = Omit<
   GetRequestConfig<P, T>,
@@ -276,17 +275,17 @@ type PrefetchConfig<P extends string = string, T = unknown> = Omit<
 
 ## Errors
 
-| Error                          | Trigger                                              | Notable properties                                                                                           |
-| ------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `CourierError`                 | Base class for all Courier errors                    | Use `instanceof` to narrow                                                                                   |
-| `CourierHttpError`             | Non-2xx HTTP response                                | `status`, `data`, `headers`, `method`, `url`, `problem`; `CourierHttpError.is(e, status?)` narrows by status |
-| `CourierNetworkError`          | Request failure without response                     | `method`, `url`, `cause`                                                                                     |
-| `CourierTimeoutError`          | Timeout signal aborts request                        | `method`, `url`, `cause`                                                                                     |
-| `CourierAbortError`            | Caller or client cancellation                        | `method`, `url`, `cause`                                                                                     |
-| `CourierSchemaValidationError` | Response schema fails                                | `data`, `cause`                                                                                              |
-| `CourierParseError`            | Response body cannot parse                           | N/A                                                                                                          |
+| Error                          | Trigger                                                                                                    | Notable properties                                                                                           |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `CourierError`                 | Base class for all Courier errors                                                                          | Use `instanceof` to narrow                                                                                   |
+| `CourierHttpError`             | Non-2xx HTTP response                                                                                      | `status`, `data`, `headers`, `method`, `url`, `problem`; `CourierHttpError.is(e, status?)` narrows by status |
+| `CourierNetworkError`          | Request failure without response                                                                           | `method`, `url`, `cause`                                                                                     |
+| `CourierTimeoutError`          | Timeout signal aborts request                                                                              | `method`, `url`, `cause`                                                                                     |
+| `CourierAbortError`            | Caller or client cancellation                                                                              | `method`, `url`, `cause`                                                                                     |
+| `CourierSchemaValidationError` | Response schema fails                                                                                      | `data`, `cause`                                                                                              |
+| `CourierParseError`            | Response body cannot parse                                                                                 | N/A                                                                                                          |
 | `CourierConfigError`           | Caller bug in the request (GET/HEAD body, raw + schema, unresolved path param, non-JSON-serializable body) | N/A                                                                                                          |
-| `CourierDisposedError`         | Work starts after disposal                           | N/A                                                                                                          |
+| `CourierDisposedError`         | Work starts after disposal                                                                                 | N/A                                                                                                          |
 
 Errors thrown directly by custom middleware are preserved rather than reclassified. Every request method (`request`, `get`, `prefetch`, and the verbs) reports failures as a rejected promise; only `createCourier()` throws synchronously, for invalid timeout and cache options.
 

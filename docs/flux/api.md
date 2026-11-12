@@ -27,8 +27,8 @@ description: Complete reference for @vielzeug/flux streams, operators, channels,
 
 ## Package Entry Point
 
-| Import           | Purpose                                                                                          |
-| ---------------- | ------------------------------------------------------------------------------------------------ |
+| Import           | Purpose                                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------------- |
 | `@vielzeug/flux` | Core streams, operators, consumers, errors, types, `createChannel()`, and `toAsyncIterable()` |
 
 ## Core
@@ -215,10 +215,10 @@ mergeMap<A, B>(project: (value: A) => Stream<B>, options: FlattenOptions): Opera
 
 Runs inner streams with bounded concurrency and queue capacity. Exceeding capacity errors output with `FluxCapacityError`.
 
-| Option        | Type                      | Description                                                                                       |
-| ------------- | ------------------------- | ------------------------------------------------------------------------------------------------- |
-| `concurrency` | `number \| 'unbounded'`   | Maximum concurrently active inner subscriptions; `'unbounded'` starts every value immediately     |
-| `capacity`    | `number`                  | Positive maximum queued source values (required when `concurrency` is a number; unused when `'unbounded'`) |
+| Option        | Type                    | Description                                                                                                |
+| ------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `concurrency` | `number \| 'unbounded'` | Maximum concurrently active inner subscriptions; `'unbounded'` starts every value immediately              |
+| `capacity`    | `number`                | Positive maximum queued source values (required when `concurrency` is a number; unused when `'unbounded'`) |
 
 Finite `concurrency` without a `capacity` throws `RangeError` when the operator is created.
 
@@ -453,9 +453,7 @@ interface Stream<T> {
 type OverflowPolicy = 'drop-newest' | 'drop-oldest' | 'error';
 type AsyncIterableOptions = { capacity: number; overflow: OverflowPolicy; signal?: AbortSignal };
 type TimerOptions = { delay: number; interval?: number };
-type FlattenOptions =
-  | { concurrency: number; capacity: number }
-  | { concurrency: 'unbounded'; capacity?: undefined };
+type FlattenOptions = { concurrency: number; capacity: number } | { concurrency: 'unbounded'; capacity?: undefined };
 type RetryOptions = { times: number; delay?: number | ((attempt: number) => number) };
 type ToArrayOptions = { maxItems: number; signal?: AbortSignal };
 type ValueOptions<T> = { signal?: AbortSignal; defaultValue?: T };

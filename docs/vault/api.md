@@ -7,14 +7,14 @@ description: Reference for Vault schemas, adapter entry points, storage capabili
 
 ## API Overview
 
-| Symbol                                            | Purpose                                                       | Execution mode                      | Common gotcha                                                          |
-| ------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------- |
-| `createMemory()`                                  | In-memory document store                                      | Async API                           | Import from `/memory`; parsers optional                                |
+| Symbol                                            | Purpose                                                       | Execution mode                      | Common gotcha                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------- |
+| `createMemory()`                                  | In-memory document store                                      | Async API                           | Import from `/memory`; parsers optional                                 |
 | `createLocalStorage()` / `createSessionStorage()` | Web Storage-backed key-value stores                           | Async API                           | Parsers required; available only where the corresponding Web API exists |
-| `createIndexedDB()`                               | Browser document store with transactions and cursor iteration | Async API                           | Import from `/indexeddb`; parsers required                             |
-| `createSQLite()`                                  | Driver-neutral SQLite document store                          | Async API over a synchronous driver | Import from `/sqlite`; parsers required                                |
-| `table()`                                         | Typed record schema                                           | Sync                                | The key field must be a string or finite number                        |
-| `ttl`                                             | Valid expiration durations                                    | Sync                                | Durations must be positive                                             |
+| `createIndexedDB()`                               | Browser document store with transactions and cursor iteration | Async API                           | Import from `/indexeddb`; parsers required                              |
+| `createSQLite()`                                  | Driver-neutral SQLite document store                          | Async API over a synchronous driver | Import from `/sqlite`; parsers required                                 |
+| `table()`                                         | Typed record schema                                           | Sync                                | The key field must be a string or finite number                         |
+| `ttl`                                             | Valid expiration durations                                    | Sync                                | Durations must be positive                                              |
 
 ## Package Entry Points
 
@@ -44,7 +44,7 @@ Defines a typed table and its primary-key field.
 | -------------------- | ---------------------------------------------------------------- |
 | `key`                | A record field whose values are `string` or finite `number` keys |
 | `options.defaultTtl` | Per-table default TTL in milliseconds                            |
-| `options.indexes`    | IndexedDB-only secondary index fields (`getAllByIndex()`)      |
+| `options.indexes`    | IndexedDB-only secondary index fields (`getAllByIndex()`)        |
 
 **Returns:** A `SchemaEntry` describing the table.
 
@@ -221,7 +221,7 @@ Creates a namespaced SQLite document store with atomic batches and keyset-pagina
 | Parameter        | Description                                                |
 | ---------------- | ---------------------------------------------------------- |
 | `schema`         | Tables created by `table()`                                |
-| `parsers`        | Required per-table parsers                                   |
+| `parsers`        | Required per-table parsers                                 |
 | `database`       | Caller-provided `SQLiteDatabase` connection                |
 | `name`           | Namespace within the connection                            |
 | `closeOnDispose` | Closes the connection during disposal; defaults to `false` |
@@ -442,12 +442,12 @@ interface TransactionContext<S extends AnySchema, K extends keyof S & string = k
 
 ## Errors
 
-| Error                 | Trigger                                                                 |
-| --------------------- | ----------------------------------------------------------------------- |
+| Error                 | Trigger                                                                  |
+| --------------------- | ------------------------------------------------------------------------ |
 | `VaultError`          | Any Vault-originated validation, serialization, storage, or parser error |
-| `VaultDisposedError`  | An operation after the store or observer hub is disposed                |
-| `VaultScopeError`     | A `batch()` callback accesses a table outside its declared scope        |
-| `VaultQuotaError`     | A LocalStorage or SessionStorage write exceeds the browser quota        |
-| `VaultMigrationError` | An IndexedDB migration callback throws                                  |
+| `VaultDisposedError`  | An operation after the store or observer hub is disposed                 |
+| `VaultScopeError`     | A `batch()` callback accesses a table outside its declared scope         |
+| `VaultQuotaError`     | A LocalStorage or SessionStorage write exceeds the browser quota         |
+| `VaultMigrationError` | An IndexedDB migration callback throws                                   |
 
 Every listed error extends `VaultError`.

@@ -69,13 +69,13 @@ function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C>;
 
 Creates the catalog store, current locale state, and the active translator.
 
-| Parameter             | Type                          | Description                                       |
-| --------------------- | ----------------------------- | ------------------------------------------------- |
-| `options.catalogs`    | `Catalogs<C>`                 | Eager locale catalogs                             |
-| `options.locale`      | `Locale`                      | Initial locale; defaults to `en`                  |
-| `options.loadCatalog` | `(locale) => Promise<C> \| C` | Loader for catalogs not supplied eagerly          |
-| `options.fallback`    | `Locale \| readonly Locale[]` | Fallback locales loaded with the selected locale  |
-| `options.missing`     | `MissingStrategy`             | Missing-key/value strategy                        |
+| Parameter             | Type                          | Description                                      |
+| --------------------- | ----------------------------- | ------------------------------------------------ |
+| `options.catalogs`    | `Catalogs<C>`                 | Eager locale catalogs                            |
+| `options.locale`      | `Locale`                      | Initial locale; defaults to `en`                 |
+| `options.loadCatalog` | `(locale) => Promise<C> \| C` | Loader for catalogs not supplied eagerly         |
+| `options.fallback`    | `Locale \| readonly Locale[]` | Fallback locales loaded with the selected locale |
+| `options.missing`     | `MissingStrategy`             | Missing-key/value strategy                       |
 
 Provide at least one of `catalogs` or `loadCatalog`; you may combine eager `catalogs` with `loadCatalog` for later locales.
 
@@ -93,15 +93,15 @@ const i18n = createI18n({
 i18n.translate('title');
 ```
 
-| Method or property | Signature                             | Returns                                                          |
-| ------------------ | ------------------------------------- | ---------------------------------------------------------------- |
-| `translate`        | Translator method                     | Rendered string                                                  |
-| `load`             | `({ locale? })`                       | `Promise<void>` after the locale and configured fallbacks load   |
-| `setLocale`        | `(locale)`                            | `Promise<void>` after an atomic loaded-locale commit             |
-| `isLoaded`         | `({ locale? })`                       | `boolean`                                                        |
-| `getSnapshot`      | `()`                                  | Current locale, referentially stable until it changes            |
-| `subscribe`        | `(listener, { immediate?, signal? })` | Unsubscribe function; listener receives the new locale           |
-| `serialize`        | `()`                                  | Loader-free `SerializedI18n<C>` for SSR transfer                 |
+| Method or property | Signature                             | Returns                                                        |
+| ------------------ | ------------------------------------- | -------------------------------------------------------------- |
+| `translate`        | Translator method                     | Rendered string                                                |
+| `load`             | `({ locale? })`                       | `Promise<void>` after the locale and configured fallbacks load |
+| `setLocale`        | `(locale)`                            | `Promise<void>` after an atomic loaded-locale commit           |
+| `isLoaded`         | `({ locale? })`                       | `boolean`                                                      |
+| `getSnapshot`      | `()`                                  | Current locale, referentially stable until it changes          |
+| `subscribe`        | `(listener, { immediate?, signal? })` | Unsubscribe function; listener receives the new locale         |
+| `serialize`        | `()`                                  | Loader-free `SerializedI18n<C>` for SSR transfer               |
 | `dispose`          | `()`                                  | `void`                                                         |
 | `locale`           | `Locale`                              | Current canonical locale                                       |
 | `disposed`         | `boolean`                             | Disposal state                                                 |
@@ -294,18 +294,22 @@ type TranslateOptions = { values?: Values };
 type PluralOptions = TranslateOptions & { count: number; ordinal?: boolean };
 type SubscribeOptions = { immediate?: boolean; signal?: AbortSignal };
 
-type CatalogPaths<C, Leaf, Prefix extends string = '', Depth extends readonly unknown[] = readonly [1, 1, 1, 1, 1, 1]> =
-  Depth extends readonly [unknown, ...infer Rest]
-    ? C extends Leaf
-      ? Prefix
-      : C extends PluralMessage
-        ? never
-        : C extends Catalog
-          ? {
-              [K in string & keyof C]: CatalogPaths<C[K], Leaf, Prefix extends '' ? K : `${Prefix}.${K}`, Rest>;
-            }[string & keyof C]
-          : never
-    : never;
+type CatalogPaths<
+  C,
+  Leaf,
+  Prefix extends string = '',
+  Depth extends readonly unknown[] = readonly [1, 1, 1, 1, 1, 1],
+> = Depth extends readonly [unknown, ...infer Rest]
+  ? C extends Leaf
+    ? Prefix
+    : C extends PluralMessage
+      ? never
+      : C extends Catalog
+        ? {
+            [K in string & keyof C]: CatalogPaths<C[K], Leaf, Prefix extends '' ? K : `${Prefix}.${K}`, Rest>;
+          }[string & keyof C]
+        : never
+  : never;
 
 type MessageKey<C> = CatalogPaths<C, string | PluralMessage>;
 type TextKey<C> = CatalogPaths<C, string>;

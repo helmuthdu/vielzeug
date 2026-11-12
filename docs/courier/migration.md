@@ -259,12 +259,12 @@ The sections above describe the historical 1.x → 2.x transition. For the curre
 
 This train tightens the error taxonomy and makes failure timing uniform across request methods.
 
-| Before                                                            | After                                                                       |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Unresolved path param threw `CourierParseError`                   | `CourierConfigError`: a caller bug, not a wire failure                      |
-| Non-JSON-serializable body surfaced as `CourierParseError`        | `CourierConfigError`                                                        |
-| `prefetch()` threw config and disposal errors synchronously       | Every request method reports failures as a rejected promise                 |
-| Verb configs were unnameable                                      | `HttpRequestConfig` is exported                                             |
+| Before                                                      | After                                                       |
+| ----------------------------------------------------------- | ----------------------------------------------------------- |
+| Unresolved path param threw `CourierParseError`             | `CourierConfigError`: a caller bug, not a wire failure      |
+| Non-JSON-serializable body surfaced as `CourierParseError`  | `CourierConfigError`                                        |
+| `prefetch()` threw config and disposal errors synchronously | Every request method reports failures as a rejected promise |
+| Verb configs were unnameable                                | `HttpRequestConfig` is exported                             |
 
 ## Config bugs report as `CourierConfigError`
 

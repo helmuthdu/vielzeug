@@ -226,11 +226,7 @@ import { useSyncExternalStore } from 'react';
 import type { I18n } from '@vielzeug/lingua';
 
 export function useLocale(i18n: I18n) {
-  return useSyncExternalStore(
-    (onChange) => i18n.subscribe(onChange),
-    i18n.getSnapshot,
-    i18n.getSnapshot,
-  );
+  return useSyncExternalStore((onChange) => i18n.subscribe(onChange), i18n.getSnapshot, i18n.getSnapshot);
 }
 ```
 

@@ -76,10 +76,7 @@ type Bus<T extends EventMap> = {
   once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, options?: SubscribeOptions): Unsubscribe;
   tap(handler: (event: HeraldEvent<T>) => void, options?: SubscribeOptions): Unsubscribe;
   wait<K extends EventKey<T>>(event: K, options?: SubscribeOptions): Promise<T[K]>;
-  waitAny<const K extends readonly EventKey<T>[]>(
-    events: K,
-    options?: SubscribeOptions,
-  ): Promise<WaitAnyResult<T, K>>;
+  waitAny<const K extends readonly EventKey<T>[]>(events: K, options?: SubscribeOptions): Promise<WaitAnyResult<T, K>>;
   wildcardCount(): number;
 };
 ```

@@ -95,13 +95,13 @@ Forge 2 introduced nested field handles, explicit validation and submission, ter
 
 This train reduces draft persistence to a key/value contract and treats dotted keys as unsafe everywhere.
 
-| Before                                                     | After                                          |
-| ---------------------------------------------------------- | ---------------------------------------------- |
-| `FormDraftStore<Table, Key, RecordValue>`                  | `FormDraftStore`: `get(key)` / `put(key, value)` |
-| `FormDraftCodec`, `FormDraftWriteStore`, `FormPersistenceOptions` | Removed: drafts are the form values     |
-| `saveForm(form, store, table, codec, options?)`            | `saveForm(form, store, key, options?)`         |
-| `loadForm(form, store, table, key, codec, options?)`       | `loadForm(form, store, key, options?)`         |
-| Object keys containing `.` accepted in form values         | Rejected like `__proto__` with `ForgeConfigError` |
+| Before                                                            | After                                             |
+| ----------------------------------------------------------------- | ------------------------------------------------- |
+| `FormDraftStore<Table, Key, RecordValue>`                         | `FormDraftStore`: `get(key)` / `put(key, value)`  |
+| `FormDraftCodec`, `FormDraftWriteStore`, `FormPersistenceOptions` | Removed: drafts are the form values               |
+| `saveForm(form, store, table, codec, options?)`                   | `saveForm(form, store, key, options?)`            |
+| `loadForm(form, store, table, key, codec, options?)`              | `loadForm(form, store, key, options?)`            |
+| Object keys containing `.` accepted in form values                | Rejected like `__proto__` with `ForgeConfigError` |
 
 ## Persist drafts as plain key/value
 

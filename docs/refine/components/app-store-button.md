@@ -16,11 +16,11 @@ Three stores ship with a badge treatment. Pick one with the `store` attribute (`
 
 </ComponentPreview>
 
-| Store         | Badge text                         |
-| ------------- | ---------------------------------- |
-| `apple`       | Download on the App Store          |
-| `google-play` | Get it on Google Play              |
-| `huawei`      | Explore it on AppGallery           |
+| Store         | Badge text                |
+| ------------- | ------------------------- |
+| `apple`       | Download on the App Store |
+| `google-play` | Get it on Google Play     |
+| `huawei`      | Explore it on AppGallery  |
 
 ## Variants
 

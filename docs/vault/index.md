@@ -5,8 +5,7 @@ package: vault
 category: Storage
 keywords: [storage, indexeddb, localstorage, sessionstorage, sqlite, ttl, browser, node, deno]
 related: [courier, forge, ripple]
-exports:
-  [table, ttl, createMemory, createLocalStorage, createSessionStorage, createIndexedDB, createSQLite]
+exports: [table, ttl, createMemory, createLocalStorage, createSessionStorage, createIndexedDB, createSQLite]
 environments: [browser, node, deno]
 ---
 

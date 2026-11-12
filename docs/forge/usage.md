@@ -131,7 +131,7 @@ Spell schemas implement Standard Schema directly. Forge uses the schema result o
 import { type FormDraftStore, loadForm, saveForm } from '@vielzeug/forge/persist';
 
 const store: FormDraftStore = {
-  get: async (key) => JSON.parse(await localStorage.getItem(key) ?? 'null'),
+  get: async (key) => JSON.parse((await localStorage.getItem(key)) ?? 'null'),
   put: async (key, value) => localStorage.setItem(key, JSON.stringify(value)),
 };
 

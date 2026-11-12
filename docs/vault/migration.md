@@ -348,15 +348,15 @@ Review the [Usage Guide](./usage.md), [API Reference](./api.md), and [plugin exa
 
 This train reduces validation to one parse-only concept and tightens adapter semantics.
 
-| Before                                                  | After                                                        |
-| ------------------------------------------------------- | ------------------------------------------------------------ |
-| `codecs: { users: UserSchema }`                         | `parsers: { users: UserSchema }`                             |
-| `RecordCodec { decode, encode }`, `validatorCodec()`    | Removed: `RecordParser { parse }` validates writes and reads |
-| Write validation via `decode(encode(value))`            | Writes store the parser's canonical output                   |
-| IndexedDB invariant that codecs preserve indexed fields | Indexes read the stored record directly                      |
-| SQLite prewalk rejecting class instances and non-finite numbers | Records must be JSON-safe; `JSON.stringify` failures throw |
-| `count()`/`isEmpty()` materializing and decoding tables | SQLite counts live records with a native query               |
-| Observer listener errors silently swallowed             | Optional `onObserverError` reports them                      |
+| Before                                                          | After                                                        |
+| --------------------------------------------------------------- | ------------------------------------------------------------ |
+| `codecs: { users: UserSchema }`                                 | `parsers: { users: UserSchema }`                             |
+| `RecordCodec { decode, encode }`, `validatorCodec()`            | Removed: `RecordParser { parse }` validates writes and reads |
+| Write validation via `decode(encode(value))`                    | Writes store the parser's canonical output                   |
+| IndexedDB invariant that codecs preserve indexed fields         | Indexes read the stored record directly                      |
+| SQLite prewalk rejecting class instances and non-finite numbers | Records must be JSON-safe; `JSON.stringify` failures throw   |
+| `count()`/`isEmpty()` materializing and decoding tables         | SQLite counts live records with a native query               |
+| Observer listener errors silently swallowed                     | Optional `onObserverError` reports them                      |
 
 ## Replace codecs with parsers
 
