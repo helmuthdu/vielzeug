@@ -11,7 +11,7 @@ Wayfinder's routing core was narrowed: the phase-mirror workflow was removed, an
 
 ### `createPhaseMirror` removed
 
-`createPhaseMirror()` (with its `PhaseMirror` and `PhaseMirrorOptions` types) was a two-way mirror between a domain state machine's phase and a `/:subject/:id/:phase` route segment. It encoded one application's stepped-flow workflow (revisit dialogs, subject ids, canonicalization rules) into the router package and had no consumers. Stepped flows remain a plain routing pattern: navigate by route name with `{ replace: true }` and drive the URL from your own state, or keep the mirror in the application that needs its exact confirm/revisit semantics.
+`createPhaseMirror()` (with its `PhaseMirror` and `PhaseMirrorOptions` types) was a two-way mirror between a domain state machine's phase and a `/:subject/:id/:phase` route segment. It encoded one application's stepped-flow workflow (revisit dialogs, subject ids, canonicalization rules) into the router package and had no consumer inside this workspace; apps outside it kept their own mirror beside their own phase machine instead. Stepped flows remain a plain routing pattern: navigate by route name with `{ replace: true }` and drive the URL from your own state; the confirm/revisit semantics are application rules, so the application owns the mirror.
 
 ```ts
 // Before
