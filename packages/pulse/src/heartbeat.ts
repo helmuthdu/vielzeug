@@ -1,3 +1,4 @@
+import { timer } from '@vielzeug/arsenal';
 import { encode } from './protocol';
 import type { HeartbeatOptions } from './types';
 
@@ -31,44 +32,34 @@ export function createHeartbeat(
   const interval = options.interval ?? DEFAULT_INTERVAL;
   const timeout = options.timeout ?? DEFAULT_TIMEOUT;
 
-  let pingTimer: ReturnType<typeof setTimeout> | undefined;
-  let pongTimer: ReturnType<typeof setTimeout> | undefined;
+  const pongTimer = timer(onDead);
+  const pingTimer = timer(() => {
+    send(encode({ ts: Date.now(), type: 'ping' }));
+    pongTimer.arm(timeout);
+  });
   let running = false;
 
   function schedulePing(): void {
-    pingTimer = setTimeout(() => {
-      const ts = Date.now();
-
-      send(encode({ ts, type: 'ping' }));
-
-      pongTimer = setTimeout(() => {
-        onDead();
-      }, timeout);
-    }, interval);
+    pingTimer.arm(interval);
   }
 
   return {
     onPong() {
-      clearTimeout(pongTimer);
-      pongTimer = undefined;
+      pongTimer.cancel();
 
       if (running) schedulePing();
     },
 
     start() {
       running = true;
-      clearTimeout(pingTimer);
-      clearTimeout(pongTimer);
-      pongTimer = undefined;
+      pongTimer.cancel();
       schedulePing();
     },
 
     stop() {
       running = false;
-      clearTimeout(pingTimer);
-      clearTimeout(pongTimer);
-      pingTimer = undefined;
-      pongTimer = undefined;
+      pingTimer.cancel();
+      pongTimer.cancel();
     },
   };
 }

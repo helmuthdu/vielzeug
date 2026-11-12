@@ -17,6 +17,7 @@ description: Reference for Arsenal root utilities and category entry points.
 | `assert`                            | Assert and narrow a condition                              | Sync      | Available from `/function`                                                  |
 | `retry`                             | Retry async work                                           | Async     | Rethrows final error                                                        |
 | `taskPool`                          | Bound concurrent tasks                                     | Async     | Available from `/async`                                                     |
+| `timer`                             | Re-armable single-slot timeout                             | Async     | Available from `/async`                                                     |
 | `cache`                             | In-memory identity-keyed cache                             | Async     | Available from `/cache`                                                     |
 | `fuzzyFilter`                       | Filter string or selected object fields                    | Sync      | Object collections require `select`                                         |
 | `fuzzyScore`                        | Rank string or selected object fields                      | Sync      | Object collections require `select`                                         |
@@ -163,6 +164,28 @@ import { taskPool } from '@vielzeug/arsenal/async';
 const pool = taskPool({ concurrency: 2 });
 const user = await pool.run((signal) => fetch('/user', { signal }).then((response) => response.json()));
 pool.dispose();
+```
+
+### timer
+
+```ts
+interface Timer {
+  arm(ms: number): void;
+  cancel(): void;
+  readonly pending: boolean;
+}
+
+timer(fn: () => void): Timer
+```
+
+A single-slot, re-armable timeout. `arm()` cancels any pending run first, so at most one run is ever scheduled. `pending` is already `false` inside the callback, which may re-arm the timer.
+
+```ts
+import { timer } from '@vielzeug/arsenal/async';
+
+const idleFlush = timer(() => flush());
+idleFlush.arm(500); // debounced: re-arming restarts the delay
+idleFlush.cancel();
 ```
 
 ---

@@ -1,3 +1,4 @@
+import { timer } from '@vielzeug/arsenal';
 import {
   DEFAULT_CHANNEL_OPEN_TIMEOUT_MS,
   DEFAULT_ICE_GATHERING_TIMEOUT_MS,
@@ -38,7 +39,11 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
   });
 
   let hostPeer: PeerRecord | null = null;
-  let openTimer: ReturnType<typeof setTimeout> | null = null;
+  const openTimer = timer(() => {
+    if (hostPeer?.status === 'connecting') {
+      failPeer(hostPeer, openTimeoutError());
+    }
+  });
 
   const openTimeoutError = (): MeshTimeoutError =>
     new MeshTimeoutError(`Timed out waiting ${channelOpenTimeoutMs}ms for the data channel to open`);
@@ -47,10 +52,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
     // Ignore events from a superseded peer after re-pairing replaced hostPeer.
     if (core.disposed || peer !== hostPeer || peer.status === 'failed') return;
     peer.status = 'failed';
-    if (openTimer) {
-      clearTimeout(openTimer);
-      openTimer = null;
-    }
+    openTimer.cancel();
     // Teardown is deferred a macrotask so a peer racing its own open
     // deadline reports its timeout rather than this hangup.
     setTimeout(() => {
@@ -78,10 +80,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
 
     dc.addEventListener('open', () => {
       if (core.disposed) return;
-      if (openTimer) {
-        clearTimeout(openTimer);
-        openTimer = null;
-      }
+      openTimer.cancel();
       peer.status = 'connected';
       core.emitTap({ peerId: peer.id, status: 'connected', type: 'peer-status-change' });
       core.emitTap({ peer: peer.publicPeer, type: 'peer-joined' });
@@ -96,7 +95,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
       if (peer.status === 'connecting')
         failPeer(
           peer,
-          openTimer ? openTimeoutError() : new MeshConnectionError('channel closed before opening', peer.id),
+          openTimer.pending ? openTimeoutError() : new MeshConnectionError('channel closed before opening', peer.id),
         );
       else disconnectPeer(peer, 'channel closed');
     });
@@ -131,10 +130,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
       if (clock() >= invitation.expiresAt) throw new MeshPairingError('Invitation expired');
 
       if (hostPeer) {
-        if (openTimer) {
-          clearTimeout(openTimer);
-          openTimer = null;
-        }
+        openTimer.cancel();
         hostPeer.pc?.close();
         hostPeer = null;
       }
@@ -208,11 +204,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
       // If the channel never opens (host never accepts the answer), fail loudly
       // instead of hanging in 'connecting' forever. The deadline must cover
       // the human carry-back of the answer, not just machine negotiation.
-      openTimer = setTimeout(() => {
-        if (hostPeer?.status === 'connecting') {
-          failPeer(hostPeer, openTimeoutError());
-        }
-      }, channelOpenTimeoutMs);
+      openTimer.arm(channelOpenTimeoutMs);
 
       return {
         peer: meta?.name === undefined ? { id: peerId } : { id: peerId, name: meta.name },
@@ -229,10 +221,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
     dispose() {
       if (core.disposed) return;
       core.markDisposed();
-      if (openTimer) {
-        clearTimeout(openTimer);
-        openTimer = null;
-      }
+      openTimer.cancel();
       if (hostPeer) {
         hostPeer.dc?.close();
         hostPeer.pc?.close();

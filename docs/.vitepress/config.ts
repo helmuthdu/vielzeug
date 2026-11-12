@@ -239,6 +239,7 @@ export default defineConfig({
                 { link: '/arsenal/examples/async/queue', text: 'taskPool' },
                 { link: '/arsenal/examples/async/retry', text: 'retry' },
                 { link: '/arsenal/examples/async/sleep', text: 'sleep' },
+                { link: '/arsenal/examples/async/timer', text: 'timer' },
                 { link: '/arsenal/examples/async/waitFor', text: 'waitFor' },
               ],
               link: '/arsenal/examples/async',

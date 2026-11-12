@@ -14,6 +14,7 @@ export * from './async/parallel';
 export * from './async/retry';
 export * from './async/sleep';
 export * from './async/taskPool';
+export * from './async/timer';
 export * from './async/waitFor';
 export * from './cache/cache';
 export * from './cache/memo';

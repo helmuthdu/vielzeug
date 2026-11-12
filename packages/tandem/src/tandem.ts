@@ -1,3 +1,4 @@
+import { timer } from '@vielzeug/arsenal';
 import { TandemDisposedError } from './errors';
 import type { SyncEnvelope, SyncHandle, SyncOptions, SyncRecordBase, SyncState, TandemEvent } from './types';
 
@@ -43,7 +44,7 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
   };
 
   let state: SyncState = baseline();
-  let timer: ReturnType<typeof setTimeout> | null = null;
+  const flushTimer = timer(() => void enqueue(pushJob(false)));
   let queue: Promise<void> = Promise.resolve();
 
   const key = (entity: string, id: string): string => `${entity}:${id}`;
@@ -124,8 +125,7 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
   };
 
   const flushSoon = (): void => {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => void enqueue(pushJob(false)), idleDelay);
+    flushTimer.arm(idleDelay);
   };
 
   const doc = globalThis.document;
@@ -158,7 +158,7 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
       if (controller.signal.aborted) return;
       emit({ type: 'dispose' });
       controller.abort();
-      if (timer) clearTimeout(timer);
+      flushTimer.cancel();
       doc?.removeEventListener('visibilitychange', onVisibility);
       globalThis.removeEventListener?.('pagehide', onPageHide);
       tappers.clear();

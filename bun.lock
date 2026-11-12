@@ -125,7 +125,7 @@
     },
     "packages/archive": {
       "name": "@vielzeug/archive",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/spell": "workspace:*",
         "jose": "6.2.15",
@@ -140,7 +140,7 @@
     },
     "packages/arsenal": {
       "name": "@vielzeug/arsenal",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -150,7 +150,7 @@
     },
     "packages/assay": {
       "name": "@vielzeug/assay",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -164,7 +164,7 @@
     },
     "packages/beacon": {
       "name": "@vielzeug/beacon",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/ripple": "workspace:*",
       },
@@ -178,7 +178,7 @@
     },
     "packages/clockwork": {
       "name": "@vielzeug/clockwork",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -191,7 +191,7 @@
     },
     "packages/codex": {
       "name": "@vielzeug/codex",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "bin": {
         "codex": "./dist/cli.js",
       },
@@ -207,7 +207,7 @@
     },
     "packages/coins": {
       "name": "@vielzeug/coins",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -217,7 +217,7 @@
     },
     "packages/conduit": {
       "name": "@vielzeug/conduit",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -227,7 +227,7 @@
     },
     "packages/courier": {
       "name": "@vielzeug/courier",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -240,7 +240,7 @@
     },
     "packages/dnd": {
       "name": "@vielzeug/dnd",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/gesture": "workspace:*",
         "@vielzeug/keymap": "workspace:*",
@@ -254,7 +254,7 @@
     },
     "packages/familiar": {
       "name": "@vielzeug/familiar",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -267,7 +267,7 @@
     },
     "packages/flux": {
       "name": "@vielzeug/flux",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -280,7 +280,7 @@
     },
     "packages/focus": {
       "name": "@vielzeug/focus",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/keymap": "workspace:*",
       },
@@ -293,7 +293,7 @@
     },
     "packages/forge": {
       "name": "@vielzeug/forge",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -308,7 +308,7 @@
     },
     "packages/gesture": {
       "name": "@vielzeug/gesture",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@playwright/test": "^1.65.0",
         "@types/node": "^26.6.6",
@@ -319,7 +319,7 @@
     },
     "packages/herald": {
       "name": "@vielzeug/herald",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -329,7 +329,7 @@
     },
     "packages/illusionist": {
       "name": "@vielzeug/illusionist",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
         "@vielzeug/coins": "workspace:*",
@@ -344,7 +344,7 @@
     },
     "packages/keymap": {
       "name": "@vielzeug/keymap",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -354,7 +354,7 @@
     },
     "packages/ledger": {
       "name": "@vielzeug/ledger",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -364,7 +364,7 @@
     },
     "packages/lingua": {
       "name": "@vielzeug/lingua",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "@vielzeug/ripple": "workspace:*",
@@ -381,7 +381,7 @@
     },
     "packages/mesh": {
       "name": "@vielzeug/mesh",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -394,7 +394,7 @@
     },
     "packages/necromancer": {
       "name": "@vielzeug/necromancer",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@playwright/test": "^1.65.0",
         "@types/node": "^26.6.6",
@@ -406,7 +406,7 @@
     },
     "packages/orbit": {
       "name": "@vielzeug/orbit",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -426,7 +426,7 @@
     },
     "packages/ore": {
       "name": "@vielzeug/ore",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "@vielzeug/assay": "workspace:*",
@@ -447,7 +447,7 @@
     },
     "packages/postmaster": {
       "name": "@vielzeug/postmaster",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
         "@vielzeug/vault": "workspace:*",
@@ -463,7 +463,7 @@
     },
     "packages/prism": {
       "name": "@vielzeug/prism",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/orbit": "workspace:*",
       },
@@ -476,7 +476,7 @@
     },
     "packages/pulse": {
       "name": "@vielzeug/pulse",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -489,7 +489,7 @@
     },
     "packages/refine": {
       "name": "@vielzeug/refine",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
         "@vielzeug/dnd": "workspace:*",
@@ -530,7 +530,7 @@
     },
     "packages/ripple": {
       "name": "@vielzeug/ripple",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -540,7 +540,7 @@
     },
     "packages/rune": {
       "name": "@vielzeug/rune",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -550,7 +550,7 @@
     },
     "packages/sandbox": {
       "name": "@vielzeug/sandbox",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "jsdom": "^31.0.0",
@@ -561,7 +561,7 @@
     },
     "packages/scout": {
       "name": "@vielzeug/scout",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -574,7 +574,7 @@
     },
     "packages/scroll": {
       "name": "@vielzeug/scroll",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -584,7 +584,7 @@
     },
     "packages/sentinel": {
       "name": "@vielzeug/sentinel",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -598,7 +598,7 @@
     },
     "packages/sigil": {
       "name": "@vielzeug/sigil",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "jsqr": "^1.4.0",
@@ -609,7 +609,7 @@
     },
     "packages/sourcerer": {
       "name": "@vielzeug/sourcerer",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -622,7 +622,7 @@
     },
     "packages/spell": {
       "name": "@vielzeug/spell",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -635,7 +635,10 @@
     },
     "packages/tandem": {
       "name": "@vielzeug/tandem",
-      "version": "26.11.5",
+      "version": "26.11.11",
+      "dependencies": {
+        "@vielzeug/arsenal": "workspace:*",
+      },
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -645,7 +648,7 @@
     },
     "packages/tavern": {
       "name": "@vielzeug/tavern",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/mesh": "workspace:*",
       },
@@ -658,7 +661,7 @@
     },
     "packages/tempo": {
       "name": "@vielzeug/tempo",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@js-temporal/polyfill": "^0.5.1",
       },
@@ -671,7 +674,7 @@
     },
     "packages/vault": {
       "name": "@vielzeug/vault",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "@vielzeug/spell": "workspace:*",
@@ -683,7 +686,7 @@
     },
     "packages/ward": {
       "name": "@vielzeug/ward",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -696,7 +699,7 @@
     },
     "packages/wayfinder": {
       "name": "@vielzeug/wayfinder",
-      "version": "26.11.5",
+      "version": "26.11.11",
       "dependencies": {
         "@vielzeug/ripple": "workspace:*",
       },

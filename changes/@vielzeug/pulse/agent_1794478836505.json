@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Use arsenal timer for heartbeat ping and pong timers",
+      "packageName": "@vielzeug/pulse",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/pulse"
+}

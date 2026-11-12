@@ -1,4 +1,4 @@
-import { backoff, tapper } from '@vielzeug/arsenal';
+import { backoff, tapper, timer } from '@vielzeug/arsenal';
 import { asJsonValue, failureFrom, isAbortError, runValidate } from './_json.ts';
 import { validateJobs } from './definitions.ts';
 import { PostmasterDisposedError, PostmasterError, PostmasterJobError } from './errors.ts';
@@ -61,7 +61,6 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
   let disposed = false;
   let started = false;
   let running: Promise<void> | undefined;
-  let wakeTimer: ReturnType<typeof setTimeout> | undefined;
   const activeEntries = new Map<string, StoredJob>();
   let flushPromise: Promise<FlushResult> | undefined;
 
@@ -78,13 +77,10 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
     if (disposed) throw new PostmasterDisposedError();
   };
 
-  const clearWakeTimer = (): void => {
-    if (wakeTimer !== undefined) clearTimeout(wakeTimer);
-    wakeTimer = undefined;
-  };
+  const wakeTimer = timer(() => wake());
 
   const wake = (): void => {
-    clearWakeTimer();
+    wakeTimer.cancel();
     if (started && !disposed) pump();
   };
 
@@ -93,7 +89,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
     const next = await store.transact((tx) => tx.findNextWake(clock()));
     if (next === undefined) return;
     const delay = Math.max(0, Math.min(next - clock(), 2_147_483_647));
-    wakeTimer = setTimeout(wake, delay);
+    wakeTimer.arm(delay);
   };
 
   const resolveJob = (entry: StoredJob): JobDefinition<any> => {
@@ -268,7 +264,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
     disposed = true;
     emitTap({ type: 'dispose' });
     tappers.clear();
-    clearWakeTimer();
+    wakeTimer.cancel();
     signal?.removeEventListener('abort', externalAbort);
     unsubscribeStore();
     controller.abort();
@@ -325,7 +321,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
     flush(options?: { signal?: AbortSignal }): Promise<FlushResult> {
       assertLive();
       if (flushPromise) return flushPromise;
-      clearWakeTimer();
+      wakeTimer.cancel();
       const promise = (async (): Promise<FlushResult> => {
         await running;
         const result: MutableFlushResult = emptyResult();

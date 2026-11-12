@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Use arsenal timer for the wake timer",
+      "packageName": "@vielzeug/postmaster",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/postmaster"
+}

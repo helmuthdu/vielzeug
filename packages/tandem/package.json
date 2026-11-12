@@ -39,6 +39,9 @@
     "prepublishOnly": "bun run --silent build",
     "test": "vitest"
   },
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^26.6.6",
     "typescript": "^6.0.3",

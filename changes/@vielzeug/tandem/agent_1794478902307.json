@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Use arsenal timer for the idle push timer; adds @vielzeug/arsenal as a dependency",
+      "packageName": "@vielzeug/tandem",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tandem"
+}

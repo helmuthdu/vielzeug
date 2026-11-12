@@ -6,4 +6,5 @@ export * from './parallel';
 export * from './retry';
 export * from './sleep';
 export * from './taskPool';
+export * from './timer';
 export * from './waitFor';

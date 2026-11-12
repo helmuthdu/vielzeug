@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Use arsenal timer for the guest channel-open deadline",
+      "packageName": "@vielzeug/mesh",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/mesh"
+}

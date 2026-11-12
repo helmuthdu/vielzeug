@@ -13,6 +13,7 @@ description: Async utility examples for Arsenal.
 - [taskPool](./async/queue.md)
 - [retry](./async/retry.md)
 - [sleep](./async/sleep.md)
+- [timer](./async/timer.md)
 - [waitFor](./async/waitFor.md)
 
 ## Common Patterns
