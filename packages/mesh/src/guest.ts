@@ -4,7 +4,7 @@ import {
   DEFAULT_ICE_GATHERING_TIMEOUT_MS,
   DEFAULT_MAX_MESSAGE_BYTES,
 } from './_defaults';
-import { createMessenger, createNodeCore, createPeerRecord, type PeerRecord } from './_node';
+import { createMessenger, createNodeCore, createPeerRecord, type PeerRecord, wireDisposalSignal } from './_node';
 import { createProof } from './_proof';
 import { randomId } from './_random';
 import { nativeRtcFactory, normalizeSdp, waitIceGathering } from './_rtc';
@@ -30,12 +30,11 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
   const channelOpenTimeoutMs = options.channelOpenTimeoutMs ?? DEFAULT_CHANNEL_OPEN_TIMEOUT_MS;
   const iceGatheringTimeoutMs = options.iceGatheringTimeoutMs ?? DEFAULT_ICE_GATHERING_TIMEOUT_MS;
 
-  const core = createNodeCore(options.signal);
+  const core = createNodeCore();
   const messenger = createMessenger({
     clock,
     emitTap: core.emitTap,
     maxMessageBytes,
-    random: options.random,
   });
 
   let hostPeer: PeerRecord | null = null;
@@ -106,14 +105,13 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
 
     // The ice-state emission lives on the pairing-scoped listener above; this
     // one owns channel-lifecycle transitions only, so each ICE change emits
-    // exactly one ice-state event.
+    // exactly one ice-state event. ICE `disconnected` is transient: the
+    // channel's own `close`/`error` events own peer teardown.
     pc.addEventListener('iceconnectionstatechange', () => {
       if (core.disposed) return;
       const state = pc.iceConnectionState;
       if (state === 'failed' || state === 'closed') {
         failPeer(peer, new MeshConnectionError(`ice ${state}`, peer.id));
-      } else if (state === 'disconnected' && peer.status === 'connected') {
-        disconnectPeer(peer, 'ice disconnected');
       }
     });
   }
@@ -258,5 +256,6 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
     },
   };
 
+  wireDisposalSignal(options.signal, () => guest.dispose());
   return guest;
 }

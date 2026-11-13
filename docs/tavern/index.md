@@ -85,7 +85,7 @@ const host = hostTavern({
 
 **Use Tavern when** one device should own the canonical state of something: a shared document, a live dashboard, a record under review, and every other device should mirror it and send commands back through the host's own command table, which stays the single validation path.
 
-**Consider raw `@vielzeug/mesh` when** you need P2P messaging without the host-authoritative replication model: chat, whiteboards, file transfer, or custom topologies.
+**Consider raw `@vielzeug/mesh` when** you need P2P messaging without the host-authoritative replication model: chat, whiteboards, or custom topologies. Mesh carries bounded typed messages (capped by `maxMessageBytes`, 65 536 by default) with no chunking or acknowledgements: file transfer needs app-level chunking and acknowledgements built on top.
 
 </div>
 

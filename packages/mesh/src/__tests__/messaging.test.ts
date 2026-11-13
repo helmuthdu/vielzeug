@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { toEnvelope } from '../_wire';
 import { MeshPayloadError } from '../errors';
 import { createMeshGuest } from '../guest';
 import { createFakeRtc } from '../testing';
@@ -18,7 +19,6 @@ describe('messaging', () => {
     // The invitation carries no host identity: the session id is the
     // host's peer id as the guest knows it.
     expect(received[0]!.peerId).toBe(guest.host!.id);
-    expect(received[0]!.messageId).toBeTruthy();
     expect(received[0]!.sentAt).toBeGreaterThan(0);
   });
 
@@ -90,21 +90,6 @@ describe('messaging', () => {
     expect(received).toHaveLength(0);
   });
 
-  it('drops duplicate message ids and taps message-rejected', async () => {
-    const { host, guest, peerId } = await pairNodes({ random: { next: () => 0.5 } });
-    const events: MeshEvent[] = [];
-    guest.tap((event) => events.push(event));
-    const received: unknown[] = [];
-    guest.on('pong', (m) => received.push(m.payload));
-
-    host.send(peerId, 'pong', { n: 1 });
-    host.send(peerId, 'pong', { n: 2 });
-    await vi.waitFor(() =>
-      expect(events).toContainEqual({ peerId: expect.any(String), reason: 'duplicate', type: 'message-rejected' }),
-    );
-    expect(received).toHaveLength(1);
-  });
-
   it('taps unknown-type instead of throwing for unregistered message types', async () => {
     const { host, guest } = await pairNodes();
     const events: MeshEvent[] = [];
@@ -127,5 +112,11 @@ describe('messaging', () => {
     host.send(peerId, 'pong', { n: 1 });
     await vi.waitFor(() => expect(guestEvents.some((e) => e.type === 'message-received')).toBe(true));
     expect(hostEvents.some((e) => e.type === 'message-sent' && e.bytes > 0)).toBe(true);
+  });
+
+  it('accepts version 2 message frames and rejects superseded version 1 frames', () => {
+    expect(toEnvelope({ p: { n: 1 }, t: 'pong', ts: 1_762_000_000_000, v: 2 })).toBeTruthy();
+    // v1 frames carried per-message ids; a mixed-version peer must be refused, not silently consumed.
+    expect(toEnvelope({ id: 'x', p: { n: 1 }, t: 'pong', ts: 1_762_000_000_000, v: 1 })).toBeNull();
   });
 });

@@ -3,7 +3,7 @@ import { MeshConnectionError, MeshDisposedError, MeshPairingError } from '../err
 import { createMeshGuest } from '../guest';
 import { createMeshHost } from '../host';
 import { createFakeRtc } from '../testing';
-import type { MeshEvent, MeshStatus } from '../types';
+import type { MeshEvent, MeshRtcFactory, MeshStatus, RTCPeerConnectionLike } from '../types';
 import { pairNodes, type TestProtocol } from './_pair';
 
 function statuses(events: MeshEvent[]): MeshStatus[] {
@@ -91,6 +91,32 @@ describe('peer lifecycle', () => {
 
     expect(events.some((e) => e.type === 'peer-left' && e.peer.id === peerId)).toBe(true);
     expect(host.status).toBe('disconnected');
+  });
+
+  it('keeps the session through a transient ICE blip', async () => {
+    const { host, guest, fx, peerId } = await pairNodes();
+    const hostIce: string[] = [];
+    host.tap((e) => {
+      if (e.type === 'ice-state') hostIce.push(e.state);
+    });
+    const hostSeen: number[] = [];
+    const guestSeen: number[] = [];
+    host.on('ping', (m) => hostSeen.push(m.payload.n));
+    guest.on('pong', (m) => guestSeen.push(m.payload.n));
+
+    fx.blipIce(0);
+    await vi.waitFor(() => expect(hostIce).toContain('connected'));
+
+    expect(host.status).toBe('connected');
+    expect(guest.status).toBe('connected');
+    expect(host.peers.get(peerId)?.status).toBe('connected');
+
+    host.send(peerId, 'pong', { n: 1 });
+    guest.send('ping', { n: 2 });
+    await vi.waitFor(() => {
+      expect(guestSeen).toEqual([1]);
+      expect(hostSeen).toEqual([2]);
+    });
   });
 
   it('rejects a second guest presenting an already-connected peer id', async () => {
@@ -198,6 +224,29 @@ describe('dispose', () => {
 
     expect(host.disposed).toBe(true);
     expect(host.status).toBe('disposed');
+  });
+
+  it('closes live connections when the signal option aborts', async () => {
+    const fx = createFakeRtc();
+    const controller = new AbortController();
+    const created: RTCPeerConnectionLike[] = [];
+    const rtc: MeshRtcFactory = {
+      createPeerConnection: (config) => {
+        const pc = fx.rtc.createPeerConnection(config);
+        created.push(pc);
+        return pc;
+      },
+    };
+    const host = createMeshHost<TestProtocol>({ rtc, signal: controller.signal });
+    const guest = createMeshGuest<TestProtocol>({ rtc });
+    await host.acceptAnswer(await guest.acceptInvitation(await host.createInvitation()));
+
+    controller.abort();
+
+    expect(host.disposed).toBe(true);
+    // Abort must run the same full teardown as `dispose()`, not just flip status.
+    expect(created[0]?.connectionState).toBe('closed');
+    guest.dispose();
   });
 
   it('supports the using declaration protocol', async () => {

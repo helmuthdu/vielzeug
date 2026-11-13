@@ -1,36 +1,20 @@
-/** Wire envelope serialized through the configured `serialize` function. */
+/**
+ * Wire envelope serialized through the configured `serialize` function.
+ * Delivery is best-effort over the reliable, ordered data channel: v2
+ * envelopes carry no per-message id because the API offers no resend with
+ * a stable id, so a dedupe layer had nothing real to deduplicate.
+ */
 export interface WireEnvelope {
-  readonly id: string;
   readonly p: unknown;
   readonly t: string;
   readonly ts: number;
-  readonly v: 1;
+  readonly v: 2;
 }
 
-/** Returns the envelope, or `null` when the value violates the wire shape. */
+/** Returns the envelope, or `null` when the value violates the wire shape (older `v: 1` frames are malformed). */
 export function toEnvelope(value: unknown): WireEnvelope | null {
   if (typeof value !== 'object' || value === null) return null;
   const env = value as Record<string, unknown>;
-  if (env.v !== 1 || typeof env.id !== 'string' || typeof env.t !== 'string' || typeof env.ts !== 'number') return null;
+  if (env.v !== 2 || typeof env.t !== 'string' || typeof env.ts !== 'number') return null;
   return value as WireEnvelope;
-}
-
-/** Per-peer duplicate guard: remembers the last `capacity` message ids (LRU). */
-export class MessageDedupe {
-  private readonly seen = new Set<string>();
-  private readonly order: string[] = [];
-  private readonly capacity: number;
-
-  constructor(capacity = 256) {
-    this.capacity = capacity;
-  }
-
-  /** `true` when the id is new (and records it); `false` for duplicates. */
-  check(id: string): boolean {
-    if (this.seen.has(id)) return false;
-    this.seen.add(id);
-    this.order.push(id);
-    if (this.order.length > this.capacity) this.seen.delete(this.order.shift()!);
-    return true;
-  }
 }

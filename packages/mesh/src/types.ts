@@ -184,9 +184,9 @@ export interface MeshPeer extends MeshPeerInfo {
 
 /** A deserialized inbound message with transport metadata. */
 export interface MeshInbound<T> {
-  readonly messageId: string;
   readonly payload: T;
   readonly peerId: string;
+  /** Sender's clock at send time in epoch milliseconds: informational only, the peer clock is untrusted. */
   readonly sentAt: number;
 }
 
@@ -215,7 +215,7 @@ export type MeshEvent =
   | {
       readonly type: 'message-rejected';
       readonly peerId: string;
-      readonly reason: 'too-large' | 'duplicate' | 'malformed' | 'unknown-type';
+      readonly reason: 'too-large' | 'malformed' | 'unknown-type';
     }
   | { readonly type: 'ice-state'; readonly peerId: string; readonly state: string }
   | { readonly type: 'error'; readonly error: MeshError }
@@ -251,7 +251,10 @@ export interface MeshHost<P extends MeshProtocol> extends MeshNode {
    * Consume a guest's answer. Resolves with the peer once the data channel is
    * open; rejects with `MeshPairingError` on unknown/expired/duplicate sessions,
    * proof mismatch, or `approvePeer` refusal, and `MeshTimeoutError` when the
-   * channel does not open in time.
+   * channel does not open in time. Only one answer per invitation can win:
+   * concurrent answers are serialized to a single winner. A proof mismatch
+   * leaves the invitation answerable (the genuine guest can still respond);
+   * an `approvePeer` refusal consumes it, so the next guest needs a fresh one.
    */
   acceptAnswer(answer: MeshAnswer): Promise<MeshPeer>;
   /** Send a typed message to every connected peer except `options.except`. */

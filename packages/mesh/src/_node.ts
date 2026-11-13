@@ -1,6 +1,5 @@
-import { type RandomSource, tapper, utf8Bytes } from '@vielzeug/arsenal';
-import { randomId } from './_random';
-import { MessageDedupe, toEnvelope } from './_wire';
+import { tapper, utf8Bytes } from '@vielzeug/arsenal';
+import { toEnvelope } from './_wire';
 import { MeshConnectionError, MeshDisposedError, MeshError, MeshPayloadError } from './errors';
 import type {
   MeshEvent,
@@ -28,7 +27,7 @@ export interface NodeCore {
   tap(handler: Tapper, options?: { readonly signal?: AbortSignal }): Unsubscribe;
 }
 
-export function createNodeCore(signal?: AbortSignal): NodeCore {
+export function createNodeCore(): NodeCore {
   const tappers = tapper<MeshEvent>();
   const disposalCtrl = new AbortController();
 
@@ -67,15 +66,18 @@ export function createNodeCore(signal?: AbortSignal): NodeCore {
     },
   };
 
-  if (signal) {
-    if (signal.aborted) {
-      core.markDisposed();
-    } else {
-      signal.addEventListener('abort', () => core.markDisposed(), { once: true });
-    }
-  }
-
   return core;
+}
+
+/**
+ * Wires the `signal` option of a node: abort runs the node's full `dispose()`,
+ * so pending invitations, live connections, and handlers are released, not
+ * just the status flags. A signal that is already aborted disposes immediately.
+ */
+export function wireDisposalSignal(signal: AbortSignal | undefined, dispose: () => void): void {
+  if (!signal) return;
+  if (signal.aborted) dispose();
+  else signal.addEventListener('abort', dispose, { once: true });
 }
 
 // ─── Peers ───────────────────────────────────────────────────────────────────
@@ -83,7 +85,6 @@ export function createNodeCore(signal?: AbortSignal): NodeCore {
 /** Internal peer record; `publicPeer` exposes live status through getters. */
 export interface PeerRecord {
   dc: RTCDataChannelLike | null;
-  readonly dedupe: MessageDedupe;
   readonly id: string;
   readonly name: string | undefined;
   pc: RTCPeerConnectionLike | null;
@@ -95,7 +96,6 @@ export interface PeerRecord {
 export function createPeerRecord(id: string, name: string | undefined, role: 'host' | 'guest'): PeerRecord {
   const record: PeerRecord = {
     dc: null,
-    dedupe: new MessageDedupe(),
     id,
     name,
     pc: null,
@@ -127,7 +127,6 @@ export interface MessengerOptions {
   readonly clock: () => number;
   readonly emitTap: (event: MeshEvent) => void;
   readonly maxMessageBytes: number;
-  readonly random?: RandomSource;
 }
 
 export interface Messenger {
@@ -142,7 +141,7 @@ export interface Messenger {
 export function createMessenger(options: MessengerOptions): Messenger {
   const handlers = new Map<string, Set<InboundHandler>>();
 
-  function reject(peerId: string, reason: 'too-large' | 'duplicate' | 'malformed' | 'unknown-type'): void {
+  function reject(peerId: string, reason: 'too-large' | 'malformed' | 'unknown-type'): void {
     options.emitTap({ peerId, reason, type: 'message-rejected' });
   }
 
@@ -179,11 +178,6 @@ export function createMessenger(options: MessengerOptions): Messenger {
         return;
       }
 
-      if (!peer.dedupe.check(envelope.id)) {
-        reject(peerId, 'duplicate');
-        return;
-      }
-
       const set = handlers.get(envelope.t);
       if (!set || set.size === 0) {
         reject(peerId, 'unknown-type');
@@ -192,7 +186,6 @@ export function createMessenger(options: MessengerOptions): Messenger {
 
       options.emitTap({ bytes, messageType: envelope.t, peerId, type: 'message-received' });
       const message: MeshInbound<unknown> = {
-        messageId: envelope.id,
         payload: envelope.p,
         peerId,
         sentAt: envelope.ts,
@@ -225,7 +218,7 @@ export function createMessenger(options: MessengerOptions): Messenger {
         throw new MeshConnectionError(`Peer "${peer.id}" is not connected`, peer.id);
       }
 
-      const envelope = { id: randomId(options.random), p: payload, t: type, ts: options.clock(), v: 1 as const };
+      const envelope = { p: payload, t: type, ts: options.clock(), v: 2 as const };
       let text: string;
       try {
         text = JSON.stringify(envelope);

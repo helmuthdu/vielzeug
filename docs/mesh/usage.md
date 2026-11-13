@@ -100,10 +100,9 @@ host.broadcast('ack', { ok: true }, { except: [peerId] }); // all but one
 guest.send('note', 'from the guest');
 ```
 
-Inbound messages arrive as `MeshInbound<T>`: `{ peerId, messageId, sentAt, payload }`. Rules:
+Inbound messages arrive as `MeshInbound<T>`: `{ peerId, sentAt, payload }`. Rules:
 
 - Payloads over `maxMessageBytes` (default 65 536) throw `MeshPayloadError` outbound; oversized inbound frames are dropped and tapped as `'message-rejected'` with reason `'too-large'`.
-- Duplicate message ids (e.g. after a retry) are dropped and tapped as `'duplicate'`.
 - A type with no registered `on` handler is tapped as `'unknown-type'`: never thrown.
 - `send` to an unknown or unconnected peer throws `MeshConnectionError`.
 
@@ -128,7 +127,7 @@ host.tap((event) => {
 host.kick(peerId, 'bye'); // guest observes 'disconnected'
 ```
 
-`status-change` reports node-level transitions; `peer-status-change` reports a single peer moving between `'connecting' | 'connected' | 'disconnected' | 'failed'`. A guest whose host peer failed or disconnected can re-pair on the same node: call `acceptInvitation` again with a fresh invitation and existing `on`/`tap` listeners keep working.
+`status-change` reports node-level transitions; `peer-status-change` reports a single peer moving between `'connecting' | 'connected' | 'disconnected' | 'failed'`. A peer reports `'disconnected'` when its data channel closes: transient ICE `disconnected` blips that recover leave the peer untouched and surface only as `'ice-state'` tap events. A guest whose host peer failed or disconnected can re-pair on the same node: call `acceptInvitation` again with a fresh invitation and existing `on`/`tap` listeners keep working.
 
 Dispose nodes deterministically: `dispose()` is idempotent, aborts `disposalSignal`, emits a final `'dispose'` event, and detaches all tappers. Passing an `AbortSignal` option disposes on abort; `using` works too.
 
@@ -155,7 +154,7 @@ Mesh reduces the manual-pairing attack surface but does not remove it:
 
 ## Testing
 
-Every WebRTC object comes from the injectable `rtc` factory: tests pair nodes fully in memory, with no browser. `@vielzeug/mesh/testing` ships the in-memory fake the package's own tests use: two peer connections wired through token SDP, with knobs for latency, drops, ICE failure, stalled gathering, and a never-opening channel.
+Every WebRTC object comes from the injectable `rtc` factory: tests pair nodes fully in memory, with no browser. `@vielzeug/mesh/testing` ships the in-memory fake the package's own tests use: two peer connections wired through token SDP, with knobs for latency, drops, ICE failure, transient ICE blips, stalled gathering, and a never-opening channel.
 
 ```ts
 import { createFakeRtc } from '@vielzeug/mesh/testing';
@@ -163,6 +162,10 @@ import { createFakeRtc } from '@vielzeug/mesh/testing';
 const fx = createFakeRtc();
 const host = createMeshHost<AppProtocol>({ rtc: fx.rtc, clock: () => now });
 const guest = createMeshGuest<AppProtocol>({ rtc: fx.rtc });
+
+// Link 0 goes ICE `disconnected` and back to `connected` on the next
+// scheduled delivery, without touching the data channels.
+fx.blipIce(0);
 ```
 
 The [REPL examples](/repl) include a runnable in-memory pairing you can copy as a starting point.

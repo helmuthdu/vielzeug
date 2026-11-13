@@ -39,6 +39,12 @@ class ListenerBag {
 }
 
 export interface FakeRtc {
+  /**
+   * Transient ICE blip on the link created at `index` (0-based, pairing
+   * order): both peer connections go `disconnected` and back to `connected`
+   * on the next scheduled delivery, without touching the data channels.
+   */
+  blipIce(index: number): void;
   /** Close both ends of the link created at `index` (0-based, pairing order). */
   closeChannel(index: number): void;
   /** Silently drop the next `n` channel sends. */
@@ -86,6 +92,27 @@ export function createFakeRtc(options: { latencyMs?: number } = {}): FakeRtc {
   let hangNextOpen = false;
 
   const fixture: FakeRtc = {
+    blipIce(index) {
+      const link = [...links.values()][index];
+      if (!link) return;
+      const pcs = [link.hostPc, link.guestPc];
+      for (const pc of pcs) {
+        if (!pc || pc.closed) continue;
+        pc.iceConnectionState = 'disconnected';
+        pc.connectionState = 'disconnected';
+        pc.emit('iceconnectionstatechange');
+        pc.emit('connectionstatechange');
+      }
+      schedule(() => {
+        for (const pc of pcs) {
+          if (!pc || pc.closed) continue;
+          pc.iceConnectionState = 'connected';
+          pc.connectionState = 'connected';
+          pc.emit('iceconnectionstatechange');
+          pc.emit('connectionstatechange');
+        }
+      });
+    },
     closeChannel(index) {
       const link = [...links.values()][index];
       link?.hostChannel?.close();

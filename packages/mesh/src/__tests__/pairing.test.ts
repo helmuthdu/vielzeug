@@ -1,10 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { meshCodec } from '../codec';
 import { MeshPairingError } from '../errors';
 import { createMeshGuest } from '../guest';
 import { createMeshHost } from '../host';
 import { createFakeRtc } from '../testing';
-import type { MeshEvent, MeshInvitation } from '../types';
+import type {
+  MeshEvent,
+  MeshInvitation,
+  MeshPeer,
+  MeshPeerInfo,
+  MeshRtcFactory,
+  RTCPeerConnectionLike,
+} from '../types';
 import { pairNodes, type TestProtocol } from './_pair';
 
 describe('createInvitation', () => {
@@ -150,6 +157,138 @@ describe('pairing round-trip', () => {
     expect(rejected).toHaveLength(1);
     expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(MeshPairingError);
     expect(host.peers.size).toBe(1);
+  });
+
+  it('admits only one of two concurrent answers presenting different peer ids', async () => {
+    const fx = createFakeRtc();
+    // The async approval widens the window the race exploits.
+    const host = createMeshHost<TestProtocol>({
+      approvePeer: async () => {
+        await Promise.resolve();
+        return true;
+      },
+      rtc: fx.rtc,
+    });
+    const guest = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
+    const invitation = await host.createInvitation();
+    const answer = await guest.acceptInvitation(invitation);
+    // The proof covers only the SDP, so a rival answer with another peer id still verifies.
+    const rival = { ...answer, peer: { id: 'other' } };
+
+    const results = await Promise.allSettled([host.acceptAnswer(answer), host.acceptAnswer(rival)]);
+    const fulfilled = results.filter((r): r is PromiseFulfilledResult<MeshPeer> => r.status === 'fulfilled');
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0]!.reason).toBeInstanceOf(MeshPairingError);
+    expect(host.peers.size).toBe(1);
+
+    const seen: number[] = [];
+    guest.on('pong', (m) => seen.push(m.payload.n));
+    host.send(fulfilled[0]!.value.id, 'pong', { n: 1 });
+    await vi.waitFor(() => expect(seen).toEqual([1]));
+  });
+
+  it('accepts the correct answer after rejecting a forged proof', async () => {
+    const fx = createFakeRtc();
+    const host = createMeshHost<TestProtocol>({ rtc: fx.rtc });
+    const guest = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
+    const invitation = await host.createInvitation();
+    const answer = await guest.acceptInvitation(invitation);
+
+    await expect(host.acceptAnswer({ ...answer, proof: 'forged' })).rejects.toBeInstanceOf(MeshPairingError);
+    const peer = await host.acceptAnswer(answer);
+    expect(peer.status).toBe('connected');
+    expect(host.peers.size).toBe(1);
+  });
+
+  it('consumes the invitation when the host rejects the peer', async () => {
+    const fx = createFakeRtc();
+    const host = createMeshHost<TestProtocol>({
+      approvePeer: (peer: MeshPeerInfo) => peer.id !== 'first',
+      rtc: fx.rtc,
+    });
+    const guest = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
+    const invitation = await host.createInvitation();
+    const answer = await guest.acceptInvitation(invitation);
+
+    await expect(host.acceptAnswer({ ...answer, peer: { id: 'first' } })).rejects.toBeInstanceOf(MeshPairingError);
+    // The host made a decision for this session: the invitation is spent, so
+    // even a peer that would be approved needs a fresh one.
+    await expect(host.acceptAnswer({ ...answer, peer: { id: 'second' } })).rejects.toBeInstanceOf(MeshPairingError);
+    expect(host.peers.size).toBe(0);
+  });
+
+  it('closes the refused peer connection instead of leaking it', async () => {
+    const fx = createFakeRtc();
+    const created: RTCPeerConnectionLike[] = [];
+    const rtc: MeshRtcFactory = {
+      createPeerConnection: (config) => {
+        const pc = fx.rtc.createPeerConnection(config);
+        created.push(pc);
+        return pc;
+      },
+    };
+    const host = createMeshHost<TestProtocol>({ approvePeer: () => false, rtc });
+    const guest = createMeshGuest<TestProtocol>({ rtc });
+    const answer = await guest.acceptInvitation(await host.createInvitation());
+
+    await expect(host.acceptAnswer(answer)).rejects.toBeInstanceOf(MeshPairingError);
+    // The first created connection is the host side of the refused session:
+    // refusal must tear it down immediately, not keep it alive until dispose.
+    expect(created[0]?.connectionState).toBe('closed');
+    guest.dispose();
+  });
+
+  it('keeps the invitation answerable when approvePeer throws', async () => {
+    const fx = createFakeRtc();
+    let backendDown = true;
+    const host = createMeshHost<TestProtocol>({
+      approvePeer: () => {
+        if (backendDown) throw new Error('approval backend down');
+        return true;
+      },
+      rtc: fx.rtc,
+    });
+    const guest = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
+    const answer = await guest.acceptInvitation(await host.createInvitation());
+
+    await expect(host.acceptAnswer(answer)).rejects.toThrow('approval backend down');
+    backendDown = false;
+    const peer = await host.acceptAnswer(answer);
+    expect(peer.status).toBe('connected');
+  });
+
+  it('rejects an in-flight answer whose invitation expires mid-approval', async () => {
+    const fx = createFakeRtc();
+    let expireApproval: () => void = () => {};
+    const approvalReleased = new Promise<void>((resolve) => {
+      expireApproval = resolve;
+    });
+    const host = createMeshHost<TestProtocol>({
+      // Resolution is caused by the expiry timer, not a wall-clock race:
+      // approval completes only after the invitation has already expired.
+      approvePeer: async () => {
+        await approvalReleased;
+        return true;
+      },
+      invitationTtlMs: 50,
+      rtc: fx.rtc,
+    });
+    const guest = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
+    const invitation = await host.createInvitation();
+    const answer = await guest.acceptInvitation(invitation);
+    const events: MeshEvent[] = [];
+    host.tap((event) => {
+      events.push(event);
+      if (event.type === 'invitation-expired') expireApproval();
+    });
+
+    await expect(host.acceptAnswer(answer)).rejects.toThrow('Invitation expired');
+    // The rejection must come from the mid-flight expiry, not the pre-flight
+    // TTL check: approval was already granted when the invitation expired.
+    expect(events.some((event) => event.type === 'peer-approved')).toBe(true);
+    expect(host.peers.size).toBe(0);
   });
 
   it('restores CRLF line endings before setRemoteDescription on both sides', async () => {

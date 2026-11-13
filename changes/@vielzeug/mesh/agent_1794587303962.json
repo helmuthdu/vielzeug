@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Run full teardown when the signal option aborts",
+      "packageName": "@vielzeug/mesh",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/mesh"
+}

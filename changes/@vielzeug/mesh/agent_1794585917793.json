@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Treat ICE disconnected as transient; add FakeRtc.blipIce",
+      "packageName": "@vielzeug/mesh",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/mesh"
+}

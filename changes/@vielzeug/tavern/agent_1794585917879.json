@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Survive transient ICE disconnects",
+      "packageName": "@vielzeug/tavern",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tavern"
+}

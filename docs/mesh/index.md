@@ -23,7 +23,7 @@ const pc = new RTCPeerConnection();
 const dc = pc.createDataChannel('sync');
 await pc.setLocalDescription(await pc.createOffer());
 // …wait for ICE, hand the SDP to the other device, wire expiry, timeouts,
-// message framing, and dedupe yourself: per guest
+// and message framing yourself: per guest
 
 // After
 const host = createMeshHost<AppProtocol>();

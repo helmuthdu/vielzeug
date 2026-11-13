@@ -5,7 +5,7 @@ import {
   DEFAULT_INVITATION_TTL_MS,
   DEFAULT_MAX_MESSAGE_BYTES,
 } from './_defaults';
-import { createMessenger, createNodeCore, createPeerRecord, type PeerRecord } from './_node';
+import { createMessenger, createNodeCore, createPeerRecord, type PeerRecord, wireDisposalSignal } from './_node';
 import { createProof } from './_proof';
 import { randomBytes, randomId } from './_random';
 import { nativeRtcFactory, normalizeSdp, waitChannelOpen, waitIceGathering } from './_rtc';
@@ -22,13 +22,17 @@ import type {
 } from './types';
 
 interface PendingInvitation {
-  answered: boolean;
   readonly dc: RTCDataChannelLike;
   readonly expiresAt: number;
   readonly expiryTimer: ReturnType<typeof setTimeout>;
   readonly pc: RTCPeerConnectionLike;
   readonly secret: string;
   readonly sessionId: string;
+  /**
+   * Single-use reservation, taken synchronously before any `await` in
+   * `acceptAnswer` so concurrent answers cannot both pass validation.
+   */
+  state: 'open' | 'reserved';
 }
 
 /**
@@ -44,12 +48,11 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
   const iceGatheringTimeoutMs = options.iceGatheringTimeoutMs ?? DEFAULT_ICE_GATHERING_TIMEOUT_MS;
   const channelInit = { label: 'mesh', ordered: true, ...options.channel };
 
-  const core = createNodeCore(options.signal);
+  const core = createNodeCore();
   const messenger = createMessenger({
     clock,
     emitTap: core.emitTap,
     maxMessageBytes,
-    random: options.random,
   });
 
   const peers = new Map<string, PeerRecord>();
@@ -78,6 +81,29 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
     invitation.pc.close();
     core.emitTap({ sessionId, type: 'invitation-expired' });
     recomputeStatus();
+  }
+
+  /** Opens a reserved invitation for another answer, unless it already expired. */
+  function releaseInvitation(sessionId: string, invitation: PendingInvitation): void {
+    if (pending.get(sessionId) === invitation) invitation.state = 'open';
+  }
+
+  /**
+   * Retires an invitation for good: no further answer will be accepted for
+   * it. Callers recompute status once their own state is in place. Used when
+   * the invitation's transport is handed to a peer; refusing a peer must
+   * teardown the transport through `discardInvitation` instead.
+   */
+  function consumeInvitation(sessionId: string, invitation: PendingInvitation): void {
+    if (pending.get(sessionId) !== invitation) return;
+    pending.delete(sessionId);
+    clearTimeout(invitation.expiryTimer);
+  }
+
+  /** Retires an invitation that will never become a peer and closes its transport. */
+  function discardInvitation(sessionId: string, invitation: PendingInvitation): void {
+    consumeInvitation(sessionId, invitation);
+    invitation.pc.close();
   }
 
   function setPeerStatus(peer: PeerRecord, status: PeerRecord['status']): void {
@@ -123,9 +149,10 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
       core.emitTap({ peerId: peer.id, state, type: 'ice-state' });
       if (state === 'failed' || state === 'closed') {
         leavePeer(peer, `ice ${state}`, state === 'failed');
-      } else if (state === 'disconnected' && peer.status === 'connected') {
-        setPeerStatus(peer, 'disconnected');
       }
+      // `disconnected` is transient in WebRTC and often recovers: peer
+      // liveness follows the data channel, so a blip only surfaces as the
+      // `ice-state` tap event above.
     });
   }
 
@@ -144,30 +171,53 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
       if (!answer.peer?.id) throw new MeshPairingError('Answer is missing a peer id');
       const invitation = pending.get(answer.sessionId);
       if (!invitation) throw new MeshPairingError('Unknown or expired session');
-      if (invitation.answered) throw new MeshPairingError('Invitation already answered');
+      if (invitation.state !== 'open') throw new MeshPairingError('Invitation already answered');
       if (peers.has(answer.peer.id)) throw new MeshPairingError(`Peer "${answer.peer.id}" is already connected`);
       if (clock() >= invitation.expiresAt) {
         expireInvitation(answer.sessionId);
         throw new MeshPairingError('Invitation expired');
       }
+      // Reserve synchronously before the first await: a concurrent answer for
+      // this session can only lose here, never race through the awaits below.
+      invitation.state = 'reserved';
 
-      const expected = await createProof(invitation.secret, answer.sdp);
-      if (answer.proof !== expected) throw new MeshPairingError('Proof mismatch');
+      let approved: boolean;
+      try {
+        const expected = await createProof(invitation.secret, answer.sdp);
+        if (answer.proof !== expected) throw new MeshPairingError('Proof mismatch');
+        approved = (await options.approvePeer?.(answer.peer)) ?? true;
+      } catch (error) {
+        // Proof mismatch or an approval/proof failure: the invitation was not
+        // decided, so the genuine guest can still answer it.
+        releaseInvitation(answer.sessionId, invitation);
+        throw error;
+      }
 
-      const approved = (await options.approvePeer?.(answer.peer)) ?? true;
+      // Disposal while awaiting proof/approval must win over the approval
+      // result: the node was torn down, it never decided anything.
+      core.ensureLive();
+
       if (!approved) {
         core.emitTap({ peerId: answer.peer.id, type: 'peer-rejected' });
+        // The host made a decision for this session: the invitation is spent
+        // and its transport is torn down, or refused peers would leak one
+        // connection per attempt.
+        discardInvitation(answer.sessionId, invitation);
+        recomputeStatus();
         throw new MeshPairingError(`Peer "${answer.peer.id}" rejected by host`);
       }
       core.emitTap({ peerId: answer.peer.id, type: 'peer-approved' });
 
-      // Re-check after the proof/approval awaits: concurrent answers for
-      // different sessions could both have passed the check above.
-      if (peers.has(answer.peer.id)) throw new MeshPairingError(`Peer "${answer.peer.id}" is already connected`);
-
-      invitation.answered = true;
-      pending.delete(answer.sessionId);
-      clearTimeout(invitation.expiryTimer);
+      // The expiry timer may have retired the invitation mid-flight; its peer
+      // connection is already closed.
+      if (pending.get(answer.sessionId) !== invitation) throw new MeshPairingError('Invitation expired');
+      // Concurrent answers for different sessions could both have passed the check above.
+      if (peers.has(answer.peer.id)) {
+        // The collision is about the peer id, not this session: leave it answerable.
+        releaseInvitation(answer.sessionId, invitation);
+        throw new MeshPairingError(`Peer "${answer.peer.id}" is already connected`);
+      }
+      consumeInvitation(answer.sessionId, invitation);
 
       const peer = createPeerRecord(answer.peer.id, answer.peer.name, 'guest');
       const opened = waitChannelOpen(
@@ -240,7 +290,7 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
       }
 
       const expiryTimer = setTimeout(() => expireInvitation(sessionId), invitationTtlMs);
-      pending.set(sessionId, { answered: false, dc, expiresAt, expiryTimer, pc, secret, sessionId });
+      pending.set(sessionId, { dc, expiresAt, expiryTimer, pc, secret, sessionId, state: 'open' });
       core.emitTap({ sessionId, type: 'invitation-created' });
       recomputeStatus();
       return { expiresAt, sdp, secret, sessionId, v: 1, ...(meta?.name === undefined ? {} : { hostName: meta.name }) };
@@ -302,5 +352,6 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
     },
   };
 
+  wireDisposalSignal(options.signal, () => host.dispose());
   return host;
 }

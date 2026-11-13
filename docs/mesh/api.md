@@ -18,9 +18,10 @@ description: Public API of @vielzeug/mesh.
 
 ## Package Entry Point
 
-| Import           | Purpose                  |
-| ---------------- | ------------------------ |
-| `@vielzeug/mesh` | Complete public Mesh API |
+| Import                   | Purpose                                       |
+| ------------------------ | --------------------------------------------- |
+| `@vielzeug/mesh`         | Complete public Mesh API                      |
+| `@vielzeug/mesh/testing` | In-memory WebRTC fake for browserless testing |
 
 ## Factory Functions
 
@@ -80,15 +81,15 @@ const answer = await guest.acceptInvitation(meshCodec.decode(invitationText), { 
 
 `MeshHost<P>` extends `MeshNode`.
 
-| Member             | Signature                                                                                                                      | Purpose                                                                                                                                                                                            |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createInvitation` | `(meta?: { name?: string }) => Promise<MeshInvitation>`                                                                        | Single-use invitation for one guest; repeatable: one per guest. `meta.name` becomes this host's peer name on the guest side.                                                                       |
-| `acceptAnswer`     | `(answer: MeshAnswer) => Promise<MeshPeer>`                                                                                    | Verifies proof + approval, then resolves once the channel opens. Rejects `MeshPairingError` (unknown/expired/duplicate session, duplicate peer id, proof mismatch, refusal) or `MeshTimeoutError`. |
-| `peers`            | `ReadonlyMap<string, MeshPeer>`                                                                                                | Live peer inventory keyed by peer id.                                                                                                                                                              |
-| `send`             | `<K extends keyof P['toGuest'] & string>(peerId: string, type: K, payload: P['toGuest'][K]) => void`                           | Typed unicast; throws `MeshConnectionError` for unknown/unconnected peers, `MeshPayloadError` over the cap.                                                                                        |
-| `broadcast`        | `<K extends keyof P['toGuest'] & string>(type: K, payload: P['toGuest'][K], options?: { except?: readonly string[] }) => void` | Sends to every connected peer not in `except`.                                                                                                                                                     |
-| `on`               | `<K extends keyof P['toHost'] & string>(type: K, handler: (message: MeshInbound<P['toHost'][K]>) => void) => Unsubscribe`      | Typed inbound subscription from any guest.                                                                                                                                                         |
-| `kick`             | `(peerId: string, reason?: string) => void`                                                                                    | Disconnects a peer; the guest observes `'disconnected'`.                                                                                                                                           |
+| Member             | Signature                                                                                                                      | Purpose                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createInvitation` | `(meta?: { name?: string }) => Promise<MeshInvitation>`                                                                        | Single-use invitation for one guest; repeatable: one per guest. `meta.name` becomes this host's peer name on the guest side.                                                                                                                                                                                                                                         |
+| `acceptAnswer`     | `(answer: MeshAnswer) => Promise<MeshPeer>`                                                                                    | Verifies proof + approval, then resolves once the channel opens. Rejects `MeshPairingError` (unknown/expired session, already-answered, duplicate peer id, proof mismatch, refusal) or `MeshTimeoutError`. Concurrent answers for one session serialize to a single winner; a proof mismatch leaves the invitation answerable, an `approvePeer` refusal consumes it. |
+| `peers`            | `ReadonlyMap<string, MeshPeer>`                                                                                                | Live peer inventory keyed by peer id.                                                                                                                                                                                                                                                                                                                                |
+| `send`             | `<K extends keyof P['toGuest'] & string>(peerId: string, type: K, payload: P['toGuest'][K]) => void`                           | Typed unicast; throws `MeshConnectionError` for unknown/unconnected peers, `MeshPayloadError` over the cap.                                                                                                                                                                                                                                                          |
+| `broadcast`        | `<K extends keyof P['toGuest'] & string>(type: K, payload: P['toGuest'][K], options?: { except?: readonly string[] }) => void` | Sends to every connected peer not in `except`.                                                                                                                                                                                                                                                                                                                       |
+| `on`               | `<K extends keyof P['toHost'] & string>(type: K, handler: (message: MeshInbound<P['toHost'][K]>) => void) => Unsubscribe`      | Typed inbound subscription from any guest.                                                                                                                                                                                                                                                                                                                           |
+| `kick`             | `(peerId: string, reason?: string) => void`                                                                                    | Disconnects a peer; the guest observes `'disconnected'`.                                                                                                                                                                                                                                                                                                             |
 
 ## Guest Surface
 
@@ -202,7 +203,7 @@ interface MeshPeer extends MeshPeerInfo {
 
 interface MeshInbound<T> {
   readonly peerId: string;
-  readonly messageId: string;
+  /** Sender's clock at send time in epoch milliseconds: informational only, the peer clock is untrusted. */
   readonly sentAt: number;
   readonly payload: T;
 }
@@ -229,7 +230,7 @@ type MeshEvent =
   | {
       readonly type: 'message-rejected';
       readonly peerId: string;
-      readonly reason: 'too-large' | 'duplicate' | 'malformed' | 'unknown-type';
+      readonly reason: 'too-large' | 'malformed' | 'unknown-type';
     }
   | { readonly type: 'ice-state'; readonly peerId: string; readonly state: string }
   | { readonly type: 'error'; readonly error: MeshError }
@@ -315,6 +316,24 @@ interface MeshRtcEvent {
   readonly channel?: RTCDataChannelLike;
 }
 ```
+
+## Testing (`@vielzeug/mesh/testing`)
+
+`createFakeRtc(options?: { latencyMs?: number })` returns a `FakeRtc`: an in-memory WebRTC stand-in whose peer connections wire together through fake SDP tokens. Pass `fx.rtc` as the `rtc` option of `createMeshHost`/`createMeshGuest`. Links are indexed by pairing order (the first created offer is link `0`).
+
+| Member         | Signature                 | Purpose                                                                                                                                                         |
+| -------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rtc`          | `MeshRtcFactory`          | The factory to inject.                                                                                                                                          |
+| `latencyMs`    | `number`                  | Delivery delay for messages and channel-open. Default `0` (microtask).                                                                                          |
+| `linkCount`    | `number`                  | Number of links initiated (one per created offer).                                                                                                              |
+| `remoteSdps`   | `readonly string[]`       | Every SDP handed to `setRemoteDescription`, in call order.                                                                                                      |
+| `closeChannel` | `(index: number) => void` | Closes both ends of link `index` and moves its ICE to `disconnected`: the real disconnect path.                                                                 |
+| `blipIce`      | `(index: number) => void` | Transient ICE blip on link `index`: both connections go `disconnected` then back to `connected` on the next scheduled delivery, leaving the data channels open. |
+| `dropNext`     | `(n: number) => void`     | Silently drops the next `n` channel sends.                                                                                                                      |
+| `failIce`      | `() => void`              | Makes the next pairing fail at the ICE stage.                                                                                                                   |
+| `stallIce`     | `() => void`              | Makes the next `setLocalDescription` never finish ICE gathering.                                                                                                |
+| `hangOpen`     | `() => void`              | Makes the next completed link connect at ICE level but never open the channel.                                                                                  |
+| `tick`         | `() => void`              | Drains all latency-queued deliveries immediately.                                                                                                               |
 
 ## Errors
 
