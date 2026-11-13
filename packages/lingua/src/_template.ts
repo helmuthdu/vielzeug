@@ -1,3 +1,5 @@
+import type { Segment } from './types';
+
 export type TemplatePart = string | { readonly value: string };
 export type Template = readonly TemplatePart[];
 
@@ -21,18 +23,70 @@ export function compileTemplate(value: string): Template {
   return parts;
 }
 
+/**
+ * The single resolution walk shared by `translate()` and `parts()`: a nullish value (missing
+ * or `null`/`undefined`) resolves through `missing` as text; every other value reaches
+ * `onValue` untouched. One walk keeps the string and segment paths semantically identical
+ * while letting `renderText` accumulate without allocating per-part segment objects.
+ */
+function eachPart(
+  template: Template,
+  values: Record<string, unknown>,
+  missing: (name: string) => string,
+  onText: (text: string) => void,
+  onValue: (name: string, value: unknown) => void,
+): void {
+  for (const part of template) {
+    if (typeof part === 'string') {
+      onText(part);
+
+      continue;
+    }
+
+    const value = Object.hasOwn(values, part.value) ? values[part.value] : undefined;
+
+    if (value == null) onText(missing(part.value));
+    else onValue(part.value, value);
+  }
+}
+
+/** Text segments are never empty (`compileTemplate` only records non-empty runs); value segments may hold `''`. */
+export function renderSegments<V>(
+  template: Template,
+  values: Record<string, unknown>,
+  missing: (name: string) => string,
+): readonly Segment<V>[] {
+  const segments: Segment<V>[] = [];
+
+  eachPart(
+    template,
+    values,
+    missing,
+    (text) => segments.push({ type: 'text', value: text }),
+    (name, value) => segments.push({ name, type: 'value', value: value as V }),
+  );
+
+  return segments;
+}
+
 export function renderText(
-  parts: Template,
+  template: Template,
   values: Record<string, unknown>,
   missing: (name: string) => string,
 ): string {
-  return parts
-    .map((part) => {
-      if (typeof part === 'string') return part;
+  let out = '';
 
-      const value = Object.hasOwn(values, part.value) ? values[part.value] : undefined;
+  eachPart(
+    template,
+    values,
+    missing,
+    (text) => {
+      out += text;
+    },
+    (_name, value) => {
+      out += String(value);
+    },
+  );
 
-      return value == null ? missing(part.value) : String(value);
-    })
-    .join('');
+  return out;
 }

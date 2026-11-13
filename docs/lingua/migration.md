@@ -147,7 +147,7 @@ This train collapses the translation surface to one method and removes the snaps
 | Before                                     | After                                                            |
 | ------------------------------------------ | ---------------------------------------------------------------- |
 | `translateDynamic(key, options?)`          | `translateUnkeyed(key, options?)`                                |
-| `parts()` / `partsDynamic()` / `Part<V>`   | Removed: translate strings; keep rich rendering in the framework |
+| `parts()` / `partsDynamic()` / `Part<V>`   | Removed in that train; `parts()` restored later with `Segment<V>`  |
 | `getSnapshot(): I18nSnapshot<C>`           | `getSnapshot(): Locale`                                          |
 | `subscribe((snapshot) => ...)`             | `subscribe((locale) => ...)`                                     |
 | `createI18n({ state })`                    | `createI18n({ catalogs: state.catalogs, locale: state.locale })` |
@@ -170,7 +170,7 @@ On the reactive path the same rule applies to the ripple bridge: wrap `reactive.
 
 ## Rich content moved out
 
-`parts()` returned `{ type: 'text' | 'value' }` arrays for framework nodes. Lingua now only renders strings; map values to pre-translated strings or keep a framework-side template renderer beside the catalog.
+`parts()` returned `{ type: 'text' | 'value' }` arrays for framework nodes. That train reduced Lingua to rendering strings: map values to pre-translated strings or keep a framework-side template renderer beside the catalog. A later train restored the capability as [`parts()`](./api.md#rich-content-parts): messages resolve through the same engine as `translate()` and return render-order `Segment<V>[]` whose values pass through untouched, so framework nodes no longer need marker-and-split workarounds.
 
 ## Locale snapshots instead of translator snapshots
 

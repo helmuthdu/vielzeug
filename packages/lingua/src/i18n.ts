@@ -7,7 +7,10 @@ import type {
   Catalog,
   I18nOptions,
   Locale,
+  PartsOptions,
   PluralOptions,
+  PluralPartsOptions,
+  Segment,
   SerializedI18n,
   SubscribeOptions,
   TranslateOptions,
@@ -116,6 +119,12 @@ export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> 
     get locale() {
       return locale;
     },
+    // Delegating through the mutable `engine` is what makes these follow `setLocale()`:
+    // `notify()` swaps the engine, and the public slots must pick up the new one.
+    parts: (<V>(key: string, options?: PartsOptions<V> | PluralPartsOptions<V>): readonly Segment<V>[] =>
+      engine.parts(key, options)) as I18n<C>['parts'],
+    partsUnkeyed: (<V>(key: string, options?: PartsOptions<V> | PluralPartsOptions<V>): readonly Segment<V>[] =>
+      engine.parts(key, options)) as I18n<C>['partsUnkeyed'],
     serialize() {
       assertLive();
 

@@ -58,6 +58,8 @@ translator.translate('save');
 | ------------------ | -------------------------------------------------------------------- | ---------------------- |
 | `translate`        | `(textKey, options?)` or `(pluralKey, { count, ordinal?, values? })` | Rendered string        |
 | `translateUnkeyed` | `(key: string, options?)`                                            | Rendered string        |
+| `parts`            | `(textKey, { values? })` or `(pluralKey, { count, ordinal?, values? })` | Render-order `Segment<V>[]` |
+| `partsUnkeyed`     | `(key: string, options?)`                                            | Render-order `Segment<V>[]` |
 | `locale`           | `Locale`                                                             | Resolved active locale |
 
 ---
@@ -98,6 +100,8 @@ i18n.translate('title');
 | ------------------ | ------------------------------------- | -------------------------------------------------------------- |
 | `translate`        | Translator method                     | Rendered string                                                |
 | `translateUnkeyed` | Translator method                     | Rendered string for a runtime key outside the typed key set    |
+| `parts`            | Translator method                     | Render-order `Segment<V>[]` for the committed locale           |
+| `partsUnkeyed`     | Translator method                     | Render-order `Segment<V>[]` for a runtime key                  |
 | `load`             | `({ locale? })`                       | `Promise<void>` after the locale and configured fallbacks load |
 | `setLocale`        | `(locale)`                            | `Promise<void>` after an atomic loaded-locale commit           |
 | `isLoaded`         | `({ locale? })`                       | `boolean`                                                      |
@@ -110,6 +114,33 @@ i18n.translate('title');
 | `disposalSignal`   | `AbortSignal`                         | Aborts on disposal                                             |
 | `[Symbol.dispose]` | `()`                                  | Delegates to `dispose()`                                       |
 
+**Memoization rule:** `translate` and `parts` have a deliberately stable function identity across `setLocale()` — they read the committed engine at call time, while `getSnapshot()` returns the locale string whose identity changes exactly when the locale does. Memoize derived translations on the **locale**, never on the function's identity (`useMemo(..., [i18n.translate])` keeps the previous language).
+
+---
+
+## Rich content (`parts`)
+
+`parts()` resolves a message exactly like `translate()` — same plural selection, locale fallback, and `missing` strategy — but returns the message as render-order segments, so framework nodes can enter a sentence without ever being stringified.
+
+```ts
+const segments = i18n.parts('link', { values: { label: <Link href="/sync">Sync</Link> } });
+// [ { type: 'text', value: 'Go to ' }, { type: 'value', name: 'label', value: <Link/> }, { type: 'text', value: ' now.' } ]
+```
+
+| Contract     | Behavior                                                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------- |
+| Order        | Segments are in render order; a value used twice produces two value segments; unreferenced values are ignored |
+| Text         | Text segments are never empty — adjacent placeholders yield adjacent value segments               |
+| Values       | Passed through untouched with identity preserved; never `String()`-ified, escaped, or merged with neighbors |
+| Missing value | Becomes a **text** segment holding the `missing` strategy's output (`null`/`undefined` count as missing; `''` is a real value) |
+| Missing key  | One text segment holding the strategy's output; `'throw'` still throws                            |
+| Plural       | `parts(key, { count, ordinal?, values? })`; `count` is interpolated into the selected form and can be overridden by an explicit `count` in `values` |
+| Equivalence  | Joining segments with `String()` reproduces `translate()` exactly, so `parts` is safe as your single resolution path |
+
+The interpolation contract shared by `translate()` and `parts()`: string values are inserted verbatim (no HTML or entity escaping), non-string values are `String(value)`-ified, and nullish values follow the `missing` strategy. Rich UIs should render `parts` segments instead of smuggling placeholders through a translated string: because values never enter the concatenated string, user data cannot reach an HTML sink through it.
+
+`V` defaults to `string`; pass your node type to keep rendering type-safe: `i18n.parts<ReactNode>('link', { values: { label: <Link/> } })`.
+
 ---
 
 ## Reactive bridge (`@vielzeug/lingua/ripple`)
@@ -120,7 +151,7 @@ i18n.translate('title');
 function createReactiveI18n<C extends Catalog>(i18n: I18n<C>): ReactiveI18n<C>;
 ```
 
-Bridges a lingua instance into `@vielzeug/ripple` so translated strings are reactive. `i18n.translate()` is not ripple-reactive on its own: reading it inside a `computed()` computes once and never re-runs, since it registers no tracked dependency. The bridge's `translate` and `translateUnkeyed` first read the reactive `locale` readable, so any binding built on them re-evaluates the instant `setLocale()` resolves. For runtime-assembled keys inside reactive bindings use the bridge's `translateUnkeyed`: calling `i18n.translateUnkeyed` directly skips the reactive locale and caches the first result.
+Bridges a lingua instance into `@vielzeug/ripple` so translated strings are reactive. `i18n.translate()` is not ripple-reactive on its own: reading it inside a `computed()` computes once and never re-runs, since it registers no tracked dependency. The bridge's `translate`, `translateUnkeyed`, `parts`, and `partsUnkeyed` first read the reactive `locale` readable, so any binding built on them re-evaluates the instant `setLocale()` resolves. For runtime-assembled keys inside reactive bindings use the bridge's `translateUnkeyed`/`partsUnkeyed`: calling `i18n.translateUnkeyed` directly skips the reactive locale and caches the first result.
 
 `@vielzeug/ripple` is an optional peer dependency: install it only when you use this subpath.
 
@@ -141,6 +172,8 @@ await reactive.i18n.setLocale('fr');
 | `locale`           | `Readable<Locale>` | Reactive locale: reading it inside a computed/template registers the dependency |
 | `translate`        | `(key, options?)`  | Rendered string; re-evaluates whenever the locale changes                       |
 | `translateUnkeyed` | `(key, options?)`  | Rendered string for a runtime key; re-evaluates whenever the locale changes     |
+| `parts`            | `(key, options?)`  | Render-order `Segment<V>[]`; re-evaluates whenever the locale changes           |
+| `partsUnkeyed`     | `(key, options?)`  | `Segment<V>[]` for a runtime key; re-evaluates whenever the locale changes      |
 
 ---
 
@@ -289,6 +322,9 @@ type Translator<C extends Catalog = Catalog> = {
   translate(key: TextKey<C>, options?: TranslateOptions): string;
   translate(key: PluralKey<C>, options: PluralOptions): string;
   translateUnkeyed(key: string, options?: TranslateOptions | PluralOptions): string;
+  parts<V = string>(key: TextKey<C>, options?: PartsOptions<V>): readonly Segment<V>[];
+  parts<V = string>(key: PluralKey<C>, options: PluralPartsOptions<V>): readonly Segment<V>[];
+  partsUnkeyed<V = string>(key: string, options?: PartsOptions<V> | PluralPartsOptions<V>): readonly Segment<V>[];
 };
 ```
 
@@ -297,6 +333,12 @@ type Values = Record<string, unknown>;
 type TranslateOptions = { values?: Values };
 type PluralOptions = TranslateOptions & { count: number; ordinal?: boolean };
 type SubscribeOptions = { immediate?: boolean; signal?: AbortSignal };
+
+type Segment<V = string> =
+  | { readonly type: 'text'; readonly value: string }
+  | { readonly type: 'value'; readonly name: string; readonly value: V };
+type PartsOptions<V = string> = { values?: Record<string, V> };
+type PluralPartsOptions<V = string> = PartsOptions<V> & { count: number; ordinal?: boolean };
 
 type CatalogPaths<
   C,

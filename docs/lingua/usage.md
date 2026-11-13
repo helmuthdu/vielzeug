@@ -258,6 +258,55 @@ export function localeStore(i18n: I18n) {
 
 :::
 
+## Rich Content
+
+`parts()` resolves a message like `translate()` — same plural selection, fallback, and `missing` strategy — but returns render-order segments so framework nodes can enter a sentence without being stringified. Values pass through untouched; joining the segments with `String()` reproduces `translate()` exactly.
+
+```ts
+import { createI18n } from '@vielzeug/lingua';
+
+const i18n = createI18n({
+  catalogs: { en: { sync: 'Click {link} to sync now.' } },
+  locale: 'en',
+});
+
+console.log(i18n.parts('sync', { values: { link: 'here' } }));
+// [ { type: 'text', value: 'Click ' }, { type: 'value', name: 'link', value: 'here' }, { type: 'text', value: ' to sync now.' } ]
+```
+
+In React, mirror the locale with `useSyncExternalStore` and key memoized translations on the **locale snapshot** — `i18n.translate`/`i18n.parts` keep a stable identity across `setLocale()` on purpose, so `[t]`-style dependency arrays keep the previous language:
+
+```tsx
+import { Fragment, useMemo, useSyncExternalStore } from 'react';
+import type { ReactNode } from 'react';
+
+import type { Catalog, I18n, TextKey } from '@vielzeug/lingua';
+
+export function useI18n<C extends Catalog>(i18n: I18n<C>) {
+  const locale = useSyncExternalStore((onChange) => i18n.subscribe(onChange), i18n.getSnapshot, i18n.getSnapshot);
+
+  // The fresh memo per locale gives `t` a locale-keyed identity, so downstream `[t]` memos recompute correctly.
+  return useMemo(
+    () => ({
+      locale,
+      t: i18n.translate.bind(i18n),
+      rich: (key: TextKey<C>, values: Record<string, ReactNode>) =>
+        i18n.parts<ReactNode>(key, { values }).map((segment, index) =>
+          segment.type === 'text'
+            ? segment.value
+            : <Fragment key={`${segment.name}-${index}`}>{segment.value}</Fragment>,
+        ),
+    }),
+    [locale],
+  );
+}
+
+// <p>{t('sync')}</p>
+// <p>{rich('sync', { link: <Link href="/sync">here</Link> })}</p>
+```
+
+The same segment shape maps directly onto `h()` vnodes in Vue or `{#each}` blocks in Svelte — only the value-segment wrapper is framework-specific. Because values never enter the concatenated string, rich rendering via `parts` also keeps user data out of any HTML-interpolation sink that marker-and-split workarounds would expose.
+
 ## Working with Other Vielzeug Libraries
 
 Bridge Lingua's `getSnapshot()`/`subscribe()` pair directly when templates need reactive locale reads.
@@ -283,3 +332,5 @@ Use Courier loaders when locale catalogs come from HTTP rather than bundled modu
 - Keep loader functions out of SSR payloads.
 - Dispose temporary instances after requests, tests, and route lifetimes.
 - Use `missing: 'throw'` in development to catch missing keys and values early.
+- Memoize derived translations on the `getSnapshot()` locale string, never on `translate` or `parts` function identity.
+- Render rich messages with `parts()` instead of smuggling markers through `translate()`.

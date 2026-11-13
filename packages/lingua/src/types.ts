@@ -48,6 +48,29 @@ export type PluralOptions = TranslateOptions & {
   ordinal?: boolean;
 };
 
+// ─── Rich content ─────────────────────────────────────────────────────────────
+
+/**
+ * One renderable piece of a message produced by `parts()`, in render order.
+ *
+ * Text segments are never empty (the compiled template records no empty runs), and a value
+ * used twice produces two value segments. A value is never stringified, escaped, or merged
+ * with its neighbors: rich renderers map segments straight to framework nodes. `V` defaults
+ * to `string`; pass your node type (`ReactNode`, vnodes, …) to keep values type-safe.
+ */
+export type Segment<V = string> =
+  | { readonly type: 'text'; readonly value: string }
+  | { readonly type: 'value'; readonly name: string; readonly value: V };
+
+export type PartsOptions<V = string> = {
+  values?: Record<string, V>;
+};
+
+export type PluralPartsOptions<V = string> = PartsOptions<V> & {
+  count: number;
+  ordinal?: boolean;
+};
+
 // ─── Missing strategy ─────────────────────────────────────────────────────────
 
 export type MissingInfo = {

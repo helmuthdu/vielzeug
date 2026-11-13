@@ -72,4 +72,31 @@ describe('createReactiveI18n', () => {
 
     expect(reactive.locale.value).toBe('fr');
   });
+
+  test('parts re-evaluates its segments when the locale changes', async () => {
+    const reactive = setup();
+    const segments = computed(() => reactive.parts('greeting', { values: { name: 'Ada' } }));
+
+    expect(segments.value.map((segment) => (segment.type === 'text' ? segment.value : `[${segment.name}]`))).toEqual([
+      'Hello ',
+      '[name]',
+    ]);
+
+    await reactive.i18n.setLocale('fr');
+
+    expect(segments.value.map((segment) => (segment.type === 'text' ? segment.value : `[${segment.name}]`))).toEqual([
+      'Bonjour ',
+      '[name]',
+    ]);
+  });
+
+  test('parts passes framework-style values through untouched', () => {
+    const reactive = setup();
+    const node = { kind: 'vnode' };
+
+    const segments = reactive.parts('greeting', { values: { name: node } });
+
+    expect(segments[1]).toMatchObject({ name: 'name', type: 'value' });
+    expect(segments[1]?.type === 'value' && segments[1].value).toBe(node);
+  });
 });

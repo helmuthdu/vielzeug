@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add parts()/partsUnkeyed() rich segmentation API with Segment<V> passthrough values, interpolation contract, and ripple bridge parity",
+      "packageName": "@vielzeug/lingua",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/lingua"
+}

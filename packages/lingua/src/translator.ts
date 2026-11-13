@@ -1,15 +1,18 @@
 import { type CompiledCatalog, type CompiledMessage, compileCatalog } from './_catalog';
 import { isDev, warn } from './_dev';
 import { canonicalLocale, localeChain, pluralCategory } from './_locale';
-import { renderText, type Template } from './_template';
+import { renderSegments, renderText, type Template } from './_template';
 import { LinguaInvalidPluralCountError, LinguaMissingKeyError, LinguaMissingValueError } from './errors';
 import type {
   Catalog,
   Locale,
   MissingInfo,
   MissingStrategy,
+  PartsOptions,
   PluralKey,
   PluralOptions,
+  PluralPartsOptions,
+  Segment,
   TextKey,
   TranslateOptions,
   TranslatorOptions,
@@ -26,10 +29,25 @@ export type Translator<C extends Catalog = Catalog> = {
    * as strings, so consumers never cast around the typed surface.
    */
   translateUnkeyed(key: string, options?: TranslateOptions | PluralOptions): string;
+  /**
+   * Renders a message as segments for rich content: interpolation values pass through
+   * untouched (never stringified or escaped), so framework nodes survive intact.
+   * Resolution — plural selection, locale fallback, and the `missing` strategy — is the
+   * same code path as `translate`: joining the segments with `String()` reproduces
+   * `translate` exactly. A missing key yields a single text segment holding the
+   * strategy's output.
+   */
+  parts<V = string>(key: TextKey<C>, options?: PartsOptions<V>): readonly Segment<V>[];
+  parts<V = string>(key: PluralKey<C>, options: PluralPartsOptions<V>): readonly Segment<V>[];
+  /** Runtime-key escape hatch for {@link Translator.parts}, mirroring `translateUnkeyed`. */
+  partsUnkeyed<V = string>(key: string, options?: PartsOptions<V> | PluralPartsOptions<V>): readonly Segment<V>[];
 };
 
 /** Loose translate signature implemented by the engine; public overloads restrict keys per catalog type. */
 export type LooseTranslate = (key: string, options?: TranslateOptions | PluralOptions) => string;
+
+/** Loose parts signature implemented by the engine; public overloads restrict keys per catalog type. */
+export type LooseParts = <V>(key: string, options?: PartsOptions<V> | PluralPartsOptions<V>) => readonly Segment<V>[];
 
 function resolveMissing(strategy: MissingStrategy | undefined, info: MissingInfo): string {
   if (strategy === 'throw') {
@@ -58,7 +76,7 @@ function resolveMissing(strategy: MissingStrategy | undefined, info: MissingInfo
 export function createTranslateEngine(
   catalogs: ReadonlyMap<Locale, CompiledCatalog>,
   options: InternalOptions = {},
-): { readonly locale: Locale; readonly translate: LooseTranslate } {
+): { readonly locale: Locale; readonly translate: LooseTranslate; readonly parts: LooseParts } {
   const locale = canonicalLocale(options.locale ?? 'en');
   const fallback = (
     Array.isArray(options.fallback) ? options.fallback : options.fallback ? [options.fallback] : []
@@ -106,14 +124,25 @@ export function createTranslateEngine(
 
     if (!template) return missingKey(key);
 
-    const values: Record<string, unknown> =
-      'count' in options ? { count: options.count, ...options.values } : (options.values ?? {});
-
-    return renderText(template, values, (name) => missingValue(name, key));
+    return renderText(template, valuesFor(options), (name) => missingValue(name, key));
   };
 
-  return { locale, translate };
+  // Both entry points share templateFor + valuesFor + the missing callbacks, so `parts`
+  // joined with String() is `translate` by construction, including the quirks consumers
+  // rely on (an explicit `count` in `values` overrides the injected one).
+  const parts = <V>(key: string, options: PartsOptions<V> | PluralPartsOptions<V> = {}): readonly Segment<V>[] => {
+    const template = templateFor(key, options);
+
+    if (!template) return [{ type: 'text', value: missingKey(key) }];
+
+    return renderSegments<V>(template, valuesFor(options), (name) => missingValue(name, key));
+  };
+
+  return { locale, parts, translate };
 }
+
+const valuesFor = (options: TranslateOptions | PluralOptions): Record<string, unknown> =>
+  'count' in options ? { count: options.count, ...options.values } : (options.values ?? {});
 
 type InternalOptions = {
   readonly fallback?: Locale | readonly Locale[];
@@ -128,5 +157,11 @@ export function createTranslator<C extends Catalog>(catalog: C, options?: Transl
     options,
   );
 
-  return { locale: engine.locale, translate: engine.translate, translateUnkeyed: engine.translate };
+  return {
+    locale: engine.locale,
+    parts: engine.parts as Translator<C>['parts'],
+    partsUnkeyed: engine.parts as Translator<C>['partsUnkeyed'],
+    translate: engine.translate,
+    translateUnkeyed: engine.translate,
+  };
 }
