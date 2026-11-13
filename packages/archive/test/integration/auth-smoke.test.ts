@@ -6,6 +6,7 @@ import { createServer } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { decodeJwt, exportJWK, generateKeyPair } from 'jose';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { sha256Hex } from '../../src/_crypto';
 import { ACCOUNT_HEADER, AUTH_SCHEMA_VERSION, archiveAuthHealthSchema } from '../../src/contract';
 
 /**
@@ -697,5 +698,28 @@ describe('production issuer smoke (real workerd, bidirectional service bindings)
     expect((await erase()).res.status).toBe(204);
     expect((await call('/api/v1/auth/session', { cookie })).res.status).toBe(401);
     expect((await call('/api/v1/me', { body: {}, cookie, method: 'POST' })).res.status).toBe(401);
+  });
+
+  it('approves a separate app session only after confirmation, without signing in the browser', async () => {
+    const proof = 'A'.repeat(43);
+    const before = outbox.length;
+    const requested = await call('/api/v1/auth/device/sign-in', {
+      body: { challenge: await sha256Hex(proof), email: 'device@example.test' },
+      method: 'POST',
+    });
+    expect(requested.res.status).toBe(202);
+    expect(outbox).toHaveLength(before + 1);
+    const token = /device\/approve\?token=([A-Za-z0-9._-]+)/.exec(outbox[before].text)?.[1];
+    if (!token) throw new Error('Missing device approval email');
+    expect((await call(`/api/v1/auth/device/approve?token=${token}`, { origin: null })).res.status).toBe(200);
+    expect((await call('/api/v1/auth/device/claim', { body: { token: proof }, method: 'POST' })).res.status).toBe(202);
+    const approval = await call('/api/v1/auth/device/approve', { body: { token }, method: 'POST' });
+    expect(approval.res.status).toBe(204);
+    expect(approval.res.headers.get('set-cookie')).toBeNull();
+    const claim = await call('/api/v1/auth/device/claim', { body: { token: proof }, method: 'POST' });
+    const cookie = sessionCookie(claim.res);
+    expect((await call('/api/v1/auth/account', { cookie })).json).toMatchObject({ email: 'device@example.test' });
+    expect((await call('/api/v1/auth/device/approve', { body: { token }, method: 'POST' })).res.status).toBe(410);
+    expect((await call('/api/v1/auth/device/claim', { body: { token: proof }, method: 'POST' })).res.status).toBe(202);
   });
 });

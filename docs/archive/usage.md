@@ -212,13 +212,14 @@ The issuer first admits sign-in requests through its singleton durable
 `auth_sign_in_budget` table: 20 requests per 60 seconds before creating accounts
 or delivering email. No rate-limiter binding is required. It then
 permits three sign-in emails per email in an hourly durable window.
-Those durable budgets guard `POST /auth/sign-in` only. `POST /auth/verify` and
+Those durable budgets guard `POST /auth/sign-in` and `POST /auth/device/sign-in`.
+`POST /auth/verify`, the device approval and claim routes, and
 `GET /auth/session` stay public: tokens are 256-bit, single-use and expire in
 15 minutes, so guessing is not the risk — but every request still costs the
 issuer: the verify GET renders the confirmation page, the verify POST performs a
 D1 token write, and the session check performs an RS256 verification plus an
 account read for a well-formed signed token. Put per-client-IP Cloudflare
-rate-limit rules (or an equivalent edge control) in front of both routes in
+rate-limit rules (or an equivalent edge control) in front of those routes in
 production. Prefer a block action: applications check `GET /auth/session` with
 a `fetch`, and a fetch cannot solve a challenge interstitial, so challenging
 that route breaks legitimate sign-in. The verify GET is a browser navigation
@@ -255,6 +256,28 @@ preferences, supports reduced motion, focuses the confirmation action and
 announces pending, success and recovery states. Without JavaScript it links to
 `${PUBLIC_ORIGIN}/account` as “Request a new sign-in link” and does not pretend
 to complete sign-in.
+
+### Sign in an isolated installed app
+
+When the app and email browser do not share cookies, generate a random 32-byte
+base64url proof in the app and compute the SHA-256 hex digest of the proof's
+UTF-8 text. Send `{ email, challenge }` to `POST /auth/device/sign-in` with the
+request marker. Show the first eight uppercase characters of the digest in the
+app: the approval page shows the same code, and users should approve only when
+they match. The link's GET is non-destructive; its confirmation POST authorizes
+the app but does not sign in the browser.
+
+The app sends `{ token: proof }` to `POST /auth/device/claim` with credentials,
+the request marker and an allowed origin. `202 { ok: false }` means no claimable
+approval; `204` sets the normal cookie in the app. Poll only while needed and
+while the app is visible, stop after 15 minutes, and serialize a claim with
+account changes so a late cookie cannot overwrite another choice. Clear the
+proof on cancellation or completion. Do not log the proof or approval URL.
+An existing valid session returns 409 without consuming the proof; recheck the
+session rather than replacing that account.
+Pending requests share the usual email budgets and are revoked by account
+deletion or sign-out-all. Add edge rate limits for device approval and claim
+before enabling the feature; block rather than challenge the programmatic claim.
 
 Archive only serves the confirmation endpoint. Your application must serve its
 sign-in entry at the fixed `${PUBLIC_ORIGIN}/account` recovery destination and
@@ -384,6 +407,10 @@ GET    /api/v1/me/reports                                   (cursor, limit)
 GET    /api/v1/auth/account
 GET    /api/v1/auth/jwks.json
 POST   /api/v1/auth/sign-in                                 (email)
+POST   /api/v1/auth/device/sign-in                          (email and challenge)
+GET    /api/v1/auth/device/approve?token=…                  (confirmation only)
+POST   /api/v1/auth/device/approve                          (authorizes device)
+POST   /api/v1/auth/device/claim                            (proof, then session cookie)
 DELETE /api/v1/auth/account                                (coordinated full erasure)
 DELETE /api/v1/me/account                                  (issuer erasure seam; revokes subject)
 GET    /api/v1/auth/verify?token=…                          (confirmation only)

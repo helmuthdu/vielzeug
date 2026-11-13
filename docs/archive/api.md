@@ -195,8 +195,8 @@ Magic links expire after 15 minutes and work once. The durable per-email budget 
 The issuer-global admission budget is durable D1 state in `auth_sign_in_budget`:
 20 requests per 60-second window before account creation or email delivery.
 This supplements, rather than replaces, the durable per-email budget. No external
-rate-limiter binding is required for sign-in admission; the budgets do not cover
-`POST /auth/verify` or `GET /auth/session`, which deployments rate-limit at the
+rate-limiter binding is required for either sign-in admission route; the budgets do not cover
+`POST /auth/verify`, the device approval and claim routes, or `GET /auth/session`, which deployments rate-limit at the
 edge. Edge rules should block rather than challenge `GET /auth/session`: clients
 check it with a `fetch`, which cannot solve a challenge interstitial. The verify
 GET is a browser navigation from the email link, so a challenge is solvable there.
@@ -204,6 +204,20 @@ Admission spends are not refunded after later database or email failures.
 Request emails are trimmed and lowercased before validation. `SENDER_ADDRESS`
 must already be canonical; `OPERATOR_EMAILS` entries are trimmed and lowercased
 before validation.
+
+For isolated browser storage, device sign-in binds approval to a secret held by
+the initiating app. Generate 32 random bytes, encode them as an unpadded base64url
+proof, and send the lowercase SHA-256 hex of its UTF-8 representation as
+`challenge`. The email approval page shows the first eight uppercase hex digits;
+the app must show the same code and ask the user to compare them. Approval is
+an explicit POST and does not sign in the confirming browser. The app claims
+with its proof; a pending claim returns 202 and an approved one returns 204 with
+the normal session cookie. Claim returns 409 without consuming the proof if the
+request already carries a valid session, so it cannot replace that account.
+Both requests require the marker and an allowed
+origin. The proof is a credential: do not log it; retain it only until claim,
+cancellation or expiration. Sign-out-all and account deletion revoke pending
+approvals. Existing browser sign-in is unchanged.
 
 Sign-in requests create pending account rows with `lastSignInAt: null`. Successful
 redemption atomically claims the one-use link and stamps the account's sign-in
@@ -297,6 +311,10 @@ Every route below is mounted under `/api/v1`. Mutation guards require an exact a
 | `POST /auth/sign-out-all`                                    | Requires marker, exact origin, session and captured `ACCOUNT_HEADER`; atomically increments `session_version`, deletes outstanding links, preserves account and catalog data; 200 `{ ok: true }` with an expired cookie only on durable success |
 | `GET /auth/jwks.json`                                        | Active and configured retired public verification keys                                                                                                                                                                                          |
 | `POST /auth/sign-in`                                         | `{ email }` (trimmed and lowercased); 202 `{ ok: true }`                                                                                                                                                                                        |
+| `POST /auth/device/sign-in`                                  | `{ email, challenge }`; 64 lowercase SHA-256 hex digits; shared admission and email budgets; 202 `{ ok: true }`                                                                                                                                 |
+| `GET /auth/device/approve?token=…`                           | Non-destructive confirmation page displaying the matching code; no cookie; expired/invalid signatures return 410 recovery HTML                                                                                                                  |
+| `POST /auth/device/approve`                                  | `{ token }`; marker and allowed or public origin; atomically authorizes the proof; 204 without a cookie                                                                                                                                         |
+| `POST /auth/device/claim`                                    | `{ token: proof }`; marker and allowed origin; 202 `{ ok: false }` if not claimable, 204 with session cookie when claimed; 409 if the request has a valid session                                                                                |
 | `GET /auth/verify?token=…`                                   | Safe no-store click-confirmation HTML; with valid issuer configuration, invalid queries return 400 recovery HTML; no token consumption or session change                                                                                        |
 | `POST /auth/verify`                                          | JSON `{ token }`, marker and exact allowed origin or `PUBLIC_ORIGIN`; consume once; 204 with session cookie                                                                                                                                     |
 | `GET /auth/account`                                          | `{ id, email, createdAt, lastSignInAt }`; no tokens or budget data                                                                                                                                                                              |
@@ -732,6 +750,9 @@ type AuthEvent =
       readonly requestId: string;
       readonly route:
         | '/auth/account'
+        | '/auth/device/approve'
+        | '/auth/device/claim'
+        | '/auth/device/sign-in'
         | '/auth/health'
         | '/auth/jwks.json'
         | '/auth/session'

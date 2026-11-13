@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add proof-bound device sign-in and device route events",
+      "packageName": "@vielzeug/archive",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/archive"
+}

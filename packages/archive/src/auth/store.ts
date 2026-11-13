@@ -22,6 +22,10 @@ export interface AccountRow {
 
 const SQL = {
   account: 'SELECT id, email, created_at, last_sign_in_at, session_version FROM auth_users WHERE id = ?',
+  // OR IGNORE answers a device-hash collision (the same challenge approved from
+  // two live links) as zero changes, which the caller reports as 410.
+  approveDevice: `INSERT OR IGNORE INTO auth_tokens (token_hash, user_id, expires_at)
+SELECT ?1, user_id, expires_at FROM auth_tokens WHERE token_hash = ?2 AND expires_at > ?3`,
   budgetWindow: 'SELECT window_start FROM auth_link_budget WHERE user_id = ?',
   consumeToken: `UPDATE auth_tokens SET redeemed_at = ?1 WHERE token_hash = ?2 AND expires_at > ?3
 RETURNING user_id AS id, (SELECT email FROM auth_users WHERE id = user_id) AS email,
@@ -32,6 +36,7 @@ RETURNING user_id AS id, (SELECT email FROM auth_users WHERE id = user_id) AS em
   ensureUser:
     'INSERT INTO auth_users (id, email, created_at, last_sign_in_at) VALUES (?, ?, ?, NULL) ON CONFLICT (email) DO UPDATE SET email = excluded.email RETURNING id, email',
   insertToken: 'INSERT INTO auth_tokens (token_hash, user_id, expires_at) VALUES (?, ?, ?)',
+  removeApprovedLink: 'DELETE FROM auth_tokens WHERE token_hash = ? AND expires_at > ?',
   revokeSessions: `UPDATE auth_users SET session_version = session_version + 1
 WHERE id = ? AND session_version = ? RETURNING session_version`,
   signInWindow: 'SELECT window_start FROM auth_sign_in_budget WHERE id = 1',
@@ -106,6 +111,17 @@ export async function insertToken(db: D1Like, tokenHash: string, userId: string,
 
 export async function deleteToken(db: D1Like, tokenHash: string): Promise<void> {
   await databaseOperation(() => db.prepare(SQL.deleteToken).bind(tokenHash).run());
+}
+
+/** Atomically exchanges one live email link for the initiating device's proof. */
+export async function approveDevice(db: D1Like, linkHash: string, deviceHash: string, nowMs: number): Promise<boolean> {
+  const results = await databaseOperation(() =>
+    db.batch([
+      db.prepare(SQL.approveDevice).bind(deviceHash, linkHash, nowMs),
+      db.prepare(SQL.removeApprovedLink).bind(linkHash, nowMs),
+    ]),
+  );
+  return results[0]?.meta?.changes === 1 && results[1]?.meta?.changes === 1;
 }
 
 /** Single-use consume: the unexpired row answers once and is gone after; the account is stamped signed in. */

@@ -12,17 +12,27 @@ const scriptValue = (value: string): string =>
 
 export function confirmationPage({
   appName,
+  device = false,
+  deviceCode,
+  errorStatus = 400,
   nonce,
   publicOrigin,
   token,
 }: {
   appName: string;
+  device?: boolean;
+  deviceCode?: string;
+  errorStatus?: 400 | 410;
   nonce: string;
   publicOrigin: string;
   token: string | null;
 }): Response {
   const valid = token !== null;
-  const title = valid ? 'Confirm sign-in' : 'This sign-in link is not valid';
+  const title = valid
+    ? 'Confirm sign-in'
+    : errorStatus === 410
+      ? 'This sign-in link has expired or was already used'
+      : 'This sign-in link is not valid';
   const script = valid
     ? `
 const button = document.getElementById('confirm');
@@ -96,7 +106,7 @@ button.addEventListener('click', async () => {
   }, 15000);
   timeout = requestTimeout;
   try {
-    const response = await fetch('/api/v1/auth/verify', {
+    const response = await fetch(${scriptValue(device ? '/api/v1/auth/device/approve' : '/api/v1/auth/verify')}, {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'content-type': 'application/json', '${REQUEST_MARKER_HEADER}': '1' },
@@ -109,9 +119,9 @@ button.addEventListener('click', async () => {
     if (disposed || controller !== active) return;
     if (response.status === 204) {
       terminal = true;
-      button.textContent = 'Signed in';
-      announce('You are signed in. Continuing to the app.');
-      location.replace(${scriptValue(`${publicOrigin}/signed-in`)});
+      button.textContent = ${scriptValue(device ? 'Sign-in approved' : 'Signed in')};
+      announce(${scriptValue(device ? 'Sign-in approved. Return to the app to finish signing in.' : 'You are signed in. Continuing to the app.')});
+      ${device ? '' : `location.replace(${scriptValue(`${publicOrigin}/signed-in`)});`}
     } else if (response.status === 410 || response.status === 400) {
       terminal = true;
       button.hidden = true;
@@ -195,7 +205,8 @@ footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--rule);
 <body>
 <main id="main" aria-labelledby="title">
 <h1 id="title" tabindex="-1">${valid ? `Sign in to ${escapeHtml(appName)}` : escapeHtml(title)}</h1>
-<p>${valid ? 'Continue only if you requested this sign-in link.' : `Request a new sign-in link for ${escapeHtml(appName)}.`}</p>
+<p>${valid ? (device ? 'Continue only if you requested sign-in from your app. This will sign in that app, not this browser.' : 'Continue only if you requested this sign-in link.') : `Request a new sign-in link for ${escapeHtml(appName)}.`}</p>
+${valid && device && deviceCode ? `<p>Confirm that this code matches the one shown in your app: <strong>${escapeHtml(deviceCode)}</strong>. If it does not match, do not continue.</p>` : ''}
 ${valid ? `<p class="detail">This link works once and expires ${LINK_TTL_MS / 60_000} minutes after it was requested.</p>` : ''}
 <div class="actions" id="actions">
 ${valid ? '<button type="button" id="confirm" hidden>Confirm sign-in</button>' : ''}
@@ -221,6 +232,6 @@ ${
       'referrer-policy': 'no-referrer',
       'x-content-type-options': 'nosniff',
     },
-    status: valid ? 200 : 400,
+    status: valid ? 200 : errorStatus,
   });
 }

@@ -36,6 +36,7 @@ import { confirmationPage, escapeHtml } from './_confirmation';
 import { type AuthConfig, type AuthWorkerEnv, authConfig, isWellFormedEmail } from './config';
 import { type AuthDiagnostic, AuthOperationError } from './errors';
 import {
+  approveDevice,
   authReadiness,
   consumeToken,
   deleteAccount,
@@ -75,6 +76,9 @@ export type AuthEvent =
         | '/auth/account'
         | '/auth/jwks.json'
         | '/auth/sign-in'
+        | '/auth/device/sign-in'
+        | '/auth/device/approve'
+        | '/auth/device/claim'
         | '/auth/verify'
         | '/auth/session'
         | '/auth/sign-out-all'
@@ -90,6 +94,9 @@ export type AuthEvent =
 
 const ROUTES = {
   account: /^\/api\/v1\/auth\/account$/,
+  deviceApprove: /^\/api\/v1\/auth\/device\/approve$/,
+  deviceClaim: /^\/api\/v1\/auth\/device\/claim$/,
+  deviceSignIn: /^\/api\/v1\/auth\/device\/sign-in$/,
   health: /^\/api\/v1\/auth\/health$/,
   jwks: /^\/api\/v1\/auth\/jwks\.json$/,
   session: /^\/api\/v1\/auth\/session$/,
@@ -100,6 +107,9 @@ const ROUTES = {
 
 const ROUTE_METHODS: Record<keyof typeof ROUTES, readonly string[]> = {
   account: ['GET', 'DELETE'],
+  deviceApprove: ['GET', 'POST'],
+  deviceClaim: ['POST'],
+  deviceSignIn: ['POST'],
   health: ['GET'],
   jwks: ['GET'],
   session: ['GET'],
@@ -110,6 +120,9 @@ const ROUTE_METHODS: Record<keyof typeof ROUTES, readonly string[]> = {
 
 const ROUTE_LABELS = {
   account: '/auth/account',
+  deviceApprove: '/auth/device/approve',
+  deviceClaim: '/auth/device/claim',
+  deviceSignIn: '/auth/device/sign-in',
   health: '/auth/health',
   jwks: '/auth/jwks.json',
   session: '/auth/session',
@@ -124,6 +137,8 @@ const matchRoute = (request: Request): keyof typeof ROUTES | undefined =>
 const TOKEN_BYTES = 32;
 // Base64url of TOKEN_BYTES random bytes, unpadded.
 const LINK_TOKEN = /^[A-Za-z0-9_-]{43}$/;
+const DEVICE_CHALLENGE = /^[a-f0-9]{64}$/;
+const DEVICE_APPROVAL = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const SUBJECT_MAX = 256;
 const CLOCK_TOLERANCE_SECONDS = 5;
 
@@ -148,7 +163,8 @@ function corsHeaders(request: Request, config: AuthConfig): Record<string, strin
   const origin = request.headers.get('origin');
   if (
     origin === null ||
-    (!config.allowedOrigins.has(origin) && !(matchRoute(request) === 'verify' && origin === config.publicOrigin))
+    (!config.allowedOrigins.has(origin) &&
+      !(['verify', 'deviceApprove'].includes(matchRoute(request) ?? '') && origin === config.publicOrigin))
   )
     return {};
   return { 'access-control-allow-credentials': 'true', 'access-control-allow-origin': origin, vary: 'Origin' };
@@ -229,26 +245,44 @@ async function requireSession(
   }
 }
 
-async function sendLink(env: AuthWorkerEnv, config: AuthConfig, to: string, link: string): Promise<void> {
+async function sendLink(
+  env: AuthWorkerEnv,
+  config: AuthConfig,
+  to: string,
+  link: string,
+  device = false,
+): Promise<void> {
   const name = config.appName;
   const minutes = LINK_TTL_MS / 60_000;
   const notice = `The link works once and expires in ${minutes} minutes. If you did not request it, ignore this email.`;
+  const prompt = device ? `Approve sign-in to ${name} on your app:` : `Open this link to sign in to ${name}:`;
   await env.AUTH_EMAIL.send({
     from: config.senderAddress,
-    html: `<p>Open this link to sign in to ${escapeHtml(name)}:</p><p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p><p>${notice}</p>`,
+    html: `<p>${escapeHtml(prompt)}</p><p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p><p>${notice}</p>`,
     subject: `Your ${name} sign-in link`,
-    text: `Open this link to sign in to ${name}:\n\n${link}\n\n${notice}`,
+    text: `${prompt}\n\n${link}\n\n${notice}`,
     to,
   });
 }
 
-async function handleSignIn(request: Request, env: AuthWorkerEnv, config: AuthConfig): Promise<Response> {
+async function handleSignIn(
+  request: Request,
+  env: AuthWorkerEnv,
+  config: AuthConfig,
+  device = false,
+): Promise<Response> {
   requireMutationGuard(request, config);
   const body = await readJsonBody(request);
   if (typeof body !== 'object' || body === null || Array.isArray(body)) throw badRequest();
   const keys = Object.keys(body);
   const requestedEmail: unknown = Reflect.get(body, 'email');
-  if (keys.length !== 1 || keys[0] !== 'email' || typeof requestedEmail !== 'string') {
+  const challenge: unknown = Reflect.get(body, 'challenge');
+  if (
+    typeof requestedEmail !== 'string' ||
+    (device
+      ? keys.length !== 2 || typeof challenge !== 'string' || !DEVICE_CHALLENGE.test(challenge)
+      : keys.length !== 1 || keys[0] !== 'email')
+  ) {
     throw badRequest();
   }
   const email = requestedEmail.trim().toLowerCase();
@@ -271,13 +305,105 @@ async function handleSignIn(request: Request, env: AuthWorkerEnv, config: AuthCo
   const tokenHash = await sha256Hex(token);
   await insertToken(env.AUTH_DB, tokenHash, user.id, nowMs);
   try {
-    await sendLink(env, config, user.email, `${config.publicOrigin}/api/v1/auth/verify?token=${token}`);
+    const approval = device
+      ? await new SignJWT({ challenge, token })
+          .setProtectedHeader({ alg: 'RS256', kid: config.signing.kid, typ: 'archive-device-approval' })
+          .setIssuedAt()
+          .setIssuer(config.issuer)
+          .setAudience(config.audience)
+          .setExpirationTime(`${LINK_TTL_MS / 1000}s`)
+          .sign(config.signing.key)
+      : token;
+    const path = device ? 'device/approve' : 'verify';
+    await sendLink(env, config, user.email, `${config.publicOrigin}/api/v1/auth/${path}?token=${approval}`, device);
   } catch (error) {
     // An unsent link is useless; the spent allowance is deliberately not refunded.
     await deleteToken(env.AUTH_DB, tokenHash).catch(() => undefined);
     throw new AuthOperationError(503, 'email', { cause: error });
   }
   return json(202, { ok: true }, noStore);
+}
+
+async function handleDeviceApprove(request: Request, env: AuthWorkerEnv, config: AuthConfig): Promise<Response> {
+  let token: unknown;
+  if (request.method === 'GET') {
+    token = queryParams(new URL(request.url), ['token']).get('token') ?? '';
+  } else {
+    requireMutationGuard(request, config, true);
+    queryParams(new URL(request.url), []);
+    const body = await readJsonBody(request);
+    if (typeof body !== 'object' || body === null || Array.isArray(body) || Object.keys(body).length !== 1)
+      throw badRequest('The link is not valid.');
+    token = Reflect.get(body, 'token');
+  }
+  if (typeof token !== 'string' || token.length > 2048 || !DEVICE_APPROVAL.test(token))
+    throw badRequest('The link is not valid.');
+  let link: unknown;
+  let challenge: unknown;
+  try {
+    const verified = await jwtVerify(token, config.verifier, {
+      algorithms: ['RS256'],
+      audience: config.audience,
+      issuer: config.issuer,
+      maxTokenAge: `${LINK_TTL_MS / 1000}s`,
+      requiredClaims: ['iss', 'aud', 'iat', 'exp'],
+      typ: 'archive-device-approval',
+    });
+    link = verified.payload.token;
+    challenge = verified.payload.challenge;
+  } catch (error) {
+    if (error instanceof errors.JOSEError)
+      throw new ApiError(410, 'gone', 'That link has expired or was already used.');
+    throw error;
+  }
+  if (
+    typeof link !== 'string' ||
+    !LINK_TOKEN.test(link) ||
+    typeof challenge !== 'string' ||
+    !DEVICE_CHALLENGE.test(challenge)
+  )
+    throw badRequest('The link is not valid.');
+  if (request.method === 'GET')
+    return confirmationPage({
+      ...config,
+      device: true,
+      deviceCode: challenge.slice(0, 8).toUpperCase(),
+      nonce: randomToken(),
+      token,
+    });
+  if (!(await approveDevice(env.AUTH_DB, await sha256Hex(link), await sha256Hex(`device:${challenge}`), Date.now())))
+    throw new ApiError(410, 'gone', 'That link has expired or was already used.');
+  return new Response(null, { headers: noStore, status: 204 });
+}
+
+async function handleDeviceClaim(request: Request, env: AuthWorkerEnv, config: AuthConfig): Promise<Response> {
+  requireMutationGuard(request, config);
+  queryParams(new URL(request.url), []);
+  const body = await readJsonBody(request);
+  if (typeof body !== 'object' || body === null || Array.isArray(body) || Object.keys(body).length !== 1)
+    throw badRequest();
+  const token: unknown = Reflect.get(body, 'token');
+  if (typeof token !== 'string' || !LINK_TOKEN.test(token)) throw badRequest();
+  if (sessionToken(request) !== null) {
+    let authenticated = false;
+    try {
+      await requireSession(request, config, env);
+      authenticated = true;
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 401)) throw error;
+    }
+    if (authenticated) throw new ApiError(409, 'account-changed', 'Sign out before claiming a device sign-in.');
+  }
+  const user = await consumeToken(env.AUTH_DB, await sha256Hex(`device:${await sha256Hex(token)}`), Date.now());
+  if (user === null) return json(202, { ok: false }, noStore);
+  const session = await mintSession(config, user.id, config.operatorEmails.has(user.email), user.sessionVersion);
+  return new Response(null, {
+    headers: {
+      ...noStore,
+      'set-cookie': sessionCookieValue(session.token, { maxAgeSeconds: session.maxAge, secure: secure(config) }),
+    },
+    status: 204,
+  });
 }
 
 async function handleVerify(request: Request, env: AuthWorkerEnv, config: AuthConfig): Promise<Response> {
@@ -440,6 +566,15 @@ async function route(request: Request, env: AuthWorkerEnv): Promise<Response> {
   }
   let response: Response;
   switch (routeId) {
+    case 'deviceApprove':
+      response = await handleDeviceApprove(request, env, config);
+      break;
+    case 'deviceClaim':
+      response = await handleDeviceClaim(request, env, config);
+      break;
+    case 'deviceSignIn':
+      response = await handleSignIn(request, env, config, true);
+      break;
     case 'health':
       response = await handleHealth(env);
       break;
@@ -508,16 +643,22 @@ export function createAuthWorker<E extends AuthWorkerEnv>(): AuthWorkerHandler<E
         const config = await authConfig(env).catch(() => null);
         if (config !== null) {
           if (
-            matchRoute(request) === 'verify' &&
+            (matchRoute(request) === 'verify' || matchRoute(request) === 'deviceApprove') &&
             request.method === 'GET' &&
             error instanceof ApiError &&
-            error.status === 400
+            (error.status === 400 || (matchRoute(request) === 'deviceApprove' && error.status === 410))
           )
-            response = confirmationPage({ ...config, nonce: randomToken(), token: null });
+            response = confirmationPage({
+              ...config,
+              device: matchRoute(request) === 'deviceApprove',
+              errorStatus: error.status === 410 ? 410 : 400,
+              nonce: randomToken(),
+              token: null,
+            });
           response = withCors(response, corsHeaders(request, config));
         }
       }
-      if (matchRoute(request) === 'verify') {
+      if (matchRoute(request) === 'verify' || matchRoute(request) === 'deviceApprove') {
         response.headers.set('cache-control', 'no-store');
         response.headers.set('referrer-policy', 'no-referrer');
         response.headers.set('x-content-type-options', 'nosniff');

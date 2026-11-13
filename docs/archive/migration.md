@@ -1,14 +1,21 @@
 ---
 title: Archive Migration
-description: 'Breaking contract changes after the first published release (26.10.6): forward-only entry pages and a slimmer derivation surface.'
+description: 'Breaking contract changes after the first published release (26.10.6): device route event values, forward-only entry pages and a slimmer derivation surface.'
 ---
 
-# Archive 26.10 Migration
+# Archive Migration
 
 Archive first shipped as 26.10.6. The next train simplifies the public contract
 as described below. There are no compatibility layers: the removed surfaces
 are gone. The SQL migrations under `migrations/` still initialize fresh D1
 databases unchanged — none of these changes touch stored data.
+
+## Device sign-in adds issuer event routes
+
+`AuthEvent.route` now also includes `/auth/device/sign-in`,
+`/auth/device/approve` and `/auth/device/claim`. If you exhaustively switch on
+request route values, handle these routes before updating Archive. The ordinary
+browser sign-in endpoints and session cookie remain unchanged.
 
 ## Entry pages page forward only
 
