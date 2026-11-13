@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add ambient and autoStart options for short-lived syncs",
+      "packageName": "@vielzeug/tandem",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tandem"
+}

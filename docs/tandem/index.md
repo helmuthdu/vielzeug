@@ -111,7 +111,7 @@ sync.dispose();
 - **`rev` baselines**: a record is dirty exactly when its rev is above the last-synced one, across reloads.
 - **`changed()`**: wire it to your write path; the engine debounces a burst into one push.
 - **`flush()`**: a full cycle on demand: pull remote changes, then push dirty records; rejects on failure.
-- **Hide-flows**: flushes with `keepalive` on `pagehide`/`hidden`, runs a full cycle on return to the foreground.
+- **Hide-flows**: flushes with `keepalive` on `pagehide`/`hidden`, runs a full cycle on return to the foreground; `ambient: false` plus `autoStart: false` turn the scheduler into a pull-when-told engine for short-lived connections.
 - **`tap()`**: typed `TandemEvent`s for pushes, pulls, invalid records, and warnings.
 - **Lifecycle-owned**: `dispose()`, `disposed`, `disposalSignal`, and `[Symbol.dispose]`; post-dispose `changed()`/`flush()` fail with `TandemDisposedError`.
 

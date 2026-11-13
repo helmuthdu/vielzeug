@@ -25,13 +25,15 @@ description: Factory, port and gateway contracts, events, and types for Tandem.
 function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(options: SyncOptions<TRecord>): SyncHandle;
 ```
 
-Starts a sync scheduler: it loads the persisted baseline, pulls remote changes, pushes anything dirty, then flushes on `changed()`, on tab hide, and on foreground return.
+Starts a sync scheduler: it loads the persisted baseline, pulls remote changes, pushes anything dirty, then flushes on `changed()`, on tab hide, and on foreground return. `autoStart: false` defers the opening cycle to the first explicit `flush()`; `ambient: false` drops the tab-lifecycle hooks.
 
-| Parameter             | Type                   | Description                                  |
-| --------------------- | ---------------------- | -------------------------------------------- |
-| `options.gateway`     | `SyncGateway<TRecord>` | The device's storage seam                    |
-| `options.idleDelayMs` | `number \| undefined`  | Quiet period before a flush (default `3000`) |
-| `options.port`        | `SyncPort<TRecord>`    | The server seam                              |
+| Parameter             | Type                   | Description                                                        |
+| --------------------- | ---------------------- | ------------------------------------------------------------------ |
+| `options.ambient`     | `boolean \| undefined` | Wire tab hide/close and foreground return to sync (default `true`) |
+| `options.autoStart`   | `boolean \| undefined` | Run a full cycle on creation (default `true`)                      |
+| `options.gateway`     | `SyncGateway<TRecord>` | The device's storage seam                                          |
+| `options.idleDelayMs` | `number \| undefined`  | Quiet period before a flush (default `3000`)                       |
+| `options.port`        | `SyncPort<TRecord>`    | The server seam                                                    |
 
 **Returns** a `SyncHandle`. Ambient flushes never reject: they surface failures as `warning` events through `tap()`. An explicit `flush()` rejects when its cycle fails.
 
@@ -154,6 +156,8 @@ interface SyncPullResult<TRecord extends SyncRecordBase = SyncRecordBase> {
 
 ```ts
 interface SyncOptions<TRecord extends SyncRecordBase = SyncRecordBase> {
+  ambient?: boolean;
+  autoStart?: boolean;
   gateway: SyncGateway<TRecord>;
   idleDelayMs?: number;
   port: SyncPort<TRecord>;

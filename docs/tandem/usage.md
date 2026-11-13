@@ -103,6 +103,15 @@ try {
 
 Tandem also flushes on its own: it pushes with `keepalive: true` when the tab hides or closes, and runs a full cycle when the tab returns to the foreground. Serve the keepalive push with `navigator.sendBeacon` or a `keepalive` fetch so it survives the tab closing.
 
+For a connection that cannot survive an ambient flush, both behaviors are options: `ambient: false` drops the tab-lifecycle hooks, and `autoStart: false` defers the opening cycle to your first `flush()` call. The boot job still loads the persisted baseline, so dirt detection works from the first tick:
+
+```ts
+const sync = createSync({ ambient: false, autoStart: false, gateway, port });
+
+// Pull and push only when the app says the connection is ready:
+await sync.flush();
+```
+
 ## Reconcile a Rejected Push
 
 When the server is ahead of the lineage you pushed, reject the push. Tandem immediately pulls to reconcile, then the next flush retries with the merged state. Ambient flushes (debounce, hide) report the failure as a `warning` event; `flush()` additionally rejects with the port's error.
