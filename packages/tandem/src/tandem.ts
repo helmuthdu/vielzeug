@@ -17,7 +17,11 @@ const cloneState = (state: SyncState): SyncState => ({ cursor: state.cursor, rev
  * comparison is the engine's: the gateway upserts what it is given and tombstones
  * what it deletes. Flushes serialize (one push in flight), fire immediately when
  * the tab hides or closes, and the tab runs a full cycle on return to the
- * foreground. A rejected push triggers a pull to reconcile.
+ * foreground. A rejected push triggers a pull to reconcile. `ambient: false` drops
+ * the tab-lifecycle hooks, and `autoStart: false` defers the opening cycle to the
+ * first {@link SyncHandle.flush}: together they turn the scheduler into a
+ * pull-when-told engine for short-lived connections that cannot survive an
+ * ambient flush.
  *
  * Runs in the browser (the visibility/pagehide hooks are no-ops without a document)
  * and in any storage-backed runtime the gateway can reach.
@@ -25,6 +29,8 @@ const cloneState = (state: SyncState): SyncState => ({ cursor: state.cursor, rev
 export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(options: SyncOptions<TRecord>): SyncHandle {
   const { gateway, port } = options;
   const idleDelay = options.idleDelayMs ?? DEFAULT_IDLE_DELAY_MS;
+  const autoStart = options.autoStart ?? true;
+  const ambient = options.ambient ?? true;
 
   const controller = new AbortController();
   const tappers = new Set<(event: TandemEvent) => void>();
@@ -134,15 +140,18 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
     else void enqueue(cycle);
   };
   const onPageHide = (): void => void enqueue(pushJob(true));
-  doc?.addEventListener('visibilitychange', onVisibility);
-  globalThis.addEventListener?.('pagehide', onPageHide);
+  if (ambient) {
+    doc?.addEventListener('visibilitychange', onVisibility);
+    globalThis.addEventListener?.('pagehide', onPageHide);
+  }
 
-  // Boot: load the persisted baseline, run one full cycle: pull remote changes,
-  // then push anything created or changed while offline. Later flushes chain onto it.
+  // Boot: load the persisted baseline, then (unless `autoStart` is off) run one full
+  // cycle: pull remote changes, push anything created or changed while offline.
+  // Later flushes chain onto it.
   void enqueue(async () => {
     if (controller.signal.aborted) return;
     state = cloneState((await gateway.loadState()) ?? baseline());
-    await cycle();
+    if (autoStart) await cycle();
   });
 
   const disposedError = (): TandemDisposedError => new TandemDisposedError('This sync handle has been disposed.');

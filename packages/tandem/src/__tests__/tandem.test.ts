@@ -591,3 +591,46 @@ describe('lifecycle', () => {
     expect(sync.disposed).toBe(true);
   });
 });
+
+describe('short-lived sync options', () => {
+  it('skips the boot cycle with autoStart false and runs the first cycle on flush', async () => {
+    const device = createGateway([{ id: 'a', rev: 0, value: 0 }]);
+    const { port, pulls, pushes } = createPort();
+    handle = createSync({ autoStart: false, gateway: device.gateway, port });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(pulls).toHaveLength(0);
+    expect(pushes).toHaveLength(0);
+
+    await handle.flush();
+    expect(pulls).toHaveLength(1);
+    expect(pushes).toHaveLength(1);
+  });
+
+  it('loads the persisted baseline during boot even with autoStart false', async () => {
+    const device = createGateway([{ id: 'a', rev: 3, value: 1 }]);
+    await device.gateway.saveState({ cursor: null, revs: { 'docs:a': 3 } });
+    const { port, pulls, pushes } = createPort();
+    handle = createSync({ autoStart: false, gateway: device.gateway, port });
+    await handle.flush();
+
+    expect(pulls).toHaveLength(1);
+    // The record sits at its baseline: nothing is dirty, nothing leaves the device.
+    expect(pushes).toHaveLength(0);
+  });
+
+  it('registers no tab-lifecycle listeners with ambient false', async () => {
+    const device = createGateway([{ id: 'a', rev: 0, value: 0 }]);
+    const { port, pushes } = createPort();
+    handle = createSync({ ambient: false, gateway: device.gateway, port });
+    await vi.waitFor(() => expect(pushes).toHaveLength(1));
+    pushes.length = 0;
+
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('pagehide'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(pushes).toHaveLength(0);
+  });
+});

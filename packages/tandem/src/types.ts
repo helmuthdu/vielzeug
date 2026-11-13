@@ -103,6 +103,17 @@ export type TandemEvent =
 
 /** Options for {@link createSync}. */
 export interface SyncOptions<TRecord extends SyncRecordBase = SyncRecordBase> {
+  /** Keep the tab's lifecycle wired to sync (default `true`): a keepalive push
+   *  when the tab hides or closes, and a full cycle when it returns to the
+   *  foreground. Set it to `false` for syncs over a connection that dies with
+   *  the tab — an ephemeral peer-to-peer link, say — where those ambient flushes
+   *  would fire into a dead or already-closed port. */
+  ambient?: boolean;
+  /** Run a full sync cycle when the handle is created (default `true`). Set it to
+   *  `false` for short-lived syncs whose data flow must start on the app's cue:
+   *  the boot job still loads the persisted baseline, and {@link SyncHandle.flush}
+   *  runs the first cycle. */
+  autoStart?: boolean;
   /** The device's storage. */
   gateway: SyncGateway<TRecord>;
   /** Quiet period after the last change before a flush, in ms (default 3000). */
