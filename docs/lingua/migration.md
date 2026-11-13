@@ -144,17 +144,17 @@ Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for the full 
 
 This train collapses the translation surface to one method and removes the snapshot and serialized-state ceremony.
 
-| Before                                     | After                                                            |
-| ------------------------------------------ | ---------------------------------------------------------------- |
-| `translateDynamic(key, options?)`          | `translateUnkeyed(key, options?)`                                |
-| `parts()` / `partsDynamic()` / `Part<V>`   | Removed in that train; `parts()` restored later with `Segment<V>`  |
-| `getSnapshot(): I18nSnapshot<C>`           | `getSnapshot(): Locale`                                          |
-| `subscribe((snapshot) => ...)`             | `subscribe((locale) => ...)`                                     |
-| `createI18n({ state })`                    | `createI18n({ catalogs: state.catalogs, locale: state.locale })` |
-| `TranslationState` / its `version` field   | `SerializedI18n`: `{ catalogs, locale }`, no version             |
-| `LinguaInvalidStateError`                  | Removed                                                          |
-| `count: 0` forcing the `zero` plural form  | `Intl.PluralRules` decides the category                          |
-| `TextKey<C>` including keys inside plurals | Removed: plural messages expose no sub-keys                      |
+| Before                                     | After                                                             |
+| ------------------------------------------ | ----------------------------------------------------------------- |
+| `translateDynamic(key, options?)`          | `translateUnkeyed(key, options?)`                                 |
+| `parts()` / `partsDynamic()` / `Part<V>`   | Removed in that train; `parts()` restored later with `Segment<V>` |
+| `getSnapshot(): I18nSnapshot<C>`           | `getSnapshot(): Locale`                                           |
+| `subscribe((snapshot) => ...)`             | `subscribe((locale) => ...)`                                      |
+| `createI18n({ state })`                    | `createI18n({ catalogs: state.catalogs, locale: state.locale })`  |
+| `TranslationState` / its `version` field   | `SerializedI18n`: `{ catalogs, locale }`, no version              |
+| `LinguaInvalidStateError`                  | Removed                                                           |
+| `count: 0` forcing the `zero` plural form  | `Intl.PluralRules` decides the category                           |
+| `TextKey<C>` including keys inside plurals | Removed: plural messages expose no sub-keys                       |
 
 ## One translate method
 

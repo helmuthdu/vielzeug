@@ -54,13 +54,13 @@ const translator = createTranslator({ save: 'Enregistrer' }, { locale: 'fr' });
 translator.translate('save');
 ```
 
-| Method             | Signature                                                            | Returns                |
-| ------------------ | -------------------------------------------------------------------- | ---------------------- |
-| `translate`        | `(textKey, options?)` or `(pluralKey, { count, ordinal?, values? })` | Rendered string        |
-| `translateUnkeyed` | `(key: string, options?)`                                            | Rendered string        |
+| Method             | Signature                                                               | Returns                     |
+| ------------------ | ----------------------------------------------------------------------- | --------------------------- |
+| `translate`        | `(textKey, options?)` or `(pluralKey, { count, ordinal?, values? })`    | Rendered string             |
+| `translateUnkeyed` | `(key: string, options?)`                                               | Rendered string             |
 | `parts`            | `(textKey, { values? })` or `(pluralKey, { count, ordinal?, values? })` | Render-order `Segment<V>[]` |
-| `partsUnkeyed`     | `(key: string, options?)`                                            | Render-order `Segment<V>[]` |
-| `locale`           | `Locale`                                                             | Resolved active locale |
+| `partsUnkeyed`     | `(key: string, options?)`                                               | Render-order `Segment<V>[]` |
+| `locale`           | `Locale`                                                                | Resolved active locale      |
 
 ---
 
@@ -127,15 +127,15 @@ const segments = i18n.parts('link', { values: { label: <Link href="/sync">Sync</
 // [ { type: 'text', value: 'Go to ' }, { type: 'value', name: 'label', value: <Link/> }, { type: 'text', value: ' now.' } ]
 ```
 
-| Contract     | Behavior                                                                                          |
-| ------------ | ------------------------------------------------------------------------------------------------- |
-| Order        | Segments are in render order; a value used twice produces two value segments; unreferenced values are ignored |
-| Text         | Text segments are never empty — adjacent placeholders yield adjacent value segments               |
-| Values       | Passed through untouched with identity preserved; never `String()`-ified, escaped, or merged with neighbors |
-| Missing value | Becomes a **text** segment holding the `missing` strategy's output (`null`/`undefined` count as missing; `''` is a real value) |
-| Missing key  | One text segment holding the strategy's output; `'throw'` still throws                            |
-| Plural       | `parts(key, { count, ordinal?, values? })`; `count` is interpolated into the selected form and can be overridden by an explicit `count` in `values` |
-| Equivalence  | Joining segments with `String()` reproduces `translate()` exactly, so `parts` is safe as your single resolution path |
+| Contract      | Behavior                                                                                                                                            |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Order         | Segments are in render order; a value used twice produces two value segments; unreferenced values are ignored                                       |
+| Text          | Text segments are never empty — adjacent placeholders yield adjacent value segments                                                                 |
+| Values        | Passed through untouched with identity preserved; never `String()`-ified, escaped, or merged with neighbors                                         |
+| Missing value | Becomes a **text** segment holding the `missing` strategy's output (`null`/`undefined` count as missing; `''` is a real value)                      |
+| Missing key   | One text segment holding the strategy's output; `'throw'` still throws                                                                              |
+| Plural        | `parts(key, { count, ordinal?, values? })`; `count` is interpolated into the selected form and can be overridden by an explicit `count` in `values` |
+| Equivalence   | Joining segments with `String()` reproduces `translate()` exactly, so `parts` is safe as your single resolution path                                |
 
 The interpolation contract shared by `translate()` and `parts()`: string values are inserted verbatim (no HTML or entity escaping), non-string values are `String(value)`-ified, and nullish values follow the `missing` strategy. Rich UIs should render `parts` segments instead of smuggling placeholders through a translated string: because values never enter the concatenated string, user data cannot reach an HTML sink through it.
 

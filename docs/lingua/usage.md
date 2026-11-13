@@ -291,11 +291,15 @@ export function useI18n<C extends Catalog>(i18n: I18n<C>) {
       locale,
       t: i18n.translate.bind(i18n),
       rich: (key: TextKey<C>, values: Record<string, ReactNode>) =>
-        i18n.parts<ReactNode>(key, { values }).map((segment, index) =>
-          segment.type === 'text'
-            ? segment.value
-            : <Fragment key={`${segment.name}-${index}`}>{segment.value}</Fragment>,
-        ),
+        i18n
+          .parts<ReactNode>(key, { values })
+          .map((segment, index) =>
+            segment.type === 'text' ? (
+              segment.value
+            ) : (
+              <Fragment key={`${segment.name}-${index}`}>{segment.value}</Fragment>
+            ),
+          ),
     }),
     [locale],
   );
