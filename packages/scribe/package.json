@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/scribe",
-  "version": "26.11.15",
+  "version": "26.11.16",
   "description": "Safe Markdown prose: deterministic parser, XSS-safe DOM and HTML renderers, outline and plain-text extraction.",
   "repository": {
     "type": "git",

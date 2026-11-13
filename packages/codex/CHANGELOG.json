@@ -6,6 +6,20 @@
           {
             "author": "agent@vielzeug",
             "comment": "chore(codex): refresh bundled docs data",
+            "commit": "cff0032676a40eccfc5c91266a453b7b788282c7"
+          }
+        ]
+      },
+      "date": "Fri, 13 Nov 2026 06:00:21 GMT",
+      "tag": "@vielzeug/codex_v26.11.16",
+      "version": "26.11.16"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "chore(codex): refresh bundled docs data",
             "commit": "658734318a8dd89bb6e821d22a63f0fee7fb8e16"
           }
         ]

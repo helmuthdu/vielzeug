@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/postmaster
 
-This log was last generated on Thu, 12 Nov 2026 23:04:49 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Nov 2026 06:00:21 GMT and should not be manually modified.
 
+## 26.11.16
+
+Fri, 13 Nov 2026 06:00:21 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.15
 
 Thu, 12 Nov 2026 23:04:49 GMT

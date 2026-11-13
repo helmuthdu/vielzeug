@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/spell",
-  "version": "26.11.15",
+  "version": "26.11.16",
   "description": "Zero-dependency schema validation with Standard Schema interoperability",
   "repository": {
     "type": "git",

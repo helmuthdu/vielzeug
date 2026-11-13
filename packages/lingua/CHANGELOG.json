@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add parts()/partsUnkeyed() rich segmentation API with Segment<V> passthrough values, interpolation contract, and ripple bridge parity",
+            "commit": "cff0032676a40eccfc5c91266a453b7b788282c7"
+          }
+        ]
+      },
+      "date": "Fri, 13 Nov 2026 06:00:21 GMT",
+      "tag": "@vielzeug/lingua_v26.11.16",
+      "version": "26.11.16"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

@@ -6,6 +6,20 @@
           {
             "author": "release-train",
             "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "cff0032676a40eccfc5c91266a453b7b788282c7"
+          }
+        ]
+      },
+      "date": "Fri, 13 Nov 2026 06:00:21 GMT",
+      "tag": "@vielzeug/gesture_v26.11.16",
+      "version": "26.11.16"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "658734318a8dd89bb6e821d22a63f0fee7fb8e16"
           }
         ]

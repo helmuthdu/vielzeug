@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add proof-bound device sign-in and device route events",
+            "commit": "cff0032676a40eccfc5c91266a453b7b788282c7"
+          }
+        ]
+      },
+      "date": "Fri, 13 Nov 2026 06:00:21 GMT",
+      "tag": "@vielzeug/archive_v26.11.16",
+      "version": "26.11.16"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",
