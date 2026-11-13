@@ -1,31 +1,31 @@
 ---
 title: 'Scout: API Reference'
-description: 'Complete API reference for @vielzeug/scout: createIndex, createReactiveSearch, createSearch, highlight, highlightField, toSearchMatcher, toFilterPredicate.'
+description: 'Complete API reference for @vielzeug/scout: createIndex, createSearch, highlight, highlightField, toSearchMatcher, toFilterPredicate.'
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol                   | Purpose                                                   | Execution mode | Common gotcha                                                                       |
-| ------------------------ | --------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------- |
-| `createIndex()`          | Build trigram index from an item array                    | Sync           | Index is built at call time: pass all initial items                                 |
-| `ScoutIndex.search()`    | Query the index, returns scored + highlighted results     | Sync           | Empty query returns all items with `score = 1`                                      |
-| `ScoutIndex.add()`       | Add one item to the index                                 | Sync           | No-op if same reference already indexed                                             |
-| `ScoutIndex.remove()`    | Remove one item by reference                              | Sync           | No-op for unknown references                                                        |
-| `ScoutIndex.reindex()`   | Re-index a mutated item in-place; preserves order         | Sync           | Call after mutating item properties; no-op if not in index                          |
-| `ScoutIndex.setItems()`  | Reconcile a refreshed corpus in one mutation              | Sync           | Uses reference identity; duplicate references collapse                              |
-| `ScoutIndex.items`       | All indexed items in insertion order                      | Sync           | Returns a new array snapshot each call                                              |
-| `ScoutIndex.revision`    | Monotonic counter incremented after each mutation         | Sync           | Use as a cache-busting token for external result caches                             |
-| `ScoutIndex.onMutate()`  | Subscribe to changed index mutations                      | Sync           | A changed `setItems()` reconciliation emits once; no-ops emit nothing               |
-| `createSearch()`         | Atomic search store backed by a `ScoutIndex`              | Sync           | Read one snapshot and dispose the store when done                                   |
-| `createReactiveSearch()` | One-call index + reactive search state                    | Sync           | Exposes `.index` for incremental mutations                                          |
-| `findMatchRanges()`      | Compute match ranges for a text + query pair              | Sync           | Returns sorted, non-overlapping `[start, end]` ranges                               |
-| `highlight()`            | Split text into highlighted/unhighlighted fragments       | Sync           | Ranges must be sorted and non-overlapping                                           |
-| `highlightField()`       | Highlight a named field from a `SearchResult`             | Sync           | Shorthand for the `matches.find(…).ranges → highlight()` pattern                    |
-| `toSearchMatcher()`      | Adapt `ScoutIndex` to Sourcerer's local `filter` callback | Sync           | Recomputes cached query matches after index mutation                                |
-| `toFilterPredicate()`    | Snapshot predicate from a one-time query                  | Sync           | Re-call when query or corpus changes                                                |
-| `segmentWords()`         | Split unsegmented-script text (CJK, Thai, ...) into words | Sync           | Uses native `Intl.Segmenter`: not applied inside `tokenize()` itself (see Pitfalls) |
+| Symbol                   | Purpose                                                   | Execution mode | Common gotcha                                                                        |
+| ------------------------ | --------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------ |
+| `createIndex()`          | Build trigram index from an item array                    | Sync           | Index is built at call time: pass all initial items                                  |
+| `ScoutIndex.search()`    | Query the index, returns scored + highlighted results     | Sync           | Empty query returns all items with `score = 1`                                       |
+| `ScoutIndex.add()`       | Add one item to the index                                 | Sync           | An existing key adopts the new object; without a `key`, same reference is a no-op    |
+| `ScoutIndex.remove()`    | Remove the item stored under `key(item)`                  | Sync           | No-op for unknown keys                                                               |
+| `ScoutIndex.removeKey()` | Remove the item stored under a raw key                    | Sync           | Returns whether an item was removed                                                  |
+| `ScoutIndex.reindex()`   | Store `item` under its key and reindex changed fields     | Sync           | With a `key`, a fresh copy of the item is enough; no-op for unknown keys             |
+| `ScoutIndex.setItems()`  | Reconcile a refreshed corpus in one mutation              | Sync           | Uses key identity (reference by default); equal fresh copies notify nothing          |
+| `ScoutIndex.items`       | All indexed items in insertion order                      | Sync           | Returns a new array snapshot each call                                               |
+| `ScoutIndex.revision`    | Monotonic counter incremented after each mutation         | Sync           | Use as a cache-busting token for external result caches                              |
+| `ScoutIndex.subscribe()` | Subscribe to changed index mutations                      | Sync           | A changed `setItems()` reconciliation emits once; no-ops emit nothing                |
+| `createSearch()`         | Atomic search store backed by a `ScoutIndex`              | Sync           | Read one snapshot and dispose the store when done                                    |
+| `findMatchRanges()`      | Compute match ranges for a text + query pair              | Sync           | Returns sorted, non-overlapping `[start, end)` ranges in the original text           |
+| `highlight()`            | Split text into highlighted/unhighlighted fragments       | Sync           | Ranges must be sorted and non-overlapping                                            |
+| `highlightField()`       | Highlight a named field from a `SearchResult`             | Sync           | Shorthand for the `matches.find(…).ranges → highlight()` pattern                     |
+| `toSearchMatcher()`      | Adapt `ScoutIndex` to Sourcerer's local `filter` callback | Sync           | Recomputes cached query matches after index mutation                                 |
+| `toFilterPredicate()`    | Snapshot predicate from a one-time query                  | Sync           | Re-call when query or corpus changes                                                 |
+| `segmentWords()`         | Split unsegmented-script text (CJK, Thai, ...) into words | Sync           | Uses native `Intl.Segmenter`: not applied inside `normalize()` itself (see Pitfalls) |
 
 ## Package Entry Point
 
@@ -37,19 +37,20 @@ description: 'Complete API reference for @vielzeug/scout: createIndex, createRea
 
 ## `createIndex(items, options)`
 
-Builds a trigram inverted index from `items`. Construction is O(corpus × field_length); subsequent `search()` calls are O(candidates).
+Builds a trigram inverted index from `items`. Construction is O(corpus × field_length); subsequent `search()` calls are O(candidates). With a `key`, construction throws `ScoutConfigError` when two different items share one key, matching `setItems()`.
 
 ```ts
-function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): ScoutIndex<T>;
+function createIndex<T>(items: readonly T[], options: ScoutIndexOptions<T>): ScoutIndex<T>;
 ```
 
 **Parameters**
 
 | Param                    | Type                         | Description                                                                                                        |
 | ------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `items`                  | `T[]`                        | Initial corpus to index.                                                                                           |
+| `items`                  | `readonly T[]`               | Initial corpus to index.                                                                                           |
 | `options.fields`         | `ReadonlyArray<FieldDef<T>>` | Fields to index. Required; at least one entry.                                                                     |
-| `options.threshold`      | `number`                     | Finite overlap score in `0..1` (default `0.2`).                                                                    |
+| `options.key`            | `(item: T) => unknown`       | Stable item identity for `add`/`remove`/`reindex`/`setItems` (default: object reference).                          |
+| `options.threshold`      | `number`                     | Finite query-coverage score in `0..1` (default `0.2`).                                                             |
 | `options.limit`          | `number`                     | Finite non-negative integer max results (default `50`).                                                            |
 | `options.minQueryLength` | `number`                     | Finite positive integer min chars before trigram scoring; shorter queries use O(n) containment scan (default `3`). |
 
@@ -91,15 +92,23 @@ const results = index.search('alice');
 
 ### `.add(item)`
 
-Adds `item` to the index. No-op if the same reference is already indexed. O(field_length).
+Adds `item` to the index. If another object is already stored under `key(item)`, that record adopts `item` and its changed fields are reindexed (no notification when nothing changed); without a custom `key`, re-adding the same reference is a no-op. O(field_length).
 
 ### `.remove(item)`
 
-Removes `item` by reference equality. No-op if not found. O(field_length).
+Removes the item stored under `key(item)`. No-op if not found. O(field_length).
+
+### `.removeKey(key)`
+
+```ts
+removeKey(key: unknown): boolean
+```
+
+Removes the item stored under `key` and returns whether an item was removed. Use with a custom `key` to delete by id without fabricating a `T`.
 
 ### `.reindex(item)`
 
-Re-reads the item's current field values and rebuilds its index entry in-place, updating only fields whose values changed. Preserves insertion order. No-op if the item is not in the index.
+Stores `item` under `key(item)`, re-reads its field values, and rebuilds its index entry in-place, updating only fields whose text changed. Preserves insertion order. With a custom `key`, passing a fresh copy of the item is enough. No-op if the key is not in the index.
 
 ```ts
 item.name = 'new name';
@@ -112,7 +121,7 @@ index.reindex(item);
 setItems(items: readonly T[]): void
 ```
 
-Reconciles the index to a refreshed corpus in one mutation. Existing references are reindexed, missing references are removed, added references are indexed, and incoming first-occurrence order becomes index order. Duplicate references collapse to one item. Calls `onMutate()` once when indexed values, membership, or order changes.
+Reconciles the index to a refreshed corpus in one mutation by key identity (reference identity by default). Retained items adopt their incoming object and are reindexed, missing keys are removed, added keys are indexed, and incoming first-occurrence order becomes index order. Duplicate references collapse to one item; two different objects sharing one key throw `ScoutConfigError`. Calls `subscribe()` listeners once when indexed field text, membership, or order changed — reconciling an equal corpus of fresh copies notifies nothing.
 
 ```ts
 index.setItems(latestUsers);
@@ -124,22 +133,22 @@ index.setItems(latestUsers);
 
 ### `.items`
 
-`readonly T[]`: all indexed items in insertion order. Returns a new array snapshot each call.
+`readonly T[]`: all indexed items in insertion order — the latest object stored for each key. Returns a new array snapshot each call.
 
 ```ts
 const all = index.items;
 ```
 
-### `.onMutate(listener)`
+### `.subscribe(listener)`
 
 ```ts
-onMutate(listener: () => void): () => void
+subscribe(listener: () => void): () => void
 ```
 
 Subscribes `listener` to run after every changed `add()` / `remove()` / `reindex()` / `setItems()` operation. No-ops, including unchanged bulk reconciliation, do not fire it. A changed `setItems()` reconciliation fires once. `createSearch()` uses this internally to keep `results` in sync with index mutations; most callers building on `createIndex()` directly will not need it.
 
 ```ts
-const unsubscribe = index.onMutate(() => {
+const unsubscribe = index.subscribe(() => {
   console.log(`Index changed: now ${index.size} items`);
 });
 
@@ -177,7 +186,6 @@ function createSearch<T>(index: ScoutIndex<T>, options?: CreateSearchOptions): S
 | `getSnapshot()`                 | `() => SearchSnapshot<T>`            | Returns the stable current snapshot. Identity changes only after a state transition. |
 | `setQuery(query)`               | `(query: string) => void`            | Starts or immediately commits a query according to `debounce`.                       |
 | `subscribe(listener, options?)` | `(listener, options?) => () => void` | Notifies after an atomic snapshot commit. Supports `{ signal }` cleanup.             |
-| `tap(handler, options?)`        | `(handler, options?) => () => void`  | Observes typed state and disposal events. Handler errors are swallowed.              |
 | `disposalSignal`                | `AbortSignal`                        | Aborted when `dispose()` is called. Use to tie other lifecycles to this search.      |
 | `disposed`                      | `boolean`                            | `true` after `dispose()` has been called.                                            |
 | `clear()`                       | `() => void`                         | Resets query, cancels debounce, and restores empty-query results synchronously.      |
@@ -202,53 +210,9 @@ search.setQuery('ada');
 
 ---
 
-## `createReactiveSearch(items, options)`
-
-Creates a `ScoutIndex` and a reactive `SearchState` in one call: the shorthand for `createIndex` + `createSearch`. Returns a `ReactiveSearch<T>` which extends `SearchState<T>` with a `.index` property for incremental mutations.
-
-```ts
-function createReactiveSearch<T>(items: T[], options: ScoutIndexOptions<T> & { debounce?: number }): ReactiveSearch<T>;
-```
-
-**Parameters**
-
-| Param                    | Type                         | Description                                                             |
-| ------------------------ | ---------------------------- | ----------------------------------------------------------------------- |
-| `items`                  | `T[]`                        | Initial corpus to index.                                                |
-| `options.fields`         | `ReadonlyArray<FieldDef<T>>` | Fields to index. Required.                                              |
-| `options.debounce`       | `number`                     | Finite non-negative integer debounce milliseconds (default `200`).      |
-| `options.threshold`      | `number`                     | Finite overlap score in `0..1` (default `0.2`).                         |
-| `options.limit`          | `number`                     | Finite non-negative integer max results (default `50`).                 |
-| `options.minQueryLength` | `number`                     | Finite positive integer min chars before trigram scoring (default `3`). |
-
-**Returns `ReactiveSearch<T>`**: all `SearchState<T>` members plus:
-
-| Member  | Type            | Description                                          |
-| ------- | --------------- | ---------------------------------------------------- |
-| `index` | `ScoutIndex<T>` | The underlying index for `add`, `remove`, `reindex`. |
-
-**Example**
-
-```ts
-import { createReactiveSearch } from '@vielzeug/scout';
-
-const users = [{ email: 'ada@example.com', name: 'Ada Lovelace' }];
-const search = createReactiveSearch(users, {
-  fields: [{ field: 'name', weight: 2 }, 'email'],
-  debounce: 150,
-});
-
-search.subscribe(() => console.log(search.getSnapshot().results.map((result) => result.item.name)));
-
-search.index.add({ email: 'grace@example.com', name: 'Grace Hopper' });
-search.dispose();
-```
-
----
-
 ## `findMatchRanges(text, query)`
 
-Normalizes raw `query` with Scout's tokenizer, then computes sorted, non-overlapping literal ranges for each normalized token within `text`. Useful when you need to apply highlighting to a different string than the indexed field value (e.g. a truncated preview or a differently formatted display string).
+Normalizes `text` and `query` with Scout's shared normalization (lowercase, punctuation to single spaces, Latin-only accent folding), matches the whole normalized query as a phrase first, then each word individually — a one-character word matches only at a word start — merges overlaps, and maps the ranges back to the original string. Useful when you need to apply highlighting to a different string than the indexed field value (e.g. a truncated preview or a differently formatted display string).
 
 ```ts
 function findMatchRanges(text: string, query: string): [number, number][];
@@ -370,7 +334,7 @@ Splits `text` into whitespace-joined word segments using the runtime's native `I
 function segmentWords(text: string): string;
 ```
 
-`tokenize()`'s trigram-based scoring already works on unsegmented scripts (Chinese, Japanese, Thai, ...) without this: trigrams are generated per-character, not per-word. `segmentWords()` is for `findMatchRanges()` / highlighting and the multi-word query semantics on `SearchConstraints`, which assume space-separated words. **Not applied inside `tokenize()` itself**: benchmarked at ~15x slower than the plain regex path for the common whitespace-delimited case, which would regress `createIndex()`'s construction cost for every caller, not just those indexing unsegmented scripts.
+`normalize()`'s trigram-based scoring already works on unsegmented scripts (Chinese, Japanese, Thai, ...) without this: trigrams are generated per-character, not per-word. `segmentWords()` is for `findMatchRanges()` highlighting and its phrase matching, which assume space-separated words. **Not applied inside `normalize()` itself**: benchmarked at ~15x slower than the plain regex path for the common whitespace-delimited case, which would regress `createIndex()`'s construction cost for every caller, not just those indexing unsegmented scripts.
 
 **Example**
 
@@ -416,6 +380,7 @@ type FieldDef<T> =
 ```ts
 type ScoutIndexOptions<T> = SearchConstraints & {
   fields: ReadonlyArray<FieldDef<T>>;
+  key?: (item: T) => unknown; // stable identity; default (item) => item
 };
 ```
 
@@ -432,8 +397,8 @@ type CreateSearchOptions = SearchConstraints & {
 ```ts
 type SearchResult<T> = {
   item: T;
-  matches: FieldMatch<keyof T & string>[]; // literal normalized-token ranges; may be empty for fuzzy-only results
-  score: number; // [0, 1]; 1 when query is empty
+  matches: FieldMatch<keyof T & string>[]; // literal [start, end) ranges in original field values; empty for fuzzy-only results
+  score: number; // weighted query coverage in [0, 1]; 1 when query is empty
 };
 ```
 
@@ -444,7 +409,7 @@ Generic over the union of field names: `match.field` is typed to the actual fiel
 ```ts
 type FieldMatch<F extends string = string> = {
   field: F;
-  ranges: [number, number][]; // literal normalized-token [start, end] ranges in original field value
+  ranges: [number, number][]; // literal [start, end) ranges in the original field value
 };
 ```
 
@@ -469,12 +434,6 @@ type SearchSnapshot<T> = Readonly<{
 
 Snapshots and their result arrays are frozen at runtime.
 
-### `ScoutEvent<T>`
-
-```ts
-type ScoutEvent<T> = { readonly snapshot: SearchSnapshot<T>; readonly type: 'state-change' };
-```
-
 ### `SearchState<T>`
 
 ```ts
@@ -486,22 +445,11 @@ type SearchState<T> = {
   getSnapshot(): SearchSnapshot<T>;
   setQuery(query: string): void;
   subscribe(listener: () => void, options?: { signal?: AbortSignal }): () => void;
-  tap(handler: (event: ScoutEvent<T>) => void, options?: { signal?: AbortSignal }): () => void;
   [Symbol.dispose](): void;
 };
 ```
 
-`subscribe()` observers are notified after the full snapshot commits. An observer error is reported asynchronously after the remaining observers run. `tap()` emits `state-change` only: disposal is observable through `disposed` and `disposalSignal`; tapper errors are swallowed.
-
-### `ReactiveSearch<T>`
-
-```ts
-type ReactiveSearch<T> = SearchState<T> & {
-  readonly index: ScoutIndex<T>;
-};
-```
-
-See `createReactiveSearch()` above.
+`subscribe()` observers are notified after the full snapshot commits. An observer error is reported asynchronously after the remaining observers run.
 
 ---
 
@@ -517,10 +465,10 @@ class ScoutError extends Error {}
 
 **Named subclasses**
 
-| Class                | Thrown when                                                                     |
-| -------------------- | ------------------------------------------------------------------------------- |
-| `ScoutConfigError`   | An index, search, or reactive search receives invalid fields or numeric options |
-| `ScoutDisposedError` | A method is called on a disposed `SearchState` instance                         |
+| Class                | Thrown when                                                                    |
+| -------------------- | ------------------------------------------------------------------------------ |
+| `ScoutConfigError`   | An index or search receives invalid fields, numeric options, or duplicate keys |
+| `ScoutDisposedError` | A method is called on a disposed `SearchState` instance                        |
 
 ## Entry Ranking
 

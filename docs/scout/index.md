@@ -7,7 +7,6 @@ keywords: [fuzzy-search, search, trigram, full-text, filter, highlight, reactive
 exports:
   [
     createIndex,
-    createReactiveSearch,
     createSearch,
     ScoutConfigError,
     ScoutDisposedError,
@@ -48,7 +47,7 @@ const matches = index.search(query);
 | ------------------- | -------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
 | Bundle size         | ~3 KB                                        | <PackageInfo package="scout" type="size" />  | ~23 KB                                       |
 | Zero dependencies   | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Algorithm           | Levenshtein                                  | Trigram + overlap coefficient                | Bitap                                        |
+| Algorithm           | Levenshtein                                  | Trigram + query coverage                     | Bitap                                        |
 | Query time          | O(n·m)                                       | O(candidates)                                | O(n·m)                                       |
 | Stateful index      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | Match highlighting  | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
@@ -105,15 +104,15 @@ console.log(results[0]?.item.name); // Ada Lovelace
 
 - `createIndex()`: Trigram inverted index; construction O(corpus × field_length), query O(candidates)
 - Per-field weights: Promote `name` matches over secondary fields; finite positive weights and custom `stringify` functions supported
-- `createReactiveSearch()`: Index + reactive `SearchState` in one call; `.index` for incremental mutations
-- `createSearch()`: Reactive search state backed by an existing `ScoutIndex`; share one index across many states
+- `createSearch()`: Reactive search state backed by a `ScoutIndex`; share one index across many states
 - `highlight()` / `highlightField()`: Split field text into `HighlightPart[]` fragments for styled rendering
 - `findMatchRanges()`: Compute match ranges for custom display strings (truncated previews, formatted values)
 - `toSearchMatcher()`: Matcher adapter for filtering in-memory collections with a `ScoutIndex`
 - `toFilterPredicate()`: Snapshot `(item: T) => boolean` predicate for `Array.filter` or vault queries
-- `setItems()`: Reconcile a refreshed corpus by reference, preserve incoming order, and notify once
+- `setItems()`: Reconcile a refreshed corpus by key, preserve incoming order, and notify once
+- `key` option + `removeKey()`: Stable item identity for immutable data; skip unchanged work with fresh copies and delete by id
 - Incremental updates: `add()` / `remove()` / `reindex()` patch individual items in O(field_length)
-- `onMutate()`: Subscribe to index mutations; powers `createSearch()`'s reactivity and bulk reconciliation
+- `subscribe()`: Subscribe to index mutations; powers `createSearch()`'s reactivity and bulk reconciliation
 - `segmentWords()`: Split unsegmented-script text (CJK, Thai, ...) into words via native `Intl.Segmenter`
 
 </div>

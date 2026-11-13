@@ -72,7 +72,7 @@ const index = createIndex(products, {
 
 ### Non-Latin scripts (CJK, Thai, ...)
 
-`tokenize()` indexes any script correctly: trigrams are generated per-character, so Chinese, Japanese, Cyrillic, and accented Latin text are all searchable out of the box. What it doesn't do is insert word boundaries for scripts that don't use spaces (Chinese, Japanese, Thai, ...), which affects `findMatchRanges()` / highlighting and multi-word query semantics. Pre-segment those fields with `segmentWords()`:
+Scout's normalization indexes any script correctly: trigrams are generated per-character, so Chinese, Japanese, Cyrillic, and accented Latin text are all searchable out of the box. What it doesn't do is insert word boundaries for scripts that don't use spaces (Chinese, Japanese, Thai, ...), which affects `findMatchRanges()` / highlighting and multi-word phrase matching. Pre-segment those fields with `segmentWords()`:
 
 ```ts
 import { createIndex, segmentWords } from '@vielzeug/scout';
@@ -86,24 +86,26 @@ const index = createIndex(docs, {
 index.search('日本語'); // matches the first document
 ```
 
-`segmentWords()` uses the runtime's native `Intl.Segmenter`: no dependency. It's opt-in per field rather than built into `tokenize()` because it benchmarks ~15x slower than the default regex path for ordinary whitespace-delimited text.
+`segmentWords()` uses the runtime's native `Intl.Segmenter`: no dependency. It's opt-in per field rather than built into the shared normalization because it benchmarks ~15x slower than the default regex path for ordinary whitespace-delimited text.
 
 ### Limiting results
 
 Pass `limit`, `threshold`, and `minQueryLength` in options to control result count and quality. `limit` must be a finite non-negative integer, `threshold` a finite value in `0..1`, and `minQueryLength` a finite positive integer; invalid values throw `ScoutConfigError`.
 
 ```ts
-// At most 10 results, minimum overlap score 0.3
+// At most 10 results, minimum query-coverage score 0.3
 const results = index.search('widget', { limit: 10, threshold: 0.3 });
 ```
 
 Per-call options override the index-level defaults set in `createIndex`.
 
-Scores come from the overlap (Szymkiewicz–Simpson) coefficient: the fraction of the _shorter_
-trigram set (almost always the query) found in the longer one. This is deliberate for the
-autocomplete/command-palette use case `createIndex` targets: a short query that's a clean prefix
-of a much longer field value (e.g. `'fin'` against `'Finalize Q3 budget report'`) scores on how
-much of the query matched, not diluted by how much longer the target field happens to be.
+Scores are query coverage: the fraction of the **query's** trigrams found in a field, scaled by
+that field's relative weight. `'fin'` against `'Finalize Q3 roadmap'` scores how much of the
+query was found (about `0.67`), independent of how long the field is; conversely, a long query
+like `'tomato soup recipe'` does not reward a field that merely contains part of it. Each item
+is also scored against the union of all its fields' text at the smallest field weight, so a
+cross-field query like `'alice smith'` finds `{ first: 'Alice', last: 'Smith' }` as well as one
+combined `Alice Smith` field.
 
 ### Controlling short-query behaviour
 
@@ -119,17 +121,13 @@ const results = index.search('alice', { minQueryLength: 8 });
 
 ## Reactive Search
 
-### `createReactiveSearch()`: recommended
-
-For most use cases, `createReactiveSearch` builds the index and state together. It returns one external store whose snapshot contains `query`, `isSearching`, and `results`, plus `.index` for incremental mutations:
+`createSearch()` wraps a `ScoutIndex` in one external store whose snapshot contains `query`, `isSearching`, and `results`. The index stays in your hands for incremental mutations, and one index can back several search stores:
 
 ```ts
-import { createReactiveSearch } from '@vielzeug/scout';
+import { createIndex, createSearch } from '@vielzeug/scout';
 
-const search = createReactiveSearch(users, {
-  fields: [{ field: 'name', weight: 2 }, 'email'],
-  debounce: 150,
-});
+const index = createIndex(users, { fields: [{ field: 'name', weight: 2 }, 'email'] });
+const search = createSearch(index, { debounce: 150 });
 
 search.subscribe(() => {
   const { isSearching, results } = search.getSnapshot();
@@ -141,28 +139,17 @@ input.addEventListener('input', (event) => {
   search.setQuery((event.currentTarget as HTMLInputElement).value);
 });
 
-search.index.add(newUser);
+index.add(newUser); // the search state re-runs the committed query
 search.dispose();
 ```
 
-Each notification observes a complete committed snapshot. During a debounce window, `query` contains the latest input, `isSearching` is `true`, and `results` remain the last committed results.
-
-### `createSearch()`: separate index and state
-
-Use `createSearch` when sharing one index across multiple search stores:
-
-```ts
-import { createIndex, createSearch } from '@vielzeug/scout';
-
-const index = createIndex(users, { fields: ['name', 'email'] });
-const search = createSearch(index, { debounce: 150 });
-```
+Each notification observes a complete committed snapshot. During a debounce window, `query` contains the latest input, `isSearching` is `true`, and `results` remain the last committed results. Index mutations re-run the last committed query, so new items surface without another `setQuery()`.
 
 ### `using` declaration
 
 ```ts
 {
-  using search = createReactiveSearch(users, { fields: ['name'] });
+  using search = createSearch(index, { debounce: 150 });
   // search.dispose() called automatically at scope exit
 }
 ```
@@ -172,7 +159,7 @@ const search = createSearch(index, { debounce: 150 });
 Pass `debounce: 0` for synchronous commits with no searching transition:
 
 ```ts
-const search = createReactiveSearch(users, { fields: ['name'], debounce: 0 });
+const search = createSearch(index, { debounce: 0 });
 
 search.setQuery('alice');
 console.log(search.getSnapshot().results); // Already updated
@@ -198,7 +185,7 @@ const topResult = ripple.computed(() => state.value.results[0]?.item ?? null);
 
 ## Incremental Updates
 
-Use `add()`, `remove()`, and `reindex()` for individual reference-based mutations. Use `setItems()` when a refreshed collection replaces the current corpus; Scout reconciles membership, current field values, and source order in one notification.
+Use `add()`, `remove()`, and `reindex()` for individual mutations. Use `setItems()` when a refreshed collection replaces the current corpus; Scout reconciles membership, current field values, and source order in one notification.
 
 ```ts
 const index = createIndex(products, { fields: ['title'] });
@@ -207,7 +194,7 @@ const index = createIndex(products, { fields: ['title'] });
 const newProduct = { id: 99, title: 'New Widget' };
 index.add(newProduct);
 
-// Remove a deleted item (by reference)
+// Remove a deleted item (by key; the default key is the reference)
 index.remove(products[0]);
 
 // Re-index a mutated item after in-place mutation
@@ -215,7 +202,30 @@ products[1].title = 'Updated Title';
 index.reindex(products[1]);
 ```
 
-> `remove()`, `reindex()`, and `setItems()` use **reference equality** (`===`). Pass retained object references from the current corpus; `setItems()` collapses duplicate references.
+> Without a `key`, `remove()`, `reindex()`, and `setItems()` identify items by **reference equality** (`===`): pass retained object references from the current corpus, and `setItems()` collapses duplicate references. With a `key`, any object carrying the same key works: see [Immutable data and stable keys](#immutable-data-and-stable-keys).
+
+### Immutable data and stable keys
+
+If your pipeline creates fresh objects on every update (framework stores, immutable reducers, mapped projections), pass a `key` that identifies each item across generations:
+
+```ts
+const index = createIndex(products, {
+  fields: ['title'],
+  key: (product) => product.id,
+});
+
+// setItems() with fresh copies of unchanged items: no reindex, no notification.
+// Changed keys reindex only their changed fields; missing keys drop out.
+index.setItems(await loadProducts()); // [{ id: 7, title: 'New title' }, ...]
+
+// reindex() accepts any fresh object carrying the key:
+index.reindex({ id: 7, title: 'Retitled' });
+
+// Or delete by key directly, without fabricating a Product:
+index.removeKey(7);
+```
+
+Two different objects that share one key — inside a single `setItems()` call or the initial `createIndex()` corpus — throw `ScoutConfigError`. Search results always return the latest object stored for each key.
 
 ### Replacing a refreshed corpus
 
@@ -225,7 +235,7 @@ const latestProducts = await loadProducts();
 index.setItems(latestProducts);
 ```
 
-`setItems()` removes references absent from `latestProducts`, adds new references, reindexes retained references, and adopts the incoming order. It calls `onMutate()` once only when index membership, field values, or order changes.
+`setItems()` removes keys absent from `latestProducts`, indexes new keys, reindexes retained keys against their incoming objects, and adopts the incoming order. It notifies `subscribe()` listeners once, only when index membership, field text, or order changed.
 
 ### Inspecting the corpus
 
@@ -238,10 +248,10 @@ console.log(index.items); // [{ id: 1, title: ... }, ...]
 
 ### Reacting to mutations directly
 
-`createSearch()` already keeps `results` in sync with `add()`/`remove()`/`reindex()`/`setItems()` internally. `toSearchMatcher()` also invalidates its query cache after index mutation. If you're building your own reactivity on top of a plain `ScoutIndex` (no `ripple` involved), subscribe with `onMutate()`:
+`createSearch()` already keeps `results` in sync with `add()`/`remove()`/`reindex()`/`setItems()` internally. `toSearchMatcher()` also invalidates its query cache after index mutation. If you're building your own reactivity on top of a plain `ScoutIndex` (no `ripple` involved), subscribe with `subscribe()`:
 
 ```ts
-const unsubscribe = index.onMutate(() => {
+const unsubscribe = index.subscribe(() => {
   rerenderResultsList();
 });
 
@@ -250,11 +260,11 @@ index.add(newProduct); // triggers rerenderResultsList()
 unsubscribe(); // when done
 ```
 
-`onMutate()` only fires for mutations that actually change the index: a duplicate `add()` or a `remove()` of an unindexed item is a no-op and doesn't notify listeners.
+`subscribe()` only fires for mutations that actually change the index: a duplicate `add()` or a `remove()` of an unindexed item is a no-op and doesn't notify listeners.
 
 ## Match Highlighting
 
-Every `SearchResult` carries `matches`: per-field literal normalized-token ranges. A fuzzy trigram candidate can have `matches: []` when no literal query token appears in its field text.
+Every `SearchResult` carries `matches`: per-field literal `[start, end)` ranges into the original field value. A fuzzy trigram candidate can have `matches: []` when no literal query text appears in its field value.
 
 ### `highlightField()`: recommended
 
@@ -338,47 +348,22 @@ for (const entry of results) {
 
 Dedupe merged catalogs with `dedupeEntries` before ranking so alias rows do not shadow their originals.
 
-## Debug Logging
-
-Use `tap()` for typed runtime observation without affecting search behavior:
-
-```ts
-import { createIndex, createSearch } from '@vielzeug/scout';
-
-const search = createSearch(index, { debounce: 150 });
-const stop = search.tap((event) => {
-  console.debug(event.snapshot.query, event.snapshot.isSearching, event.snapshot.results.length);
-});
-
-search.setQuery('alice');
-stop();
-```
-
-`tap()` emits only `state-change`; observe disposal through `disposed` or `disposalSignal`. Tapper errors are swallowed. Use `subscribe()` instead when application state must update after each snapshot commit.
-
-::: warning Development logging
-`query` carries the full, literal search query string: if your queries may carry PII (names, emails, medical/financial terms typed by end users), don't log them in production.
-:::
-
 ## Framework Integration
 
 ::: code-group
 
 ```tsx [React]
-import { createReactiveSearch } from '@vielzeug/scout';
+import { createIndex, createSearch } from '@vielzeug/scout';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
 type User = { id: number; name: string; email: string };
 
 function useScoutSearch(items: User[]) {
-  const search = useMemo(
-    () =>
-      createReactiveSearch(items, {
-        fields: [{ field: 'name', weight: 2 }, 'email'],
-        debounce: 150,
-      }),
-    [items],
-  );
+  const search = useMemo(() => {
+    const index = createIndex(items, { fields: [{ field: 'name', weight: 2 }, 'email'] });
+
+    return createSearch(index, { debounce: 150 });
+  }, [items]);
   const snapshot = useSyncExternalStore(search.subscribe, search.getSnapshot, search.getSnapshot);
 
   useEffect(() => () => search.dispose(), [search]);
@@ -388,16 +373,14 @@ function useScoutSearch(items: User[]) {
 ```
 
 ```ts [Vue 3]
-import { createReactiveSearch } from '@vielzeug/scout';
+import { createIndex, createSearch } from '@vielzeug/scout';
 import { onScopeDispose, shallowRef } from 'vue';
 
 type User = { id: number; name: string; email: string };
 
 function useScoutSearch(items: User[]) {
-  const search = createReactiveSearch(items, {
-    fields: [{ field: 'name', weight: 2 }, 'email'],
-    debounce: 150,
-  });
+  const index = createIndex(items, { fields: [{ field: 'name', weight: 2 }, 'email'] });
+  const search = createSearch(index, { debounce: 150 });
   const snapshot = shallowRef(search.getSnapshot());
   const stop = search.subscribe(() => {
     snapshot.value = search.getSnapshot();
@@ -414,17 +397,15 @@ function useScoutSearch(items: User[]) {
 
 ```svelte [Svelte]
 <script lang="ts">
-  import { createReactiveSearch } from '@vielzeug/scout';
+  import { createIndex, createSearch } from '@vielzeug/scout';
   import { onDestroy } from 'svelte';
 
   type User = { id: number; name: string; email: string };
 
   export let items: User[];
 
-  const search = createReactiveSearch(items, {
-    fields: [{ field: 'name', weight: 2 }, 'email'],
-    debounce: 150,
-  });
+  const index = createIndex(items, { fields: [{ field: 'name', weight: 2 }, 'email'] });
+  const search = createSearch(index, { debounce: 150 });
   let snapshot = search.getSnapshot();
   const stop = search.subscribe(() => { snapshot = search.getSnapshot(); });
 
@@ -479,7 +460,8 @@ Call `toFilterPredicate` again whenever the query or corpus changes: the predica
 ## Best Practices
 
 - **Build the index once**: `createIndex()` runs in O(corpus × field_length). Create it at module level or in an effect, not inside render loops.
-- **Keep the index in sync**: call `index.add()` / `remove()` / `reindex()` when items mutate. Stale index entries return wrong scores.
+- **Keep the index in sync**: call `index.add()` / `remove()` / `reindex()` when items mutate, or `index.setItems()` with the refreshed collection. Stale index entries return wrong scores.
+- **Set a `key` for immutable data**: when updates create fresh objects, `key: (item) => item.id` lets `setItems()` skip unchanged items and `removeKey()` delete by id.
 - **Tune threshold before limit**: set a meaningful `threshold` (e.g. `0.25–0.4`) to suppress noise, then use `limit` to cap the list length.
 - **Set `minQueryLength` for your corpus size**: the default `3` works well for most cases. Lower it for small corpora where single-char queries are expected; raise it for large corpora to avoid expensive O(n) scans.
 - **Dispose reactive state**: always call `search.dispose()` or use `using` when the component unmounts.

@@ -1,5 +1,5 @@
 export const reactiveSearchExample = {
-  code: `import { createReactiveSearch } from '@vielzeug/scout'
+  code: `import { createIndex, createSearch } from '@vielzeug/scout'
 
 const users = [
   { name: 'Alice Johnson', email: 'alice@example.com' },
@@ -8,8 +8,9 @@ const users = [
   { name: 'Alicia Keys',   email: 'alicia@example.com' },
 ]
 
-// One call creates the index and the reactive search state together
-const search = createReactiveSearch(users, { fields: ['name', 'email'], debounce: 0 })
+// The index holds the corpus; the search store keeps one snapshot in sync with it
+const index = createIndex(users, { fields: ['name', 'email'] })
+const search = createSearch(index, { debounce: 0 })
 
 const show = (label) => {
   console.log(label, '\\u2192', search.getSnapshot().results.map(r => r.item.name).join(', ') || '(none)')
@@ -23,8 +24,8 @@ show('Query: "ali"')   // Alice Johnson, Alicia Keys, Dave Alison
 search.setQuery('alice')
 show('Query: "alice"') // Alice Johnson
 
-// Add a new user at runtime via the exposed index
-search.index.add({ name: 'Alice Cooper', email: 'cooper@example.com' })
+// Add a new user at runtime: the search state re-runs the committed query
+index.add({ name: 'Alice Cooper', email: 'cooper@example.com' })
 show('After add()')    // now includes Alice Cooper
 
 search.clear()

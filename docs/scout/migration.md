@@ -5,6 +5,86 @@ description: Migrate Scout index configuration and corpus updates to Scout.
 
 [[toc]]
 
+## Scout 26.11 Changes
+
+Scout 26.11 fixes the scoring and normalization cores and removes the redundant constructor and observation surface.
+
+### Scores measure query coverage
+
+`search()` scored each field with the overlap coefficient: the fraction of the _smaller_ trigram set found in the larger one. For multi-word queries the field is often the smaller set, so any short field contained in the query scored near `1.0`: the query `tomato soup recipe` returned the field `Tom` at `0.67`.
+
+Scores are now query coverage: `|query ∩ field| / |query|` — what fraction of _what you typed_ was found. The same query scores `Tom` at `0.1` (below the default `0.2` threshold), while clean prefix matches like `fin` → `Finalize Q3 roadmap` keep their high score. Each candidate additionally scores against the union of all its fields' trigrams, weighted by the smallest field weight, so a cross-field query like `alice smith` finds `{ first: 'Alice', last: 'Smith' }` as well as one `Alice Smith` field.
+
+No signature changed, but **score values and result ordering change**; re-tune any hardcoded `threshold` you set against the old formula.
+
+### One normalization for indexing, matching, and highlighting
+
+Indexing, short-query matching, and highlighting previously normalized text three different ways. They now share one normalization: per-code-point lowercasing, punctuation/whitespace runs collapsed to a single space, and Latin-only accent folding (`cafe` finds `Café`; Devanagari, Thai, Arabic, and Hebrew marks are never folded away).
+
+`findMatchRanges()` and `FieldMatch.ranges` output changes:
+
+- Ranges are `[start, end)` positions in the **original** field value, mapped back through the normalization offset map (`İİİstanbul` / `stan` now highlights exactly `stan`, not `nbul`).
+- A multi-word query matches as a phrase first, so contiguous phrase hits merge into one range.
+- A one-character word only highlights at a word start: initials (`J Smith`) and single-letter codes still light up; `e` no longer matches every `e` in `mercedes`.
+
+Update anything that compared or sliced ranges position-by-position against the old per-word output.
+
+### `createReactiveSearch()` removed
+
+The one-call constructor only forwarded to `createIndex()` + `createSearch()`. Compose the two explicitly:
+
+```ts
+// Before
+import { createReactiveSearch } from '@vielzeug/scout';
+
+const search = createReactiveSearch(users, { fields: ['name'], debounce: 150 });
+search.index.add(newUser);
+
+// After
+import { createIndex, createSearch } from '@vielzeug/scout';
+
+const index = createIndex(users, { fields: ['name'] });
+const search = createSearch(index, { debounce: 150 });
+index.add(newUser); // the search state re-runs the committed query
+```
+
+The `ReactiveSearch<T>` type is removed with it; `SearchState<T>` and `ScoutIndex<T>` remain.
+
+### `tap()` and `ScoutEvent` removed
+
+`SearchState.tap()` emitted only `state-change`, duplicating `subscribe()` + `getSnapshot()`. Observe state through the subscription and disposal through the lifecycle members:
+
+```ts
+// Before
+const stop = search.tap((event) => console.debug(event.snapshot));
+
+// After
+const stop = search.subscribe(() => console.debug(search.getSnapshot()));
+
+// Disposal observation (was a { type: 'dispose' } tap event):
+search.disposalSignal.addEventListener('abort', cleanup);
+```
+
+The `ScoutEvent` type is removed with it.
+
+### `ScoutIndex.onMutate()` renamed to `subscribe()`
+
+Same signature and semantics: subscribe to changed index mutations, receive an unsubscribe function.
+
+```ts
+// Before
+const unsubscribe = index.onMutate(refresh);
+
+// After
+const unsubscribe = index.subscribe(refresh);
+```
+
+### Corpus input is `readonly`, records can be keyed (additive)
+
+`createIndex()` and `setItems()` accept `readonly T[]` (source-compatible for all callers). New options/methods for immutable corpora: `ScoutIndexOptions.key` identifies items by a stable key instead of object reference — `setItems()` with fresh-but-equal copies then notifies nothing — and `removeKey(key)` deletes by key without fabricating a `T`. See the Usage Guide's "Immutable data and stable keys".
+
+---
+
 ## Scout 26.10 Changes
 
 Scout 26.10 trims the observation surface and aligns error naming with the rest of the monorepo.

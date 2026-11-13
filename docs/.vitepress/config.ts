@@ -1812,7 +1812,6 @@ export default defineConfig({
             { link: '/scout/api#createindex-items-options', text: 'createIndex()' },
             { link: '/scout/api#scoutindex', text: 'ScoutIndex<T>' },
             { link: '/scout/api#createsearch-index-options', text: 'createSearch()' },
-            { link: '/scout/api#createreactivesearch-items-options', text: 'createReactiveSearch()' },
             { link: '/scout/api#findmatchranges-text-query', text: 'findMatchRanges()' },
             { link: '/scout/api#highlight-text-ranges', text: 'highlight()' },
             { link: '/scout/api#highlightfield-result-field-text', text: 'highlightField()' },

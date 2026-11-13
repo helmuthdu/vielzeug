@@ -9,9 +9,9 @@ const products = [
 
 const index = createIndex(products, { fields: ['title'] })
 
-// onMutate() fires after changed add()/remove()/reindex()/setItems() operations :
+// subscribe() fires after changed add()/remove()/reindex()/setItems() operations :
 // not on no-ops like removing an item that isn't indexed
-const unsubscribe = index.onMutate(() => {
+const unsubscribe = index.subscribe(() => {
   console.log(\`  (index changed: now \${index.size} items)\`)
 })
 
@@ -21,7 +21,8 @@ console.log('Search "keyboard":', index.search('keyboard').map(r => r.item.title
 index.add({ id: 4, title: 'Gaming Keyboard', price: 120 })
 console.log('After add():', index.search('keyboard').map(r => r.item.title))
 
-// Re-index a mutated item: reference equality, so mutate in place first
+// Re-index a mutated item: items default to reference identity, so mutate in place first
+// (with a key option, a fresh copy with the same key works too)
 products[0].title = 'Wireless Trackball'
 index.reindex(products[0])
 console.log('After reindex():', index.search('trackball').map(r => r.item.title))
