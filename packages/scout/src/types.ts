@@ -38,8 +38,9 @@ export type SearchConstraints = {
    */
   minQueryLength?: number;
   /**
-   * Finite minimum overlap-coefficient score in `[0, 1]` for a candidate to appear in results. Default: `0.2`.
-   * Higher values require a closer match; lower values are more permissive.
+   * Finite minimum query-coverage score in `[0, 1]` for a candidate to appear in results. Default: `0.2`.
+   * Coverage is the fraction of the query's trigrams found in a field, so higher values require a
+   * closer match and lower values are more permissive.
    */
   threshold?: number;
 };
@@ -48,6 +49,17 @@ export type SearchConstraints = {
 export type ScoutIndexOptions<T> = SearchConstraints & {
   /** Fields to index. At least one field is required. */
   fields: ReadonlyArray<FieldDef<T>>;
+  /**
+   * Stable identity for items, used by `add()`, `remove()`, `reindex()`, and `setItems()` to
+   * recognize items across object generations. Essential for immutable data: with a key,
+   * `setItems()` given fresh copies of unchanged items performs no re-index and fires no
+   * notification, and `remove()`/`reindex()` accept any object carrying the same key.
+   * Must be consistent and referentially stable for a given logical item. Two different items
+   * sharing one key (at construction or in one `setItems()` batch) throw `ScoutConfigError`.
+   *
+   * @default (item) => item
+   */
+  key?: (item: T) => unknown;
 };
 
 export type CreateSearchOptions = SearchConstraints & { debounce?: number };
@@ -60,8 +72,6 @@ export type SearchSnapshot<T> = Readonly<{
 
 export type SearchSubscribeOptions = { readonly signal?: AbortSignal };
 
-export type ScoutEvent<T> = { readonly snapshot: SearchSnapshot<T>; readonly type: 'state-change' };
-
 export type SearchState<T> = {
   [Symbol.dispose](): void;
   clear(): void;
@@ -71,11 +81,10 @@ export type SearchState<T> = {
   getSnapshot(): SearchSnapshot<T>;
   setQuery(query: string): void;
   subscribe(listener: () => void, options?: SearchSubscribeOptions): () => void;
-  tap(handler: (event: ScoutEvent<T>) => void, options?: SearchSubscribeOptions): () => void;
 };
 
 /**
- * Per-field literal normalized-token character ranges where the query was found (for highlighting).
+ * Per-field literal match ranges where the query was found (for highlighting).
  * A fuzzy trigram candidate can have no literal ranges.
  *
  * The generic parameter `F` is the union of valid field names from the index,
@@ -85,7 +94,8 @@ export type FieldMatch<F extends string = string> = {
   /** Field name this match belongs to. */
   field: F;
   /**
-   * Matched character ranges `[start, end]` in the **original** (pre-lowercase) field value.
+   * Matched `[start, end)` positions in the **original** field value: literal matches are
+   * found in the normalized text and mapped back through the normalization offset map.
    * Pass these directly to `highlight()` or `highlightField()`.
    */
   ranges: [number, number][];
@@ -95,12 +105,12 @@ export type FieldMatch<F extends string = string> = {
 export type SearchResult<T> = {
   /** The original item from the index. */
   item: T;
-  /** Per-field literal normalized-token ranges for rendering highlighted snippets. Empty for empty or fuzzy-only queries. */
+  /** Per-field literal match ranges in the original field values, for rendering highlighted snippets. Empty for empty or fuzzy-only queries. */
   matches: FieldMatch<keyof T & string>[];
   /**
-   * Weighted overlap-coefficient score in `[0, 1]`: the fraction of the smaller trigram set
-   * (almost always the query) found in the larger one. `1` when every trigram of the smaller
-   * set is present in the larger set.
+   * Weighted query-coverage score in `[0, 1]`: the fraction of the query's trigrams found in the
+   * best-matching field (or the whole record joined as one text), scaled by that field's relative
+   * weight. `1` when every query trigram is present in a maximum-weight field.
    * `1` when query is empty (all items returned with full score).
    */
   score: number;

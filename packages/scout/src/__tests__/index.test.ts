@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ScoutConfigError, ScoutDisposedError, ScoutError } from '../errors';
 import { createIndex } from '../scout-index';
+import type { ScoutIndexOptions } from '../types';
 
 type User = { age: number; email: string; name: string };
 
@@ -28,6 +29,12 @@ describe('createIndex', () => {
 
   test('throws ScoutConfigError when fields is empty', () => {
     expect(() => createIndex(USERS, { fields: [] })).toThrow(ScoutConfigError);
+  });
+
+  test('accepts a read-only items array', () => {
+    const frozen: readonly User[] = Object.freeze([...USERS]);
+
+    expect(createIndex(frozen, { fields: ['name'] }).size).toBe(5);
   });
 });
 
@@ -79,6 +86,22 @@ describe('ScoutIndex.search', () => {
     const results = index.search('', { limit: 2 });
 
     expect(results).toHaveLength(2);
+  });
+
+  test('kept results still carry correct matches when limit cuts the candidate set', () => {
+    const items = Array.from({ length: 200 }, (_, i) => ({ title: `Widget alpha ${i}` }));
+    const index = createIndex(items, { fields: ['title'] });
+
+    const results = index.search('alpha', { limit: 5 });
+
+    expect(results).toHaveLength(5);
+
+    for (const result of results) {
+      const range = result.matches.find((m) => m.field === 'title')?.ranges[0];
+
+      expect(range).toBeDefined();
+      expect(result.item.title.slice(range![0], range![1])).toBe('alpha');
+    }
   });
 
   test('field-restricted search only matches specified fields', () => {
@@ -267,6 +290,194 @@ describe('ScoutIndex.search', () => {
   });
 });
 
+describe('keyed identity', () => {
+  type Row = { id: string; text: string };
+
+  const row = (id: string, text: string): Row => ({ id, text });
+  const options: ScoutIndexOptions<Row> = { fields: ['text'], key: (r) => r.id };
+
+  test('setItems with fresh copies of unchanged items changes nothing observable', () => {
+    const index = createIndex([row('1', 'Alpha')], options);
+    const listener = vi.fn();
+
+    index.subscribe(listener);
+    const revision = index.revision;
+    index.setItems([row('1', 'Alpha')]);
+
+    expect(index.revision).toBe(revision);
+    expect(listener).not.toHaveBeenCalled();
+    expect(index.search('alpha')[0].item).toEqual(row('1', 'Alpha'));
+  });
+
+  test('setItems reindexes only the item whose text changed', () => {
+    const kept = row('2', 'Bravo');
+    const index = createIndex([row('1', 'Alpha'), kept], options);
+
+    index.setItems([row('1', 'Zulu'), kept]);
+
+    expect(index.search('zulu').map((r) => r.item.id)).toEqual(['1']);
+    expect(index.search('alpha')).toEqual([]);
+    expect(index.items[1]).toBe(kept);
+  });
+
+  test('two different items sharing one key throw', () => {
+    const index = createIndex<Row>([], options);
+
+    expect(() => index.setItems([row('1', 'A'), row('1', 'B')])).toThrow(ScoutConfigError);
+  });
+
+  test('construction throws when two different items share one key', () => {
+    expect(() => createIndex([row('1', 'A'), row('1', 'B')], options)).toThrow(ScoutConfigError);
+  });
+
+  test('reindex and remove accept a fresh copy carrying the same key', () => {
+    const index = createIndex([row('1', 'Alpha')], options);
+
+    index.reindex(row('1', 'Zulu'));
+
+    expect(index.items[0].text).toBe('Zulu');
+    expect(index.size).toBe(1);
+
+    index.remove(row('1', 'ignored'));
+
+    expect(index.size).toBe(0);
+  });
+
+  test('add adopts the object already stored under the same key', () => {
+    const index = createIndex([row('1', 'Alpha')], options);
+    const fresh = row('1', 'Zulu');
+
+    index.add(fresh);
+
+    expect(index.size).toBe(1);
+    expect(index.items[0]).toBe(fresh);
+  });
+
+  test('reindexing one field keeps the record findable via trigrams a sibling field still provides', () => {
+    const index = createIndex([{ id: 1, name: 'apple pie', tags: 'apple' }], {
+      fields: ['name', 'tags'],
+      key: (item) => item.id,
+    });
+
+    index.add({ id: 1, name: 'banana split', tags: 'apple' });
+
+    expect(index.search('apple')).toHaveLength(1);
+    expect(index.search('apple')[0]?.item.name).toBe('banana split');
+    expect(index.search('banana')).toHaveLength(1);
+  });
+
+  test('removeKey deletes by key and reports whether it removed anything', () => {
+    const index = createIndex([row('1', 'Alpha')], options);
+
+    expect(index.removeKey('1')).toBe(true);
+    expect(index.removeKey('1')).toBe(false);
+    expect(index.search('alpha')).toEqual([]);
+  });
+});
+
+describe('shared normalization', () => {
+  test('a punctuation-containing query matches through the punctuation', () => {
+    const index = createIndex([{ name: 'a.b corp' }], { fields: ['name'], minQueryLength: 5 });
+
+    const results = index.search('a.b');
+
+    expect(results).toHaveLength(1);
+    expect(results[0].item.name).toBe('a.b corp');
+    expect(results[0].matches[0].ranges[0]).toEqual([0, 3]);
+  });
+
+  test('an unaccented query matches an accented field value at near-perfect score', () => {
+    const index = createIndex([{ title: 'Café' }], { fields: ['title'] });
+
+    const results = index.search('cafe');
+
+    expect(results[0].score).toBeGreaterThanOrEqual(0.9);
+    expect(results[0].matches[0].ranges).toEqual([[0, 4]]);
+  });
+
+  test('Devanagari vowel signs are indexed verbatim and not folded away', () => {
+    const index = createIndex([{ title: 'किताब' }], { fields: ['title'] });
+
+    const exact = index.search('किता');
+
+    expect(exact).toHaveLength(1);
+    // Three of the four padded query trigrams sit inside the word; the trailing boundary
+    // trigram does not, so coverage is 3/4, not 1.
+    expect(exact[0].score).toBeCloseTo(0.75);
+
+    expect(index.search('कतब')).toHaveLength(0);
+  });
+
+  test('decomposed and precomposed Latin accents normalize identically', () => {
+    const decomposed = createIndex([{ title: 'cafe\u0301' }], { fields: ['title'], threshold: 0.5 });
+
+    const results = decomposed.search('café');
+
+    expect(results).toHaveLength(1);
+    expect(results[0].score).toBe(1);
+  });
+
+  test('a dotted capital I folds to a plain i for matching and ranges', () => {
+    const index = createIndex([{ title: 'İstanbul' }], { fields: ['title'], threshold: 0.5 });
+
+    const results = index.search('istanbul');
+
+    expect(results).toHaveLength(1);
+    expect(results[0].score).toBe(1);
+    expect(results[0].matches[0].ranges[0]).toEqual([0, 8]);
+  });
+});
+
+describe('query coverage scoring', () => {
+  test('a long query does not fully match a short field it merely contains', () => {
+    const items = [{ title: 'Tom' }, { title: 'Tomato soup recipe with basil' }];
+    const index = createIndex(items, { fields: ['title'] });
+
+    const results = index.search('tomato soup recipe');
+
+    expect(results.map((r) => r.item.title)).toEqual(['Tomato soup recipe with basil']);
+  });
+
+  test('a short prefix still scores high against a much longer field', () => {
+    const items = [{ title: 'Finalize Q3 roadmap' }];
+    const index = createIndex(items, { fields: ['title'] });
+
+    const results = index.search('fin');
+
+    expect(results).toHaveLength(1);
+    expect(results[0].score).toBeGreaterThanOrEqual(0.6);
+  });
+
+  test('a cross-field query matches split fields as well as one combined field', () => {
+    // No single field ("alice" or "smith") carries enough of the query alone to pass
+    // the 0.5 threshold; only the record-level trigram union reaches full coverage.
+    const split = createIndex([{ first: 'Alice', last: 'Smith' }], {
+      fields: ['first', 'last'],
+      threshold: 0.5,
+    });
+    const combined = createIndex([{ full: 'Alice Smith' }], { fields: ['full'], threshold: 0.5 });
+
+    const splitScore = split.search('alice smith')[0]?.score ?? 0;
+    const combinedScore = combined.search('alice smith')[0]?.score ?? 0;
+
+    expect(splitScore).toBeCloseTo(1);
+    expect(splitScore).toBe(combinedScore);
+  });
+
+  test('a query matching two equal-weight fields outranks a query matching only one', () => {
+    const items = [
+      { first: 'Alice', last: 'Zephyr' },
+      { first: 'Aaron', last: 'Smith' },
+      { first: 'Alice', last: 'Smith' },
+    ];
+    const index = createIndex(items, { fields: ['first', 'last'] });
+
+    const results = index.search('alice smith', { threshold: 0.1 });
+
+    expect(results[0].item).toBe(items[2]);
+  });
+});
+
 describe('ScoutIndex.add', () => {
   test('add() increases size', () => {
     const index = createIndex<User>([], { fields: ['name'] });
@@ -419,12 +630,12 @@ describe('ScoutIndex.items', () => {
   });
 });
 
-describe('ScoutIndex.onMutate', () => {
+describe('ScoutIndex.subscribe', () => {
   test('fires when add() inserts a new item', () => {
     const index = createIndex<User>([], { fields: ['name'] });
     const listener = vi.fn();
 
-    index.onMutate(listener);
+    index.subscribe(listener);
     index.add({ age: 20, email: 'x@x.com', name: 'New' });
 
     expect(listener).toHaveBeenCalledTimes(1);
@@ -435,7 +646,7 @@ describe('ScoutIndex.onMutate', () => {
     const index = createIndex<User>([item], { fields: ['name'] });
     const listener = vi.fn();
 
-    index.onMutate(listener);
+    index.subscribe(listener);
     index.add(item);
 
     expect(listener).not.toHaveBeenCalled();
@@ -446,7 +657,7 @@ describe('ScoutIndex.onMutate', () => {
     const index = createIndex([item], { fields: ['name'] });
     const listener = vi.fn();
 
-    index.onMutate(listener);
+    index.subscribe(listener);
     index.remove(item);
 
     expect(listener).toHaveBeenCalledTimes(1);
@@ -456,7 +667,7 @@ describe('ScoutIndex.onMutate', () => {
     const index = createIndex(USERS, { fields: ['name'] });
     const listener = vi.fn();
 
-    index.onMutate(listener);
+    index.subscribe(listener);
     index.remove({ age: 0, email: '', name: 'Ghost' });
 
     expect(listener).not.toHaveBeenCalled();
@@ -467,7 +678,7 @@ describe('ScoutIndex.onMutate', () => {
     const index = createIndex([item], { fields: ['name'] });
     const listener = vi.fn();
 
-    index.onMutate(listener);
+    index.subscribe(listener);
     item.name = 'ZebraVan';
     index.reindex(item);
 
@@ -479,7 +690,7 @@ describe('ScoutIndex.onMutate', () => {
     const index = createIndex([item], { fields: ['name'] });
     const listener = vi.fn();
 
-    index.onMutate(listener);
+    index.subscribe(listener);
     index.reindex(item);
 
     expect(listener).not.toHaveBeenCalled();
@@ -489,7 +700,7 @@ describe('ScoutIndex.onMutate', () => {
     const index = createIndex(USERS, { fields: ['name'] });
     const listener = vi.fn();
 
-    index.onMutate(listener);
+    index.subscribe(listener);
     index.reindex({ age: 0, email: '', name: 'Ghost' });
 
     expect(listener).not.toHaveBeenCalled();
@@ -500,8 +711,8 @@ describe('ScoutIndex.onMutate', () => {
     const listenerA = vi.fn();
     const listenerB = vi.fn();
 
-    index.onMutate(listenerA);
-    index.onMutate(listenerB);
+    index.subscribe(listenerA);
+    index.subscribe(listenerB);
     index.add({ age: 20, email: 'x@x.com', name: 'New' });
 
     expect(listenerA).toHaveBeenCalledTimes(1);
@@ -512,7 +723,7 @@ describe('ScoutIndex.onMutate', () => {
     const index = createIndex<User>([], { fields: ['name'] });
     const listener = vi.fn();
 
-    const unsubscribe = index.onMutate(listener);
+    const unsubscribe = index.subscribe(listener);
 
     index.add({ age: 20, email: 'a@x.com', name: 'A' });
     unsubscribe();
@@ -530,7 +741,7 @@ describe('ScoutIndex.setItems', () => {
     const index = createIndex([removed, retained], { fields: ['name'] });
     const listener = vi.fn();
 
-    index.onMutate(listener);
+    index.subscribe(listener);
     retained.name = 'After';
     index.setItems([added, retained]);
 
@@ -545,7 +756,7 @@ describe('ScoutIndex.setItems', () => {
     const index = createIndex([item], { fields: ['name'] });
     const listener = vi.fn();
 
-    index.onMutate(listener);
+    index.subscribe(listener);
     index.setItems([item, item]);
 
     expect(index.items).toEqual([item]);

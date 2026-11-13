@@ -125,17 +125,65 @@ describe('findMatchRanges', () => {
     expect(ranges[0][1]).toBeGreaterThanOrEqual(4);
   });
 
-  test('multi-word query finds each word independently', () => {
-    const ranges = findMatchRanges('Alice Johnson', 'alice johnson');
+  test('a contiguous multi-word phrase match merges into one range', () => {
+    expect(findMatchRanges('Alice Johnson', 'alice johnson')).toEqual([[0, 13]]);
+  });
 
-    expect(ranges.length).toBeGreaterThanOrEqual(2);
+  test('non-contiguous words produce independent ranges', () => {
+    expect(findMatchRanges('Johnson Alice', 'alice johnson')).toEqual([
+      [0, 7],
+      [8, 13],
+    ]);
   });
 
   test('normalizes raw punctuation and whitespace in the query', () => {
-    expect(findMatchRanges('Scout Index', 'scout--- index!')).toEqual([
-      [0, 5],
-      [6, 11],
-    ]);
+    expect(findMatchRanges('Scout Index', 'scout--- index!')).toEqual([[0, 11]]);
+  });
+
+  test('maps ranges through multi-unit lowercase expansions to the original string', () => {
+    // "İ".toLowerCase() is two code units long, which shifted every legacy range.
+    const ranges = findMatchRanges('İİİstanbul', 'stan');
+
+    expect(ranges).toEqual([[3, 7]]);
+    expect('İİİstanbul'.slice(3, 7)).toBe('stan');
+  });
+
+  test('highlights a hyphenated phrase once instead of every contained letter', () => {
+    expect(findMatchRanges('send e-mail now', 'e-mail')).toEqual([[5, 11]]);
+  });
+
+  test('folds Latin accents for matching and covers the original word', () => {
+    const ranges = findMatchRanges('Café', 'cafe');
+
+    expect(ranges).toEqual([[0, 4]]);
+    expect('Café'.slice(0, 4)).toBe('Café');
+  });
+
+  test('highlights a one-character query only at word starts', () => {
+    expect(findMatchRanges('J Smith', 'j')).toEqual([[0, 1]]);
+    expect(findMatchRanges('mercedes', 'e')).toEqual([]);
+  });
+
+  test('keeps non-Latin combining marks and matches them exactly', () => {
+    expect(findMatchRanges('किताब', 'किता')).toEqual([[0, 4]]);
+    // The same word without the vowel signs is a different normalized string.
+    expect(findMatchRanges('किताब', 'कतब')).toEqual([]);
+  });
+
+  test('keeps a non-Latin mark attached to a Latin base', () => {
+    const text = 'a\u093Eb c';
+    const ranges = findMatchRanges(text, 'a\u093e');
+
+    expect(ranges).toEqual([[0, 2]]);
+  });
+
+  test('a match ending at the last character never swallows trailing punctuation', () => {
+    expect(findMatchRanges('foo...', 'foo')).toEqual([[0, 3]]);
+    expect(findMatchRanges('Smith et al.', 'al')).toEqual([[9, 11]]);
+  });
+
+  test('a dotted capital I yields a non-empty range for its folded form', () => {
+    expect(findMatchRanges('İ', 'i')).toEqual([[0, 1]]);
   });
 });
 

@@ -29,7 +29,11 @@ function records(): SearchRecord[] {
   ];
 }
 
-export const crmIndex = createIndex<SearchRecord>(records(), { fields: ['label', 'meta'] });
+export const crmIndex = createIndex<SearchRecord>(records(), {
+  fields: ['label', 'meta'],
+  // Records are rebuilt from the store on every effect run; identify them by id.
+  key: (record) => record.id,
+});
 effect(() => {
   crmIndex.setItems(records());
 });

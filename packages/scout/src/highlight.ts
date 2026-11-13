@@ -1,50 +1,75 @@
-import { tokenize } from './tokenize';
+import type { Normalized } from './tokenize';
+import { normalize } from './tokenize';
 import type { HighlightPart, SearchResult } from './types';
 
 /**
  * Finds character ranges within `text` where `query` words appear.
- * Ranges are sorted and overlapping ranges are merged.
+ *
+ * Text and query go through the same normalization the index uses (lowercase, punctuation to
+ * spaces, Latin-only accent folding), so a match always renders against the original. The
+ * whole normalized query is matched as a phrase first, then each word individually; a
+ * one-character word only matches at a word start, so initials and single-letter codes still
+ * highlight without every stray letter of that character lighting up.
  *
  * Useful when you need to apply match ranges to a different string than the
  * indexed field value (e.g. a truncated preview or a differently formatted display string).
  *
  * @param text - The string to search within.
- * @param query - Raw query text. It is normalized with Scout's tokenizer before literal lookup.
- * @returns Sorted, non-overlapping `[start, end]` character ranges.
+ * @param query - Raw query text. It is normalized before literal lookup.
+ * @returns Sorted, non-overlapping `[start, end)` ranges in the **original** `text`.
  */
 export function findMatchRanges(text: string, query: string): [number, number][] {
-  const lower = text.toLowerCase();
-  const words = tokenize(query).split(' ').filter(Boolean);
+  return matchRanges(normalize(text), normalize(query).text);
+}
+
+/**
+ * Literal ranges inside `normalized` for an already-normalized `normalizedQuery`,
+ * mapped back to offsets in the original string via `normalized.offsets`.
+ *
+ * @internal
+ */
+export function matchRanges(normalized: Normalized, normalizedQuery: string): [number, number][] {
+  const { offsets, text } = normalized;
+
+  if (!text || !normalizedQuery) return [];
+
   const ranges: [number, number][] = [];
 
-  for (const word of words) {
-    let pos = 0;
+  const collect = (needle: string, wordStartOnly: boolean): void => {
+    let pos = text.indexOf(needle);
 
-    while (pos < lower.length) {
-      const idx = lower.indexOf(word, pos);
+    while (pos !== -1) {
+      if (!wordStartOnly || pos === 0 || text[pos - 1] === ' ') {
+        ranges.push([pos, pos + needle.length]);
+      }
 
-      if (idx === -1) break;
-
-      ranges.push([idx, idx + word.length]);
-      pos = idx + 1;
+      pos = text.indexOf(needle, pos + 1);
     }
+  };
+
+  // The phrase pass only pays off for multi-word queries; a single word goes straight to
+  // the word pass, where the one-character word-start rule applies to it as well.
+  if (normalizedQuery.includes(' ')) collect(normalizedQuery, false);
+
+  for (const word of normalizedQuery.split(' ').filter(Boolean)) {
+    collect(word, word.length === 1);
   }
 
   ranges.sort((a, b) => a[0] - b[0]);
 
   const merged: [number, number][] = [];
 
-  for (const range of ranges) {
+  for (const [start, end] of ranges) {
     const last = merged[merged.length - 1];
 
-    if (last && range[0] <= last[1]) {
-      last[1] = Math.max(last[1], range[1]);
+    if (last && start <= last[1]) {
+      last[1] = Math.max(last[1], end);
     } else {
-      merged.push([range[0], range[1]]);
+      merged.push([start, end]);
     }
   }
 
-  return merged;
+  return merged.map(([start, end]) => [offsets[start], offsets[end]]);
 }
 
 /**

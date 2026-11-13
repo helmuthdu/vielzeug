@@ -33,11 +33,11 @@ describe('toSearchMatcher', () => {
       get items() {
         return [item];
       },
-      onMutate() {
-        return () => {};
-      },
       reindex() {},
       remove() {},
+      removeKey() {
+        return false;
+      },
       revision: 0,
       search(query) {
         return query === 'alpha' ? [{ item, matches: [], score: 1 }] : [];
@@ -45,6 +45,9 @@ describe('toSearchMatcher', () => {
       setItems() {},
       get size() {
         return 1;
+      },
+      subscribe() {
+        return () => {};
       },
     };
 

@@ -1,7 +1,7 @@
 import { ScoutConfigError } from './errors';
-import { findMatchRanges } from './highlight';
-import { defaultStringify, tokenize } from './tokenize';
-import { generateTrigrams, overlapSimilarity } from './trigram';
+import { matchRanges } from './highlight';
+import { defaultStringify, type Normalized, normalize } from './tokenize';
+import { generateTrigrams, queryCoverage } from './trigram';
 import type { FieldDef, FieldMatch, ScoutIndexOptions, SearchConstraints, SearchResult } from './types';
 
 type FieldConfig<T> = {
@@ -10,11 +10,25 @@ type FieldConfig<T> = {
   weight: number;
 };
 
-type ItemRecord = {
+/** One indexed field of a record: original text plus its shared normalized form. */
+type FieldEntry = {
+  norm: Normalized;
+  raw: string;
+};
+
+type ItemRecord<T> = {
+  /** The latest object stored for this key. */
+  item: T;
   /** Per-field trigrams for scoring. */
   trigrams: Map<string, Set<string>>;
-  /** Per-field original text for highlighting. */
-  values: Map<string, string>;
+  /**
+   * Trigrams of every field's normalized text joined into one record-level text, so a
+   * multi-word query that spans fields ("alice smith" vs `first` + `last`) still covers
+   * its full length. Contributes no highlight ranges: those stay per-field.
+   */
+  union: Set<string>;
+  /** Per-field original and normalized text for matching and highlighting. */
+  values: Map<string, FieldEntry>;
 };
 
 /**
@@ -24,31 +38,34 @@ type ItemRecord = {
  * the trigram index in O(field_length) without a full rebuild.
  */
 export interface ScoutIndex<T> {
-  /** Adds `item` to the index. No-op if the item is already indexed (by reference). */
+  /**
+   * Adds `item` to the index. If another object is already stored under `key(item)`, that
+   * record adopts `item` and its changed fields are reindexed (no notification when nothing
+   * changed); without a custom `key`, re-adding the same reference is a no-op.
+   */
   add(item: T): void;
-  /** All items currently in the index, in insertion order. */
+  /**
+   * All items currently in the index, in insertion order: the latest object stored for each
+   * key. Returns a fresh array on each access.
+   */
   readonly items: readonly T[];
   /**
-   * Subscribes `listener` to be called after every changed `add()` / `remove()` / `reindex()`
-   * / `setItems()` operation. No-ops: e.g. removing an unindexed item or reconciling an
-   * unchanged corpus: do not fire it. Each changed `setItems()` reconciliation fires once.
-   * Returns an unsubscribe function.
-   *
-   * Framework-agnostic extension point: `createSearch()` uses this internally to keep
-   * its snapshot in sync with index mutations. Most callers won't need this directly.
-   */
-  onMutate(listener: () => void): () => void;
-  /**
-   * Re-reads the item's current field values and rebuilds its index entry in-place,
-   * only updating fields whose values have changed. Preserves insertion order.
-   * No-op if the item is not in the index.
+   * Stores `item` under `key(item)`, re-reads its field values, and rebuilds its index entry
+   * in-place, only updating fields whose text changed. Preserves insertion order. With a
+   * custom `key`, passing a fresh copy of the item is enough: the stored record adopts it.
+   * No-op if the key is not in the index.
    */
   reindex(item: T): void;
   /**
-   * Removes `item` from the index by reference equality.
-   * No-op if the item is not in the index.
+   * Removes the item stored under `key(item)`.
+   * No-op if the key is not in the index.
    */
   remove(item: T): void;
+  /**
+   * Removes the item stored under `key`. Returns whether an item was removed.
+   * Use with a custom `key` to delete by id without fabricating a `T`.
+   */
+  removeKey(key: unknown): boolean;
   /**
    * Monotonically increasing counter, incremented after every changed `add()` / `remove()` /
    * `reindex()` / `setItems()` operation. Use as a cache-busting token when caching search
@@ -64,13 +81,26 @@ export interface ScoutIndex<T> {
    */
   search(query: string, options?: SearchConstraints): SearchResult<T>[];
   /**
-   * Reconciles the index to `items` by reference identity. Retained items are reindexed,
-   * new items are added, missing items are removed, and one mutation notification fires
-   * when indexed corpus or field values change. Duplicate references collapse to one item.
+   * Reconciles the index to `items` by key identity (reference identity by default).
+   * Retained items adopt their incoming object and are reindexed, new keys are added,
+   * missing keys are removed, and one mutation notification fires when indexed corpus or
+   * field text changed — reconciling an equal corpus with fresh copies notifies nothing.
+   * Duplicate references collapse to one item; two different objects sharing one key throw
+   * `ScoutConfigError`.
    */
   setItems(items: readonly T[]): void;
   /** Number of items currently in the index. */
   readonly size: number;
+  /**
+   * Subscribes `listener` to be called after every changed `add()` / `remove()` / `reindex()`
+   * / `setItems()` operation. No-ops: e.g. removing an unindexed item or reconciling an
+   * unchanged corpus: do not fire it. Each changed `setItems()` reconciliation fires once.
+   * Returns an unsubscribe function.
+   *
+   * Framework-agnostic extension point: `createSearch()` uses this internally to keep
+   * its snapshot in sync with index mutations. Most callers won't need this directly.
+   */
+  subscribe(listener: () => void): () => void;
 }
 
 function requireFiniteInteger(value: number, name: string, minimum: number): number {
@@ -120,23 +150,27 @@ function resolveFields<T>(defs: ReadonlyArray<FieldDef<T>>): FieldConfig<T>[] {
  * const results = index.search('alice');
  * ```
  *
- * @throws {ScoutConfigError} If options use an invalid field or numeric configuration.
+ * @throws {ScoutConfigError} If options use an invalid field or numeric configuration, or if
+ * items with a `key` option contain two different items sharing the same key.
  */
-export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): ScoutIndex<T> {
+export function createIndex<T>(items: readonly T[], options: ScoutIndexOptions<T>): ScoutIndex<T> {
   if (options.fields.length === 0) {
     throw new ScoutConfigError('createIndex: at least one field is required.');
   }
 
+  const keyOf = options.key ?? ((item: T): unknown => item);
+
   const fields = resolveFields(options.fields);
   const maxWeight = fields.reduce((max, f) => Math.max(max, f.weight), 1);
+  const minWeight = fields.reduce((min, f) => Math.min(min, f.weight), maxWeight);
   const defaultThreshold = requireFiniteNumber(options.threshold ?? 0.2, 'threshold', 0, 1);
   const defaultLimit = requireFiniteInteger(options.limit ?? 50, 'limit', 0);
   const defaultMinQueryLength = requireFiniteInteger(options.minQueryLength ?? 3, 'minQueryLength', 1);
 
-  /** item → per-item record, preserves insertion order for `items` getter */
-  const itemData = new Map<T, ItemRecord>();
-  /** trigram → set of items that contain it */
-  const invertedIndex = new Map<string, Set<T>>();
+  /** key → per-item record, preserves insertion order for `items` getter */
+  const itemData = new Map<unknown, ItemRecord<T>>();
+  /** trigram → set of keys that contain it */
+  const invertedIndex = new Map<string, Set<unknown>>();
   const mutationListeners = new Set<() => void>();
   let revision = 0;
 
@@ -159,47 +193,73 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
     return cachedTrigrams;
   }
 
-  function addFieldToIndex(item: T, fieldTrigrams: Set<string>): void {
+  function addFieldToIndex(key: unknown, fieldTrigrams: Set<string>): void {
     for (const trigram of fieldTrigrams) {
       let bucket = invertedIndex.get(trigram);
 
       if (!bucket) {
-        bucket = new Set<T>();
+        bucket = new Set<unknown>();
         invertedIndex.set(trigram, bucket);
       }
 
-      bucket.add(item);
+      bucket.add(key);
     }
   }
 
-  function removeFieldFromIndex(item: T, fieldTrigrams: Set<string>): void {
+  /** Maps every item by key, rejecting a batch where two different objects share one key. */
+  function uniqueKeyMap(items: readonly T[]): Map<unknown, T> {
+    const map = new Map<unknown, T>();
+
+    for (const item of items) {
+      const key = keyOf(item);
+      const existing = map.get(key);
+
+      if (existing !== undefined && existing !== item) {
+        throw new ScoutConfigError('two different items share the same key.');
+      }
+
+      map.set(key, item);
+    }
+
+    return map;
+  }
+
+  function removeFieldFromIndex(key: unknown, fieldTrigrams: Set<string>): void {
     for (const trigram of fieldTrigrams) {
       const bucket = invertedIndex.get(trigram);
 
       if (bucket) {
-        bucket.delete(item);
+        bucket.delete(key);
 
         if (bucket.size === 0) invertedIndex.delete(trigram);
       }
     }
   }
 
-  function addItem(item: T): void {
+  function buildUnion(values: Map<string, FieldEntry>): Set<string> {
+    const joined = [...values.values()]
+      .map((entry) => entry.norm.text)
+      .filter(Boolean)
+      .join(' ');
+
+    return joined.length >= 1 ? generateTrigrams(joined) : new Set<string>();
+  }
+
+  function addItem(item: T, key: unknown): void {
     const trigrams = new Map<string, Set<string>>();
-    const values = new Map<string, string>();
+    const values = new Map<string, FieldEntry>();
 
     for (const { field, stringify } of fields) {
-      const raw = item[field];
-      const text = stringify(raw);
-      const normalized = tokenize(text);
-      const fieldTrigrams = normalized.length >= 1 ? generateTrigrams(normalized) : new Set<string>();
+      const text = stringify(item[field]);
+      const norm = normalize(text);
+      const fieldTrigrams = norm.text.length >= 1 ? generateTrigrams(norm.text) : new Set<string>();
 
       trigrams.set(field, fieldTrigrams);
-      values.set(field, text);
-      addFieldToIndex(item, fieldTrigrams);
+      values.set(field, { norm, raw: text });
+      addFieldToIndex(key, fieldTrigrams);
     }
 
-    itemData.set(item, { trigrams, values });
+    itemData.set(key, { item, trigrams, union: buildUnion(values), values });
   }
 
   /**
@@ -207,13 +267,13 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
    * O(n × field_count): acceptable for small corpora; consider raising
    * `minQueryLength` on large datasets to avoid triggering this path.
    */
-  function containmentScan(query: string): Set<T> {
-    const result = new Set<T>();
+  function containmentScan(query: string): Set<unknown> {
+    const result = new Set<unknown>();
 
-    for (const [item, record] of itemData) {
-      for (const value of record.values.values()) {
-        if (value.toLowerCase().includes(query)) {
-          result.add(item);
+    for (const [key, record] of itemData) {
+      for (const entry of record.values.values()) {
+        if (entry.norm.text.includes(query)) {
+          result.add(key);
           break;
         }
       }
@@ -222,36 +282,36 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
     return result;
   }
 
-  function trigramCandidates(queryTrigrams: Set<string>): Set<T> {
-    const candidates = new Set<T>();
+  function trigramCandidates(queryTrigrams: Set<string>): Set<unknown> {
+    const candidates = new Set<unknown>();
 
     for (const trigram of queryTrigrams) {
-      const items = invertedIndex.get(trigram);
+      const keys = invertedIndex.get(trigram);
 
-      if (items) {
-        for (const item of items) candidates.add(item);
+      if (keys) {
+        for (const key of keys) candidates.add(key);
       }
     }
 
     return candidates;
   }
 
-  function scoreCandidate(normalized: string, queryTrigrams: Set<string> | null, record: ItemRecord): number {
+  function scoreCandidate(normalized: string, queryTrigrams: Set<string> | null, record: ItemRecord<T>): number {
     let bestScore = 0;
 
     for (const { field, weight } of fields) {
       let fieldScore: number;
 
       if (queryTrigrams === null) {
-        const raw = record.values.get(field) ?? '';
+        const norm = record.values.get(field)?.norm.text ?? '';
 
-        fieldScore = raw.toLowerCase().includes(normalized) ? 1.0 : 0;
+        fieldScore = norm.includes(normalized) ? 1.0 : 0;
       } else {
         const itemTrigrams = record.trigrams.get(field);
 
         if (!itemTrigrams || itemTrigrams.size === 0) continue;
 
-        fieldScore = overlapSimilarity(queryTrigrams, itemTrigrams);
+        fieldScore = queryCoverage(queryTrigrams, itemTrigrams);
       }
 
       const weighted = fieldScore * (weight / maxWeight);
@@ -259,18 +319,26 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
       if (weighted > bestScore) bestScore = weighted;
     }
 
+    // Whole-record coverage, weighted by the smallest field weight: a query whose words
+    // split across fields scores as well as if they sat in one field of that weight.
+    if (queryTrigrams !== null) {
+      const unionScore = queryCoverage(queryTrigrams, record.union) * (minWeight / maxWeight);
+
+      if (unionScore > bestScore) bestScore = unionScore;
+    }
+
     return bestScore;
   }
 
-  function computeMatches(query: string, values: Map<string, string>): FieldMatch<keyof T & string>[] {
+  function computeMatches(normalizedQuery: string, values: Map<string, FieldEntry>): FieldMatch<keyof T & string>[] {
     const matches: FieldMatch<keyof T & string>[] = [];
 
     for (const { field } of fields) {
-      const text = values.get(field);
+      const entry = values.get(field);
 
-      if (!text) continue;
+      if (!entry) continue;
 
-      const ranges = findMatchRanges(text, query);
+      const ranges = matchRanges(entry.norm, normalizedQuery);
 
       if (ranges.length > 0) matches.push({ field, ranges });
     }
@@ -278,80 +346,111 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
     return matches;
   }
 
-  function reindexItem(item: T): boolean {
-    const record = itemData.get(item);
+  function reindexStored(key: unknown, item: T): boolean {
+    const record = itemData.get(key);
 
     if (!record) return false;
 
+    record.item = item;
+
     let changed = false;
+    // Postings map trigram -> keys across ALL fields, so removals are computed
+    // as (old trigrams) minus (new trigrams over every field): deleting a
+    // changed field's old trigrams directly would blind the record for
+    // trigrams a sibling field still provides.
+    const stale = new Set<string>();
+
+    for (const fieldTrigrams of record.trigrams.values()) {
+      for (const trigram of fieldTrigrams) stale.add(trigram);
+    }
 
     for (const { field, stringify } of fields) {
       const newText = stringify(item[field]);
-      const oldText = record.values.get(field);
 
-      if (newText === oldText) continue;
+      if (newText === record.values.get(field)?.raw) continue;
 
       changed = true;
 
-      const oldTrigrams = record.trigrams.get(field);
-
-      if (oldTrigrams) removeFieldFromIndex(item, oldTrigrams);
-
-      const normalized = tokenize(newText);
-      const newTrigrams = normalized.length >= 1 ? generateTrigrams(normalized) : new Set<string>();
+      const norm = normalize(newText);
+      const newTrigrams = norm.text.length >= 1 ? generateTrigrams(norm.text) : new Set<string>();
 
       record.trigrams.set(field, newTrigrams);
-      record.values.set(field, newText);
-      addFieldToIndex(item, newTrigrams);
+      record.values.set(field, { norm, raw: newText });
+    }
+
+    if (changed) {
+      record.union = buildUnion(record.values);
+
+      const current = new Set<string>();
+
+      for (const fieldTrigrams of record.trigrams.values()) {
+        for (const trigram of fieldTrigrams) current.add(trigram);
+      }
+
+      addFieldToIndex(key, current);
+
+      const dropped = new Set([...stale].filter((trigram) => !current.has(trigram)));
+
+      removeFieldFromIndex(key, dropped);
     }
 
     return changed;
   }
 
-  function removeItem(item: T): boolean {
-    const record = itemData.get(item);
+  function removeStored(key: unknown): boolean {
+    const record = itemData.get(key);
 
     if (!record) return false;
 
     for (const fieldTrigrams of record.trigrams.values()) {
-      removeFieldFromIndex(item, fieldTrigrams);
+      removeFieldFromIndex(key, fieldTrigrams);
     }
 
-    itemData.delete(item);
+    itemData.delete(key);
 
     return true;
   }
 
+  if (options.key) uniqueKeyMap(items);
+
   for (const item of items) {
-    if (!itemData.has(item)) addItem(item);
+    const key = keyOf(item);
+
+    if (!itemData.has(key)) addItem(item, key);
   }
 
   const index: ScoutIndex<T> = {
     add(item: T): void {
-      if (itemData.has(item)) return;
+      const key = keyOf(item);
 
-      addItem(item);
+      if (itemData.has(key)) {
+        if (reindexStored(key, item)) notifyMutation();
+
+        return;
+      }
+
+      addItem(item, key);
       notifyMutation();
     },
 
     get items(): readonly T[] {
-      return [...itemData.keys()];
-    },
-
-    onMutate(listener: () => void): () => void {
-      mutationListeners.add(listener);
-
-      return () => {
-        mutationListeners.delete(listener);
-      };
+      return [...itemData.values()].map((record) => record.item);
     },
 
     reindex(item: T): void {
-      if (reindexItem(item)) notifyMutation();
+      if (reindexStored(keyOf(item), item)) notifyMutation();
     },
 
     remove(item: T): void {
-      if (removeItem(item)) notifyMutation();
+      if (removeStored(keyOf(item))) notifyMutation();
+    },
+
+    removeKey(key: unknown): boolean {
+      if (!removeStored(key)) return false;
+
+      notifyMutation();
+
+      return true;
     },
 
     get revision(): number {
@@ -368,10 +467,10 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
       );
 
       if (!query.trim()) {
-        return [...itemData.keys()].slice(0, limit).map((item) => ({ item, matches: [], score: 1 }));
+        return [...itemData.values()].slice(0, limit).map((record) => ({ item: record.item, matches: [], score: 1 }));
       }
 
-      const normalized = tokenize(query);
+      const normalized = normalize(query).text;
 
       // Query had no indexable content (e.g. punctuation-only): no match, not "match all".
       if (!normalized) return [];
@@ -379,55 +478,58 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
       const isShort = normalized.length < minQueryLength;
       const queryTrigrams = isShort ? null : getQueryTrigrams(normalized);
       const candidates = queryTrigrams === null ? containmentScan(normalized) : trigramCandidates(queryTrigrams);
-      const results: SearchResult<T>[] = [];
+      const scored: { record: ItemRecord<T>; score: number }[] = [];
 
-      for (const item of candidates) {
-        const record = itemData.get(item);
+      for (const key of candidates) {
+        const record = itemData.get(key);
 
         if (!record) continue;
 
         const score = scoreCandidate(normalized, queryTrigrams, record);
 
-        if (score >= threshold) {
-          const matches = computeMatches(normalized, record.values);
-
-          results.push({ item, matches, score });
-        }
+        if (score >= threshold) scored.push({ record, score });
       }
 
-      return results.sort((a, b) => b.score - a.score).slice(0, limit);
+      // Highlight ranges only for the kept results: the range scan is O(field length) per
+      // result, so it must not run for candidates that `limit` will drop anyway.
+      return scored
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit)
+        .map(({ record, score }) => ({ item: record.item, matches: computeMatches(normalized, record.values), score }));
     },
 
     setItems(items: readonly T[]): void {
-      const incoming = new Set(items);
-      const next = [...incoming];
+      const incoming = uniqueKeyMap(items);
+
       let changed = false;
 
-      for (const item of [...itemData.keys()]) {
-        if (incoming.has(item)) continue;
+      for (const key of [...itemData.keys()]) {
+        if (incoming.has(key)) continue;
 
-        removeItem(item);
+        removeStored(key);
         changed = true;
       }
 
-      for (const item of next) {
-        if (!itemData.has(item)) {
-          addItem(item);
+      for (const [key, item] of incoming) {
+        if (!itemData.has(key)) {
+          addItem(item, key);
           changed = true;
-        } else if (reindexItem(item)) {
+        } else if (reindexStored(key, item)) {
           changed = true;
         }
       }
 
-      const current = [...itemData.keys()];
-      const orderChanged = current.length !== next.length || current.some((item, index) => item !== next[index]);
+      const currentKeys = [...itemData.keys()];
+      const nextKeys = [...incoming.keys()];
+      const orderChanged =
+        currentKeys.length !== nextKeys.length || currentKeys.some((key, index) => key !== nextKeys[index]);
 
       if (orderChanged) {
-        const records = new Map(next.map((item) => [item, itemData.get(item)!]));
+        const records = new Map(nextKeys.map((key) => [key, itemData.get(key)!]));
 
         itemData.clear();
 
-        for (const [item, record] of records) itemData.set(item, record);
+        for (const [key, record] of records) itemData.set(key, record);
 
         changed = true;
       }
@@ -437,6 +539,14 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
 
     get size(): number {
       return itemData.size;
+    },
+
+    subscribe(listener: () => void): () => void {
+      mutationListeners.add(listener);
+
+      return () => {
+        mutationListeners.delete(listener);
+      };
     },
   };
 

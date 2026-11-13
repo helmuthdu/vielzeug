@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Remove createReactiveSearch and tap; rename ScoutIndex.onMutate to subscribe",
+      "packageName": "@vielzeug/scout",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/scout"
+}

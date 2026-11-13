@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Unify text normalization for indexing, matching, and highlighting",
+      "packageName": "@vielzeug/scout",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/scout"
+}

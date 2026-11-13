@@ -9,8 +9,7 @@ export {
 } from './entries';
 export { ScoutConfigError, ScoutDisposedError, ScoutError } from './errors';
 export { findMatchRanges, highlight, highlightField } from './highlight';
-export type { ReactiveSearch } from './reactive';
-export { createReactiveSearch, createSearch } from './reactive';
+export { createSearch } from './reactive';
 export type { ScoutIndex } from './scout-index';
 export { createIndex } from './scout-index';
 export { segmentWords } from './segment';
@@ -19,7 +18,6 @@ export type {
   FieldDef,
   FieldMatch,
   HighlightPart,
-  ScoutEvent,
   ScoutIndexOptions,
   SearchConstraints,
   SearchResult,

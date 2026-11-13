@@ -1,18 +1,6 @@
-import { tapper } from '@vielzeug/arsenal';
-
 import { ScoutConfigError, ScoutDisposedError } from './errors';
-import { createIndex, type ScoutIndex } from './scout-index';
-import type {
-  CreateSearchOptions,
-  ScoutEvent,
-  ScoutIndexOptions,
-  SearchResult,
-  SearchSnapshot,
-  SearchState,
-  SearchSubscribeOptions,
-} from './types';
-
-export type ReactiveSearch<T> = SearchState<T> & { readonly index: ScoutIndex<T> };
+import type { ScoutIndex } from './scout-index';
+import type { CreateSearchOptions, SearchResult, SearchSnapshot, SearchState, SearchSubscribeOptions } from './types';
 
 const DEFAULT_DEBOUNCE = 200;
 
@@ -60,7 +48,6 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
     results: ReadonlyArray<SearchResult<T>>,
   ): SearchSnapshot<T> => Object.freeze({ isSearching, query, results: Object.freeze(results) });
   const listeners = new Set<() => void>();
-  const tappers = tapper<ScoutEvent<T>>();
   const controller = new AbortController();
   let snapshot = createSnapshot('', false, search(''));
   let committedQuery = '';
@@ -70,13 +57,12 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
   const publish = (next: SearchSnapshot<T>): void => {
     snapshot = next;
     notify(listeners);
-    tappers.emit({ snapshot: next, type: 'state-change' });
   };
   const commit = (query: string): void => {
     committedQuery = query;
     publish(createSnapshot(query, false, search(query)));
   };
-  const unsubscribeIndex = index.onMutate(() => {
+  const unsubscribeIndex = index.subscribe(() => {
     publish(createSnapshot(snapshot.query, snapshot.isSearching, search(committedQuery)));
   });
   const assertActive = (method: string): void => {
@@ -89,7 +75,6 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
     timer = undefined;
     unsubscribeIndex();
     listeners.clear();
-    tappers.clear();
     controller.abort();
   };
 
@@ -136,36 +121,6 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
     subscribe(listener, subscribeOptions) {
       return subscribe(listeners, listener, subscribeOptions, disposed, controller.signal);
     },
-    tap(handler, tapOptions) {
-      if (disposed) return () => {};
-
-      return tappers.tap(handler, tapOptions);
-    },
     [Symbol.dispose]: dispose,
-  };
-}
-
-export function createReactiveSearch<T>(
-  items: T[],
-  options: ScoutIndexOptions<T> & Pick<CreateSearchOptions, 'debounce'>,
-): ReactiveSearch<T> {
-  const index = createIndex(items, options);
-  const state = createSearch(index, options);
-
-  return {
-    clear: state.clear,
-    get disposalSignal() {
-      return state.disposalSignal;
-    },
-    dispose: state.dispose,
-    get disposed() {
-      return state.disposed;
-    },
-    getSnapshot: state.getSnapshot,
-    index,
-    setQuery: state.setQuery,
-    subscribe: state.subscribe,
-    tap: state.tap,
-    [Symbol.dispose]: state[Symbol.dispose],
   };
 }

@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 
 import { ScoutConfigError, ScoutDisposedError } from '../errors';
-import { createReactiveSearch, createSearch } from '../reactive';
+import { createSearch } from '../reactive';
 import { createIndex } from '../scout-index';
 
 type User = { name: string };
@@ -363,17 +363,24 @@ describe('createSearch: subscriptions', () => {
     search.dispose();
   });
 
-  test('emits typed state events without exposing control flow to tapper errors', () => {
-    const search = makeSearch(0);
-    const events: string[] = [];
-    search.tap((event) => events.push(event.type));
-    search.tap(() => {
-      throw new Error('observer failure');
-    });
+  test('a throwing listener does not break query updates', () => {
+    // notify() rethrows listener errors via queueMicrotask as a dev signal;
+    // swallow that rethrow so it does not surface as an unhandled error.
+    const rethrow = vi.spyOn(globalThis, 'queueMicrotask').mockImplementation(() => {});
 
-    expect(() => search.setQuery('alice')).not.toThrow();
-    expect(() => search.dispose()).not.toThrow();
-    expect(events).toEqual(['state-change']);
+    try {
+      const search = makeSearch(0);
+
+      search.subscribe(() => {
+        throw new Error('observer failure');
+      });
+
+      expect(() => search.setQuery('alice')).not.toThrow();
+      expect(search.getSnapshot().results.length).toBeGreaterThan(0);
+      search.dispose();
+    } finally {
+      rethrow.mockRestore();
+    }
   });
 });
 
@@ -405,29 +412,19 @@ describe('createSearch: configuration validation', () => {
   });
 });
 
-describe('createReactiveSearch', () => {
-  test('creates index + search state in one call', () => {
-    const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'] });
+describe('createIndex + createSearch composition', () => {
+  const makeCombined = (options: { debounce?: number } & Record<string, unknown> = {}) => {
+    const index = createIndex(USERS, { ...options, fields: ['name'] } as never);
 
-    expect(search.getSnapshot().query).toBe('');
-    expect(search.getSnapshot().results).toHaveLength(3);
-    search.dispose();
-  });
+    return { index, search: createSearch(index, options as never) };
+  };
 
-  test('exposes the underlying index via .index', () => {
-    const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'] });
-
-    expect(search.index).toBeDefined();
-    expect(search.index.size).toBe(3);
-    search.dispose();
-  });
-
-  test('search state is reactive against the exposed index', () => {
-    const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'] });
+  test('search state is reactive against the index', () => {
+    const { index, search } = makeCombined({ debounce: 0 });
     const newUser: User = { name: 'Diana' };
 
-    search.index.add(newUser);
-    expect(search.index.size).toBe(4);
+    index.add(newUser);
+    expect(index.size).toBe(4);
 
     search.setQuery('diana');
     expect(search.getSnapshot().results.length).toBeGreaterThan(0);
@@ -435,8 +432,19 @@ describe('createReactiveSearch', () => {
     search.dispose();
   });
 
+  test('index mutations re-run the committed query', () => {
+    const { index, search } = makeCombined({ debounce: 0 });
+
+    search.setQuery('diana');
+    expect(search.getSnapshot().results).toHaveLength(0);
+
+    index.add({ name: 'Diana' });
+    expect(search.getSnapshot().results.map((r) => r.item.name)).toEqual(['Diana']);
+    search.dispose();
+  });
+
   test('dispose() works as expected', () => {
-    const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'] });
+    const { search } = makeCombined({ debounce: 0 });
 
     search.dispose();
 
@@ -444,14 +452,14 @@ describe('createReactiveSearch', () => {
   });
 
   test('respects limit option', () => {
-    const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'], limit: 1 });
+    const { search } = makeCombined({ debounce: 0, limit: 1 });
 
     expect(search.getSnapshot().results).toHaveLength(1);
     search.dispose();
   });
 
   test('respects threshold option', () => {
-    const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'], threshold: 0.99 });
+    const { search } = makeCombined({ debounce: 0, threshold: 0.99 });
 
     search.setQuery('alic');
 
@@ -460,7 +468,7 @@ describe('createReactiveSearch', () => {
   });
 
   test('respects minQueryLength option', () => {
-    const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'], minQueryLength: 10 });
+    const { search } = makeCombined({ debounce: 0, minQueryLength: 10 });
 
     search.setQuery('alice');
 
@@ -472,7 +480,7 @@ describe('createReactiveSearch', () => {
   test('respects debounce option (non-zero, timer-based)', () => {
     vi.useFakeTimers();
 
-    const search = createReactiveSearch(USERS, { debounce: 100, fields: ['name'] });
+    const { search } = makeCombined({ debounce: 100 });
 
     search.setQuery('alice');
     expect(search.getSnapshot().isSearching).toBe(true);
