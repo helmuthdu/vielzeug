@@ -561,7 +561,8 @@ describe('lifecycle', () => {
 
     handle.dispose();
     device.edit('a', (record) => ({ ...record, value: 1 }));
-    expect(() => handle.changed()).toThrow(TandemDisposedError);
+    const disposedHandle = handle;
+    expect(() => disposedHandle.changed()).toThrow(TandemDisposedError);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(pushes).toHaveLength(0);
