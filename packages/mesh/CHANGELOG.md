@@ -1,7 +1,23 @@
 # Change Log - @vielzeug/mesh
 
-This log was last generated on Fri, 13 Nov 2026 06:00:21 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Nov 2026 19:37:26 GMT and should not be manually modified.
 
+## 26.11.17
+
+Fri, 13 Nov 2026 19:37:26 GMT
+
+### Major changes
+
+- Remove message dedupe and MeshInbound.messageId
+
+### Minor changes
+
+- Treat ICE disconnected as transient; add FakeRtc.blipIce
+
+### Patches
+
+- Make invitation acceptance atomic under concurrent answers
+- Run full teardown when the signal option aborts
 ## 26.11.16
 
 Fri, 13 Nov 2026 06:00:21 GMT

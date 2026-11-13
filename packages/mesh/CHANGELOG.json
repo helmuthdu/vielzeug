@@ -2,6 +2,39 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Remove message dedupe and MeshInbound.messageId",
+            "commit": "c7afb3e340e4abee51ece3ac820b2ed20a406079"
+          }
+        ],
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Treat ICE disconnected as transient; add FakeRtc.blipIce",
+            "commit": "c7afb3e340e4abee51ece3ac820b2ed20a406079"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Make invitation acceptance atomic under concurrent answers",
+            "commit": "c7afb3e340e4abee51ece3ac820b2ed20a406079"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Run full teardown when the signal option aborts",
+            "commit": "c7afb3e340e4abee51ece3ac820b2ed20a406079"
+          }
+        ]
+      },
+      "date": "Fri, 13 Nov 2026 19:37:26 GMT",
+      "tag": "@vielzeug/mesh_v26.11.17",
+      "version": "26.11.17"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

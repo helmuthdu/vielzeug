@@ -2,6 +2,44 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Remove createReactiveSearch and tap; rename ScoutIndex.onMutate to subscribe",
+            "commit": "c7afb3e340e4abee51ece3ac820b2ed20a406079"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Score by query coverage and add record-level union scoring",
+            "commit": "c7afb3e340e4abee51ece3ac820b2ed20a406079"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Unify text normalization for indexing, matching, and highlighting",
+            "commit": "c7afb3e340e4abee51ece3ac820b2ed20a406079"
+          }
+        ],
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add key option and removeKey for immutable corpora",
+            "commit": "c7afb3e340e4abee51ece3ac820b2ed20a406079"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "reindex and setItems keep records findable through trigrams a sibling field still provides",
+            "commit": "c7afb3e340e4abee51ece3ac820b2ed20a406079"
+          }
+        ]
+      },
+      "date": "Fri, 13 Nov 2026 19:37:26 GMT",
+      "tag": "@vielzeug/scout_v26.11.17",
+      "version": "26.11.17"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

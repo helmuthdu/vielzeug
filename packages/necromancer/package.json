@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/necromancer",
-  "version": "26.11.16",
+  "version": "26.11.17",
   "description": "Lifecycle-owned Web Animations API primitives with native access, per-handle groups, and additive FLIP",
   "repository": {
     "type": "git",

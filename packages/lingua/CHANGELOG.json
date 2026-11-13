@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "c7afb3e340e4abee51ece3ac820b2ed20a406079"
+          }
+        ]
+      },
+      "date": "Fri, 13 Nov 2026 19:37:26 GMT",
+      "tag": "@vielzeug/lingua_v26.11.17",
+      "version": "26.11.17"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",

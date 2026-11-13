@@ -1,7 +1,24 @@
 # Change Log - @vielzeug/scout
 
-This log was last generated on Fri, 13 Nov 2026 06:00:21 GMT and should not be manually modified.
+This log was last generated on Fri, 13 Nov 2026 19:37:26 GMT and should not be manually modified.
 
+## 26.11.17
+
+Fri, 13 Nov 2026 19:37:26 GMT
+
+### Major changes
+
+- Remove createReactiveSearch and tap; rename ScoutIndex.onMutate to subscribe
+- Score by query coverage and add record-level union scoring
+- Unify text normalization for indexing, matching, and highlighting
+
+### Minor changes
+
+- Add key option and removeKey for immutable corpora
+
+### Patches
+
+- reindex and setItems keep records findable through trigrams a sibling field still provides
 ## 26.11.16
 
 Fri, 13 Nov 2026 06:00:21 GMT
