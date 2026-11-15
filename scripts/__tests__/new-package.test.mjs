@@ -87,5 +87,7 @@ describe('planPackage()', () => {
   it('prints follow-up steps naming the package', () => {
     expect(nextSteps('widget-kit')).toMatch(/bun install/);
     expect(nextSteps('widget-kit')).toMatch(/change\.mjs widget-kit minor/);
+    expect(nextSteps('widget-kit')).toMatch(/packageGroups\.ts/);
+    expect(nextSteps('widget-kit')).toMatch(/repl\/examples\/widget-kit/);
   });
 });

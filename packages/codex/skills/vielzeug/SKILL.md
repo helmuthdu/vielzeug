@@ -49,6 +49,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/archive`: Community content publishing for Cloudflare Workers + D1: a hardened Worker core over per-collection payload schemas
 - `@vielzeug/arsenal`: Non-trivial TypeScript utilities: retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections
 - `@vielzeug/assay`: Framework-agnostic DOM testing primitives: scoped queries, event dispatch, async waiting
+- `@vielzeug/bard`: Lifecycle-owned Web Audio mixing: buses with ducking, buffered SFX and sprites, procedural synth, streamed tracks, and crossfading music decks
 - `@vielzeug/beacon`: Guided onboarding and contextual product tours for web applications
 - `@vielzeug/clockwork`: Framework-neutral finite state machines with pure transitions and actors
 - `@vielzeug/coins`: Currency formatting and exchange utilities for monetary arithmetic

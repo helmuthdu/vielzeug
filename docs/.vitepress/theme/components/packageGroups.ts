@@ -75,6 +75,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
     id: 'ui',
     name: 'UI Components',
     packages: [
+      { id: 'bard', tagline: 'Web Audio mixing & music decks' },
       { id: 'beacon', tagline: 'Product tours & onboarding' },
       { id: 'necromancer', tagline: 'Web Animations API primitives' },
       { id: 'ore', tagline: 'Web component primitives' },

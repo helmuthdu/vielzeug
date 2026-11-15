@@ -352,8 +352,13 @@ Created @vielzeug/${name}. Next:
   1. bun install                                       # link the new package into the workspace
   2. Implement src/index.ts and its tests; fill every TODO in docs/${name}/ and README.md
   3. Add a sidebar entry for /${name}/ in docs/.vitepress/config.ts
-  4. bun run --filter @vielzeug/${name} build && bun run validate:docs -- --package=${name} && bun run validate:readme -- --package=${name}
-  5. bun scripts/change.mjs ${name} minor "feat(${name}): initial release"
+  4. Add { id: '${name}', tagline: '...' } to a group in docs/.vitepress/theme/components/packageGroups.ts
+     (drives the navbar Packages menu and the homepage; packageGroups.test.ts fails until you do)
+  5. Add REPL examples in docs/.vitepress/theme/components/repl/examples/${name}/ and register
+     them in repl/examples/index.ts (replExamples.test.ts fails until every REPL-eligible
+     package has examples; mark examples browserOnly if jsdom cannot run them)
+  6. bun run --filter @vielzeug/${name} build && bun run validate:docs -- --package=${name} && bun run validate:readme -- --package=${name}
+  7. bun scripts/change.mjs ${name} minor "feat(${name}): initial release"
 `;
 }
 
