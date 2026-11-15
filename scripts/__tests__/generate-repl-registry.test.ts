@@ -14,6 +14,7 @@ import {
   readBundleMeta,
   readDistFile,
   readExternalDeps,
+  readReplThemeCss,
   resolveLoadOrder,
   toPrintableNode,
 } from '../generate-repl-registry';
@@ -309,5 +310,66 @@ describe('buildRegistrySource(): full assembly against a fake two-package tree',
     });
 
     expect(() => buildRegistrySource(root)).toThrow();
+  });
+
+  it('emits REPL_THEME_CSS assembled from the fixture theme files', () => {
+    root = mkdtempSync(path.join(tmpdir(), 'repl-registry-test-'));
+    makeFakePackage(root, 'refine', { declaration: `export declare function x(): void;\n` });
+    mkdirSync(path.join(root, 'refine/dist/styles'), { recursive: true });
+    writeFileSync(path.join(root, 'refine/dist/styles/fouc.css'), '/* fouc */\n');
+    writeFileSync(
+      path.join(root, 'refine/dist/styles/preflight.css'),
+      "@import url('./fouc.css');\n/* preflight */\n",
+    );
+    writeFileSync(path.join(root, 'refine/dist/styles/theme.css'), '/* theme */\n');
+    writeFileSync(path.join(root, 'refine/dist/styles/animation.css'), '/* anim */\n');
+    writeFileSync(path.join(root, 'refine/dist/styles/layers.css'), '/* layers */\n');
+    makeFakePackage(root, 'prism', { declaration: `export declare function y(): void;\n` });
+    mkdirSync(path.join(root, 'prism/dist/theme'), { recursive: true });
+    writeFileSync(path.join(root, 'prism/dist/theme/prism.css'), '/* prism theme */\n');
+
+    const { output } = buildRegistrySource(root);
+
+    expect(output).toContain('export const REPL_THEME_CSS');
+    expect(output).toContain('/* fouc */');
+    expect(output).toContain('/* preflight */');
+    expect(output).toContain('/* prism theme */');
+    // The unresolvable @import must be stripped: the sandbox CSP forbids external url() fetches.
+    expect(output).not.toContain("@import url('./fouc.css')");
+    expect(output).toContain('background: var(--color-canvas');
+  }, 15_000);
+});
+
+describe('readReplThemeCss()', () => {
+  let root: string;
+
+  afterEach(() => {
+    if (root) rmSync(root, { recursive: true, force: true });
+  });
+
+  it('returns empty string when no theme files exist (test fixtures without styles)', () => {
+    root = mkdtempSync(path.join(tmpdir(), 'repl-registry-test-'));
+
+    expect(readReplThemeCss(root)).toBe('');
+  });
+
+  it('concatenates the refine chain and prism theme, stripping the preflight @import', () => {
+    root = mkdtempSync(path.join(tmpdir(), 'repl-registry-test-'));
+    mkdirSync(path.join(root, 'refine/dist/styles'), { recursive: true });
+    writeFileSync(path.join(root, 'refine/dist/styles/fouc.css'), ':not(:defined) { visibility: hidden; }\n');
+    writeFileSync(
+      path.join(root, 'refine/dist/styles/preflight.css'),
+      "@import url('./fouc.css');\n@layer refine.reset { body { margin: 0; } }\n",
+    );
+    writeFileSync(path.join(root, 'refine/dist/styles/theme.css'), ':root { --color-canvas: #fff; }\n');
+
+    const css = readReplThemeCss(root);
+
+    expect(css).toContain(':not(:defined)');
+    expect(css).toContain('@layer refine.reset');
+    expect(css).toContain('--color-canvas: #fff');
+    expect(css).not.toContain("@import url('./fouc.css')");
+    // Body base styles come last so they win over the library chain's resets.
+    expect(css.indexOf('padding: 1rem;')).toBeGreaterThan(css.indexOf('--color-canvas: #fff'));
   });
 });

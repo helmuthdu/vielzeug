@@ -16,12 +16,14 @@ import { readPackageManifests } from './lib/packages.mjs';
 const NON_BROWSER_PACKAGES = new Set(['codex']);
 
 /**
- * Packages with no runnable surface in the REPL, excluded from REPL registration:
- * DOM-output packages have no preview container, and worker-runtime packages
- * (`archive`) need D1/JWKS bindings the sandbox cannot host — they also ship no
- * IIFE bundle for the registry to inline.
+ * Packages with no runnable surface in the REPL, excluded from REPL registration.
+ * Keep this set empty unless a package genuinely cannot run in the sandbox: the
+ * registry generator inlines every non-excluded package's IIFE bundle, so a package
+ * listed here must also drop its `vite.bundle.config.ts`. DOM-output packages (ore,
+ * prism, refine) render into the REPL's Preview pane; browser-safe subpaths of
+ * server-oriented packages (`archive`'s root contract) register like any other.
  */
-export const REPL_EXCLUDED_PACKAGES = new Set(['archive', 'ore', 'prism', 'refine']);
+export const REPL_EXCLUDED_PACKAGES = new Set<string>([]);
 
 /**
  * Returns every directory under `packagesDir` that has a `package.json`, sorted

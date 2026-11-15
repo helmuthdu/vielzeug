@@ -1,5 +1,5 @@
 <template>
-  <div class="repl-panes" :class="{ 'has-output': execution.output.value.length > 0 }">
+  <div class="repl-panes" :class="{ 'has-output': execution.output.value.length > 0 || execution.hasDom.value }">
     <!-- Shared toolbar: Examples (left) + Run (right) -->
     <div class="editor-toolbar">
       <ore-select
@@ -132,7 +132,31 @@
     <!-- Output -->
     <div class="output-section">
       <div class="output-header">
-        <span class="output-label">Output</span>
+        <div aria-label="Output view" class="output-tabs" role="tablist" >
+          <button
+            aria-controls="repl-console-panel"
+            class="output-tab"
+            id="repl-console-tab"
+            role="tab"
+            type="button"
+            :aria-selected="outputTab === 'console'"
+            :class="{ 'is-active': outputTab === 'console' }"
+            @click="outputTab = 'console'">
+            Console
+          </button>
+          <button
+            aria-controls="repl-preview-panel"
+            class="output-tab"
+            id="repl-preview-tab"
+            role="tab"
+            type="button"
+            :aria-selected="outputTab === 'preview'"
+            :class="{ 'is-active': outputTab === 'preview' }"
+            @click="outputTab = 'preview'">
+            Preview
+            <span aria-hidden="true" class="preview-dot" v-if="execution.hasDom.value" ></span>
+          </button>
+        </div>
         <ore-tooltip content="Clear Output" placement="bottom">
           <ore-button icon-only size="sm" variant="ghost" @click="execution.clear">
             <svg
@@ -154,7 +178,12 @@
           </ore-button>
         </ore-tooltip>
       </div>
-      <div class="output-area">
+      <div
+        aria-labelledby="repl-console-tab"
+        class="output-area"
+        id="repl-console-panel"
+        role="tabpanel"
+        v-show="outputTab === 'console'">
         <div class="output-placeholder" v-if="execution.output.value.length === 0" >
           <svg
             fill="none"
@@ -199,9 +228,46 @@
             </span>
           </div>
         </div>
-        <!-- Sandboxed execution target: invisible: this REPL only shows console/return-value
-             output, never rendered DOM, so the iframe itself never needs to be seen. -->
-        <div aria-hidden="true" class="sandbox-host" ref="sandboxContainer" ></div>
+      </div>
+      <!-- Sandboxed execution target: the iframe @vielzeug/sandbox mounts here is the
+           Preview pane itself. It renders DOM-output examples (ore, prism, refine) in an
+           opaque-origin iframe; the host only ever sees its postMessage output. -->
+      <div
+        aria-labelledby="repl-preview-tab"
+        class="preview-area"
+        id="repl-preview-panel"
+        role="tabpanel"
+        v-show="outputTab === 'preview'">
+        <div class="output-placeholder" v-if="!execution.hasDom.value" >
+          <svg
+            fill="none"
+            height="28"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+            viewBox="0 0 24 24"
+            width="28"
+            xmlns="http://www.w3.org/2000/svg">
+            <rect height="14" rx="2" width="18" x="3" y="3" />
+            <path d="M3 9h18" />
+            <path d="M9 21V9" />
+          </svg>
+          <p>No preview yet</p>
+          <ul class="placeholder-steps">
+            <li>
+              <span class="step-num">1</span>
+              Run code that renders DOM into
+              <code>document.body</code>
+            </li>
+            <li>
+              <span class="step-num">2</span>
+              The rendered UI appears here, themed with the site's dark mode
+            </li>
+          </ul>
+          <span class="placeholder-note">Examples from ore, prism, and refine show this off</span>
+        </div>
+        <div class="sandbox-host" v-show="execution.hasDom.value" ref="sandboxContainer" :style="sandboxHostStyle" ></div>
       </div>
     </div>
   </div>
@@ -213,9 +279,15 @@ import type { ExampleModule } from './repl/examples/types';
 import type { SandboxLibrary } from './repl/execution/buildSandboxDocument';
 import { executeReplCode } from './repl/execution/executeReplCode';
 import { persistedCode } from './repl/execution/persistedCode';
+import { createLibraryResolver } from './repl/execution/resolveLibraries';
 import { loadMonaco } from './repl/execution/useMonaco';
 import { type OutputLine, useReplExecution } from './repl/execution/useReplExecution';
-import { LIBRARY_REGISTRY, type LibraryEntry, TEMPORAL_POLYFILL_SOURCE } from './repl/registry.generated';
+import {
+  LIBRARY_REGISTRY,
+  type LibraryEntry,
+  REPL_THEME_CSS,
+  TEMPORAL_POLYFILL_SOURCE,
+} from './repl/registry.generated';
 
 // ============================================================================
 // Props
@@ -234,10 +306,39 @@ const props = defineProps<{
 const editorContainer = ref<HTMLElement | null>(null);
 const sandboxContainer = ref<HTMLElement | null>(null);
 const selectedExample = ref('');
+const outputTab = ref<'console' | 'preview'>('console');
 
-const execution = useReplExecution(sandboxContainer);
+const execution = useReplExecution(sandboxContainer, { themeCss: REPL_THEME_CSS });
 
 const OUTPUT_ICON: Record<OutputLine['type'], string> = { error: '✖', log: '▸', result: '→', warn: '⚠' };
+
+// The sandbox package creates the iframe unstyled; grow it with the height the iframe's
+// ResizeObserver reports (clamped so a runaway page can't push the editor off-screen) and
+// let it fill the pane otherwise.
+const sandboxHostStyle = computed(() => ({
+  height: execution.contentHeight.value > 0 ? `${Math.min(Math.max(execution.contentHeight.value, 80), 1200)}px` : '',
+}));
+
+// When a run starts rendering DOM, jump the user to the Preview tab once per run (they can
+// switch back to Console and we won't fight them until the next run).
+let previewTabShownForRun = false;
+
+watch(
+  () => execution.hasDom.value,
+  (hasDom) => {
+    if (hasDom && !previewTabShownForRun) {
+      outputTab.value = 'preview';
+      previewTabShownForRun = true;
+    }
+  },
+);
+
+watch(
+  () => execution.isExecuting.value,
+  (executing) => {
+    if (executing) previewTabShownForRun = false;
+  },
+);
 
 let monaco: Awaited<ReturnType<typeof loadMonaco>> | null = null;
 let editor: import('monaco-editor').editor.IStandaloneCodeEditor | null = null;
@@ -261,30 +362,24 @@ const examplesByCategory = computed(() => {
   }));
 });
 
-/** This library plus every transitive @vielzeug dependency's registry entry, deps first. */
-const librariesInLoadOrder = computed<LibraryEntry[]>(() =>
-  [...props.library.dependencies, props.library.id].map((id) =>
-    id === props.library.id ? props.library : LIBRARY_REGISTRY[id]!,
-  ),
-);
+/** IIFE bundles for one run: the selected library's chain plus the chain of every other
+ *  @vielzeug package the code imports (cross-package examples, e.g. forge + refine), in
+ *  dependency-first order. The Temporal polyfill is prepended when tempo is in the load
+ *  order: tempo's IIFE expects a top-level `Temporal` global, which browsers don't provide. */
+function librariesFor(jsCode: string): SandboxLibrary[] {
+  return createLibraryResolver({
+    registry: LIBRARY_REGISTRY,
+    selectedId: props.library.id,
+    temporalPolyfill: TEMPORAL_POLYFILL_SOURCE,
+  })(jsCode);
+}
 
-/** IIFE bundles to inline into the sandbox document, in dependency-first order.
- *  Prepends the Temporal polyfill when tempo (or a dependent like illusionist) is in the
- *  load order: tempo's IIFE expects a top-level `Temporal` global, which browsers don't
- *  provide natively. */
-const sandboxLibraries = computed<SandboxLibrary[]>(() => {
-  const libs = librariesInLoadOrder.value.map((entry) => ({ globalName: entry.globalName, iifeSource: entry.iifeSource }));
-
-  if (libs.some((lib) => lib.globalName === 'Tempo') && TEMPORAL_POLYFILL_SOURCE) {
-    return [{ globalName: '__temporalPolyfill', iifeSource: TEMPORAL_POLYFILL_SOURCE }, ...libs];
-  }
-
-  return libs;
-});
-
-/** Monaco "extra lib" entries so the editor can resolve types for this library and its deps. */
-function extraLibsFor(entries: LibraryEntry[]): { content: string; filePath: string }[] {
-  return entries.map((entry) => ({
+/** Monaco "extra lib" entries for every registry package, so cross-package imports
+ *  (a forge example importing refine) get IntelliSense on any tab. ~600KB of .d.ts
+ *  total: loaded once at init, which is well within Monaco's normal working set and
+ *  simpler than re-registering per library switch. */
+function extraLibsFor(registry: Record<string, LibraryEntry>): { content: string; filePath: string }[] {
+  return Object.values(registry).map((entry) => ({
     content: entry.typeDeclaration,
     filePath: `file:///node_modules/@vielzeug/${entry.id}/index.d.ts`,
   }));
@@ -318,8 +413,10 @@ function getInitialCode(): string {
   return persistedCode.get(props.library.id) ?? defaultCodeFor(props.library.id);
 }
 
-function resolveGlobalNameFor(entries: LibraryEntry[]): (lib: string) => string {
-  const globalNames = Object.fromEntries(entries.map((entry) => [entry.id, entry.globalName]));
+/** Maps any registry package (not just the selected library's chain) to its IIFE global:
+ *  cross-package imports rewrite to globals that librariesFor() made sure are loaded. */
+function resolveGlobalNameFor(registry: Record<string, LibraryEntry>): (lib: string) => string {
+  const globalNames = Object.fromEntries(Object.values(registry).map((entry) => [entry.id, entry.globalName]));
 
   // Subpath imports (e.g. `@vielzeug/illusionist/locales`) capture the full path
   // as `lib`. Strip to the package name to find the matching IIFE global: the
@@ -339,11 +436,11 @@ async function runCode(): Promise<void> {
 
   await executeReplCode({
     execution,
-    libraries: sandboxLibraries.value,
+    librariesFor,
     model: editor.getModel(),
     monaco,
     rawCode,
-    resolveGlobalName: resolveGlobalNameFor(librariesInLoadOrder.value),
+    resolveGlobalName: resolveGlobalNameFor(LIBRARY_REGISTRY),
   });
 }
 
@@ -415,7 +512,7 @@ async function initializeEditor(): Promise<void> {
 
   if (!editorContainer.value) return;
 
-  monaco.typescript.typescriptDefaults.setExtraLibs(extraLibsFor(librariesInLoadOrder.value));
+  monaco.typescript.typescriptDefaults.setExtraLibs(extraLibsFor(LIBRARY_REGISTRY));
 
   editor = monaco.editor.create(editorContainer.value, {
     automaticLayout: true,
@@ -459,14 +556,17 @@ watch(
 
     if (!editor || !monaco) return;
 
-    monaco.typescript.typescriptDefaults.setExtraLibs(extraLibsFor(librariesInLoadOrder.value));
     editor.setValue(persistedCode.get(props.library.id) ?? defaultCodeFor(props.library.id));
   },
 );
 
 watch(
   () => props.isDark,
-  (dark) => monaco?.editor.setTheme(dark ? 'vs-dark' : 'vs'),
+  (dark) => {
+    monaco?.editor.setTheme(dark ? 'vs-dark' : 'vs');
+    execution.setTheme(dark);
+  },
+  { immediate: true },
 );
 
 onMounted(() => {
@@ -516,6 +616,13 @@ defineExpose({ insertTextAtCursor });
 .editor-toolbar :deep(ore-select),
 .editor-toolbar :deep(ore-button) {
   align-self: center;
+}
+
+/* ore-button's default min-height is the 44px touch target, which overrides the
+   sm size's 32px height. Dense toolbars opt down via --button-min-height (same
+   escape hatch refine's datagrid/toast use), so Run matches the sm select. */
+.editor-toolbar :deep(ore-button) {
+  --button-min-height: var(--size-8);
 }
 
 .toolbar-spacer {
@@ -579,12 +686,47 @@ defineExpose({ insertTextAtCursor });
   border-bottom: var(--border) solid var(--color-contrast-300);
 }
 
-.output-label {
+.output-tabs {
+  display: flex;
+  gap: var(--size-1);
+  align-items: center;
+  height: 100%;
+}
+
+.output-tab {
+  display: inline-flex;
+  gap: var(--size-1-5);
+  align-items: center;
+  height: 100%;
+  padding: 0 var(--size-2);
   font-size: 0.6875rem;
   font-weight: 700;
   color: var(--text-color-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.07em;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.output-tab:hover {
+  color: var(--text-color-secondary);
+}
+
+.output-tab.is-active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.preview-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-success, var(--color-primary));
+  border-radius: 50%;
 }
 
 /* Editor & Output Areas */
@@ -798,11 +940,32 @@ defineExpose({ insertTextAtCursor });
   }
 }
 
+/* Preview pane: hosts the sandbox iframe (created by @vielzeug/sandbox) which renders
+   DOM-output examples. The host div takes the height the iframe reports for its content
+   (sandboxHostStyle inline height), so the preview grows with the rendered UI and the
+   pane scrolls instead of the iframe. */
+.preview-area {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--color-canvas);
+}
+
 .sandbox-host {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
+  display: flex;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 80px;
+}
+
+.sandbox-host :deep(iframe) {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  color-scheme: light dark;
   border: 0;
 }
 </style>

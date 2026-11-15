@@ -7,8 +7,8 @@ import { getConfig, readWorkspaceDeps } from '../../vite.config.ts';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Two entries: the browser-safe root contract and the Worker-only subpath. The
-// IIFE bundle build is deliberately absent — no consumer loads this package from a
-// script tag; deployments bundle the Worker entry with wrangler.
+// root contract additionally ships an IIFE bundle (vite.bundle.config.ts) for the
+// REPL; deployments bundle the Worker entry with wrangler instead.
 export default defineConfig(
   getConfig(__dirname, {
     entry: {

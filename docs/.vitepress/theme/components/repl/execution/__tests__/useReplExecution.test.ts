@@ -229,6 +229,115 @@ describe('useReplExecution', () => {
     });
   });
 
+  describe('preview state', () => {
+    it('tracks contentHeight from resize messages', async () => {
+      const runPromise = execution.run('', []);
+      const helpers = createSandboxTestHelpers(container);
+
+      helpers.fireReady();
+      await runPromise;
+
+      expect(execution.contentHeight.value).toBe(0);
+
+      helpers.fireResize(240);
+      expect(execution.contentHeight.value).toBe(240);
+    });
+
+    it('tracks hasDom from repl:dom messages and resets both on clear()', async () => {
+      const runPromise = execution.run('', []);
+      const helpers = createSandboxTestHelpers(container);
+
+      helpers.fireReady();
+      await runPromise;
+
+      helpers.fireCustom('repl:dom', true);
+      helpers.fireResize(120);
+      expect(execution.hasDom.value).toBe(true);
+      expect(execution.contentHeight.value).toBe(120);
+
+      execution.clear();
+      expect(execution.hasDom.value).toBe(false);
+      expect(execution.contentHeight.value).toBe(0);
+    });
+
+    it('treats a non-boolean repl:dom detail as false', async () => {
+      const runPromise = execution.run('', []);
+      const helpers = createSandboxTestHelpers(container);
+
+      helpers.fireReady();
+      await runPromise;
+
+      helpers.fireCustom('repl:dom', '<script>alert(1)</script>');
+
+      expect(execution.hasDom.value).toBe(false);
+    });
+
+    it('resets preview state at the start of each run', async () => {
+      const helpers = createSandboxTestHelpers(container);
+
+      const first = execution.run('', []);
+
+      helpers.fireReady();
+      await first;
+      helpers.fireCustom('repl:dom', true);
+      expect(execution.hasDom.value).toBe(true);
+
+      const second = execution.run('', []);
+
+      expect(execution.hasDom.value).toBe(false);
+
+      helpers.fireReady();
+      await second;
+    });
+
+    it('renders the theme stylesheet inside the sandbox when themeCss is provided', async () => {
+      const themed = useReplExecution(ref(container), { themeCss: 'body { color: red }' });
+
+      try {
+        const runPromise = themed.run('', []);
+
+        createSandboxTestHelpers(container).fireReady();
+        await runPromise;
+
+        // jsdom does not evaluate srcdoc into a live contentDocument, so assert on the
+        // serialized document the sandbox wrote to the iframe.
+        const srcdoc = container.querySelector('iframe')?.getAttribute('srcdoc') ?? '';
+
+        expect(srcdoc).toContain('<style id="repl-theme">');
+        expect(srcdoc).toContain('color: red');
+      } finally {
+        themed.dispose();
+      }
+    });
+
+    it('pushes dark-mode state into the iframe via setTheme', async () => {
+      const runPromise = execution.run('', []);
+      const helpers = createSandboxTestHelpers(container);
+
+      helpers.fireReady();
+      await runPromise;
+
+      const iframe = container.querySelector('iframe');
+      const contentWindow = iframe?.contentWindow as (Window & { postMessage: typeof window.postMessage }) | null;
+      const original = contentWindow?.postMessage.bind(contentWindow);
+      const posted: unknown[] = [];
+
+      if (!contentWindow || !original) throw new Error('expected a content window to spy on');
+
+      contentWindow.postMessage = ((msg: unknown) => {
+        posted.push(msg);
+      }) as typeof contentWindow.postMessage;
+
+      try {
+        execution.setTheme(true);
+      } finally {
+        contentWindow.postMessage = original;
+      }
+
+      expect(posted).toContainEqual(expect.objectContaining({ record: { dark: true }, type: 'state-update-all' }));
+    });
+  });
+
   describe('disposal', () => {
     it('is idempotent and flips disposed to true', () => {
       expect(execution.disposed.value).toBe(false);

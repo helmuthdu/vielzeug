@@ -7,7 +7,10 @@ import type { ReplExecution } from './useReplExecution';
 
 export interface ExecuteReplCodeParams {
   execution: Pick<ReplExecution, 'clear' | 'reportError' | 'run'>;
-  libraries: SandboxLibrary[];
+  /** Resolves the IIFE bundles the transpiled code needs (selected library chain plus
+   * any other `@vielzeug/*` package the code imports). Throws for a package the REPL
+   * cannot load: the error lands in the output panel like any other run failure. */
+  librariesFor: (jsCode: string) => SandboxLibrary[];
   model: Monaco.editor.ITextModel | null;
   monaco: typeof Monaco;
   rawCode: string;
@@ -30,7 +33,7 @@ export interface ExecuteReplCodeParams {
  * fails.
  */
 export async function executeReplCode(params: ExecuteReplCodeParams): Promise<void> {
-  const { execution, libraries, model, monaco, rawCode, resolveGlobalName } = params;
+  const { execution, librariesFor, model, monaco, rawCode, resolveGlobalName } = params;
 
   execution.clear();
 
@@ -42,6 +45,9 @@ export async function executeReplCode(params: ExecuteReplCodeParams): Promise<vo
 
   try {
     const jsCode = model ? await transpileTypeScript(monaco, model) : rawCode;
+    // Bundles are resolved from the transpiled code, not just the selected library:
+    // examples may import other @vielzeug packages (e.g. forge + refine together).
+    const libraries = librariesFor(jsCode);
     const runnableCode = rewriteVielzeugImports(jsCode, resolveGlobalName);
 
     await execution.run(runnableCode, libraries);

@@ -38,6 +38,25 @@ function toBindingClause(specifiers: string): string {
 /** Maps a `@vielzeug/<lib>` specifier to the global variable name exposed in the sandbox. */
 export type GlobalNameResolver = (lib: string) => string;
 
+const ANY_VIELZEUG_IMPORT = /import\s+(?:[^'"]*from\s*)?['"]@vielzeug\/([\w-]+)/g;
+
+/**
+ * Every `@vielzeug/<name>` package the (transpiled) code imports, in first-seen order,
+ * subpaths collapsed to the package name. The REPL uses this to load the IIFE bundles
+ * for cross-package examples: code under any library tab may import another package
+ * (e.g. a forge example rendering refine elements), and the sandbox only has globals
+ * for the bundles it inlined.
+ */
+export function referencedPackages(code: string): string[] {
+  const names = new Set<string>();
+
+  for (const match of code.matchAll(ANY_VIELZEUG_IMPORT)) {
+    names.add(match[1]);
+  }
+
+  return [...names];
+}
+
 export function rewriteVielzeugImports(code: string, resolveGlobalName: GlobalNameResolver): string {
   return code
     .replace(NAMED_IMPORT, (_match, specifiers: string, lib: string) => {

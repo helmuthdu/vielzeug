@@ -5,6 +5,7 @@ import { fieldOperationsExample } from './field-operations';
 import { formSubmissionExample } from './form-submission';
 import { formSubscriptionsExample } from './form-subscriptions';
 import { formValidationExample } from './form-validation';
+import { refineElementsExample } from './refine-elements';
 import { scopedSubFormsExample } from './scoped-sub-forms';
 
 export const forgeExamples = {
@@ -15,5 +16,6 @@ export const forgeExamples = {
   'form-submission': formSubmissionExample,
   'form-subscriptions': formSubscriptionsExample,
   'form-validation': formValidationExample,
+  'refine-elements': refineElementsExample,
   'scoped-sub-forms': scopedSubFormsExample,
 };

@@ -48,34 +48,50 @@ describe('buildSandboxRunHtml', () => {
     expect(html).toContain("__replEmit('repl:console'");
   });
 
-  it('emits repl:done in a finally so it fires regardless of success or failure', () => {
+  it('emits repl:dom then repl:done in a finally so they fire regardless of success or failure', () => {
     const html = buildSandboxRunHtml({ code: '', libraries: [] });
 
-    expect(html).toContain(".finally(function () {\n  __replEmit('repl:done');\n});");
+    expect(html).toContain(
+      ".finally(function () {\n  __replEmit('repl:dom', Boolean(document.body.querySelector(':scope > :not(script)')));\n  __replEmit('repl:done');\n});",
+    );
   });
 
-  // Regression test: @vielzeug/sandbox's own bridge script (which defines `window.__sandbox__`)
-  // is appended by buildDocument() *after* the html passed to render(), so anything emitted
-  // here must not depend on `window.__sandbox__` existing yet. See buildSandboxDocument.ts.
-  it('never references window.__sandbox__ directly: emits via postMessage instead', () => {
+  it('reports whether the run rendered visible DOM, ignoring injected script tags', () => {
+    const html = buildSandboxRunHtml({ code: '', libraries: [] });
+
+    // The host uses this to decide whether the Preview tab has content; the run's own
+    // <script> tags live in the body too, so they must not count as visible output.
+    expect(html).toContain(':not(script)');
+  });
+
+  // The bridge script (which defines `window.__sandbox__`) lives in <head>, before the
+  // body content passed to render(): see packages/sandbox/src/_document.ts. The theme
+  // listener can therefore use `window.__sandbox__.onState`, but console/result emits
+  // still go through __replEmit, which carries channel + generation itself and works
+  // regardless of bridge ordering.
+  it('emits via postMessage helper and registers the dark-mode state listener', () => {
     const html = buildSandboxRunHtml({ code: "console.log('hi')", libraries: [] });
 
-    expect(html).not.toContain('__sandbox__');
     expect(html).toContain('parent.postMessage');
+    expect(html).toContain("__replEmit('repl:console'");
+    expect(html).toContain("window.__sandbox__.onState('dark'");
+    expect(html).toContain("document.documentElement.classList.toggle('dark'");
   });
 
-  it('defines the emit helper before any library script or the console bridge runs', () => {
+  it('defines the emit helper and theme listener before any library script runs', () => {
     const html = buildSandboxRunHtml({
       code: '',
       libraries: [{ globalName: 'Arsenal', iifeSource: 'var Arsenal = {};' }],
     });
 
     const helperIndex = html.indexOf('function __replEmit');
+    const themeIndex = html.indexOf("window.__sandbox__.onState('dark'");
     const libraryIndex = html.indexOf('var Arsenal');
     const consoleOverrideIndex = html.indexOf("__replEmit('repl:console'");
 
     expect(helperIndex).toBeGreaterThan(-1);
-    expect(libraryIndex).toBeGreaterThan(helperIndex);
+    expect(themeIndex).toBeGreaterThan(helperIndex);
+    expect(libraryIndex).toBeGreaterThan(themeIndex);
     expect(consoleOverrideIndex).toBeGreaterThan(helperIndex);
   });
 

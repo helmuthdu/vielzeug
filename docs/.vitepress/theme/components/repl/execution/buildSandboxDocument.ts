@@ -189,15 +189,11 @@ window.fetch = async function (input, init) {
 };
 `;
 
-// @vielzeug/sandbox's own bridge script: the thing that defines `window.__sandbox__`: is
-// appended by buildDocument() *after* the body content passed to render() (i.e. after
-// everything below). So `window.__sandbox__` does not exist yet while our library scripts,
-// console overrides, and the user's code are still executing synchronously: any user
-// snippet that calls console.log() before its first `await` would hit `__sandbox__` as
-// undefined. Emitting messages by hand via the same postMessage shape the bridge itself
-// uses (see @vielzeug/sandbox's internal `post()`) sidesteps that ordering dependency
-// entirely: it only needs bridge channel and generation metadata, which render() sets in <head>
-// before any body script runs.
+// Emitting by hand via the same postMessage shape the bridge itself uses (see
+// @vielzeug/sandbox's internal `post()`) instead of calling `window.__sandbox__.emit()`:
+// the helper carries the channel/generation metadata itself, so it stays generation-safe
+// (stale messages from a superseded run are dropped by the host) and keeps every message
+// in the run coming from one place, regardless of bridge load ordering.
 const EMIT_HELPER_SCRIPT = `
 function __replEmit(event, detail) {
   parent.postMessage({
@@ -231,6 +227,19 @@ function __replSafe(value) {
 });
 `;
 
+// Keeps the iframe's `<html>` element in sync with the docs site's dark mode: the host
+// pushes the current value via `sandbox.setState({ dark })` (accumulated across renders,
+// flushed to the iframe when it reports ready) and again whenever the site theme toggles.
+// `window.__sandbox__.onState` is defined by the bridge script, which render() places in
+// <head> before any body script: this runs as a body script, so it is available.
+const THEME_STATE_SCRIPT = `
+if (window.__sandbox__ && window.__sandbox__.onState) {
+  window.__sandbox__.onState('dark', function (dark) {
+    document.documentElement.classList.toggle('dark', Boolean(dark));
+  });
+}
+`;
+
 function buildRunScript(code: string): string {
   return `
 (async function () {
@@ -238,14 +247,16 @@ ${code}
 })().then(function (result) {
   if (result !== undefined) __replEmit('repl:result', __replSafe(result));
 }).finally(function () {
+  __replEmit('repl:dom', Boolean(document.body.querySelector(':scope > :not(script)')));
   __replEmit('repl:done');
 });
 `;
 }
 
-// Deliberate tradeoff: every run re-parses and re-executes the full IIFE source of the
-// selected library and all its transitive @vielzeug dependencies (e.g. flux pulls in
-// ripple + arsenal + herald + pulse + courier + itself): there's no cross-run caching,
+// Deliberate tradeoff: every run re-parses and re-executes the full IIFE source of every
+// library the run needs (the selected package's dependency chain plus any other imported
+// package's chain, e.g. flux pulls in ripple + arsenal + herald + pulse + courier +
+// itself): there's no cross-run caching,
 // because a fresh iframe is what makes cross-run isolation free (see the module doc
 // comment). Fine at today's bundle sizes (tens of KB, sub-frame to parse+eval); revisit
 // with a "keep dependency bundles warm across runs" strategy if that ever changes.
@@ -254,6 +265,7 @@ export function buildSandboxRunHtml(params: { code: string; libraries: SandboxLi
 
   return [
     inlineScript(EMIT_HELPER_SCRIPT),
+    inlineScript(THEME_STATE_SCRIPT),
     inlineScript(STORAGE_POLYFILL_SCRIPT),
     inlineScript(FETCH_MOCK_SCRIPT),
     libraryScripts,

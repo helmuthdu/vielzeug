@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Ship an IIFE bundle of the browser-safe root contract and register archive in the REPL.",
+      "packageName": "@vielzeug/archive",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/archive"
+}

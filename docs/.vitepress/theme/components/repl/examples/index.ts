@@ -1,4 +1,7 @@
+import { archiveExamples } from './archive';
 import { arsenalExamples } from './arsenal';
+import { assayExamples } from './assay';
+import { bardExamples } from './bard';
 import { beaconExamples } from './beacon';
 import { clockworkExamples } from './clockwork';
 import { coinsExamples } from './coins';
@@ -18,8 +21,12 @@ import { linguaExamples } from './lingua';
 import { meshExamples } from './mesh';
 import { necromancerExamples } from './necromancer';
 import { orbitExamples } from './orbit';
+import { oreExamples } from './ore';
+import { patchworkExamples } from './patchwork';
 import { postmasterExamples } from './postmaster';
+import { prismExamples } from './prism';
 import { pulseExamples } from './pulse';
+import { refineExamples } from './refine';
 import { rippleExamples } from './ripple';
 import { runeExamples } from './rune';
 import { sandboxExamples } from './sandbox';
@@ -30,7 +37,9 @@ import { sentinelExamples } from './sentinel';
 import { sigilExamples } from './sigil';
 import { sourcererExamples } from './sourcerer';
 import { spellExamples } from './spell';
+import { tabulaExamples } from './tabula';
 import { tandemExamples } from './tandem';
+import { tavernExamples } from './tavern';
 import { tempoExamples } from './tempo';
 import type { ExampleModule } from './types';
 import { vaultExamples } from './vault';
@@ -38,7 +47,10 @@ import { wardExamples } from './ward';
 import { wayfinderExamples } from './wayfinder';
 
 export const examples: Record<string, Record<string, ExampleModule>> = {
+  archive: archiveExamples,
   arsenal: arsenalExamples,
+  assay: assayExamples,
+  bard: bardExamples,
   beacon: beaconExamples,
   clockwork: clockworkExamples,
   coins: coinsExamples,
@@ -58,8 +70,12 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   mesh: meshExamples,
   necromancer: necromancerExamples,
   orbit: orbitExamples,
+  ore: oreExamples,
+  patchwork: patchworkExamples,
   postmaster: postmasterExamples,
+  prism: prismExamples,
   pulse: pulseExamples,
+  refine: refineExamples,
   ripple: rippleExamples,
   rune: runeExamples,
   sandbox: sandboxExamples,
@@ -70,7 +86,9 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   sigil: sigilExamples,
   sourcerer: sourcererExamples,
   spell: spellExamples,
+  tabula: tabulaExamples,
   tandem: tandemExamples,
+  tavern: tavernExamples,
   tempo: tempoExamples,
   vault: vaultExamples,
   ward: wardExamples,

@@ -22,7 +22,7 @@ describe('executeReplCode', () => {
 
     await executeReplCode({
       execution,
-      libraries: [],
+      librariesFor: () => [],
       model: null,
       // @ts-expect-error -- monaco isn't touched on the blank-code path
       monaco: undefined,
@@ -40,7 +40,7 @@ describe('executeReplCode', () => {
 
     await executeReplCode({
       execution,
-      libraries: [],
+      librariesFor: () => [],
       model: null,
       // @ts-expect-error -- monaco isn't touched on the blank-code path
       monaco: undefined,
@@ -57,7 +57,7 @@ describe('executeReplCode', () => {
 
     await executeReplCode({
       execution,
-      libraries,
+      librariesFor: () => libraries,
       model: null,
       // @ts-expect-error -- monaco isn't touched when model is null
       monaco: undefined,
@@ -76,7 +76,7 @@ describe('executeReplCode', () => {
 
     await executeReplCode({
       execution,
-      libraries: [],
+      librariesFor: () => [],
       // @ts-expect-error -- a stub model is enough; transpileTypeScript is mocked
       model: {},
       // @ts-expect-error -- a stub is enough; transpileTypeScript is mocked
@@ -95,7 +95,7 @@ describe('executeReplCode', () => {
 
     await executeReplCode({
       execution,
-      libraries: [],
+      librariesFor: () => [],
       // @ts-expect-error -- a stub model is enough; transpileTypeScript is mocked
       model: {},
       // @ts-expect-error -- a stub is enough; transpileTypeScript is mocked
@@ -118,7 +118,7 @@ describe('executeReplCode', () => {
 
     await executeReplCode({
       execution,
-      libraries: [],
+      librariesFor: () => [],
       model: null,
       // @ts-expect-error -- monaco isn't touched when model is null
       monaco: undefined,

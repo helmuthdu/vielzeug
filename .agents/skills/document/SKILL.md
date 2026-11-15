@@ -24,8 +24,8 @@ Confirm the documentation surfaces and their owning source exist. For package do
 3. For a full API documentation pass or export changes, inventory the affected public entry points, following re-export barrels. For a local correction, verify only the APIs and examples it touches.
 4. Establish a pre-edit baseline only under the `build` skill's baseline preconditions; otherwise run the relevant structural validator after editing.
 5. For API changes, update the API reference first, then propagate to affected overview, usage, README, recipes, and REPL examples. For local prose or example fixes, edit the affected surface without reopening unrelated pages.
-6. Keep docs recipes (`docs/<name>/examples/`) distinct from REPL modules (`docs/.vitepress/theme/components/repl/`).
-7. Update sidebar routes in `docs/.vitepress/config.ts` whenever a page is added, removed, or renamed: the build never catches a stale or missing sidebar link (`ignoreDeadLinks` is on). Verify with `bun run validate:sidebar -- --package=<name>`.
+6. Keep docs recipes (`docs/<name>/examples/`) distinct from REPL modules (`docs/.vitepress/theme/components/repl/`). New packages need REPL modules under `repl/examples/<name>/` registered in `repl/examples/index.ts`; `replExamples.test.ts` gates coverage.
+7. Update sidebar routes in `docs/.vitepress/config.ts` whenever a page is added, removed, or renamed: the build never catches a stale or missing sidebar link (`ignoreDeadLinks` is on). Verify with `bun run validate:sidebar -- --package=<name>`. For a new package, also add it to `docs/.vitepress/theme/components/packageGroups.ts` (navbar Packages menu + homepage); `packageGroups.test.ts` gates coverage.
 8. Run the validation row below for every touched surface.
 
 ## Surface rules
@@ -36,7 +36,7 @@ Follow `.agents/reference/docs-template.md`. When a public export changed, inspe
 
 ### REPL
 
-Use plain JavaScript, one concept per snippet, top-level package imports only, visible output, and no DOM-output package examples. Rebuild package output before regenerating a stale REPL registry.
+Use plain JavaScript, one concept per snippet, top-level `@vielzeug/<name>` imports only (no deep file paths), and visible output. An example may import any REPL-eligible `@vielzeug/*` package, not just the one whose tab it lives under: the sandbox loads the IIFE bundle for every package the code imports (unknown packages report a friendly error). DOM-output packages (ore, prism, refine) render into the REPL's Preview pane: mount into `document.body`. Every browser-resolvable package needs REPL examples and an IIFE bundle (`vite.bundle.config.ts` + `build:bundle`); only genuinely non-browser packages may skip this (see `REPL_EXCLUDED_PACKAGES`/`NON_BROWSER_PACKAGES` in `scripts/vielzeug-packages.ts`). Rebuild package output before regenerating a stale REPL registry.
 
 ### README
 

@@ -12,15 +12,31 @@ export interface OutputLine {
   type: 'error' | 'log' | 'result' | 'warn';
 }
 
+export interface ReplExecutionOptions {
+  /**
+   * Inline stylesheet rendered inside the sandbox iframe (refine/prism theme chain from
+   * the generated registry). Passed by REPLEditor.vue rather than imported here: the
+   * registry file is generated at docs-build time and must stay out of test-reachable
+   * modules (unit tests run before `gen:repl-registry`).
+   */
+  themeCss?: string;
+}
+
 export interface ReplExecution {
   cancel(): void;
   clear(): void;
+  /** Height (px) the sandbox iframe reported for its body content. */
+  readonly contentHeight: Ref<number>;
   dispose(): void;
   readonly disposed: Ref<boolean>;
+  /** Whether the last run rendered visible DOM into the sandbox body (Preview tab hint). */
+  readonly hasDom: Ref<boolean>;
   isExecuting: Ref<boolean>;
   output: Ref<OutputLine[]>;
   reportError(message: string): void;
   run(code: string, libraries: SandboxLibrary[]): Promise<void>;
+  /** Push the docs site's dark-mode state into the sandbox iframe. */
+  setTheme(dark: boolean): void;
   [Symbol.dispose](): void;
 }
 
@@ -53,14 +69,20 @@ function toOutputLevel(level: unknown): 'error' | 'log' | 'warn' {
  * without a Worker (which can be `terminate()`d): out of scope here, same limitation as
  * most browser-based code playgrounds.
  */
-export function useReplExecution(container: Ref<HTMLElement | null>): ReplExecution {
+export function useReplExecution(
+  container: Ref<HTMLElement | null>,
+  options: ReplExecutionOptions = {},
+): ReplExecution {
   const output = ref<OutputLine[]>([]);
   const isExecuting = ref(false);
   const disposed = ref(false);
+  const hasDom = ref(false);
+  const contentHeight = ref(0);
 
   let sandbox: SandboxHandle | null = null;
   let unsubscribe: (() => void) | null = null;
   let nextLineId = 0;
+  let isDark = false;
 
   function pushLine(type: OutputLine['type'], text: string): void {
     output.value.push({
@@ -78,6 +100,13 @@ export function useReplExecution(container: Ref<HTMLElement | null>): ReplExecut
       return;
     }
 
+    if (msg.type === 'resize') {
+      // The sandbox package already validates the height (finite, >= 0) before broadcasting.
+      contentHeight.value = msg.height;
+
+      return;
+    }
+
     if (msg.type !== 'custom') return;
 
     switch (msg.event) {
@@ -90,6 +119,9 @@ export function useReplExecution(container: Ref<HTMLElement | null>): ReplExecut
       case 'repl:done':
         isExecuting.value = false;
         break;
+      case 'repl:dom':
+        hasDom.value = msg.detail === true;
+        break;
       case 'repl:result':
         pushLine('result', stringify(msg.detail));
         break;
@@ -101,14 +133,26 @@ export function useReplExecution(container: Ref<HTMLElement | null>): ReplExecut
 
     if (!container.value) throw new Error('useReplExecution: sandbox container is not mounted yet.');
 
-    sandbox = createSandbox(container.value);
+    sandbox = createSandbox(container.value, {
+      styles: options.themeCss ? { 'repl-theme': options.themeCss } : {},
+    });
     unsubscribe = sandbox.onMessage(handleMessage);
+    // setState accumulates until the iframe reports ready (and survives later renders), so
+    // the theme value set before the first run: or between runs: is delivered on ready.
+    sandbox.setState({ dark: isDark });
 
     return sandbox;
   }
 
+  function setTheme(dark: boolean): void {
+    isDark = dark;
+    sandbox?.setState({ dark });
+  }
+
   function clear(): void {
     output.value = [];
+    hasDom.value = false;
+    contentHeight.value = 0;
   }
 
   function reportError(message: string): void {
@@ -161,12 +205,15 @@ export function useReplExecution(container: Ref<HTMLElement | null>): ReplExecut
   return {
     cancel,
     clear,
+    contentHeight,
     dispose,
     disposed,
+    hasDom,
     isExecuting,
     output,
     reportError,
     run,
+    setTheme,
     [Symbol.dispose]: dispose,
   };
 }

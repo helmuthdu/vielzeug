@@ -52,7 +52,8 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vite build && bun run --silent build:types",
+    "build": "vite build && bun run --silent build:bundle && bun run --silent build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "biome check --write src test",
     "lint": "biome ci src test",

@@ -23,9 +23,11 @@ server subpaths) and their browsers (the root contract).
   `auth/`. The identity issuer in `auth/` is a sibling of the catalog `worker/`, not
   a child of it: catalog-specific origin/CORS posture stays in `worker/_cors.ts` and
   the issuer keeps its own guard.
-- **No IIFE bundle** and no REPL examples: `archive` is in `REPL_EXCLUDED_PACKAGES`
-  (`scripts/vielzeug-packages.ts`) because the registry generator inlines every
-  non-excluded package's IIFE, and the sandbox cannot host D1/JWKS bindings.
+- The IIFE bundle (`vite.bundle.config.ts`) covers the **browser-safe root contract
+  only** — schemas, constants, the collection seam, errors — so the REPL can run
+  `defineArchiveCollection`/derive examples. The `worker`/`auth` subpaths stay
+  unbundled: the sandbox cannot host D1/JWKS bindings, so keep REPL examples on the
+  root surface.
 
 ## Database ownership
 
