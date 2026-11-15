@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/spell
 
-This log was last generated on Fri, 13 Nov 2026 19:37:26 GMT and should not be manually modified.
+This log was last generated on Sun, 15 Nov 2026 09:34:00 GMT and should not be manually modified.
 
+## 26.11.18
+
+Sun, 15 Nov 2026 09:34:00 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.17
 
 Fri, 13 Nov 2026 19:37:26 GMT

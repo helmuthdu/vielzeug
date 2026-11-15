@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Ship an IIFE bundle of the browser-safe root contract and register archive in the REPL.",
+            "commit": "ea3d22442da7ef1fb6f0da43b0366d98feb1d504"
+          }
+        ]
+      },
+      "date": "Sun, 15 Nov 2026 09:34:00 GMT",
+      "tag": "@vielzeug/archive_v26.11.18",
+      "version": "26.11.18"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

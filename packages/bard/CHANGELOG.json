@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat(bard): initial release",
+            "commit": "ea3d22442da7ef1fb6f0da43b0366d98feb1d504"
+          }
+        ]
+      },
+      "date": "Sun, 15 Nov 2026 09:34:00 GMT",
+      "tag": "@vielzeug/bard_v26.11.18",
+      "version": "26.11.18"
+    }
+  ],
+  "name": "@vielzeug/bard"
+}
