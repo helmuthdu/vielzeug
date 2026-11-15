@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "transition() returns void; voices always expose a panner; remove dead pool/bus/synth surfaces",
+            "commit": "9d7a8e0b193dab68ceec4882dd03712b281c44b6"
+          }
+        ]
+      },
+      "date": "Sun, 15 Nov 2026 10:17:59 GMT",
+      "tag": "@vielzeug/bard_v26.11.19",
+      "version": "26.11.19"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",
