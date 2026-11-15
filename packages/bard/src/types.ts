@@ -147,8 +147,6 @@ export interface SynthOptions {
   /** Frequency in Hz, or a `[from, to]` exponential sweep. For `'noise'` it maps to the filter cutoff. */
   readonly freq?: number | readonly [from: number, to: number];
   readonly pan?: number;
-  /** Random source for internal sampling; inject a deterministic one in tests. */
-  readonly random?: () => number;
   readonly type?: SynthWaveform;
   readonly volume?: number;
 }
@@ -190,8 +188,12 @@ export interface MusicDeck {
   /** Replaces the queue and starts its first track with a crossfade. */
   queue(keys: readonly string[], options?: QueueOptions): void;
   stop(options?: FadeOptions): void;
-  /** Crossfades to `key`; transitioning to the current key is a no-op. */
-  transition(key: string, options?: TransitionOptions): SoundHandle;
+  /**
+   * Crossfades to `key`. Transitioning to the key that is already live is a
+   * no-op; the deck's own `pause`/`play`/`stop` control playback, so this
+   * returns nothing.
+   */
+  transition(key: string, options?: TransitionOptions): void;
   /** Calls {@link MusicDeck.dispose}. */
   [Symbol.dispose](): void;
 }

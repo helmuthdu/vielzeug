@@ -30,13 +30,12 @@ describe('deck', () => {
     bard.dispose();
   });
 
-  it('transition to the current key returns the same handle without restarting', async () => {
+  it('transition to the current key is a no-op without restarting', async () => {
     const { bard, ctx } = createHarness();
     await bard.load({ a: '/a.wav' });
     const deck = bard.createDeck();
-    const h1 = deck.transition('a');
-    const h2 = deck.transition('a');
-    expect(h2).toBe(h1);
+    deck.transition('a');
+    deck.transition('a');
     expect(ctx.sources.length).toBe(1);
     bard.dispose();
   });

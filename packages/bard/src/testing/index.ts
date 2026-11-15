@@ -71,9 +71,10 @@ export class FakeAudioNode extends FakeEventTarget {
   disconnected = 0;
   readonly context: FakeAudioContext;
 
-  constructor(context: FakeAudioContext) {
+  constructor(context?: FakeAudioContext) {
     super();
-    this.context = context;
+    // A FakeAudioContext *is* the context for its own nodes.
+    this.context = context ?? (this as unknown as FakeAudioContext);
   }
 
   connect(destination: FakeAudioNode): FakeAudioNode {

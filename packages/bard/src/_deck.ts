@@ -5,11 +5,9 @@ import { MICRO_FADE, rampParam } from './_ramp';
 import type { StreamManager } from './_stream';
 import type { VoicePool } from './_voices';
 import { BardError } from './errors';
-import type { DeckOptions, MusicDeck, QueueOptions, SoundHandle, TransitionOptions } from './types';
+import type { DeckOptions, MusicDeck, QueueOptions, TransitionOptions } from './types';
 
 interface Slot {
-  /** Control handle for the slot's voice; assigned for every slot kind. */
-  handle: SoundHandle | null;
   readonly key: string;
   /** Resolves `crossfade` seconds before the track ends; never resolves for loops. */
   nearlyOver(crossfade: number): Promise<void>;
@@ -77,38 +75,6 @@ export function createDeck(deps: DeckDeps, options: DeckOptions = {}): MusicDeck
     session.setMetadata(deps.loader.definitionOf(key)?.meta, key);
   };
 
-  /** A handle for streamed slots, which have no pooled voice. */
-  const streamHandle = (target: Slot): SoundHandle => {
-    let stopped = false;
-    const finished = new Promise<void>((resolve) => {
-      void target.nearlyOver(0).then(resolve);
-    });
-    const handle: SoundHandle = {
-      dispose(): void {
-        handle.stop({ fade: 0 });
-      },
-      get disposed() {
-        return stopped;
-      },
-      finished,
-      setPan(): void {
-        // Streamed slot pan follows the bus routing.
-      },
-      setVolume(): void {
-        // Streamed slot volume follows the bus.
-      },
-      stop(fadeOptions): void {
-        if (stopped) return;
-        stopped = true;
-        target.stop(fadeOptions?.fade ?? defaultFade);
-      },
-      [Symbol.dispose](): void {
-        handle.dispose();
-      },
-    };
-    return handle;
-  };
-
   /** Starts one asset into a new slot; throws for unknown keys. */
   const startSlot = (key: string, transition: TransitionOptions, fadeIn: number): Slot => {
     const ctx = deps.context();
@@ -137,8 +103,7 @@ export function createDeck(deps: DeckDeps, options: DeckOptions = {}): MusicDeck
         // Autoplay rejection; the unlock gesture path retries playback.
       });
       let stopped = false;
-      const streamSlot: Slot = {
-        handle: null,
+      return {
         key,
         async nearlyOver(crossfade): Promise<void> {
           if (element.loop) return new Promise<void>(() => {});
@@ -193,8 +158,6 @@ export function createDeck(deps: DeckDeps, options: DeckOptions = {}): MusicDeck
           setTimeout(teardown, fade * 1000);
         },
       };
-      streamSlot.handle = streamHandle(streamSlot);
-      return streamSlot;
     }
 
     // Buffered path through the voice pool.
@@ -210,7 +173,6 @@ export function createDeck(deps: DeckDeps, options: DeckOptions = {}): MusicDeck
     });
     let stopped = false;
     return {
-      handle,
       key,
       async nearlyOver(crossfade): Promise<void> {
         if (transition.loop) return new Promise<void>(() => {});
@@ -233,11 +195,10 @@ export function createDeck(deps: DeckDeps, options: DeckOptions = {}): MusicDeck
     };
   };
 
-  const beginTrack = (key: string, transition: TransitionOptions): SoundHandle => {
+  const beginTrack = (key: string, transition: TransitionOptions): void => {
     const fade = transition.fade ?? defaultFade;
     const previous = slot;
-    const next = startSlot(key, transition, fade);
-    slot = next;
+    slot = startSlot(key, transition, fade);
     paused = false;
     // Restarting the same key (pause -> play, or transition while paused) reuses the
     // cached stream element: the outgoing slot must not pause what the new slot just resumed.
@@ -245,9 +206,6 @@ export function createDeck(deps: DeckDeps, options: DeckOptions = {}): MusicDeck
     deps.onTrack(key);
     setSessionMeta(key);
     setSessionState('playing');
-    const handle = next.handle;
-    if (!handle) throw new BardError(`Slot "${key}" was created without a handle.`);
-    return handle;
   };
 
   /** Schedules the automatic crossfade to the next queued track. */
@@ -364,16 +322,14 @@ export function createDeck(deps: DeckDeps, options: DeckOptions = {}): MusicDeck
       setSessionMeta(null);
       setSessionState('none');
     },
-    transition(key, transition = {}): SoundHandle {
+    transition(key, transition = {}): void {
       if (disposed) throw new BardError('The deck is disposed.');
-      if (key === slot?.key && !paused && slot.handle && !slot.handle.disposed) {
-        return slot.handle;
-      }
+      if (key === slot?.key && !paused) return;
       // A manual transition takes over from the queue.
       queue = [];
       queueIndex = -1;
       queueToken += 1;
-      return beginTrack(key, transition);
+      beginTrack(key, transition);
     },
     [Symbol.dispose](): void {
       deck.dispose();

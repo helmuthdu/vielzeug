@@ -44,7 +44,7 @@ deck.next(); // skip ahead manually at any time
 
 ### Pitfalls
 
-- Transitioning to the current key is a no-op that returns the live handle, so re-entrant state changes are safe.
+- Transitioning to the current key is a no-op, so re-entrant state changes are safe.
 - A manual `transition()` clears an active queue; call `queue()` again to resume continuous playback.
 - `loopStart` is absolute buffer seconds for buffered tracks; streamed tracks loop the whole file only.
 

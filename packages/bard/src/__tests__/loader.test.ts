@@ -103,7 +103,7 @@ describe('sprites', () => {
     bard.play('sfx:hit', { loop: true });
     const source = ctx.sources[0];
     expect(source && 'loop' in source ? source.loop : false).toBe(true);
-    if (source && 'loopStart' in source) {
+    if (source && 'loopStart' in source && 'loopEnd' in source) {
       expect(source.loopStart).toBe(0.2);
       expect(source.loopEnd).toBe(0.7);
     }

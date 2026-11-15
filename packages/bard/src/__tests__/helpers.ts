@@ -64,7 +64,7 @@ export function createHarness(options: Partial<BardOptions> = {}): Harness {
         }),
     ),
   );
-  const bard = createBard({ context: () => ctx, ...options });
+  const bard = createBard({ context: () => ctx as unknown as AudioContext, ...options });
   const events: BardEvent[] = [];
   bard.tap((event) => events.push(event));
   return { bard, ctx, doc, elements, events, win };

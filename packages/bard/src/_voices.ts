@@ -10,7 +10,7 @@ interface VoiceRecord {
   readonly finish: () => void;
   readonly gain: GainNode;
   readonly key: string;
-  readonly panner: StereoPannerNode | null;
+  readonly panner: StereoPannerNode;
   readonly source: AudioBufferSourceNode;
   stopped: boolean;
 }
@@ -19,13 +19,8 @@ export interface VoicePool {
   dispose(): void;
   /** Starts a buffered sound; throws `BardError` for unknown keys. */
   play(key: string, options?: PlayOptions): SoundHandle;
-  stopAll(fade: number): void;
   /** Stops every voice for the given asset keys (used by `unload`). */
   stopKeys(keys: readonly string[]): void;
-  /** Registers an externally built voice (deck slots) under the pool's caps and ducking. */
-  track(record: VoiceRecord): void;
-  /** Removes a tracked voice (called when the owner ends it). */
-  untrack(record: VoiceRecord): void;
 }
 
 /**
@@ -56,7 +51,7 @@ export function createVoicePool(deps: {
       // Already disconnected.
     }
     record.gain.disconnect();
-    record.panner?.disconnect();
+    record.panner.disconnect();
   };
 
   const fadeOut = (record: VoiceRecord, fade: number): void => {
@@ -143,15 +138,13 @@ export function createVoicePool(deps: {
       } else {
         gain.gain.value = volume;
       }
-      let panner: StereoPannerNode | null = null;
-      if (options.pan !== undefined) {
-        panner = ctx.createStereoPanner();
-        panner.pan.value = options.pan;
-        gain.connect(panner);
-        panner.connect(bus.input);
-      } else {
-        gain.connect(bus.input);
-      }
+      // Every voice gets a panner so `handle.setPan()` always works; the node
+      // is cheap and the uniform `gain -> panner -> bus` shape is simpler
+      // than a conditional graph.
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = options.pan ?? 0;
+      gain.connect(panner);
+      panner.connect(bus.input);
       source.connect(gain);
 
       let resolveFinished!: () => void;
@@ -195,7 +188,7 @@ export function createVoicePool(deps: {
         },
         finished,
         setPan(panValue): void {
-          if (panner) panner.pan.value = Math.min(Math.max(panValue, -1), 1);
+          panner.pan.value = Math.min(Math.max(panValue, -1), 1);
         },
         setVolume(volumeValue, fadeOptions): void {
           rampParam(gain.gain, Math.min(Math.max(volumeValue, 0), 1), fadeOptions?.fade ?? MICRO_FADE, ctx.currentTime);
@@ -234,21 +227,11 @@ export function createVoicePool(deps: {
       source.start(ctx.currentTime, offset, loop ? undefined : region?.duration);
       return handle;
     },
-    stopAll(fade): void {
-      for (const record of [...voices]) fadeOut(record, fade);
-    },
     stopKeys(keys): void {
       for (const record of [...voices]) {
         const assetKey = parseSpriteKey(record.key)?.asset ?? record.key;
         if (keys.includes(assetKey)) fadeOut(record, MICRO_FADE);
       }
-    },
-    track(record): void {
-      voices.add(record);
-      deps.buses().voiceCount(record.bus, 1);
-    },
-    untrack(record): void {
-      release(record);
     },
   };
 }

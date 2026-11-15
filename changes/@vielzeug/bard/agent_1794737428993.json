@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "transition() returns void; voices always expose a panner; remove dead pool/bus/synth surfaces",
+      "packageName": "@vielzeug/bard",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/bard"
+}

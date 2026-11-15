@@ -24,9 +24,6 @@ interface BusInternal extends Bus {
 export interface BusManager {
   dispose(): void;
   get(name: string): Bus;
-  readonly master: GainNode;
-  /** All routable bus names including `'master'`. */
-  names(): readonly string[];
   /** Adjusts the active-voice count on `source` and ramps every ducked target. */
   voiceCount(source: string, delta: number): void;
 }
@@ -181,10 +178,6 @@ export function createBusManager(options: {
       const bus = buses.get(name);
       if (!bus) throw new BardError(`Unknown bus "${name}".`);
       return bus;
-    },
-    master,
-    names(): readonly string[] {
-      return [...buses.keys(), 'master'];
     },
     voiceCount(source, delta): void {
       if (!buses.has(source)) return;

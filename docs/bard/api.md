@@ -81,7 +81,7 @@ Returned by `play()` and `synth()`.
 | --------------------------------------------- | -------------------------------- | ------------------------------------------- |
 | `stop(options?)`                              | `(FadeOptions?) => void`         | Fades (default 15 ms micro-fade) then stops |
 | `setVolume(volume, options?)`                 | `(number, FadeOptions?) => void` | Ramped, never clicks                        |
-| `setPan(pan)`                                 | `(-1..1) => void`                | No-op when the voice has no panner          |
+| `setPan(pan)`                                 | `(-1..1) => void`                | Every voice has a panner                    |
 | `finished`                                    | `Promise<void>`                  | Resolves on natural end, stop, or dispose   |
 | `dispose()` / `disposed` / `[Symbol.dispose]` |                                  | Immediate stop and node release             |
 
@@ -91,7 +91,7 @@ Returned by `play()` and `synth()`.
 | ----------------------- | ---------------------- | ------------- | -------------------------------------- |
 | `bus`                   | `string`               | `'sfx'`       | Destination bus                        |
 | `volume`                | `number`               | `1`           | Linear 0..1                            |
-| `pan`                   | `number`               | —             | -1..1; adds a `StereoPannerNode`       |
+| `pan`                   | `number`               | `0`           | -1..1; voices always route via a panner   |
 | `loop`                  | `boolean`              | `false`       | Loops the buffer or sprite region      |
 | `loopStart` / `loopEnd` | `number`               | —             | Absolute buffer seconds                |
 | `offset`                | `number`               | `0`           | Start offset in seconds                |
@@ -110,7 +110,7 @@ Returned by `play()` and `synth()`.
 | `duration`                                     | `number`                                                    | `0.3`                                                        | Total seconds including release; must be positive               |
 | `envelope`                                     | `SynthEnvelope`                                             | `{ attack: 0.005, decay: 0.05, sustain: 0.6, release: 0.1 }` | ADSR; `sustain` is a level                                      |
 | `filter`                                       | `SynthFilter`                                               | —                                                            | Biquad stage before the envelope                                |
-| `bus` / `volume` / `pan` / `detune` / `random` | as in `PlayOptions`                                         |                                                              |                                                                 |
+| `bus` / `volume` / `pan` / `detune`          | as in `PlayOptions`                                             |                                                                 |                                                                 |
 
 ---
 
@@ -149,7 +149,7 @@ While the `source` bus has active voices, `target` ramps to `gain`; when they en
 | --------------------------------------------- | --------------------------------------------- | ----------------------------------------------- |
 | `current`                                     | `string \| null`                              | Active track key                                |
 | `playing`                                     | `boolean`                                     | `false` while paused or stopped                 |
-| `transition(key, options?)`                   | `(string, TransitionOptions?) => SoundHandle` | Crossfades; same key returns the current handle |
+| `transition(key, options?)`                   | `(string, TransitionOptions?) => void` | Crossfades; transitioning to the live key is a no-op |
 | `queue(keys, options?)`                       | `(readonly string[], QueueOptions?) => void`  | Replaces the queue and starts its first track   |
 | `next()` / `previous()`                       | `() => void`                                  | No-op without a queue                           |
 | `pause()` / `play()`                          | `() => void`                                  | `play()` resumes from the paused offset         |
