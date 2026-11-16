@@ -21,6 +21,7 @@
     "@vielzeug/keymap": "workspace:*",
     "@vielzeug/ledger": "workspace:*",
     "@vielzeug/orbit": "workspace:*",
+    "@vielzeug/palette": "workspace:*",
     "@vielzeug/refine": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
     "@vielzeug/wire": "workspace:*"
