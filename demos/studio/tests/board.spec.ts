@@ -151,3 +151,43 @@ test('pinch zooms the camera', async ({ page }) => {
 
   await expect.poll(async () => world.evaluate((el) => el.style.transform)).not.toBe(before);
 });
+
+test('dragging a shape shows snap guides and align centers a selection', async ({ page }) => {
+  const box = await viewportBox(page);
+  // Drawn low enough that the selection toolbar never overlaps the fixed board toolbar.
+  await drawRect(page, [box.x + 60, box.y + 160], [box.x + 160, box.y + 240]);
+  await drawRect(page, [box.x + 240, box.y + 300], [box.x + 340, box.y + 380]);
+  await expect.poll(() => shapeCount(page)).toBe(2);
+
+  // Select the second shape, then drag it near the first's edges so a guide appears mid-drag.
+  await page.mouse.click(box.x + 290, box.y + 340);
+  await page.mouse.move(box.x + 290, box.y + 340);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 168, box.y + 340, { steps: 6 });
+  await expect(page.locator('[data-testid="board-guides"] .studio-guide').first()).toBeVisible();
+  await page.mouse.up();
+  await expect(page.locator('[data-testid="board-guides"]')).toBeHidden();
+
+  // Marquee-select both shapes and center them on X.
+  await page.mouse.move(box.x + 400, box.y + 420);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 30, box.y + 30, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('.studio-selection-toolbar')).toBeVisible();
+
+  const shapes = page.locator('.studio-shape');
+  await page.locator('[data-action="align-x"]').click();
+  const centers = [await shapes.nth(0).boundingBox(), await shapes.nth(1).boundingBox()];
+  expect(
+    Math.abs(
+      (centers[0]?.x ?? 0) + (centers[0]?.width ?? 0) / 2 - ((centers[1]?.x ?? 0) + (centers[1]?.width ?? 0) / 2),
+    ),
+  ).toBeLessThan(2);
+
+  // Align is one undoable step.
+  await page.keyboard.press(`${MOD}+z`);
+  const undone = [await shapes.nth(0).boundingBox(), await shapes.nth(1).boundingBox()];
+  expect(
+    Math.abs((undone[0]?.x ?? 0) + (undone[0]?.width ?? 0) / 2 - ((undone[1]?.x ?? 0) + (undone[1]?.width ?? 0) / 2)),
+  ).toBeGreaterThan(2);
+});

@@ -1,4 +1,16 @@
-import { type Camera, createCamera, type Point, type Rect, rectFromPoints, unionRect } from '@vielzeug/atlas';
+import {
+  type AlignEdge,
+  alignRects,
+  type Camera,
+  createCamera,
+  distributeRects,
+  type Point,
+  type Rect,
+  rectFromPoints,
+  type SnapGuide,
+  snapRect,
+  unionRect,
+} from '@vielzeug/atlas';
 import { createDragGesture, createPinchGesture, createWheelGesture } from '@vielzeug/gesture';
 import { createKeymap } from '@vielzeug/keymap';
 import { createLedger } from '@vielzeug/ledger';
@@ -19,6 +31,9 @@ import { createToolActor, type ToolEvent } from '../core/tools.ts';
 import './board.css';
 
 const ZOOM_STEP = 1.0015;
+// Grid spacing matches the viewport's dot background (--size-8 = 32px at zoom 1).
+const GRID_SPACING = 32;
+const SNAP_THRESHOLD = 8;
 
 let nextShapeId = 1;
 
@@ -79,15 +94,31 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
   toolbar.innerHTML = `
     <ore-button-group attached label="Selection actions" size="sm">
       <ore-button data-action="delete" variant="frost" effect="glass" emphasis="destructive" size="sm">Delete</ore-button>
+    </ore-button-group>
+    <ore-button-group attached label="Align and distribute" size="sm">
+      <ore-button data-action="align-x" variant="frost" effect="glass" size="sm">Center X</ore-button>
+      <ore-button data-action="align-y" variant="frost" effect="glass" size="sm">Center Y</ore-button>
+      <ore-button data-action="distribute-x" variant="frost" effect="glass" size="sm">Space X</ore-button>
+      <ore-button data-action="distribute-y" variant="frost" effect="glass" size="sm">Space Y</ore-button>
     </ore-button-group>`;
 
-  overlay.append(marqueeEl, toolbar);
+  const guidesEl = document.createElement('div');
+  guidesEl.className = 'studio-guides';
+  guidesEl.dataset.testid = 'board-guides';
+  guidesEl.hidden = true;
+
+  overlay.append(guidesEl, marqueeEl, toolbar);
   viewport.append(world, overlay);
   container.append(viewport);
 
   toolbar.addEventListener('click', (event) => {
     const target = event.target instanceof Element ? event.target.closest('[data-action]') : null;
-    if (target?.getAttribute('data-action') === 'delete') deleteSelection();
+    const action = target?.getAttribute('data-action');
+    if (action === 'delete') deleteSelection();
+    if (action === 'align-x') alignSelection('horizontal-center');
+    if (action === 'align-y') alignSelection('vertical-center');
+    if (action === 'distribute-x') distributeSelection('x');
+    if (action === 'distribute-y') distributeSelection('y');
   });
 
   // ── DOM shape elements ────────────────────────────────────────────────────
@@ -116,6 +147,37 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
       el.classList.toggle('is-selected', model.selection.includes(shape.id));
     }
     syncToolbar();
+  }
+
+  const guideEls: HTMLElement[] = [];
+
+  /** Draws world-space snap guides as screen-space lines in the overlay. */
+  function renderGuides(guides: readonly SnapGuide[]): void {
+    while (guideEls.length < guides.length) {
+      const line = document.createElement('div');
+      line.className = 'studio-guide';
+      guidesEl.append(line);
+      guideEls.push(line);
+    }
+    guides.forEach((guide, i) => {
+      const el = guideEls[i];
+      if (!el) return;
+      const from = camera.toScreen(
+        guide.axis === 'x' ? { x: guide.position, y: guide.from } : { x: guide.from, y: guide.position },
+      );
+      const to = camera.toScreen(
+        guide.axis === 'x' ? { x: guide.position, y: guide.to } : { x: guide.to, y: guide.position },
+      );
+      const x = Math.min(from.x, to.x);
+      const y = Math.min(from.y, to.y);
+      el.style.transform = `translate(${String(x)}px, ${String(y)}px)`;
+      el.style.width = `${String(Math.max(1, Math.abs(to.x - from.x)))}px`;
+      el.style.height = `${String(Math.max(1, Math.abs(to.y - from.y)))}px`;
+      el.hidden = false;
+    });
+    for (let i = guides.length; i < guideEls.length; i++) guideEls[i]?.remove();
+    guideEls.length = guides.length;
+    guidesEl.hidden = guides.length === 0;
   }
 
   function selectionBounds(): Rect | null {
@@ -170,7 +232,7 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
   type Interaction =
     | { kind: 'draw'; origin: Point }
     | { kind: 'marquee'; origin: Point }
-    | { kind: 'move'; from: Map<string, ShapePosition>; originWorld: Point }
+    | { kind: 'move'; bounds: Rect; from: Map<string, ShapePosition>; originWorld: Point }
     | { kind: 'pan'; lastX: number; lastY: number }
     | null;
 
@@ -202,6 +264,39 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
     ledger.record(removeShapesCommand(model, shapes));
   }
 
+  function selectedShapes(): BoardShape[] {
+    return model.selection.map((id) => model.get(id)).filter((shape): shape is BoardShape => shape != null);
+  }
+
+  function alignSelection(edge: AlignEdge): void {
+    const shapes = selectedShapes();
+    if (shapes.length < 2) return;
+    applyRectAction(shapes, alignRects(shapes, edge));
+  }
+
+  function distributeSelection(axis: 'x' | 'y'): void {
+    const shapes = selectedShapes();
+    if (shapes.length < 3) return;
+    applyRectAction(shapes, distributeRects(shapes, axis));
+  }
+
+  /** Applies a pure rect transform to shapes and records one undoable move. */
+  function applyRectAction(from: readonly BoardShape[], to: readonly Rect[]): void {
+    const positions = new Map<string, ShapePosition>();
+    for (const shape of from) positions.set(shape.id, { x: shape.x, y: shape.y });
+    from.forEach((shape, i) => {
+      const rect = to[i];
+      if (rect) model.moveTo(shape.id, { x: rect.x, y: rect.y });
+    });
+    ledger.record(
+      moveShapesCommand(
+        model,
+        from.map((shape) => shape.id),
+        positions,
+      ),
+    );
+  }
+
   const drag = createDragGesture(viewport, {
     activationDistance: 3,
     onEnd: (detail) => {
@@ -224,6 +319,7 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
       } else if (interaction.kind === 'marquee') {
         marqueeEl.hidden = true;
       } else if (interaction.kind === 'move') {
+        renderGuides([]);
         const ids = [...interaction.from.keys()];
         if (cancelled) {
           for (const [id, from] of interaction.from) model.moveTo(id, from);
@@ -267,12 +363,27 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
         return;
       }
       if (interaction.kind === 'move') {
+        const move = interaction;
         const worldPoint = camera.toWorld(point);
         const dx = worldPoint.x - interaction.originWorld.x;
         const dy = worldPoint.y - interaction.originWorld.y;
-        for (const [id, from] of interaction.from) {
-          model.moveTo(id, { x: from.x + dx, y: from.y + dy });
+        // Snap the selection bounds against everything outside the selection.
+        const movedBounds: Rect = {
+          height: move.bounds.height,
+          width: move.bounds.width,
+          x: move.bounds.x + dx,
+          y: move.bounds.y + dy,
+        };
+        const candidates = model.shapes.filter((shape) => !move.from.has(shape.id));
+        const snap = snapRect(movedBounds, {
+          candidates,
+          grid: { x: GRID_SPACING, y: GRID_SPACING },
+          threshold: SNAP_THRESHOLD,
+        });
+        for (const [id, from] of move.from) {
+          model.moveTo(id, { x: from.x + dx + snap.delta.x, y: from.y + dy + snap.delta.y });
         }
+        renderGuides(snap.guides);
       }
     },
     onStart: (detail) => {
@@ -296,7 +407,8 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
           const shape = model.get(id);
           if (shape) from.set(id, { x: shape.x, y: shape.y });
         }
-        interaction = { from, kind: 'move', originWorld: worldPoint };
+        const bounds = selectionBounds() ?? { height: 0, width: 0, x: 0, y: 0 };
+        interaction = { bounds, from, kind: 'move', originWorld: worldPoint };
       } else {
         if (hit) model.select([hit.id]);
         else model.select([]);

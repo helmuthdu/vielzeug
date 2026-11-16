@@ -61,6 +61,8 @@
 
 .studio-selection-toolbar {
   position: absolute;
+  /* Contextual toolbar: stays clickable when it overlaps the fixed board toolbar. */
+  z-index: 1;
 }
 
 .studio-toolbar {
@@ -73,4 +75,19 @@
 
 .studio-toolbar [data-tool].is-active {
   color: var(--color-primary);
+}
+
+.studio-guides {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.studio-guide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--color-warning);
 }
