@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(ink): freehand stroke geometry and SVG path output",
+      "packageName": "@vielzeug/ink",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ink"
+}
