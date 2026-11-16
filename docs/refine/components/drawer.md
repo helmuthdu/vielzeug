@@ -374,19 +374,19 @@ A bottom sheet: `size="content"` fits the actions, `detents` lets a dragged shee
 
 ### Attributes
 
-| Attribute               | Type                                     | Default     | Description                                                                                                    |
-| ----------------------- | ---------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------- |
-| `open`                  | `boolean`                                | N/A         | Controlled visibility                                                                                          |
-| `default-open`          | `boolean`                                | `false`     | Initial visibility when `open` is not provided                                                                 |
-| `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`   | Edge the drawer slides in from                                                                                 |
-| `size`                  | `'sm' \| 'lg' \| 'full' \| 'content'`    | unset       | Size preset; `content` fits top/bottom sheets to content with bounded body scrolling                           |
-| `detents`               | `string`                                 | N/A         | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only |
-| `title`                 | `string`                                 | N/A         | Visible header title text                                                                                      |
-| `label`                 | `string`                                 | N/A         | Accessible name (`aria-label`); also shown as the header title when `title` is not set                         |
-| `drag-handle-placement` | `'outside' \| 'inset'`                   | `'inset'`   | Position of the swipe drag handle                                                                              |
-| `dismissible`           | `boolean`                                | `true`      | Shows a close (×) button in the header                                                                         |
-| `backdrop`              | `'opaque' \| 'blur' \| 'transparent'`    | `'opaque'`  | Backdrop style, matching `ore-dialog`                                                                          |
-| `persistent`            | `boolean`                                | `false`     | Prevents backdrop click from requesting close                                                                  |
+| Attribute               | Type                                     | Default    | Description                                                                                                    |
+| ----------------------- | ---------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
+| `open`                  | `boolean`                                | N/A        | Controlled visibility                                                                                          |
+| `default-open`          | `boolean`                                | `false`    | Initial visibility when `open` is not provided                                                                 |
+| `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`  | Edge the drawer slides in from                                                                                 |
+| `size`                  | `'sm' \| 'lg' \| 'full' \| 'content'`    | unset      | Size preset; `content` fits top/bottom sheets to content with bounded body scrolling                           |
+| `detents`               | `string`                                 | N/A        | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only |
+| `title`                 | `string`                                 | N/A        | Visible header title text                                                                                      |
+| `label`                 | `string`                                 | N/A        | Accessible name (`aria-label`); also shown as the header title when `title` is not set                         |
+| `drag-handle-placement` | `'outside' \| 'inset'`                   | `'inset'`  | Position of the swipe drag handle                                                                              |
+| `dismissible`           | `boolean`                                | `true`     | Shows a close (×) button in the header                                                                         |
+| `backdrop`              | `'opaque' \| 'blur' \| 'transparent'`    | `'opaque'` | Backdrop style, matching `ore-dialog`                                                                          |
+| `persistent`            | `boolean`                                | `false`    | Prevents backdrop click from requesting close                                                                  |
 
 Beyond these attributes, any element inside the drawer's content — in the body or the slots — accepts `data-drawer-close`: clicking it closes the drawer through the same cancelable `close-request` path as the close button (reason `trigger`).
 
