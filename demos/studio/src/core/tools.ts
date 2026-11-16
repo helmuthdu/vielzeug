@@ -1,12 +1,13 @@
 import { defineMachine } from '@vielzeug/clockwork';
 
-export type BoardTool = 'draw' | 'pan' | 'select';
+export type BoardTool = 'draw' | 'pan' | 'pen' | 'select';
 
 export type ToolContext = { previous: BoardTool };
 
 export type ToolEvent =
   | { type: 'DRAW_TOOL' }
   | { type: 'PAN_TOOL' }
+  | { type: 'PEN_TOOL' }
   | { type: 'SELECT_TOOL' }
   | { type: 'TEMP_PAN_END' }
   | { type: 'TEMP_PAN_START' };
@@ -23,6 +24,7 @@ const machine = defineMachine<ToolContext, ToolEvent>()({
     draw: {
       on: {
         PAN_TOOL: { target: 'pan' },
+        PEN_TOOL: { target: 'pen' },
         SELECT_TOOL: { target: 'select' },
         TEMP_PAN_START: { reduce: () => ({ previous: 'draw' }), target: 'pan' },
       },
@@ -30,14 +32,28 @@ const machine = defineMachine<ToolContext, ToolEvent>()({
     pan: {
       on: {
         DRAW_TOOL: { target: 'draw' },
+        PEN_TOOL: { target: 'pen' },
         SELECT_TOOL: { target: 'select' },
-        TEMP_PAN_END: [{ guard: ({ context }) => context.previous === 'draw', target: 'draw' }, { target: 'select' }],
+        TEMP_PAN_END: [
+          { guard: ({ context }) => context.previous === 'draw', target: 'draw' },
+          { guard: ({ context }) => context.previous === 'pen', target: 'pen' },
+          { target: 'select' },
+        ],
+      },
+    },
+    pen: {
+      on: {
+        DRAW_TOOL: { target: 'draw' },
+        PAN_TOOL: { target: 'pan' },
+        SELECT_TOOL: { target: 'select' },
+        TEMP_PAN_START: { reduce: () => ({ previous: 'pen' }), target: 'pan' },
       },
     },
     select: {
       on: {
         DRAW_TOOL: { target: 'draw' },
         PAN_TOOL: { target: 'pan' },
+        PEN_TOOL: { target: 'pen' },
         TEMP_PAN_START: { reduce: () => ({ previous: 'select' }), target: 'pan' },
       },
     },

@@ -191,3 +191,24 @@ test('dragging a shape shows snap guides and align centers a selection', async (
     Math.abs((undone[0]?.x ?? 0) + (undone[0]?.width ?? 0) / 2 - ((undone[1]?.x ?? 0) + (undone[1]?.width ?? 0) / 2)),
   ).toBeGreaterThan(2);
 });
+
+test('draws a freehand stroke with the pen tool that can be selected and undone', async ({ page }) => {
+  const box = await viewportBox(page);
+  await page.keyboard.press('p');
+  await page.mouse.move(box.x + 120, box.y + 240);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 200, box.y + 236, { steps: 6 });
+  await page.mouse.move(box.x + 300, box.y + 244, { steps: 6 });
+  await page.mouse.up();
+
+  const stroke = page.locator('path.studio-stroke');
+  await expect(stroke).toHaveCount(1);
+  await expect(stroke).toHaveAttribute('d', /^M/);
+
+  // Clicking the stroke body selects it (polygon narrow-phase hit-test).
+  await page.mouse.click(box.x + 200, box.y + 238);
+  await expect(page.locator('.studio-selection-toolbar')).toBeVisible();
+
+  await page.keyboard.press(`${MOD}+z`);
+  await expect(page.locator('path.studio-stroke')).toHaveCount(0);
+});

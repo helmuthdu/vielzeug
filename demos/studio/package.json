@@ -17,6 +17,7 @@
     "@vielzeug/atlas": "workspace:*",
     "@vielzeug/clockwork": "workspace:*",
     "@vielzeug/gesture": "workspace:*",
+    "@vielzeug/ink": "workspace:*",
     "@vielzeug/keymap": "workspace:*",
     "@vielzeug/ledger": "workspace:*",
     "@vielzeug/orbit": "workspace:*",

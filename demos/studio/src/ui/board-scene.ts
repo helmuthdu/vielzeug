@@ -12,6 +12,14 @@ import {
   unionRect,
 } from '@vielzeug/atlas';
 import { createDragGesture, createPinchGesture, createWheelGesture } from '@vielzeug/gesture';
+import {
+  type StrokePoint,
+  simplifyStroke,
+  smoothStroke,
+  strokeOutline,
+  strokeOutlineToSvgPath,
+  strokeWidths,
+} from '@vielzeug/ink';
 import { createKeymap } from '@vielzeug/keymap';
 import { createLedger } from '@vielzeug/ledger';
 import { createPositioner } from '@vielzeug/orbit';
@@ -87,6 +95,19 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
   draftEl.hidden = true;
   world.append(draftEl);
 
+  // Strokes render into one world-space SVG; overflow stays visible so freehand
+  // geometry is never clipped to its own bounds.
+  const strokesSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  strokesSvg.classList.add('studio-strokes');
+  strokesSvg.setAttribute('overflow', 'visible');
+  strokesSvg.dataset.testid = 'board-strokes';
+  world.append(strokesSvg);
+
+  const previewPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  previewPath.classList.add('studio-stroke-preview');
+  previewPath.style.display = 'none';
+  strokesSvg.append(previewPath);
+
   const toolbar = document.createElement('div');
   toolbar.className = 'studio-selection-toolbar';
   toolbar.dataset.testid = 'selection-toolbar';
@@ -122,7 +143,7 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
   });
 
   // ── DOM shape elements ────────────────────────────────────────────────────
-  const shapeEls = new Map<string, HTMLElement>();
+  const shapeEls = new Map<string, HTMLElement | SVGElement>();
 
   function syncShapes(): void {
     const live = new Set(model.shapes.map((shape) => shape.id));
@@ -135,15 +156,23 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
     for (const shape of model.shapes) {
       let el = shapeEls.get(shape.id);
       if (!el) {
-        el = document.createElement('div');
-        el.className = 'studio-shape';
-        el.dataset.shapeId = shape.id;
-        world.append(el);
+        if (shape.kind === 'stroke') {
+          el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          el.classList.add('studio-shape', 'studio-stroke');
+          el.setAttribute('d', shape.path);
+        } else {
+          el = document.createElement('div');
+          el.classList.add('studio-shape');
+        }
+        el.setAttribute('data-shape-id', shape.id);
+        (shape.kind === 'stroke' ? strokesSvg : world).append(el);
         shapeEls.set(shape.id, el);
       }
       el.style.transform = `translate(${String(shape.x)}px, ${String(shape.y)}px)`;
-      el.style.width = `${String(shape.width)}px`;
-      el.style.height = `${String(shape.height)}px`;
+      if (shape.kind === 'rect') {
+        el.style.width = `${String(shape.width)}px`;
+        el.style.height = `${String(shape.height)}px`;
+      }
       el.classList.toggle('is-selected', model.selection.includes(shape.id));
     }
     syncToolbar();
@@ -231,6 +260,7 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
   // ── Pointer interaction ───────────────────────────────────────────────────
   type Interaction =
     | { kind: 'draw'; origin: Point }
+    | { kind: 'pen'; points: StrokePoint[] }
     | { kind: 'marquee'; origin: Point }
     | { kind: 'move'; bounds: Rect; from: Map<string, ShapePosition>; originWorld: Point }
     | { kind: 'pan'; lastX: number; lastY: number }
@@ -262,6 +292,38 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
     if (shapes.length === 0) return;
     for (const shape of shapes) model.remove(shape.id);
     ledger.record(removeShapesCommand(model, shapes));
+  }
+
+  function commitStroke(points: readonly StrokePoint[]): void {
+    if (points.length < 2) return;
+    const smoothed = simplifyStroke(smoothStroke(points, { algorithm: 'streamline' }), 0.6);
+    if (smoothed.length < 2) return;
+    const widths = strokeWidths(smoothed, { baseWidth: 4 });
+    const outline = strokeOutline(smoothed, widths);
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const pt of outline) {
+      minX = Math.min(minX, pt.x);
+      minY = Math.min(minY, pt.y);
+      maxX = Math.max(maxX, pt.x);
+      maxY = Math.max(maxY, pt.y);
+    }
+    const shape: BoardShape = {
+      height: maxY - minY,
+      id: `stroke-${String(nextShapeId++)}`,
+      kind: 'stroke',
+      outline: outline.map((pt) => ({ x: pt.x - minX, y: pt.y - minY })),
+      path: strokeOutlineToSvgPath(outline.map((pt) => ({ x: pt.x - minX, y: pt.y - minY }))),
+      points: smoothed.map((pt) => ({ pressure: pt.pressure, x: pt.x - minX, y: pt.y - minY })),
+      width: maxX - minX,
+      x: minX,
+      y: minY,
+    };
+    model.add(shape);
+    ledger.record(addShapeCommand(model, shape));
+    model.select([shape.id]);
   }
 
   function selectedShapes(): BoardShape[] {
@@ -304,13 +366,17 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
       dragActivated = false;
       if (!interaction) return;
       const cancelled = detail.reason === 'cancel';
-      if (interaction.kind === 'draw') {
+      if (interaction.kind === 'pen') {
+        previewPath.style.display = 'none';
+        previewPath.setAttribute('d', '');
+        if (!cancelled) commitStroke(interaction.points);
+      } else if (interaction.kind === 'draw') {
         draftEl.hidden = true;
         if (!cancelled) {
           const worldPoint = camera.toWorld(screenPoint(viewport, detail.current.x, detail.current.y));
           const rect = rectBetween(interaction.origin, worldPoint);
           if (rect.width >= 4 && rect.height >= 4) {
-            const shape: BoardShape = { id: `shape-${String(nextShapeId++)}`, ...rect };
+            const shape: BoardShape = { id: `shape-${String(nextShapeId++)}`, kind: 'rect', ...rect };
             model.add(shape);
             ledger.record(addShapeCommand(model, shape));
             model.select([shape.id]);
@@ -339,6 +405,19 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
         return;
       }
       const point = screenPoint(viewport, detail.current.x, detail.current.y);
+      if (interaction.kind === 'pen') {
+        const worldPoint = camera.toWorld(point);
+        const last = interaction.points[interaction.points.length - 1];
+        // Skip near-duplicate samples; smoothing handles the rest.
+        if (!last || Math.hypot(worldPoint.x - last.x, worldPoint.y - last.y) >= 1.5) {
+          interaction.points.push({ pressure: detail.event.pressure, x: worldPoint.x, y: worldPoint.y });
+          previewPath.setAttribute(
+            'd',
+            `M ${interaction.points.map((pt) => `${String(pt.x)} ${String(pt.y)}`).join(' L ')}`,
+          );
+        }
+        return;
+      }
       if (interaction.kind === 'draw') {
         const worldPoint = camera.toWorld(point);
         const rect = rectBetween(interaction.origin, worldPoint);
@@ -398,6 +477,12 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
       if (tool === 'draw') {
         interaction = { kind: 'draw', origin: worldPoint };
         draftEl.hidden = false;
+        return;
+      }
+      if (tool === 'pen') {
+        interaction = { kind: 'pen', points: [{ pressure: detail.event.pressure, x: worldPoint.x, y: worldPoint.y }] };
+        previewPath.style.display = '';
+        previewPath.setAttribute('d', `M ${String(worldPoint.x)} ${String(worldPoint.y)}`);
         return;
       }
       const hit = model.hitTest(worldPoint);
@@ -471,6 +556,7 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
     <ore-button-group attached label="Board tools" size="sm">
       <ore-button data-tool="select" variant="frost" effect="glass" size="sm">Select</ore-button>
       <ore-button data-tool="draw" variant="frost" effect="glass" size="sm">Draw</ore-button>
+      <ore-button data-tool="pen" variant="frost" effect="glass" size="sm">Pen</ore-button>
       <ore-button data-tool="pan" variant="frost" effect="glass" size="sm">Pan</ore-button>
     </ore-button-group>
     <ore-button-group attached label="History" size="sm">
@@ -496,6 +582,7 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
       { handler: deleteSelection, id: 'delete', shortcut: 'delete' },
       { handler: () => toolEvent('SELECT_TOOL'), id: 'tool-select', shortcut: 'v' },
       { handler: () => toolEvent('DRAW_TOOL'), id: 'tool-draw', shortcut: 'b' },
+      { handler: () => toolEvent('PEN_TOOL'), id: 'tool-pen', shortcut: 'p' },
       { handler: () => toolEvent('PAN_TOOL'), id: 'tool-pan', shortcut: 'h' },
       {
         handler: () => toolEvent('TEMP_PAN_START'),
@@ -532,7 +619,7 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
     const tool = snapshot.state;
     viewport.dataset.tool = tool;
     setToolButton(tool);
-    viewport.style.cursor = tool === 'pan' ? 'grab' : tool === 'draw' ? 'crosshair' : 'default';
+    viewport.style.cursor = tool === 'pan' ? 'grab' : tool === 'draw' || tool === 'pen' ? 'crosshair' : 'default';
   });
   setToolButton('select');
   viewport.dataset.tool = 'select';

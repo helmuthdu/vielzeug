@@ -21,6 +21,23 @@ describe('tool machine', () => {
     expect(actor.snapshot.state).toBe('draw');
   });
 
+  it('switches to pen and back', () => {
+    const actor = createToolActor();
+    actor.send({ type: 'PEN_TOOL' });
+    expect(actor.snapshot.state).toBe('pen');
+    actor.send({ type: 'SELECT_TOOL' });
+    expect(actor.snapshot.state).toBe('select');
+  });
+
+  it('space-pan from pen returns to pen', () => {
+    const actor = createToolActor();
+    actor.send({ type: 'PEN_TOOL' });
+    actor.send({ type: 'TEMP_PAN_START' });
+    expect(actor.snapshot.state).toBe('pan');
+    actor.send({ type: 'TEMP_PAN_END' });
+    expect(actor.snapshot.state).toBe('pen');
+  });
+
   it('space-pan from select returns to select', () => {
     const actor = createToolActor();
     actor.send({ type: 'TEMP_PAN_START' });

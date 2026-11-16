@@ -1,13 +1,39 @@
-import { createSpatialIndex, type Point, type Rect, type SpatialIndex } from '@vielzeug/atlas';
+import { createSpatialIndex, type Point, pointInPolygon, type Rect, type SpatialIndex } from '@vielzeug/atlas';
+import type { StrokePoint } from '@vielzeug/ink';
 import type { ReversibleCommand } from '@vielzeug/ledger';
 
-/** A rectangle on the board, in world coordinates. */
-export interface BoardShape {
+/** A rectangle on the board. `x`/`y` are the world position of the top-left corner. */
+export interface BoardRect {
   height: number;
   id: string;
+  kind: 'rect';
   width: number;
   x: number;
   y: number;
+}
+
+/**
+ * A freehand stroke. `points` (centerline) and `outline` (variable-width
+ * polygon) are stored relative to `x`/`y`, so moving a stroke is the same
+ * position update as moving a rect.
+ */
+export interface BoardStroke {
+  height: number;
+  id: string;
+  kind: 'stroke';
+  outline: readonly Point[];
+  path: string;
+  points: readonly StrokePoint[];
+  width: number;
+  x: number;
+  y: number;
+}
+
+export type BoardShape = BoardRect | BoardStroke;
+
+/** Axis-aligned world bounds of any board entity. */
+export function shapeBounds(shape: BoardShape): Rect {
+  return { height: shape.height, width: shape.width, x: shape.x, y: shape.y };
 }
 
 export type ShapePosition = Readonly<{ x: number; y: number }>;
@@ -57,7 +83,7 @@ export function createBoardModel(): BoardModel {
       if (shapes.has(shape.id)) return;
       shapes.set(shape.id, { ...shape });
       order.push(shape.id);
-      index.insert(shape.id, shape, shape);
+      index.insert(shape.id, shapeBounds(shape), shape);
       notify();
     },
     get disposalSignal() {
@@ -80,10 +106,16 @@ export function createBoardModel(): BoardModel {
       let topmost: BoardShape | null = null;
       let topmostZ = -1;
       for (const entry of hits) {
+        const shape = entry.value;
+        // Strokes need polygon narrow-phase inside their bounds; rects already passed it.
+        if (shape.kind === 'stroke') {
+          const local = { x: point.x - shape.x, y: point.y - shape.y };
+          if (!pointInPolygon(shape.outline, local) && tolerance <= 0) continue;
+        }
         const z = order.indexOf(entry.id);
         if (z > topmostZ) {
           topmostZ = z;
-          topmost = entry.value;
+          topmost = shape;
         }
       }
       return topmost;
@@ -100,7 +132,7 @@ export function createBoardModel(): BoardModel {
       if (!shape) return false;
       shape.x = position.x;
       shape.y = position.y;
-      index.update(id, shape);
+      index.update(id, shapeBounds(shape));
       notify();
       return true;
     },
