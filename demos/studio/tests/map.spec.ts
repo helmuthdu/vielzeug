@@ -48,3 +48,50 @@ test('export produces a PNG blob download', async ({ page }) => {
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('vielzeug-map.png');
 });
+
+test.describe('worker render mode', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.locator('[data-testid="map-toolbar"] [data-action="mode"]').click();
+    await expect(page.locator('[data-testid="map-status"]')).toHaveAttribute('data-mode', 'worker');
+  });
+
+  test('worker mode keeps the canvas mounted and status live', async ({ page }) => {
+    await expect(page.locator('[data-testid="map-canvas"]')).toBeVisible();
+    await expect(page.locator('[data-testid="map-status"]')).toContainText('worker render');
+  });
+
+  test('export round-trips a PNG blob through the worker', async ({ page }) => {
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('[data-testid="map-toolbar"] [data-action="export"]').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe('vielzeug-map.png');
+  });
+
+  test('dragging the hero token updates visibility in worker mode', async ({ page }) => {
+    const status = page.locator('[data-testid="map-status"]');
+    const before = Number(await status.getAttribute('data-visible'));
+
+    const canvas = page.locator('[data-testid="map-canvas"]');
+    const box = await canvas.boundingBox();
+    if (!box) throw new Error('canvas not visible');
+    const heroX = box.x + 120 + 24;
+    const heroY = box.y + 264 + 24;
+    await page.mouse.move(heroX, heroY);
+    await page.mouse.down();
+    await page.mouse.move(heroX + 240, heroY + 48, { steps: 8 });
+    await page.mouse.up();
+
+    const after = Number(await status.getAttribute('data-visible'));
+    expect(after).not.toBe(before);
+  });
+
+  test('toggling back to main thread rendering works', async ({ page }) => {
+    await page.locator('[data-testid="map-toolbar"] [data-action="mode"]').click();
+    await expect(page.locator('[data-testid="map-status"]')).toHaveAttribute('data-mode', 'main');
+    await expect(page.locator('[data-testid="map-status"]')).toContainText('main render');
+    const downloadPromise = page.waitForEvent('download');
+    await page.locator('[data-testid="map-toolbar"] [data-action="export"]').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe('vielzeug-map.png');
+  });
+});

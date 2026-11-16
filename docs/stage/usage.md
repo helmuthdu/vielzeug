@@ -109,6 +109,44 @@ const stage = createStage(fakeCanvas, {
 
 The default factory uses `OffscreenCanvas` when present, else a canvas from the document; in environments with neither, it throws `StageUnsupportedError`.
 
+## Worker Rendering
+
+The `@vielzeug/stage/worker` subpath renders the composited canvas inside a Web Worker. The main thread transfers an `OffscreenCanvas` once and then drives the stage over a versioned message protocol; painters live worker-side.
+
+```ts
+// main.ts
+import { createWorkerStage } from '@vielzeug/stage/worker';
+
+const worker = new Worker(new URL('./stage.worker.ts', import.meta.url), { type: 'module' });
+const stage = createWorkerStage(canvas, worker, {
+  height: 600,
+  layers: [{ id: 'scene' }],
+  width: 800,
+});
+
+await stage.ready; // the worker created its stage
+stage.setTransform([1, 0, 0, 1, 0, 0]);
+stage.invalidate('scene');
+const blob = await stage.toBlob({ type: 'image/png' }); // correlated round-trip
+stage.dispose(); // also rejects any in-flight blob requests
+```
+
+```ts
+// stage.worker.ts
+import { serveStage } from '@vielzeug/stage/worker';
+
+serveStage(self, () => ({
+  layers: [{ id: 'scene', paint: (ctx) => ctx.fillRect(0, 0, 800, 600) }],
+}));
+```
+
+Notes:
+
+- The canvas transfer is **one-shot**: `createWorkerStage` calls `transferControlToOffscreen()` on construction. To go back to main-thread rendering, mount a fresh `<canvas>` element.
+- `toBlob()` sends a `blob` command and resolves with the worker's response; requests are correlated by id and reject with `StageDisposedError` if the client is disposed while one is in flight.
+- `sendScene(scene)` forwards arbitrary app data to the worker's `onScene` hook — useful for mirroring model state (e.g. token moves) without shipping painters to the main thread.
+- A protocol mismatch between the two halves logs a dev warning and is otherwise ignored; bump `STAGE_WORKER_PROTOCOL` only with a coordinated rebuild of both halves.
+
 ## Best Practices
 
 - Keep per-layer paint callbacks cheap and cull with `frame.visibleRect`; the stage caches the result, so cost is paid once per invalidation, not per frame.

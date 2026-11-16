@@ -40,6 +40,7 @@ stage.invalidate('tokens'); // only the tokens layer repaints
 - **`drawSpriteFrame()`**: sprite-sheet cell slicing scaled into world rects
 - **`toBlob()`**: PNG export with typed unsupported-capability errors
 - **Injectable surfaces**: `createSurface` factory for tests and `OffscreenCanvas` workers
+- **`@vielzeug/stage/worker`**: worker-rendered stages via a transferred `OffscreenCanvas` and a versioned message protocol
 
 ## Documentation
 

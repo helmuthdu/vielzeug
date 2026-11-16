@@ -2,6 +2,19 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const modules = [await import('./dist/index.js'), require('./dist/index.cjs')];
+const workerModules = [await import('./dist/worker/index.js'), require('./dist/worker/index.cjs')];
+
+for (const worker of workerModules) {
+  if (typeof worker.createWorkerStage !== 'function') {
+    throw new Error('createWorkerStage export missing');
+  }
+  if (typeof worker.serveStage !== 'function') {
+    throw new Error('serveStage export missing');
+  }
+  if (worker.STAGE_WORKER_PROTOCOL !== 1) {
+    throw new Error('STAGE_WORKER_PROTOCOL export missing or stale');
+  }
+}
 
 for (const stage of modules) {
   if (typeof stage.createStage !== 'function') {
@@ -11,6 +24,7 @@ for (const stage of modules) {
     [stage.StageError, 'StageError'],
     [stage.StageConfigError, 'StageConfigError'],
     [stage.StageUnsupportedError, 'StageUnsupportedError'],
+    [stage.StageDisposedError, 'StageDisposedError'],
   ]) {
     const error = new ErrorType('artifact');
     if (error.name !== name || !(error instanceof stage.StageError)) {

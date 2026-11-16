@@ -93,8 +93,15 @@ export type Stage = {
 };
 
 const DEFAULT_SCHEDULER: FrameScheduler = {
-  cancelFrame: (handle) => cancelAnimationFrame(handle),
-  requestFrame: (callback) => requestAnimationFrame(callback),
+  // Workers may lack requestAnimationFrame; fall back to a timer there.
+  cancelFrame: (handle) => {
+    if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(handle);
+    else clearTimeout(handle);
+  },
+  requestFrame: (callback) =>
+    typeof requestAnimationFrame === 'function'
+      ? requestAnimationFrame(callback)
+      : (setTimeout(() => callback(Date.now()), 16) as unknown as number),
 };
 
 function defaultCreateSurface(width: number, height: number): StageSurface {
@@ -410,11 +417,19 @@ export function createStage(
     },
     async toBlob(options) {
       if (disposed) throw new StageConfigError('Cannot export a disposed stage.');
+      const type = options?.type ?? 'image/png';
+      const convertToBlob = (canvas as Partial<OffscreenCanvas>).convertToBlob;
+      if (typeof convertToBlob === 'function') {
+        // OffscreenCanvas (worker-rendered stages): promise-based export.
+        const blob = await convertToBlob.call(canvas, { quality: options?.quality, type });
+        if (!blob) throw new StageUnsupportedError('Canvas blob export returned no data.');
+        return blob;
+      }
       if (typeof canvas.toBlob !== 'function') {
         throw new StageUnsupportedError('This canvas does not support blob export.');
       }
       const blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(resolve, options?.type ?? 'image/png', options?.quality);
+        canvas.toBlob(resolve, type, options?.quality);
       });
       if (!blob) {
         throw new StageUnsupportedError('Canvas blob export returned no data.');

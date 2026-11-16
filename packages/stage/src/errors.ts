@@ -10,3 +10,6 @@ export class StageConfigError extends StageError {}
 
 /** A required browser capability (e.g. canvas blob export) is missing. */
 export class StageUnsupportedError extends StageError {}
+
+/** The stage (or its worker) was disposed before a pending request settled. */
+export class StageDisposedError extends StageError {}

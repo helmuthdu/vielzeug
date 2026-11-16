@@ -23,6 +23,18 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
+    },
+    "./worker": {
+      "import": "./dist/worker/index.js",
+      "require": "./dist/worker/index.cjs",
+      "types": "./dist/worker/index.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "worker": [
+        "dist/worker/index.d.ts"
+      ]
     }
   },
   "sideEffects": false,

@@ -124,6 +124,19 @@ Paint callbacks receive a context whose transform is `dpr × matrix`, so they dr
 
 ---
 
+---
+
+## Worker Subpath (`@vielzeug/stage/worker`)
+
+| Export                                                                                                                   | Description                                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `createWorkerStage(canvas, worker, options)`                                                                             | Main-thread client: transfers `canvas` to `worker` once, then drives it over the protocol; returns `ready`, `resize`, `setTransform`, `invalidate`, `sendScene`, `toBlob`, `dispose` |
+| `serveStage(scope, setup)`                                                                                               | Worker half: waits for `init`, creates a `createStage` on the transferred `OffscreenCanvas`, and services commands; `setup` returns `{ layers, onScene?, onStart?, onDispose? }`     |
+| `STAGE_WORKER_PROTOCOL`, `checkProtocol()`                                                                               | Protocol version constant and dev-gated mismatch check                                                                                                                               |
+| `WorkerScope`, `WorkerSelfScope`, `WorkerStage`, `WorkerStageOptions`, `StageServer`, `StageSceneMessage`, message types | Supporting types for both halves                                                                                                                                                     |
+
+`createWorkerStage` throws `StageUnsupportedError` when the canvas cannot transfer control (`transferControlToOffscreen` missing). `dispose()` posts a final `dispose` command, rejects in-flight `toBlob()` promises with `StageDisposedError`, and makes later calls inert.
+
 ## Errors
 
 | Class                   | Thrown when                                                    |

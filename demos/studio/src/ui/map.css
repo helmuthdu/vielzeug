@@ -9,6 +9,11 @@
   background-color: var(--color-neutral-backdrop);
 }
 
+.map-mount {
+  position: absolute;
+  inset: 0;
+}
+
 .map-canvas {
   display: block;
   width: 100%;
