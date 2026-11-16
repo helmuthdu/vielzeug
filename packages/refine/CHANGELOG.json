@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Drawer drag handle defaults to inset placement; set drag-handle-placement=\"outside\" to restore the previous handle position.",
+            "commit": "b2106b8fdcef921273683e009010aa0623f1b77a"
+          }
+        ]
+      },
+      "date": "Mon, 16 Nov 2026 15:20:18 GMT",
+      "tag": "@vielzeug/refine_v26.11.20",
+      "version": "26.11.20"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

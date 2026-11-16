@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Sun, 15 Nov 2026 10:17:59 GMT and should not be manually modified.
+This log was last generated on Mon, 16 Nov 2026 15:20:18 GMT and should not be manually modified.
 
+## 26.11.20
+
+Mon, 16 Nov 2026 15:20:18 GMT
+
+### Major changes
+
+- Drawer drag handle defaults to inset placement; set drag-handle-placement="outside" to restore the previous handle position.
 ## 26.11.19
 
 Sun, 15 Nov 2026 10:17:59 GMT
