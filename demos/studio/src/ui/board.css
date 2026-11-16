@@ -6,8 +6,8 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: var(--color-neutral-alpha-100);
-  background-image: radial-gradient(var(--color-neutral-alpha-300) 1px, transparent 1px);
+  background-color: var(--color-neutral-backdrop);
+  background-image: radial-gradient(var(--color-neutral) 1px, transparent 1px);
   background-size: var(--size-8) var(--size-8);
 }
 
@@ -24,8 +24,8 @@
   position: absolute;
   top: 0;
   left: 0;
-  background-color: var(--color-primary-alpha-200);
-  border: var(--border-width-md) solid var(--color-primary);
+  background-color: var(--color-primary-backdrop);
+  border: var(--border-2) solid var(--color-primary);
   border-radius: var(--rounded-lg);
 }
 
@@ -43,33 +43,33 @@
   pointer-events: auto;
   fill: var(--color-primary);
   stroke: var(--color-primary-dark);
-  stroke-width: var(--border-width-md);
+  stroke-width: var(--border-2);
 }
 
 .studio-stroke.is-selected {
-  filter: drop-shadow(0 0 var(--size-px-2) var(--color-primary-light));
+  filter: drop-shadow(0 0 var(--size-1) var(--color-primary-light));
   fill: var(--color-primary-dark);
 }
 
 .studio-stroke-preview {
   fill: none;
   stroke: var(--color-primary);
-  stroke-width: var(--border-width-md);
+  stroke-width: var(--border-2);
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .studio-shape.is-selected {
   border-color: var(--color-primary-dark);
-  box-shadow: 0 0 0 var(--size-px-1) var(--color-primary-light);
+  box-shadow: 0 0 0 var(--border-2) var(--color-primary-light);
 }
 
 .studio-draft {
   position: absolute;
   top: 0;
   left: 0;
-  background-color: var(--color-primary-alpha-100);
-  border: var(--border-width-md) dashed var(--color-primary);
+  background-color: var(--color-primary-backdrop);
+  border: var(--border-2) dashed var(--color-primary);
   border-radius: var(--rounded-lg);
 }
 
@@ -77,8 +77,8 @@
   position: absolute;
   top: 0;
   left: 0;
-  background-color: var(--color-secondary-alpha-100);
-  border: var(--border-width-md) solid var(--color-secondary);
+  background-color: var(--color-secondary-backdrop);
+  border: var(--border-2) solid var(--color-secondary);
 }
 
 .studio-overlay {

@@ -118,6 +118,7 @@
         "@vielzeug/orbit": "workspace:*",
         "@vielzeug/refine": "workspace:*",
         "@vielzeug/ripple": "workspace:*",
+        "@vielzeug/wire": "workspace:*",
       },
       "devDependencies": {
         "@vielzeug/assay": "workspace:*",

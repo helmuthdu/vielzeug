@@ -1,0 +1,125 @@
+/* Flow scene: node editor with wire-routed edges. */
+
+.flow-viewport {
+  background-image: radial-gradient(circle, var(--color-neutral-border) var(--border), transparent var(--border));
+  background-size: var(--size-8) var(--size-8);
+}
+
+.flow-nodes {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.flow-edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.flow-edge {
+  fill: none;
+  stroke: var(--color-neutral);
+  stroke-width: var(--border-2);
+}
+
+.flow-edge-temp {
+  stroke: var(--color-primary);
+  stroke-dasharray: var(--size-1) var(--size-2);
+}
+
+.flow-edge-fallback {
+  stroke: var(--color-warning);
+  stroke-dasharray: var(--size-1) var(--size-2);
+}
+
+.flow-edge-cyclic {
+  stroke: var(--color-error);
+}
+
+.flow-node {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--size-2);
+  cursor: grab;
+  user-select: none;
+  background-color: var(--color-neutral-lighter);
+  border: var(--border-2) solid var(--color-neutral-border);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.flow-node.is-selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 var(--border-2) var(--color-primary-light);
+}
+
+.flow-node.flow-node-cyclic {
+  border-color: var(--color-error);
+}
+
+.flow-node-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-color-body);
+}
+
+.flow-port {
+  position: absolute;
+  width: var(--size-3);
+  height: var(--size-3);
+  background-color: var(--color-neutral-lighter);
+  border: var(--border-2) solid var(--color-primary);
+  border-radius: var(--rounded-full);
+}
+
+.flow-port[data-port-side='left'] {
+  top: 50%;
+  left: calc(var(--size-3) / -2 - var(--border-2));
+  translate: 0 -50%;
+}
+
+.flow-port[data-port-side='right'] {
+  top: 50%;
+  right: calc(var(--size-3) / -2 - var(--border-2));
+  translate: 0 -50%;
+}
+
+.flow-port[data-port-side='top'] {
+  top: calc(var(--size-3) / -2 - var(--border-2));
+  left: 50%;
+  translate: -50% 0;
+}
+
+.flow-port[data-port-side='bottom'] {
+  bottom: calc(var(--size-3) / -2 - var(--border-2));
+  left: 50%;
+  translate: -50% 0;
+}
+
+.flow-status {
+  position: absolute;
+  bottom: var(--size-4);
+  left: 50%;
+  padding: var(--size-1) var(--size-3);
+  font-size: var(--text-sm);
+  color: var(--text-color-body);
+  pointer-events: none;
+  background-color: var(--color-neutral-lighter);
+  border: var(--border) solid var(--color-neutral-border);
+  border-radius: var(--rounded-full);
+  translate: -50% 0;
+}
+
+.flow-status[data-state='cycle'] {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}

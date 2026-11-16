@@ -1,0 +1,109 @@
+import { expect, test } from 'playwright/test';
+
+/** See board.spec.ts: the runner resolves `mod` to Control on the pinned descriptors. */
+const MOD = 'Control';
+
+/** Centre of an element (ports/nodes are DOM, so tests stay zoom-independent). */
+async function centerOf(locator: import('playwright/test').Locator) {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error('element not visible');
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+function port(page: import('playwright/test').Page, nodeIndex: number, portId: string) {
+  return page.locator('[data-testid="flow-world"] [data-node-id]').nth(nodeIndex).locator(`[data-port-id="${portId}"]`);
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/#/flow');
+  await expect(page.locator('[data-testid="flow-viewport"]')).toBeVisible();
+});
+
+test('seeds a four-node graph with routed edges and a topological order', async ({ page }) => {
+  await expect(page.locator('[data-testid="flow-world"] [data-node-id]')).toHaveCount(4);
+  await expect(page.locator('[data-testid="flow-edges"] .flow-edge:not(.flow-edge-temp)')).toHaveCount(4);
+  await expect(page.locator('[data-testid="flow-status"]')).toHaveText(/Topological order: Input →/);
+});
+
+test('dragging a node moves it and undo restores it', async ({ page }) => {
+  const node = page.locator('[data-testid="flow-world"] [data-node-id]').nth(1);
+  const before = await node.boundingBox();
+  const from = await centerOf(node);
+
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x, from.y + 120, { steps: 6 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await node.boundingBox())?.y ?? 0, { message: 'node moved down' })
+    .toBeGreaterThan((before?.y ?? 0) + 60);
+
+  await page.keyboard.press(`${MOD}+z`);
+  await expect
+    .poll(async () => (await node.boundingBox())?.y ?? 0, { message: 'undo restored' })
+    .toBeCloseTo(before?.y ?? 0, 0);
+});
+
+test('dragging from a port to another node connects them', async ({ page }) => {
+  const edges = page.locator('[data-testid="flow-edges"] .flow-edge:not(.flow-edge-temp)');
+  await expect(edges).toHaveCount(4);
+
+  // Out port of "Input" (node 0) to in port of "Output" (node 3).
+  const out = await centerOf(port(page, 0, 'out'));
+  const inn = await centerOf(port(page, 3, 'in'));
+
+  await page.mouse.move(out.x, out.y);
+  await page.mouse.down();
+  await page.mouse.move(inn.x, inn.y, { steps: 8 });
+  await page.mouse.up();
+
+  await expect(edges).toHaveCount(5);
+
+  await page.keyboard.press(`${MOD}+z`);
+  await expect(edges).toHaveCount(4);
+});
+
+test('a cycle is detected, highlighted, and reported', async ({ page }) => {
+  const status = page.locator('[data-testid="flow-status"]');
+  await expect(status).toHaveAttribute('data-state', 'ok');
+
+  // Close a cycle: Output.out -> Input.in.
+  const out = await centerOf(port(page, 3, 'out'));
+  const inn = await centerOf(port(page, 0, 'in'));
+  await page.mouse.move(out.x, out.y);
+  await page.mouse.down();
+  await page.mouse.move(inn.x, inn.y, { steps: 8 });
+  await page.mouse.up();
+
+  await expect(status).toHaveAttribute('data-state', 'cycle');
+  await expect(page.locator('.flow-edge-cyclic').first()).toBeVisible();
+  await expect(page.locator('.flow-node-cyclic').first()).toBeVisible();
+});
+
+test('orthogonal routing toggles and keeps every edge visible', async ({ page }) => {
+  const edges = page.locator('[data-testid="flow-edges"] .flow-edge:not(.flow-edge-temp)');
+  const bezierD = await edges.first().getAttribute('d');
+
+  await page.keyboard.press('o');
+  await expect(page.locator('[data-testid="flow-toolbar"] [data-action="route"]')).toHaveText('Orthogonal');
+  const orthoD = await edges.first().getAttribute('d');
+  expect(orthoD).toMatch(/^M [\d.-]+ [\d.-]+ L/);
+  expect(orthoD).not.toBe(bezierD);
+
+  await page.keyboard.press('o');
+  await expect(edges.first()).toHaveAttribute('d', bezierD);
+});
+
+test('add node and delete selection round-trip through undo', async ({ page }) => {
+  const nodes = page.locator('[data-testid="flow-world"] [data-node-id]');
+  await expect(nodes).toHaveCount(4);
+
+  await page.keyboard.press('n');
+  await expect(nodes).toHaveCount(5);
+
+  await page.keyboard.press('Delete');
+  await expect(nodes).toHaveCount(4);
+
+  await page.keyboard.press(`${MOD}+z`);
+  await expect(nodes).toHaveCount(5);
+});
