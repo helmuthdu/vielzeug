@@ -45,6 +45,15 @@ export {
   unionRect,
 } from './rect.js';
 export {
+  type AlignEdge,
+  alignRects,
+  distributeRects,
+  type SnapGuide,
+  type SnapOptions,
+  type SnapResult,
+  snapRect,
+} from './snap.js';
+export {
   createSpatialIndex,
   type SpatialEntry,
   type SpatialIndex,

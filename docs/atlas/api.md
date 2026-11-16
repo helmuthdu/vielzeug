@@ -16,6 +16,9 @@ description: API reference for the Atlas camera, spatial index, matrix, rect, OB
 | `obbFromRect()`             | Rotated box around a rect's center                       | Sync      | Rotation pivots on the center, not the origin              |
 | `pointInPolygon()`          | Even-odd ray-cast containment                            | Sync      | Boundary points are implementation-defined; add tolerance  |
 | `distanceToPolyline()`      | Distance to the nearest segment                          | Sync      | Returns `Infinity` for empty paths                         |
+| `snapRect()`                | Magnetic snapping with guide descriptors                 | Sync      | Each axis snaps independently to its nearest target        |
+| `alignRects()`              | Align rects to a shared edge or center                   | Sync      | Pure: returns new rects, input untouched                   |
+| `distributeRects()`         | Equalize gaps along one axis                             | Sync      | Needs 3+ rects; outermost rects stay fixed                 |
 | `AtlasError`                | Base class for all atlas errors                          | Sync      | Narrow with `instanceof AtlasError`                        |
 | `AtlasConfigError`          | Invalid options, unknown ids, disposed usage             | Sync      | Thrown at call time                                        |
 | `Point` / `Rect` / `Matrix` | Structural shapes shared across the canvas toolkit       | Sync      | All readonly; treat as values                              |
@@ -180,6 +183,18 @@ All matrices use Canvas2D element order `[a, b, c, d, e, f]`; composition `multi
 | `distanceToPolyline(path, point)`             | Distance to the nearest segment; `Infinity` for empty paths |
 | `pointNearPolygon(polygon, point, tolerance)` | Inside the polygon OR within `tolerance` of its outline     |
 | `boundsOf(points)`                            | AABB of a point set; `null` when empty                      |
+
+---
+
+## Snapping Functions
+
+| Function                       | Description                                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `snapRect(rect, options)`      | Snapped `{ delta, guides }` against candidate rects and grid lines                             |
+| `alignRects(rects, edge)`      | Copies aligned to a shared `left`/`horizontal-center`/`right`/`top`/`vertical-center`/`bottom` |
+| `distributeRects(rects, axis)` | Copies with equalized gaps along `'x'` or `'y'`                                                |
+
+`snapRect` options: `candidates` (rects to snap to), `grid` (`{ x?, y? }` line spacing), `threshold` (max snap distance, default `8`). Anchors are the rect's left/center/right and top/center/bottom edges; each axis picks its nearest target within `threshold` (inclusive). A `SnapGuide` is `{ axis, position, from, to }`: `axis` is the axis the guide line is perpendicular to, `position` is the world coordinate of the line, and `from`/`to` span the line along the other axis. `alignRects` and `distributeRects` are pure; distribution keeps the outermost rects fixed and returns input copies unchanged for fewer than three rects.
 
 ---
 

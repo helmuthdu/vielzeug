@@ -109,6 +109,29 @@ pointNearPolygon(polygon, worldPoint, 2); // inside OR within 2 units of the out
 
 `pointNearPolygon` is what a vector tool needs to hit-test a stroked (unfilled) shape: the outline band plus the interior both count.
 
+## Snapping and Alignment
+
+While a shape moves, snap it to nearby shapes and grid lines, and draw the returned guides on an overlay:
+
+```ts
+import { snapRect } from '@vielzeug/atlas';
+
+const snap = snapRect(dragRect, { candidates: otherSelectedOutRects, grid: { x: 50, y: 50 }, threshold: 8 });
+const snapped = { ...dragRect, x: dragRect.x + snap.delta.x, y: dragRect.y + snap.delta.y };
+// snap.guides: [{ axis, position, from, to }] in world coordinates — draw them through the camera.
+```
+
+Each axis snaps independently to its nearest anchor (left/center/right, top/center/bottom) within `threshold`. On drop, commit `snapped` to your model so undo history records the final position, not the raw pointer position.
+
+After a multi-select, align or distribute with the pure helpers and record one command:
+
+```ts
+import { alignRects, distributeRects } from '@vielzeug/atlas';
+
+const aligned = alignRects(selectedRects, 'horizontal-center'); // copies, same order
+const spread = distributeRects(selectedRects, 'x'); // equal gaps, outermost fixed
+```
+
 ## Matrix Helpers
 
 For custom transforms, the matrix functions use Canvas2D order and compose left-to-right like `ctx.transform()`:
@@ -127,4 +150,5 @@ toCssMatrix(transform); // 'matrix(...)' for CSS transforms
 - Subtract the viewport rect once at the input boundary; never mix client and screen coordinates inside camera calls.
 - Call `index.update()` after every committed move — stale bounds silently break marquee and culling queries.
 - Use `visibleRect()` (the world AABB of the rotated viewport) for culling; it is conservative by design, so no visible shape is ever dropped.
+- Snap against the pre-move rect each pointer move (not the last snapped rect) so the delta stays relative to the raw pointer and snapping never drifts cumulatively.
 - Dispose the camera and index when the editor unmounts: both follow the Vielzeug disposal contract, and disposal aborts in-flight animations.

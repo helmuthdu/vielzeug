@@ -422,6 +422,7 @@ export default defineConfig({
             { link: '/atlas/usage#animating-the-camera', text: 'Animating the Camera' },
             { link: '/atlas/usage#indexing-the-scene', text: 'Indexing the Scene' },
             { link: '/atlas/usage#exact-hit-testing', text: 'Exact Hit-Testing' },
+            { link: '/atlas/usage#snapping-and-alignment', text: 'Snapping and Alignment' },
             { link: '/atlas/usage#matrix-helpers', text: 'Matrix Helpers' },
             { link: '/atlas/usage#best-practices', text: 'Best Practices' },
           ],

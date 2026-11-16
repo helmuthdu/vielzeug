@@ -21,7 +21,7 @@ keywords:
     geometry,
     canvas,
   ]
-exports: [createCamera, createSpatialIndex, multiply, invert, rectsIntersect, pointInPolygon]
+exports: [createCamera, createSpatialIndex, multiply, invert, rectsIntersect, pointInPolygon, snapRect]
 related: [gesture, ink, wire]
 environments: [browser, node, ssr, deno]
 ---

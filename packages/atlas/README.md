@@ -31,6 +31,7 @@ index.queryRect(camera.visibleRect({ x: 800, y: 600 })); // viewport culling
 - Rect/AABB math: union, intersection, containment, inflation, bounds-from-points
 - OBB math: corners, bounds, point-in-box, and SAT box-box intersection
 - Narrow-phase geometry: `pointInPolygon`, `distanceToPolyline`, `pointNearPolygon`
+- Snapping: `snapRect()` with candidate/grid targets and guide descriptors, plus pure `alignRects()`/`distributeRects()`
 - Typed errors and the Vielzeug disposal contract throughout
 - Zero runtime dependencies, no DOM requirement
 
