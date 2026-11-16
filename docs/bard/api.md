@@ -87,30 +87,30 @@ Returned by `play()` and `synth()`.
 
 ### PlayOptions
 
-| Option                  | Type                   | Default       | Notes                                  |
-| ----------------------- | ---------------------- | ------------- | -------------------------------------- |
-| `bus`                   | `string`               | `'sfx'`       | Destination bus                        |
-| `volume`                | `number`               | `1`           | Linear 0..1                            |
-| `pan`                   | `number`               | `0`           | -1..1; voices always route via a panner   |
-| `loop`                  | `boolean`              | `false`       | Loops the buffer or sprite region      |
-| `loopStart` / `loopEnd` | `number`               | —             | Absolute buffer seconds                |
-| `offset`                | `number`               | `0`           | Start offset in seconds                |
-| `detune`                | `number \| [min, max]` | —             | Cents; ranges sampled per voice        |
-| `rate`                  | `number \| [min, max]` | —             | Playback rate; shifts pitch on buffers |
-| `maxVoices`             | `number`               | —             | Per-key cap; oldest copy is stolen     |
-| `fadeIn`                | `number`               | —             | Seconds from 0 to `volume`             |
-| `random`                | `() => number`         | `Math.random` | Deterministic sampling in tests        |
+| Option                  | Type                   | Default       | Notes                                   |
+| ----------------------- | ---------------------- | ------------- | --------------------------------------- |
+| `bus`                   | `string`               | `'sfx'`       | Destination bus                         |
+| `volume`                | `number`               | `1`           | Linear 0..1                             |
+| `pan`                   | `number`               | `0`           | -1..1; voices always route via a panner |
+| `loop`                  | `boolean`              | `false`       | Loops the buffer or sprite region       |
+| `loopStart` / `loopEnd` | `number`               | —             | Absolute buffer seconds                 |
+| `offset`                | `number`               | `0`           | Start offset in seconds                 |
+| `detune`                | `number \| [min, max]` | —             | Cents; ranges sampled per voice         |
+| `rate`                  | `number \| [min, max]` | —             | Playback rate; shifts pitch on buffers  |
+| `maxVoices`             | `number`               | —             | Per-key cap; oldest copy is stolen      |
+| `fadeIn`                | `number`               | —             | Seconds from 0 to `volume`              |
+| `random`                | `() => number`         | `Math.random` | Deterministic sampling in tests         |
 
 ### SynthOptions
 
-| Option                                         | Type                                                        | Default                                                      | Notes                                                           |
-| ---------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
-| `type`                                         | `'sine' \| 'square' \| 'sawtooth' \| 'triangle' \| 'noise'` | `'sine'`                                                     | `'noise'` uses a cached white-noise buffer                      |
-| `freq`                                         | `number \| [from, to]`                                      | `440`                                                        | Tuple sweeps exponentially; maps to filter cutoff for `'noise'` |
-| `duration`                                     | `number`                                                    | `0.3`                                                        | Total seconds including release; must be positive               |
-| `envelope`                                     | `SynthEnvelope`                                             | `{ attack: 0.005, decay: 0.05, sustain: 0.6, release: 0.1 }` | ADSR; `sustain` is a level                                      |
-| `filter`                                       | `SynthFilter`                                               | —                                                            | Biquad stage before the envelope                                |
-| `bus` / `volume` / `pan` / `detune`          | as in `PlayOptions`                                             |                                                                 |                                                                 |
+| Option                              | Type                                                        | Default                                                      | Notes                                                           |
+| ----------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
+| `type`                              | `'sine' \| 'square' \| 'sawtooth' \| 'triangle' \| 'noise'` | `'sine'`                                                     | `'noise'` uses a cached white-noise buffer                      |
+| `freq`                              | `number \| [from, to]`                                      | `440`                                                        | Tuple sweeps exponentially; maps to filter cutoff for `'noise'` |
+| `duration`                          | `number`                                                    | `0.3`                                                        | Total seconds including release; must be positive               |
+| `envelope`                          | `SynthEnvelope`                                             | `{ attack: 0.005, decay: 0.05, sustain: 0.6, release: 0.1 }` | ADSR; `sustain` is a level                                      |
+| `filter`                            | `SynthFilter`                                               | —                                                            | Biquad stage before the envelope                                |
+| `bus` / `volume` / `pan` / `detune` | as in `PlayOptions`                                         |                                                              |                                                                 |
 
 ---
 
@@ -145,16 +145,16 @@ While the `source` bus has active voices, `target` ramps to `gain`; when they en
 
 ### MusicDeck
 
-| Member                                        | Signature                                     | Notes                                           |
-| --------------------------------------------- | --------------------------------------------- | ----------------------------------------------- |
-| `current`                                     | `string \| null`                              | Active track key                                |
-| `playing`                                     | `boolean`                                     | `false` while paused or stopped                 |
-| `transition(key, options?)`                   | `(string, TransitionOptions?) => void` | Crossfades; transitioning to the live key is a no-op |
-| `queue(keys, options?)`                       | `(readonly string[], QueueOptions?) => void`  | Replaces the queue and starts its first track   |
-| `next()` / `previous()`                       | `() => void`                                  | No-op without a queue                           |
-| `pause()` / `play()`                          | `() => void`                                  | `play()` resumes from the paused offset         |
-| `stop(options?)`                              | `(FadeOptions?) => void`                      | Stops and clears queue and slot                 |
-| `dispose()` / `disposed` / `[Symbol.dispose]` |                                               | Releases a Media Session claim                  |
+| Member                                        | Signature                                    | Notes                                                |
+| --------------------------------------------- | -------------------------------------------- | ---------------------------------------------------- |
+| `current`                                     | `string \| null`                             | Active track key                                     |
+| `playing`                                     | `boolean`                                    | `false` while paused or stopped                      |
+| `transition(key, options?)`                   | `(string, TransitionOptions?) => void`       | Crossfades; transitioning to the live key is a no-op |
+| `queue(keys, options?)`                       | `(readonly string[], QueueOptions?) => void` | Replaces the queue and starts its first track        |
+| `next()` / `previous()`                       | `() => void`                                 | No-op without a queue                                |
+| `pause()` / `play()`                          | `() => void`                                 | `play()` resumes from the paused offset              |
+| `stop(options?)`                              | `(FadeOptions?) => void`                     | Stops and clears queue and slot                      |
+| `dispose()` / `disposed` / `[Symbol.dispose]` |                                              | Releases a Media Session claim                       |
 
 `TransitionOptions`: `fade`, `loop`, `loopStart`, `loopEnd`, `offset`.
 `QueueOptions`: `shuffle`, `crossfade`, `repeat`, `random`.

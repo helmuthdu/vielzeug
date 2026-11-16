@@ -7,25 +7,25 @@ description: API reference for drag, pan, long-press, pinch, and wheel recogniti
 
 ## API Overview
 
-| Symbol                                     | Purpose                                             | Execution mode | Common gotcha                                           |
-| ------------------------------------------ | --------------------------------------------------- | -------------- | ------------------------------------------------------- |
-| `createDragGesture()`                      | Track unrestricted two-dimensional pointer movement | Sync           | Does not provide DOM movement or drop semantics         |
-| `createPanGesture()`                       | Track pointer movement projected onto one axis      | Sync           | Cross-axis intent ends a pending interaction            |
-| `createLongPress()`                        | Recognize a primary pointer held in place           | Sync           | The click that follows a fired hold is swallowed        |
-| `createPinchGesture()`                     | Track two-pointer scale and rotation                | Sync           | Ends when either pointer lifts                          |
+| Symbol                                     | Purpose                                             | Execution mode | Common gotcha                                            |
+| ------------------------------------------ | --------------------------------------------------- | -------------- | -------------------------------------------------------- |
+| `createDragGesture()`                      | Track unrestricted two-dimensional pointer movement | Sync           | Does not provide DOM movement or drop semantics          |
+| `createPanGesture()`                       | Track pointer movement projected onto one axis      | Sync           | Cross-axis intent ends a pending interaction             |
+| `createLongPress()`                        | Recognize a primary pointer held in place           | Sync           | The click that follows a fired hold is swallowed         |
+| `createPinchGesture()`                     | Track two-pointer scale and rotation                | Sync           | Ends when either pointer lifts                           |
 | `createWheelGesture()`                     | Track wheel input with pixel-normalized deltas      | Sync           | Never prevents scrolling unless `preventDefault` opts in |
-| `normalizeWheel()`                         | Convert wheel deltas to CSS pixels for any mode     | Sync           | Page-mode scaling uses the target's client box          |
-| `DragGesture` / `PanGesture` / `LongPress` | Control recognition lifecycle                       | Sync           | `dispose()` does not invoke `onEnd`                     |
-| `DragGestureOptions`                       | Configure free-drag recognition                     | Sync           | `activationDistance` uses Euclidean distance            |
-| `PanGestureOptions`                        | Configure axis-locked recognition                   | Sync           | Completion thresholds belong in `onEnd`                 |
-| `LongPressOptions`                         | Configure hold recognition                          | Sync           | `durationMs` and `slopPx` are validated at construction |
-| `PinchGestureOptions`                      | Configure pinch/rotate recognition                  | Sync           | `activationDistance` is a span change, not pointer move |
-| `WheelOptions`                             | Configure wheel recognition                         | Sync           | `preventDefault` accepts a per-event predicate          |
+| `normalizeWheel()`                         | Convert wheel deltas to CSS pixels for any mode     | Sync           | Page-mode scaling uses the target's client box           |
+| `DragGesture` / `PanGesture` / `LongPress` | Control recognition lifecycle                       | Sync           | `dispose()` does not invoke `onEnd`                      |
+| `DragGestureOptions`                       | Configure free-drag recognition                     | Sync           | `activationDistance` uses Euclidean distance             |
+| `PanGestureOptions`                        | Configure axis-locked recognition                   | Sync           | Completion thresholds belong in `onEnd`                  |
+| `LongPressOptions`                         | Configure hold recognition                          | Sync           | `durationMs` and `slopPx` are validated at construction  |
+| `PinchGestureOptions`                      | Configure pinch/rotate recognition                  | Sync           | `activationDistance` is a span change, not pointer move  |
+| `WheelOptions`                             | Configure wheel recognition                         | Sync           | `preventDefault` accepts a per-event predicate           |
 
 ## Package Entry Point
 
-| Import              | Purpose                                                                                                     |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Import              | Purpose                                                                                                        |
+| ------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `@vielzeug/gesture` | Drag, pan, long-press, pinch, and wheel factories, handles, callback details, options, points, and end reasons |
 
 ## Core Functions
@@ -144,10 +144,10 @@ function createPinchGesture(target: Element, options?: PinchGestureOptions): Pin
 
 Tracks two pointers and reports scale and rotation relative to the positions where they went down.
 
-| Parameter | Type                  | Description                                                             |
-| --------- | --------------------- | ----------------------------------------------------------------------- |
-| `target`  | `Element`             | Element that owns pointer admission and optional capture                |
-| `options` | `PinchGestureOptions` | Activation, admission, capture, callback, and lifecycle configuration   |
+| Parameter | Type                  | Description                                                           |
+| --------- | --------------------- | --------------------------------------------------------------------- |
+| `target`  | `Element`             | Element that owns pointer admission and optional capture              |
+| `options` | `PinchGestureOptions` | Activation, admission, capture, callback, and lifecycle configuration |
 
 **Returns:** A lifecycle-owned `PinchGesture` handle with the same members as the other gestures.
 
@@ -177,10 +177,10 @@ function createWheelGesture(target: Element, options?: WheelOptions): WheelGestu
 
 Reports wheel events with deltas normalized to CSS pixels. The handle is disposal-only: it has `dispose()`, `disposed`, `disposalSignal`, and `[Symbol.dispose]()`, but no `active` or `cancel()` because wheel events are stateless.
 
-| Parameter | Type           | Description                                                                |
-| --------- | -------------- | -------------------------------------------------------------------------- |
-| `target`  | `Element`      | Element the `wheel` listener is attached to                                |
-| `options` | `WheelOptions` | Prevention, admission, callback, and lifecycle configuration               |
+| Parameter | Type           | Description                                                  |
+| --------- | -------------- | ------------------------------------------------------------ |
+| `target`  | `Element`      | Element the `wheel` listener is attached to                  |
+| `options` | `WheelOptions` | Prevention, admission, callback, and lifecycle configuration |
 
 **Returns:** A disposal-only `WheelGesture` handle.
 

@@ -4,7 +4,8 @@ description: Framework-neutral pointer drag, pan, pinch, and wheel recognition w
 package: gesture
 category: input
 keywords: [pointer, pan, swipe, gesture, touch, drag, long press, pinch, zoom, wheel]
-exports: [createDragGesture, createPanGesture, createLongPress, createPinchGesture, createWheelGesture, GestureConfigError]
+exports:
+  [createDragGesture, createPanGesture, createLongPress, createPinchGesture, createWheelGesture, GestureConfigError]
 related: [refine, dnd, keymap]
 environments: [browser]
 ---
