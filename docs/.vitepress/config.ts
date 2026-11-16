@@ -990,6 +990,9 @@ export default defineConfig({
         {
           items: [
             { link: '/gesture/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/gesture/usage#recognize-long-presses', text: 'Long Press' },
+            { link: '/gesture/usage#recognize-pinch-and-rotate', text: 'Pinch and Rotate' },
+            { link: '/gesture/usage#recognize-wheel-and-trackpad-zoom', text: 'Wheel and Trackpad Zoom' },
             { link: '/gesture/usage#completion-rules', text: 'Completion Rules' },
             { link: '/gesture/usage#direction-recognition', text: 'Direction Recognition' },
             { link: '/gesture/usage#pointer-capture', text: 'Pointer Capture' },

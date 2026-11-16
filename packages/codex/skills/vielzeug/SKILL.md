@@ -60,7 +60,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/flux`: Minimal push streams with explicit ownership, bounded buffering, and structural bridges
 - `@vielzeug/focus`: Framework-neutral list navigation and focus restoration primitives
 - `@vielzeug/forge`: Typed form state, validation, submission
-- `@vielzeug/gesture`: Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles
+- `@vielzeug/gesture`: Framework-neutral pointer drag, pan, pinch, and wheel recognition with lifecycle-owned handles
 - `@vielzeug/herald`: Typed synchronous event bus with wildcard subscriptions, one-shot waits, and lifecycle tracing
 - `@vielzeug/illusionist`: Typed, deterministic, locale-aware fake data generator with seeded PRNG
 - `@vielzeug/keymap`: Headless keyboard shortcut manager with chord sequences
