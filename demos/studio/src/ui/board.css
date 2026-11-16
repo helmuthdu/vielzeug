@@ -1,0 +1,76 @@
+/* Board scene: viewport, transformed world layer, and overlays.
+   All visuals come from Refine design tokens. */
+
+.studio-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--color-neutral-alpha-100);
+  background-image: radial-gradient(var(--color-neutral-alpha-300) 1px, transparent 1px);
+  background-size: var(--size-8) var(--size-8);
+}
+
+.studio-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+
+.studio-shape {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--color-primary-alpha-200);
+  border: var(--border-width-md) solid var(--color-primary);
+  border-radius: var(--rounded-lg);
+}
+
+.studio-shape.is-selected {
+  border-color: var(--color-primary-dark);
+  box-shadow: 0 0 0 var(--size-px-1) var(--color-primary-light);
+}
+
+.studio-draft {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--color-primary-alpha-100);
+  border: var(--border-width-md) dashed var(--color-primary);
+  border-radius: var(--rounded-lg);
+}
+
+.studio-marquee {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--color-secondary-alpha-100);
+  border: var(--border-width-md) solid var(--color-secondary);
+}
+
+.studio-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.studio-selection-toolbar {
+  position: absolute;
+}
+
+.studio-toolbar {
+  position: absolute;
+  top: var(--size-4);
+  left: var(--size-4);
+  display: flex;
+  gap: var(--size-2);
+}
+
+.studio-toolbar [data-tool].is-active {
+  color: var(--color-primary);
+}

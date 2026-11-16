@@ -1,6 +1,7 @@
 import { archiveExamples } from './archive';
 import { arsenalExamples } from './arsenal';
 import { assayExamples } from './assay';
+import { atlasExamples } from './atlas';
 import { bardExamples } from './bard';
 import { beaconExamples } from './beacon';
 import { clockworkExamples } from './clockwork';
@@ -15,6 +16,7 @@ import { forgeExamples } from './forge';
 import { gestureExamples } from './gesture';
 import { heraldExamples } from './herald';
 import { illusionistExamples } from './illusionist';
+import { inkExamples } from './ink';
 import { keymapExamples } from './keymap';
 import { ledgerExamples } from './ledger';
 import { linguaExamples } from './lingua';
@@ -22,6 +24,7 @@ import { meshExamples } from './mesh';
 import { necromancerExamples } from './necromancer';
 import { orbitExamples } from './orbit';
 import { oreExamples } from './ore';
+import { paletteExamples } from './palette';
 import { patchworkExamples } from './patchwork';
 import { postmasterExamples } from './postmaster';
 import { prismExamples } from './prism';
@@ -45,11 +48,13 @@ import type { ExampleModule } from './types';
 import { vaultExamples } from './vault';
 import { wardExamples } from './ward';
 import { wayfinderExamples } from './wayfinder';
+import { wireExamples } from './wire';
 
 export const examples: Record<string, Record<string, ExampleModule>> = {
   archive: archiveExamples,
   arsenal: arsenalExamples,
   assay: assayExamples,
+  atlas: atlasExamples,
   bard: bardExamples,
   beacon: beaconExamples,
   clockwork: clockworkExamples,
@@ -64,6 +69,7 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   gesture: gestureExamples,
   herald: heraldExamples,
   illusionist: illusionistExamples,
+  ink: inkExamples,
   keymap: keymapExamples,
   ledger: ledgerExamples,
   lingua: linguaExamples,
@@ -71,6 +77,7 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   necromancer: necromancerExamples,
   orbit: orbitExamples,
   ore: oreExamples,
+  palette: paletteExamples,
   patchwork: patchworkExamples,
   postmaster: postmasterExamples,
   prism: prismExamples,
@@ -93,4 +100,5 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   vault: vaultExamples,
   ward: wardExamples,
   wayfinder: wayfinderExamples,
+  wire: wireExamples,
 };

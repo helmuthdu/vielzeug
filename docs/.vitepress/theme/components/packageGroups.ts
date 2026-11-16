@@ -25,6 +25,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
     name: 'Data & Formats',
     packages: [
       { id: 'archive', tagline: 'Community archive core' },
+      { id: 'wire', tagline: 'Edge routing & graph order' },
       { id: 'patchwork', tagline: 'RFC 6902 JSON Patch' },
       { id: 'scout', tagline: 'Trigram fuzzy search' },
       { id: 'tabula', tagline: 'Typed CSV & TSV' },
@@ -78,7 +79,9 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
       { id: 'bard', tagline: 'Web Audio mixing & music decks' },
       { id: 'beacon', tagline: 'Product tours & onboarding' },
       { id: 'necromancer', tagline: 'Web Animations API primitives' },
+      { id: 'ink', tagline: 'Freehand stroke geometry' },
       { id: 'ore', tagline: 'Web component primitives' },
+      { id: 'palette', tagline: 'Color parsing & contrast' },
       { id: 'prism', tagline: 'SVG charts' },
       { id: 'refine', tagline: 'Accessible components' },
       { id: 'scribe', tagline: 'Safe Markdown prose' },
@@ -92,6 +95,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
     packages: [
       { id: 'dnd', tagline: 'Drag & drop' },
       { id: 'focus', tagline: 'Keyboard nav & focus restoration' },
+      { id: 'atlas', tagline: '2D camera & spatial math' },
       { id: 'gesture', tagline: 'Swipe gesture recognition' },
       { id: 'keymap', tagline: 'Keyboard shortcuts & chords' },
       { id: 'orbit', tagline: 'Floating positioning' },
