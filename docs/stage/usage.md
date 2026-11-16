@@ -1,6 +1,6 @@
 ---
 title: 'Stage: Usage Guide'
-description: How to drive a @vielzeug/stage layered canvas: layers, transforms, dirty repaints, and export.
+description: 'How to drive a @vielzeug/stage layered canvas: layers, transforms, dirty repaints, and export.'
 ---
 
 [[toc]]
