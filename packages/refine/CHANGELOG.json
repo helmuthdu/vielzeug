@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Match query-bar filter drawer backgrounds to the standard drawer surface in light and dark themes.",
+            "commit": "1333d918216e51a371fd73aa2a6b6964544cf63e"
+          }
+        ]
+      },
+      "date": "Mon, 16 Nov 2026 17:10:57 GMT",
+      "tag": "@vielzeug/refine_v26.11.21",
+      "version": "26.11.21"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "agent@vielzeug",
