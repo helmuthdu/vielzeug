@@ -23,6 +23,18 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
+    },
+    "./grid": {
+      "import": "./dist/grid/index.js",
+      "require": "./dist/grid/index.cjs",
+      "types": "./dist/grid/index.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "grid": [
+        "dist/grid/index.d.ts"
+      ]
     }
   },
   "sideEffects": false,

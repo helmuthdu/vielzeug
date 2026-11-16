@@ -145,6 +145,45 @@ invert(transform); // null for degenerate matrices
 toCssMatrix(transform); // 'matrix(...)' for CSS transforms
 ```
 
+## Tile Grids
+
+Tile and map editors live on a square grid. The `@vielzeug/atlas/grid` subpath converts between world coordinates and tile coordinates, and enumerates only the tiles a viewport can see:
+
+```ts
+import { iterateTileRange, tileCenter, tileKey, tileToRect, visibleTileRange, worldToTile } from '@vielzeug/atlas/grid';
+
+const grid = { tileSize: 32 };
+
+worldToTile({ x: 40, y: -1 }, grid); // { col: 1, row: -1 }
+tileToRect({ col: 1, row: -1 }, grid); // { x: 32, y: -32, width: 32, height: 32 }
+tileCenter({ col: 1, row: -1 }, grid); // { x: 48, y: -16 }
+
+// Render loop: iterate the tiles intersecting the camera's world rect.
+for (const coord of iterateTileRange(visibleTileRange(camera.visibleRect(), grid))) {
+  drawTile(coord);
+}
+```
+
+`tileKey(coord)` yields the stable `"col:row"` string used by the FOV and fog APIs (and convenient as a `Map` key). `chunkOf()`/`chunkKey()` group tiles into fixed-size chunks for streaming or caching chunked tile data.
+
+## Field of View and Fog
+
+`computeFov()` runs recursive shadowcasting over the eight octants and returns the set of `tileKey` strings a viewer can see within a radius. Blocking tiles are visible but cast shadows behind themselves:
+
+```ts
+import { computeFov, createFog } from '@vielzeug/atlas/grid';
+
+const fov = computeFov({ col: 10, row: 8 }, 6, { blocks: (c) => walls.has(`${c.col}:${c.row}`) });
+
+const fog = createFog();
+fog.demote(); // last frame's visible tiles become 'seen'
+fog.revealKeys(fov); // keys currently in view are 'visible'
+fog.state({ col: 10, row: 8 }); // 'visible' | 'seen' | 'unseen'
+saveGame(fog.exportState()); // serializable { seen, visible } key lists
+```
+
+`computeFov()` is pure and costs O(radius²) worst case; walls prune the walk. `createFog()` owns the three-state bookkeeping (`unseen` → `visible` → `seen`) and round-trips through `exportState()`/`importState()` for save files. `hide()` returns tiles to `unseen`.
+
 ## Best Practices
 
 - Subtract the viewport rect once at the input boundary; never mix client and screen coordinates inside camera calls.

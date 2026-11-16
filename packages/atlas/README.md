@@ -32,6 +32,7 @@ index.queryRect(camera.visibleRect({ x: 800, y: 600 })); // viewport culling
 - OBB math: corners, bounds, point-in-box, and SAT box-box intersection
 - Narrow-phase geometry: `pointInPolygon`, `distanceToPolyline`, `pointNearPolygon`
 - Snapping: `snapRect()` with candidate/grid targets and guide descriptors, plus pure `alignRects()`/`distributeRects()`
+- `@vielzeug/atlas/grid` subpath: square-tile coordinate math, viewport tile ranges, 8-octant shadowcasting `computeFov()`, and three-state `createFog()`
 - Typed errors and the Vielzeug disposal contract throughout
 - Zero runtime dependencies, no DOM requirement
 

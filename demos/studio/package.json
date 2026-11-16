@@ -24,6 +24,7 @@
     "@vielzeug/palette": "workspace:*",
     "@vielzeug/refine": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
+    "@vielzeug/stage": "workspace:*",
     "@vielzeug/wire": "workspace:*"
   },
   "devDependencies": {

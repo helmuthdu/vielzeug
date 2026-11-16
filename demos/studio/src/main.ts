@@ -4,6 +4,7 @@ import type {} from '@vielzeug/refine/frameworks/elements';
 import './styles/app.css';
 import { mountBoardScene } from './ui/board-scene.ts';
 import { mountFlowScene } from './ui/flow-scene.ts';
+import { mountMapScene } from './ui/map-scene.ts';
 import { mountPaletteScene } from './ui/palette-scene.ts';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -12,6 +13,7 @@ if (!app) throw new Error('Studio requires a #app root element');
 const scenes: Readonly<Record<string, (container: HTMLElement) => { dispose(): void }>> = {
   board: mountBoardScene,
   flow: mountFlowScene,
+  map: mountMapScene,
   palette: mountPaletteScene,
 };
 

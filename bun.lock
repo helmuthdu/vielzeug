@@ -119,6 +119,7 @@
         "@vielzeug/palette": "workspace:*",
         "@vielzeug/refine": "workspace:*",
         "@vielzeug/ripple": "workspace:*",
+        "@vielzeug/stage": "workspace:*",
         "@vielzeug/wire": "workspace:*",
       },
       "devDependencies": {
@@ -719,6 +720,16 @@
         "vitest": "^5.1.0",
       },
     },
+    "packages/stage": {
+      "name": "@vielzeug/stage",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^26.6.6",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.6",
+        "vitest": "^5.1.0",
+      },
+    },
     "packages/tabula": {
       "name": "@vielzeug/tabula",
       "version": "26.11.19",
@@ -1246,6 +1257,8 @@
     "@vielzeug/sourcerer": ["@vielzeug/sourcerer@workspace:packages/sourcerer"],
 
     "@vielzeug/spell": ["@vielzeug/spell@workspace:packages/spell"],
+
+    "@vielzeug/stage": ["@vielzeug/stage@workspace:packages/stage"],
 
     "@vielzeug/tabula": ["@vielzeug/tabula@workspace:packages/tabula"],
 

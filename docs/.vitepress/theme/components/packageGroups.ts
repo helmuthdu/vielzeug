@@ -96,6 +96,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
       { id: 'dnd', tagline: 'Drag & drop' },
       { id: 'focus', tagline: 'Keyboard nav & focus restoration' },
       { id: 'atlas', tagline: '2D camera & spatial math' },
+      { id: 'stage', tagline: 'Layered 2D canvas rendering' },
       { id: 'gesture', tagline: 'Swipe gesture recognition' },
       { id: 'keymap', tagline: 'Keyboard shortcuts & chords' },
       { id: 'orbit', tagline: 'Floating positioning' },

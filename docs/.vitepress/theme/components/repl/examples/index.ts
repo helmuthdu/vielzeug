@@ -40,6 +40,7 @@ import { sentinelExamples } from './sentinel';
 import { sigilExamples } from './sigil';
 import { sourcererExamples } from './sourcerer';
 import { spellExamples } from './spell';
+import { stageExamples } from './stage';
 import { tabulaExamples } from './tabula';
 import { tandemExamples } from './tandem';
 import { tavernExamples } from './tavern';
@@ -93,6 +94,7 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   sigil: sigilExamples,
   sourcerer: sourcererExamples,
   spell: spellExamples,
+  stage: stageExamples,
   tabula: tabulaExamples,
   tandem: tandemExamples,
   tavern: tavernExamples,

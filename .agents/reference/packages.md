@@ -49,6 +49,7 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/sigil` | QR code generation and scanning: pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning | N/A | N/A | N/A |
 | `@vielzeug/sourcerer` | Reactive collection sources with local, page, cursor, and infinite pagination | `arsenal` | N/A | N/A |
 | `@vielzeug/spell` | Zero-dependency schema validation with Standard Schema interoperability | `arsenal` | N/A | N/A |
+| `@vielzeug/stage` | Retained-mode 2D canvas stage engine with DPR-aware layers, dirty repaints, and PNG export | N/A | N/A | N/A |
 | `@vielzeug/tabula` | Typed CSV and TSV: RFC 4180 parser with schema-validated rows, streaming reader, and safe serializer. | `spell` | N/A | N/A |
 | `@vielzeug/tandem` | Offline-first sync engine with rev baselines, tombstoned deletions, and idle-batched pushes | `arsenal` | N/A | N/A |
 | `@vielzeug/tavern` | Table sessions over mesh: host-owned state replication with guest command forwarding | `mesh` | N/A | N/A |

@@ -25,9 +25,10 @@ description: API reference for the Atlas camera, spatial index, matrix, rect, OB
 
 ## Package Entry Point
 
-| Import            | Purpose                                                                    |
-| ----------------- | -------------------------------------------------------------------------- |
-| `@vielzeug/atlas` | Camera, spatial index, matrix/rect/OBB/geometry helpers, types, and errors |
+| Import                 | Purpose                                                                    |
+| ---------------------- | -------------------------------------------------------------------------- |
+| `@vielzeug/atlas`      | Camera, spatial index, matrix/rect/OBB/geometry helpers, types, and errors |
+| `@vielzeug/atlas/grid` | Square-tile math, recursive shadowcasting FOV, and fog-of-war state        |
 
 ---
 
@@ -195,6 +196,27 @@ All matrices use Canvas2D element order `[a, b, c, d, e, f]`; composition `multi
 | `distributeRects(rects, axis)` | Copies with equalized gaps along `'x'` or `'y'`                                                |
 
 `snapRect` options: `candidates` (rects to snap to), `grid` (`{ x?, y? }` line spacing), `threshold` (max snap distance, default `8`). Anchors are the rect's left/center/right and top/center/bottom edges; each axis picks its nearest target within `threshold` (inclusive). A `SnapGuide` is `{ axis, position, from, to }`: `axis` is the axis the guide line is perpendicular to, `position` is the world coordinate of the line, and `from`/`to` span the line along the other axis. `alignRects` and `distributeRects` are pure; distribution keeps the outermost rects fixed and returns input copies unchanged for fewer than three rects.
+
+---
+
+## Grid Functions
+
+From the `@vielzeug/atlas/grid` subpath:
+
+| Function                               | Returns                                                                                                           |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `worldToTile(point, grid)`             | `TileCoord` (`{ col, row }`) containing the point (floor division)                                                |
+| `tileToRect(coord, grid)`              | World `Rect` of the tile                                                                                          |
+| `tileCenter(coord, grid)`              | World `Point` at the tile's centre                                                                                |
+| `visibleTileRange(view, grid)`         | `TileRange` (`minCol/maxCol/minRow/maxRow`) intersecting a world rect                                             |
+| `iterateTileRange(range)`              | Generator over every `TileCoord` in a range                                                                       |
+| `tileKey(coord)`                       | Stable `"col:row"` string                                                                                         |
+| `chunkOf(coord, chunkSize)`            | `{ cx, cy }` chunk the tile belongs to                                                                            |
+| `chunkKey(coord, chunkSize)`           | `"cx,cy"` chunk key                                                                                               |
+| `computeFov(origin, radius, options?)` | `Set<string>` of visible `tileKey`s (8-octant recursive shadowcasting)                                            |
+| `createFog()`                          | Three-state fog tracker: `reveal`/`revealKeys`/`demote`/`hide`/`state`/`visibleKeys`, `exportState`/`importState` |
+
+`grid` is `{ tileSize }` (positive; `worldToTile`/`tileToRect`/`tileCenter`/`visibleTileRange` throw `RangeError` otherwise, as do negative/non-integer `chunkSize` and a negative/non-integer FOV `radius`). `computeFov` options: `blocks(coord)` returns true when sight cannot pass through the tile; blocking tiles within range are themselves visible. The origin is always in the result. `TileCoord` is `{ col, row }`.
 
 ---
 
