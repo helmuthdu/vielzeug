@@ -7,7 +7,7 @@ Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeu
 ## Start work
 
 1. Inspect the worktree and preserve changes you did not make.
-2. Pick the smallest skill that fits (clients with skill support load it automatically; otherwise read the file):
+2. Select every row in the table that matches the task; do not load skills for rows that do not match (clients with skill support load them automatically; otherwise read the files):
 
 | Situation                                              | Skill                              |
 | ------------------------------------------------------ | ---------------------------------- |
@@ -40,8 +40,7 @@ Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeu
 - Prefer the smallest task that fits the work, direct code reading over speculation, and simple architecture over configurable architecture.
 - Prefer deleting obsolete patterns to wrapping them.
 - Treat demos as first-party integration harnesses. When a demo exposes a library gap, fix the owning package instead of adding a demo-only workaround, then cover both.
-- External consumers of published packages are invisible to a workspace grep: before removing or breaking a public symbol on "no consumers" grounds, verify with a code search across the consuming repositories (for example `gh search code --owner <owner> <symbol>`), not only this checkout.
-- Before a removal or breaking change to a published surface, run the linked external consumer's full check and keep its `@vielzeug/codex` install current, so its MCP snapshot never teaches superseded APIs.
+- External consumers of published packages are invisible to a workspace grep: before removing or breaking a public symbol on "no consumers" grounds, verify with a code search across the consuming repositories, not only this checkout.
 - Demo UI MUST favor existing `@vielzeug/refine` components over custom composite controls. When Refine lacks the required primitive or behavior, improve or add it in `packages/refine` with tests and documentation before consuming it from a demo; use native elements only for document semantics that do not duplicate a Refine component.
 - Every UI change that consumes Refine MUST use Refine design tokens and component variables for spacing, dimensions, typography, radii, colors, borders, shadows, and motion instead of hardcoded or magic values. Use a hardcoded value only when no suitable token exists and the value is an intrinsic technical constraint; make that reason evident in the implementation.
 - Treat the monorepo as one owned system: propagate changes across packages, demos, tests, and docs when required for correctness and coherence.

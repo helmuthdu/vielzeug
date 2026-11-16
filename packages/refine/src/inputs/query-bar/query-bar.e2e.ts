@@ -571,6 +571,45 @@ test.describe('Multiple selection', () => {
 });
 
 test.describe('Filter drawer', () => {
+  for (const theme of ['light', 'dark']) {
+    for (const width of [390, 1024]) {
+      test(`matches standard drawer surfaces in ${theme} mode at ${width}px`, async ({ page, refinePage }) => {
+        await page.setViewportSize({ height: 844, width });
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await mountBar(page, refinePage);
+        await page.evaluate((theme) => {
+          document.documentElement.classList.toggle('dark', theme === 'dark');
+          const drawer = document.createElement('ore-drawer');
+          drawer.id = 'reference-drawer';
+          drawer.innerHTML = '<span slot="header">Reference</span><p>Content</p><span slot="footer">Footer</span>';
+          document.querySelector('.frame')!.append(drawer);
+        }, theme);
+        await page.getByRole('button', { exact: true, name: 'Filters' }).click();
+        const drawer = page.locator('ore-query-bar ore-drawer');
+        await expect(drawer.locator('[part="panel"]')).toBeVisible();
+        await expect(drawer).toHaveAttribute('placement', width === 390 ? 'bottom' : 'right');
+
+        for (const background of ['', 'var(--color-primary)']) {
+          await page.evaluate((background) => {
+            document.documentElement.style.setProperty('--drawer-bg', background);
+          }, background);
+          const reference = page.locator('#reference-drawer');
+          for (const part of ['panel', 'header', 'body', 'footer']) {
+            const expected = await reference.locator(`[part="${part}"]`).evaluate((el) => ({
+              backdropFilter: getComputedStyle(el).backdropFilter,
+              backgroundColor: getComputedStyle(el).backgroundColor,
+            }));
+            await expect(drawer.locator(`[part="${part}"]`)).toHaveCSS('background-color', expected.backgroundColor);
+            await expect(drawer.locator(`[part="${part}"]`)).toHaveCSS('backdrop-filter', expected.backdropFilter);
+            if (part !== 'panel') {
+              await expect(drawer.locator(`[part="${part}"]`)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+            }
+          }
+        }
+      });
+    }
+  }
+
   test('stages selections without emitting query changes and applies them once', async ({ page, refinePage }) => {
     await mountBar(page, refinePage);
     await input(page).fill('regression');
