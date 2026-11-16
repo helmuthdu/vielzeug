@@ -1,9 +1,28 @@
 ---
 title: Migration
-description: Migrate the viewport-only responsive breakpoints in Refine's sidebar, the async state container to ore-state, command palette categories and the item type, the mobile input font-size floor, the standardized overlay backdrop, the sidebar drawer backdrop default, toast statuses, the human-interface-guideline adoption, surface variants, tabs density, the tabs active pill, the sidebar drawer overlay, DataGrid sources, and framework type declarations to Refine.
+description: Migrate the viewport-only responsive breakpoints in Refine's sidebar, the async state container to ore-state, command palette categories and the item type, the mobile input font-size floor, the standardized overlay backdrop, the sidebar drawer backdrop default, the drawer drag handle default placement, toast statuses, the human-interface-guideline adoption, surface variants, tabs density, the tabs active pill, the sidebar drawer overlay, DataGrid sources, and framework type declarations to Refine.
 ---
 
 # Migration
+
+## Drawer drag handle is inset by default
+
+`ore-drawer`'s swipe-to-close drag handle now sits inset inside the panel edge (`drag-handle-placement="inset"`)
+instead of hanging outside it. The inset handle stays within the panel's own bounds, so it never overlaps page
+content beside the drawer and stays inside the panel's shadow and rounded corners.
+
+Nothing to change unless you relied on the handle sitting outside the panel: opt back in explicitly.
+
+```html
+<!-- Before: outside was the default -->
+<ore-drawer>…</ore-drawer>
+
+<!-- After: same appearance as before -->
+<ore-drawer drag-handle-placement="outside">…</ore-drawer>
+```
+
+Swipe-to-close behavior, the handle's `drag-handle` part, and `--drawer-*` props are unchanged; only the resting
+position moved.
 
 ## Responsive breakpoints measure the viewport unless you opt into containers
 

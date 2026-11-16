@@ -157,10 +157,16 @@ describe('ore-drawer', () => {
       expect(fixture.element.getAttribute('backdrop')).toBe('transparent');
     });
 
-    it('reflects drag-handle-placement attribute on host', async () => {
-      fixture = await mount('ore-drawer', { attrs: { 'drag-handle-placement': 'inset' } });
+    it('defaults drag-handle-placement to inset', async () => {
+      fixture = await mount('ore-drawer');
 
       expect(fixture.element.getAttribute('drag-handle-placement')).toBe('inset');
+    });
+
+    it('reflects drag-handle-placement attribute on host', async () => {
+      fixture = await mount('ore-drawer', { attrs: { 'drag-handle-placement': 'outside' } });
+
+      expect(fixture.element.getAttribute('drag-handle-placement')).toBe('outside');
     });
   });
 

@@ -1,6 +1,35 @@
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Interaction', () => {
+  test('insets the drag handle by default for every placement', async ({ page, refinePage }) => {
+    const placements = ['left', 'right', 'top', 'bottom'] as const;
+    const drawers = placements
+      .flatMap((placement) => [
+        `<ore-drawer default-open label="Inset ${placement}" placement="${placement}"></ore-drawer>`,
+        `<ore-drawer default-open label="Outside ${placement}" placement="${placement}" drag-handle-placement="outside"></ore-drawer>`,
+      ])
+      .join('');
+    await refinePage.mountComponent(drawers);
+
+    const offsets = await page.locator('ore-drawer').evaluateAll((elements) => {
+      const handleSide = { bottom: 'top', left: 'right', right: 'left', top: 'bottom' };
+
+      return elements.map((element) => {
+        const handle = element.shadowRoot?.querySelector<HTMLElement>('[part="drag-handle"]');
+        const side = handleSide[element.getAttribute('placement') as keyof typeof handleSide];
+
+        if (!handle || !side) throw new Error('Expected each drawer to have a drag handle and placement.');
+
+        return Math.abs(Number.parseFloat(getComputedStyle(handle).getPropertyValue(side)));
+      });
+    });
+
+    expect(offsets).toHaveLength(placements.length * 2);
+    for (let index = 0; index < offsets.length; index += 2) {
+      expect(offsets[index]).toBeLessThan(offsets[index + 1]!);
+    }
+  });
+
   test('content-sized sheets fit short content and scroll long content', async ({ page, refinePage }) => {
     await page.setViewportSize({ height: 844, width: 390 });
     await refinePage.mountComponent(

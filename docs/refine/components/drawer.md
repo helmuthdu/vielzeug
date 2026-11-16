@@ -115,7 +115,7 @@ Use the `header` slot to replace the default title bar and the `footer` slot for
 
 The drag handle is a decorative pointer-gesture affordance, not a keyboard control. Use the Close button or Escape to dismiss with a keyboard. Preventing a swipe `close-request` restores the panel without losing its contents.
 
-Use `drag-handle-placement` to control whether the swipe handle sits outside the panel edge or inset inside it.
+Use `drag-handle-placement` to control whether the swipe handle sits inset inside the panel edge (default) or outside it.
 
 <ComponentPreview height="400px">
 
@@ -129,7 +129,7 @@ Use `drag-handle-placement` to control whether the swipe handle sits outside the
   placement="right"
   drag-handle-placement="outside"
   dismissible>
-  <p>Default behavior. The drag handle sits outside the drawer edge.</p>
+  <p>The drag handle sits outside the drawer edge.</p>
 </ore-drawer>
 
 <ore-drawer
@@ -138,7 +138,7 @@ Use `drag-handle-placement` to control whether the swipe handle sits outside the
   placement="right"
   drag-handle-placement="inset"
   dismissible>
-  <p>Inset behavior. The drag handle stays inside the drawer edge.</p>
+  <p>Default behavior. The drag handle stays inside the drawer edge.</p>
 </ore-drawer>
 
 <script>
@@ -383,7 +383,7 @@ A bottom sheet: `size="content"` fits the actions, `detents` lets a dragged shee
 | `detents`               | `string`                                 | N/A         | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only |
 | `title`                 | `string`                                 | N/A         | Visible header title text                                                                                      |
 | `label`                 | `string`                                 | N/A         | Accessible name (`aria-label`); also shown as the header title when `title` is not set                         |
-| `drag-handle-placement` | `'outside' \| 'inset'`                   | `'outside'` | Position of the swipe drag handle                                                                              |
+| `drag-handle-placement` | `'outside' \| 'inset'`                   | `'inset'`   | Position of the swipe drag handle                                                                              |
 | `dismissible`           | `boolean`                                | `true`      | Shows a close (×) button in the header                                                                         |
 | `backdrop`              | `'opaque' \| 'blur' \| 'transparent'`    | `'opaque'`  | Backdrop style, matching `ore-dialog`                                                                          |
 | `persistent`            | `boolean`                                | `false`     | Prevents backdrop click from requesting close                                                                  |

@@ -96,7 +96,7 @@ export type OreDrawerProps = {
   'default-open'?: boolean;
   /** Show the close (×) button in the header (default: true) */
   dismissible?: boolean;
-  /** Drag handle position used for swipe-to-close gestures */
+  /** Drag handle position used for swipe-to-close gestures: 'inset' (default) | 'outside' */
   'drag-handle-placement'?: DrawerDragHandlePlacement;
   /**
    * CSS selector for the element inside the drawer that should receive focus on open.
@@ -143,7 +143,7 @@ export type OreDrawerProps = {
  * @attr {string} title - Visible header title text
  * @attr {string} label - Invisible aria-label (for drawers without a visible title)
  * @attr {boolean} dismissible - Show the close (×) button (default: true)
- * @attr {string} drag-handle-placement - 'outside' (default) | 'inset'
+ * @attr {string} drag-handle-placement - 'inset' (default) | 'outside'
  * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
  * @attr {boolean} persistent - Prevent backdrop-click from closing (default: false)
  *
@@ -190,7 +190,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
     'default-open': prop.bool(false),
     detents: prop.string(),
     dismissible: prop.bool(true),
-    'drag-handle-placement': prop.oneOf(['outside', 'inset'] as const, 'outside'),
+    'drag-handle-placement': prop.oneOf(['outside', 'inset'] as const, 'inset'),
     'initial-focus': prop.string(),
     label: prop.string(),
     open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
