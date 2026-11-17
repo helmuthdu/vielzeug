@@ -90,21 +90,59 @@
 }
 
 .studio-selection-toolbar {
+  /* Mockup's dark contextual pill: fixed-dark recipe derived from the
+     contrast ramp (contrast-900 is the darkest ink in light mode). */
+  --button-bg: var(--color-contrast-900);
+  --button-color: var(--color-contrast-50);
+  --button-border-color: transparent;
+
   position: absolute;
-  /* Contextual toolbar: stays clickable when it overlaps the fixed board toolbar. */
+  /* Contextual toolbar: stays clickable when it overlaps the floating chrome. */
   z-index: 1;
 }
 
-.studio-toolbar {
-  position: absolute;
-  top: var(--size-4);
-  left: var(--size-4);
-  display: flex;
-  gap: var(--size-2);
+.studio-selection-toolbar ore-button-group {
+  --button-radius: var(--rounded-full);
+  --button-min-height: var(--size-9);
 }
 
-.studio-toolbar [data-tool].is-active {
-  color: var(--color-primary);
+/* Floating bottom tool dock shared by the board, flow, and map scenes. */
+.studio-toolbar {
+  position: absolute;
+  bottom: var(--size-5);
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  gap: var(--size-1);
+  align-items: center;
+  padding: var(--size-1);
+  background-color: var(--surface-base);
+  border: var(--border) solid var(--color-neutral-border);
+  border-radius: var(--rounded-full);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(-50%);
+}
+
+.board-dock .dock-group {
+  display: flex;
+  align-items: center;
+}
+
+.board-dock ore-tooltip {
+  display: inline-flex;
+}
+
+.board-dock [data-tool].is-active {
+  --button-bg: var(--color-primary-backdrop);
+  --button-color: var(--color-primary-dark);
+}
+
+.dock-sep {
+  width: var(--border-2);
+  height: var(--size-5);
+  margin-inline: var(--size-1);
+  background-color: var(--color-divider);
+  border-radius: var(--rounded-full);
 }
 
 .studio-guides {

@@ -1,4 +1,5 @@
-/* Studio app shell. */
+/* Studio app shell: full-bleed canvas with floating chrome.
+   All visuals come from Refine design tokens. */
 
 html,
 body,
@@ -11,4 +12,94 @@ body {
   font-family: var(--font-sans);
   color: var(--color-neutral-900);
   background-color: var(--color-neutral-50);
+}
+
+.studio-app,
+.studio-shell-root {
+  height: 100%;
+}
+
+.studio-shell-root {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Height of the floating bar plus its top/bottom offsets: the strip the canvas
+   yields to it, since the bar owns the pointer there. */
+.studio-shell-root {
+  --shell-inset: calc(var(--navbar-height, var(--size-14)) + var(--navbar-offset, var(--size-3)) * 2);
+}
+
+/* The canvas starts below the floating bar and runs to the window edges. */
+.studio-scene {
+  position: absolute;
+  inset: var(--shell-inset) 0 0;
+}
+
+.studio-shell {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  /* Above the canvas overlays; the shell itself is transparent to pointer
+     events except for the navbar, so drags over empty bar space still pan. */
+  z-index: var(--z-sticky);
+  pointer-events: none;
+}
+
+.shell-navbar {
+  --navbar-item-active-bg: var(--color-primary-backdrop);
+  --navbar-item-active-color: var(--color-primary-dark);
+
+  pointer-events: auto;
+}
+
+.shell-brand {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+  padding-inline: var(--size-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-primary);
+}
+
+.shell-brand-name {
+  white-space: nowrap;
+}
+
+.shell-tabs {
+  display: flex;
+  align-items: center;
+}
+
+.shell-actions {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+}
+
+/* Mockup's zoom cluster: light primary tint with primary ink. */
+.zoom-group {
+  --button-bg: var(--color-primary-backdrop);
+  --button-color: var(--color-primary);
+  --button-border-color: transparent;
+  --button-selected-bg: var(--color-primary-light);
+}
+
+.shell-divider {
+  width: var(--border-2);
+  height: var(--size-5);
+  background-color: var(--color-divider);
+  border-radius: var(--rounded-full);
+}
+
+/* Secondary chrome steps aside on narrow screens; tabs and actions win. */
+@media (max-width: 639px) {
+  .shell-crumb,
+  .shell-brand-name,
+  .shell-divider,
+  .shell-actions ore-avatar-group {
+    display: none;
+  }
 }

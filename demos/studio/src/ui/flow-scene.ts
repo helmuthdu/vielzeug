@@ -17,6 +17,7 @@ import {
   nodeRect,
   removeNodeCommand,
 } from '../core/flow.ts';
+import type { SceneHandle } from './shell.ts';
 import './flow.css';
 
 const ZOOM_STEP = 1.0015;
@@ -54,7 +55,7 @@ function makeNode(x: number, y: number, label: string): FlowNode {
  * (bezier and orthogonal obstacle-avoiding A*), topological ordering, and
  * cycle detection over draggable DOM nodes.
  */
-export function mountFlowScene(container: HTMLElement): { dispose(): void } {
+export function mountFlowScene(container: HTMLElement): SceneHandle {
   const model: FlowModel = createFlowModel();
   const camera: Camera = createCamera({ initial: { x: -80, y: -60, zoom: 1 } });
   const ledger = createLedger();
@@ -473,6 +474,7 @@ export function mountFlowScene(container: HTMLElement): { dispose(): void } {
   const unmountKeymap = keymap.mount(viewport.ownerDocument);
 
   return {
+    camera,
     dispose() {
       unmountKeymap();
       keymap.dispose();
@@ -485,6 +487,13 @@ export function mountFlowScene(container: HTMLElement): { dispose(): void } {
       camera.dispose();
       model.dispose();
       container.innerHTML = '';
+    },
+    // Same framing as the initial mount: frame the seeded graph for the viewport.
+    fit() {
+      camera.fitBounds(
+        { height: 224, width: 800, x: -80, y: -160 },
+        { padding: 40, size: { x: viewport.clientWidth, y: viewport.clientHeight } },
+      );
     },
   };
 }

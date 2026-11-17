@@ -34,8 +34,10 @@ import {
   moveShapesCommand,
   removeShapesCommand,
   type ShapePosition,
+  shapeBounds,
 } from '../core/board.ts';
 import { createToolActor, type ToolEvent } from '../core/tools.ts';
+import type { SceneHandle } from './shell.ts';
 import './board.css';
 
 const ZOOM_STEP = 1.0015;
@@ -64,7 +66,7 @@ function screenPoint(viewport: HTMLElement, clientX: number, clientY: number): P
  * Mounts the board scene: an infinite pan/zoom canvas with rect creation,
  * selection, movement, marquee selection, and ledger-backed undo/redo.
  */
-export function mountBoardScene(container: HTMLElement): { dispose(): void } {
+export function mountBoardScene(container: HTMLElement): SceneHandle {
   const model: BoardModel = createBoardModel();
   const camera: Camera = createCamera({ initial: { x: -160, y: -120, zoom: 1 } });
   const ledger = createLedger();
@@ -112,15 +114,14 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
   toolbar.className = 'studio-selection-toolbar';
   toolbar.dataset.testid = 'selection-toolbar';
   toolbar.hidden = true;
+  // Dark contextual pill, mockup-style: icon actions with accessible labels.
   toolbar.innerHTML = `
-    <ore-button-group attached label="Selection actions" size="sm">
-      <ore-button data-action="delete" variant="frost" effect="glass" emphasis="destructive" size="sm">Delete</ore-button>
-    </ore-button-group>
-    <ore-button-group attached label="Align and distribute" size="sm">
-      <ore-button data-action="align-x" variant="frost" effect="glass" size="sm">Center X</ore-button>
-      <ore-button data-action="align-y" variant="frost" effect="glass" size="sm">Center Y</ore-button>
-      <ore-button data-action="distribute-x" variant="frost" effect="glass" size="sm">Space X</ore-button>
-      <ore-button data-action="distribute-y" variant="frost" effect="glass" size="sm">Space Y</ore-button>
+    <ore-button-group attached label="Selection actions" size="sm" rounded="full">
+      <ore-button data-action="align-x" icon-only label="Center horizontally"><ore-icon name="align-center-horizontal"></ore-icon></ore-button>
+      <ore-button data-action="align-y" icon-only label="Center vertically"><ore-icon name="align-center-vertical"></ore-icon></ore-button>
+      <ore-button data-action="distribute-x" icon-only label="Distribute horizontally"><ore-icon name="align-horizontal-distribute-center"></ore-icon></ore-button>
+      <ore-button data-action="distribute-y" icon-only label="Distribute vertically"><ore-icon name="align-vertical-distribute-center"></ore-icon></ore-button>
+      <ore-button data-action="delete" icon-only label="Delete selection" emphasis="destructive"><ore-icon name="trash-2"></ore-icon></ore-button>
     </ore-button-group>`;
 
   const guidesEl = document.createElement('div');
@@ -549,19 +550,24 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
     }
   }
 
+  // Floating bottom tool dock (mockup-style): icon tools with tooltips.
+  // Tooltips wrap each button, which breaks `attached` fusion (::slotted only
+  // matches the ore-button itself), so the dock styles one capsule around both
+  // groups instead.
   const toolbarParent = document.createElement('div');
-  toolbarParent.className = 'studio-toolbar';
+  toolbarParent.className = 'studio-toolbar board-dock';
   toolbarParent.dataset.testid = 'board-toolbar';
   toolbarParent.innerHTML = `
-    <ore-button-group attached label="Board tools" size="sm">
-      <ore-button data-tool="select" variant="frost" effect="glass" size="sm">Select</ore-button>
-      <ore-button data-tool="draw" variant="frost" effect="glass" size="sm">Draw</ore-button>
-      <ore-button data-tool="pen" variant="frost" effect="glass" size="sm">Pen</ore-button>
-      <ore-button data-tool="pan" variant="frost" effect="glass" size="sm">Pan</ore-button>
+    <ore-button-group label="Board tools" size="sm" class="dock-group">
+      <ore-tooltip content="Select (V)" placement="top"><ore-button data-tool="select" variant="ghost" icon-only label="Select"><ore-icon name="mouse-pointer-2"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="Draw rectangle (B)" placement="top"><ore-button data-tool="draw" variant="ghost" icon-only label="Draw rectangle"><ore-icon name="square"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="Pen (P)" placement="top"><ore-button data-tool="pen" variant="ghost" icon-only label="Pen"><ore-icon name="pen-line"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="Pan (H)" placement="top"><ore-button data-tool="pan" variant="ghost" icon-only label="Pan"><ore-icon name="hand"></ore-icon></ore-button></ore-tooltip>
     </ore-button-group>
-    <ore-button-group attached label="History" size="sm">
-      <ore-button data-history="undo" variant="frost" effect="glass" size="sm">Undo</ore-button>
-      <ore-button data-history="redo" variant="frost" effect="glass" size="sm">Redo</ore-button>
+    <span class="dock-sep" aria-hidden="true"></span>
+    <ore-button-group label="History" size="sm" class="dock-group">
+      <ore-tooltip content="Undo (⌘Z)" placement="top"><ore-button data-history="undo" variant="ghost" icon-only label="Undo"><ore-icon name="undo-2"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="Redo (⇧⌘Z)" placement="top"><ore-button data-history="redo" variant="ghost" icon-only label="Redo"><ore-icon name="redo-2"></ore-icon></ore-button></ore-tooltip>
     </ore-button-group>`;
   container.append(toolbarParent);
 
@@ -624,7 +630,17 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
   setToolButton('select');
   viewport.dataset.tool = 'select';
 
+  function modelBounds(): Rect | null {
+    let bounds: Rect | null = null;
+    for (const shape of model.shapes) {
+      const shapeRect = shapeBounds(shape);
+      bounds = bounds ? unionRect(bounds, shapeRect) : shapeRect;
+    }
+    return bounds;
+  }
+
   return {
+    camera,
     dispose() {
       unmountKeymap();
       keymap.dispose();
@@ -640,6 +656,19 @@ export function mountBoardScene(container: HTMLElement): { dispose(): void } {
       camera.dispose();
       model.dispose();
       container.innerHTML = '';
+    },
+    // Frame the drawn content; with an empty board there is nothing to frame,
+    // so fit just restores the initial view.
+    fit() {
+      const bounds = modelBounds();
+      if (!bounds) {
+        camera.animateTo({ x: -160, y: -120, zoom: 1 }, { duration: 180 });
+        return;
+      }
+      camera.fitBounds(bounds, {
+        padding: 80,
+        size: { x: viewport.clientWidth, y: viewport.clientHeight },
+      });
     },
   };
 }

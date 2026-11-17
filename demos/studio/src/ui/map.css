@@ -22,13 +22,10 @@
   cursor: grab;
 }
 
+/* Sits in the shared floating bottom dock (see .studio-toolbar in board.css);
+   only the status chip needs local layout here. */
 .map-toolbar {
-  position: absolute;
-  top: var(--size-4);
-  left: var(--size-4);
-  display: flex;
   gap: var(--size-2);
-  align-items: center;
 }
 
 .map-status {

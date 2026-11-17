@@ -6,6 +6,7 @@ import '@vielzeug/refine/button';
 import { createMapModel, FOV_RADIUS, type MapModel, TILE_SIZE } from '../core/map.ts';
 import { createMapLayers, MAP_LAYER_IDS, type MapSceneMessage } from '../core/map-layers.ts';
 import MapWorker from '../worker/map.worker.ts?worker&inline';
+import type { SceneHandle } from './shell.ts';
 import './map.css';
 
 const ZOOM_STEP = 1.0015;
@@ -33,7 +34,7 @@ type Renderer = {
  * with a transferred OffscreenCanvas); switching disposes the current stage
  * and mounts a fresh canvas because the canvas transfer is one-shot.
  */
-export function mountMapScene(container: HTMLElement): { dispose(): void } {
+export function mountMapScene(container: HTMLElement): SceneHandle {
   container.innerHTML = '';
 
   const root = document.createElement('div');
@@ -236,5 +237,5 @@ export function mountMapScene(container: HTMLElement): { dispose(): void } {
     model.dispose();
     camera.dispose();
   }
-  return { dispose };
+  return { camera, dispose, fit: () => camera.animateTo({ x: -120, y: -120, zoom: 1 }, { duration: 180 }) };
 }

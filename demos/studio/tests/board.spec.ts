@@ -41,7 +41,8 @@ test('draws rectangles with the pen tool and selects them with a click', async (
   await page.mouse.click(box.x + 150, box.y + 140);
   await expect(page.locator('.studio-selection-toolbar')).toBeVisible();
 
-  await page.mouse.click(box.x + box.width - 40, box.y + box.height - 40);
+  // Clear of the tool dock floating at the bottom edge of the canvas.
+  await page.mouse.click(box.x + box.width - 40, box.y + box.height - 140);
   await expect(page.locator('.studio-selection-toolbar')).toBeHidden();
 });
 
