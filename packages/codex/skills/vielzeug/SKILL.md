@@ -9,32 +9,33 @@ Vielzeug is a monorepo of independently published TypeScript packages. "Zero dep
 
 ## Detect
 
-1. Read `package.json` (`dependencies`, `devDependencies`, `peerDependencies`) and list every `@vielzeug/*` entry. Resolve each installed version from `node_modules/@vielzeug/<pkg>/package.json` when present, otherwise from the package-manager lockfile.
+1. If codex's MCP server is connected, call `check-install` once per project: it compares every declared `@vielzeug/*` dependency with the snapshot. Offline, read `package.json` (`dependencies`, `devDependencies`, `peerDependencies`) and list every `@vielzeug/*` entry, resolving each installed version from `node_modules/@vielzeug/<pkg>/package.json` when present, otherwise from the package-manager lockfile.
 2. Note whether `@vielzeug/refine` is installed. If it is, the **Refine** and **Theme** sections below are mandatory for any UI work.
-3. Read the project's own agent contract (`AGENTS.md`, `.github/copilot-instructions.md`) first: project rules win over this skill.
+3. Read the project's own agent contract (`AGENTS.md`, `.github/copilot-instructions.md`) first: project rules win over this skill. Also load the nearest subtree `AGENTS.md` before editing inside it (index at the end of root `AGENTS.md`).
 
 ## Discover, don't recall
 
 Never guess exports, attributes, events, slots, or token names. Look them up:
 
-| Question                                                    | MCP tool (`@vielzeug/codex`)                     | Offline fallback                                                                                         |
-| ----------------------------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Which package solves X?                                     | `search-packages`, `list-packages`               | the package list below                                                                                   |
-| How do I use package X?                                     | `get-docs` (`index`, `usage`, `api`, `examples`) | `node_modules/@vielzeug/<pkg>/README.md`                                                                 |
-| Exact signature of an export                                | `get-type-signature`                             | the declaration file named by the installed manifest's matching export                                   |
-| Runnable example                                            | `list-examples`, `get-example`                   | package README; `docs/<pkg>/examples/` when the Vielzeug repository is checked out                       |
-| Which Refine components exist?                              | `refine-list-components` (tags + descriptions)   | `rg '"tagName"' node_modules/@vielzeug/refine/dist/custom-elements.json`                                 |
-| Attributes, properties, events, slots, CSS parts of `ore-*` | `refine-get-component`                           | extract the matching `tagName` declaration from the manifest with a JSON parser                          |
-| Component CSS custom properties                             | `refine-get-tokens` (pass a prefix)              | extract the component's `cssProperties` from the manifest                                                |
-| Global design tokens                                        | targeted search in installed theme CSS           | `node_modules/@vielzeug/refine/dist/styles/theme.css` or checkout `packages/refine/src/styles/theme.css` |
-| Are component attribute names recognized?                   | `refine-validate-usage`                          | compare against the manifest                                                                             |
-| Blank component scaffold                                    | `refine-generate-template`                       | N/A                                                                                                      |
+| Question                                                          | MCP tool (`@vielzeug/codex`)                     | Offline fallback                                                                                             |
+| ----------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Which package solves X?                                           | `search-packages`, `list-packages`               | the package list below                                                                                       |
+| How do I use package X?                                           | `get-docs` (`index`, `usage`, `api`, `examples`) | `node_modules/@vielzeug/<pkg>/README.md`                                                                     |
+| Exact signature of an export                                      | `get-type-signature` (`slug`, `symbol`)          | the declaration file named by the installed manifest's matching export                                       |
+| Bundled source of one package (only on a `check-install` `match`) | `get-source` (`packageSlug`)                     | the installed package's declaration files; checkout `packages/<pkg>/src/` when the repository is checked out |
+| Runnable example                                                  | `list-examples`, `get-example`                   | package README; `docs/<pkg>/examples/` when the Vielzeug repository is checked out                           |
+| Which Refine components exist?                                    | `refine-list-components` (tags + descriptions)   | `rg '"tagName"' node_modules/@vielzeug/refine/dist/custom-elements.json`                                     |
+| Attributes, properties, events, slots, CSS parts of `ore-*`       | `refine-get-component`                           | extract the matching `tagName` declaration from the manifest with a JSON parser                              |
+| Component CSS custom properties                                   | `refine-get-tokens` (pass a prefix)              | extract the component's `cssProperties` from the manifest                                                    |
+| Global design tokens                                              | targeted search in installed theme CSS           | `node_modules/@vielzeug/refine/dist/styles/theme.css` or checkout `packages/refine/src/styles/theme.css`     |
+| Are component attribute names recognized?                         | `refine-validate-usage`                          | compare against the manifest                                                                                 |
+| Blank component scaffold                                          | `refine-generate-template`                       | N/A                                                                                                          |
 
 Look each thing up once, from the smallest source that answers it: reuse a lookup already in this task while its version and relevant inputs remain unchanged; read one component with `refine-get-component` instead of listing the whole catalog; pass the narrowest known prefix (prefer an exact token name when known) to `refine-get-tokens`; fetch the one `get-docs` page that answers the question, not `index` + `usage` + `api` + `examples`. Verified installed declarations or checkout source are sufficient evidence without an additional docs fetch. Offline, use targeted searches to locate source or CSS; extract a component declaration from the JSON manifest with a structured parser rather than dumping the manifest.
 
 `refine-get-tokens` reads CEM component CSS properties, not the complete global theme. For global tokens such as `--size-*`, search the relevant prefix or exact name in theme CSS; an empty MCP result does not prove a global token is unavailable. `tokens.css` only imports the underlying stylesheets.
 
-Codex serves a versioned snapshot, which may not match the versions installed in the project or include the newest packages. Compare `get-package`'s `version` with the installed version before using its API docs or signatures, or call codex's `check-install` tool once per project to compare the snapshot against every `@vielzeug/*` dependency the project declares. If they differ, treat the installed package's declarations, docs, and runtime as authoritative; do not use newer snapshot APIs unless the dependency is deliberately updated. Treat the generated package list as a discovery aid, not proof that no other package exists.
+Codex serves a versioned snapshot, which may not match the versions installed in the project or include the newest packages. Call codex's `check-install` once per project to compare the snapshot against every `@vielzeug/*` dependency the project declares; it reports `match`, `drift`, `linked`, `not-in-snapshot`, or `unresolved`. Use snapshot docs, signatures, and `get-source` only for a `match`. Otherwise, treat the installed package's declarations, docs, and runtime as authoritative; do not use newer snapshot APIs unless the dependency is deliberately updated. Treat the generated package list as a discovery aid, not proof that no other package exists.
 
 `get-docs` reaches only the four standard pages (`index`, `api`, `usage`, `examples`). A package's extra guides (Refine's `frameworks`, `theming`, `accessibility`, per-component references) are not in that set: read them from `https://vielzeug.dev/<pkg>/<page>` or from the checkout's `docs/<pkg>/`, not from `get-docs`.
 
@@ -106,6 +107,7 @@ Common compositions (verify unfamiliar APIs from the smallest applicable source 
 - **Data**: `courier` for HTTP with caching and structured errors; `sourcerer` for paged/cursor/infinite collections; `vault` for storage; `postmaster` for durable jobs; `scout` for fuzzy search; `mesh` for backendless peer sessions on a LAN; `sigil` for QR generation/scanning: prefer `ore-qr-code` / `ore-qr-scanner` when Refine is installed.
 - **Forms**: `forge` for form state, validation, and submission; `spell` for schemas; render fields with Refine inputs when Refine is installed.
 - **App shell**: `wayfinder` routing; `conduit` DI; `herald` events; `lingua` i18n; `rune` logging; `ward` authorization; `keymap` shortcuts.
+- **Dates**: `tempo` for date utilities; do not hand-roll date math.
 - **Own cleanup** for every stateful handle or subscription whose API documents disposal or unsubscription, and tie it to the owner's lifecycle. Pure functions and value-returning APIs need no cleanup; verify the specific API contract rather than assuming it returns a disposable.
 
 ## Refine (when `@vielzeug/refine` is installed)
@@ -133,7 +135,7 @@ Refine is the UI layer. Build interfaces from `ore-*` elements before anything e
 
 7. **Check attribute names** with `refine-validate-usage` when available. It only checks for unknown attributes on the specified component's opening tag; it does not validate HTML generally, attribute values, JavaScript properties, events, slots, accessibility, or runtime behavior. Check those against the component docs and relevant tests instead.
 
-8. **Missing capability?** Compose existing `ore-*` elements when they fit. If none meets the documented feature and project requirements, use the simplest appropriate native element or other package and report the gap; avoid a parallel composite when a suitable Refine component exists.
+8. **Missing capability?** Compose existing `ore-*` elements when they fit. If none meets the documented feature and project requirements, use the simplest appropriate native element or other package and report the gap.
 
 ## Theme (when `@vielzeug/refine` is installed)
 
@@ -170,6 +172,6 @@ Refine covers the widget layer; these provide specialized behavior it may not co
 
 - Every new capability maps to an installed `@vielzeug/*` package or is justified as out of scope.
 - No parallel implementation of something an installed package provides.
-- With Refine installed: prefer `ore-*` for interactive UI when its documented contract fits; load `tokens.css` + `fouc.css` once, use the attribute checker within its stated limits, and use Refine tokens for app styling where suitable tokens exist.
+- With Refine installed: component choice follows Refine step 3; load `tokens.css` + `fouc.css` once, use the attribute checker within its stated limits, and use Refine tokens for app styling where suitable tokens exist.
 - Every API that documents an owned resource or cleanup operation is integrated with the owning lifecycle; pure and value-returning APIs are not given invented cleanup.
 - Claims about package APIs were verified from an applicable lookup, installed declarations, or checkout source, not recalled; completion does not require repeating unchanged evidence.

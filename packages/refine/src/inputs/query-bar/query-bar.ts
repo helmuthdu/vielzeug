@@ -704,7 +704,6 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
         class="filters-drawer"
         title=${() => label('filters')}
         placement=${drawerPlacement}
-        drag-handle-placement="inset"
         ?open=${drawerOpen}
         @close-request=${(event: CustomEvent<OverlayCloseDetail>) => {
           event.stopPropagation();

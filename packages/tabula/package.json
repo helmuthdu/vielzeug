@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/tabula",
-  "version": "26.11.19",
+  "version": "26.11.22",
   "description": "Typed CSV and TSV: RFC 4180 parser with schema-validated rows, streaming reader, and safe serializer.",
   "repository": {
     "type": "git",
@@ -45,7 +45,7 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "typescript": "^6.0.3",
-    "vite": "^8.3.6",
+    "vite": "^8.3.8",
     "vitest": "^5.1.0"
   }
 }

@@ -485,6 +485,7 @@ define<OreMenuProps>(MENU_TAG, {
 
     createOutsidePointerDismissal({
       getTargets: () => [el, panelEl],
+      host: el,
       isActive: () => isOpenSignal.value,
       onDismiss: () => close('outsideClick'),
       signal: abortSignal,

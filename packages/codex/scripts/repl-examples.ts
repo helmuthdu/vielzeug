@@ -113,8 +113,8 @@ function readExampleFields(filePath: string, exportedName: string): { code: stri
 
 /**
  * Returns all REPL examples for a package, sorted by id. Returns [] when the package has no
- * REPL examples directory (DOM-output packages ore/prism/refine, or any package not yet wired
- * into the REPL).
+ * REPL examples directory (`docs/.vitepress/theme/components/repl/examples/<slug>/`), or absent
+ * when a package has no REPL examples yet.
  */
 export function readReplExamples(repoRoot: string, slug: string): BundledExample[] {
   const dir = resolve(repoRoot, `docs/.vitepress/theme/components/repl/examples/${slug}`);

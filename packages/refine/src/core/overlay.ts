@@ -28,6 +28,8 @@ export type OverlayOpenChangeDetail = {
 
 export type OutsidePointerDismissalOptions = {
   getTargets: () => Array<Element | null | undefined>;
+  /** Component host: the listener attaches to its `ownerDocument`, not the global one. */
+  host?: Element | null;
   isActive: () => boolean;
   onDismiss: () => void;
   signal: AbortSignal;
@@ -38,6 +40,8 @@ export type OutsidePointerDismissalOptions = {
  * supplied boundary elements. Components retain ownership of their open state.
  */
 export const createOutsidePointerDismissal = (options: OutsidePointerDismissalOptions): (() => void) => {
+  const ownerDocument = options.host?.ownerDocument ?? document;
+
   const onPointerDown = (event: PointerEvent): void => {
     if (!options.isActive()) return;
 
@@ -55,10 +59,10 @@ export const createOutsidePointerDismissal = (options: OutsidePointerDismissalOp
   };
 
   const dispose = (): void => {
-    document.removeEventListener('pointerdown', onPointerDown, { capture: true });
+    ownerDocument.removeEventListener('pointerdown', onPointerDown, { capture: true });
   };
 
-  document.addEventListener('pointerdown', onPointerDown, { capture: true });
+  ownerDocument.addEventListener('pointerdown', onPointerDown, { capture: true });
   options.signal.addEventListener('abort', dispose, { once: true });
 
   return dispose;

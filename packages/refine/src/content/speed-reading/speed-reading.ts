@@ -412,15 +412,19 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
       if (fullscreen.value) exitFullscreen();
       else enterFullscreen();
     };
-    let tapOrigin: { x: number; y: number } | undefined;
+    let tapOrigin: { pointerId: number; x: number; y: number } | undefined;
     const handlePointerDown = (event: PointerEvent): void => {
-      tapOrigin = { x: event.clientX, y: event.clientY };
+      if (!event.isPrimary) return;
+
+      tapOrigin = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
     };
     const handlePointerUp = (event: PointerEvent): void => {
       const origin = tapOrigin;
+      if (!origin || event.pointerId !== origin.pointerId) return;
+
       tapOrigin = undefined;
       const display = viewport.value;
-      if (!origin || !display || event.pointerType === 'mouse' || overflow.value || !words.value.length) return;
+      if (!display || event.pointerType === 'mouse' || overflow.value || !words.value.length) return;
       if (Math.abs(event.clientX - origin.x) > 8 || Math.abs(event.clientY - origin.y) > 8) return;
       const bounds = display.getBoundingClientRect();
       const ratio = (event.clientX - bounds.left) / bounds.width;
@@ -572,8 +576,8 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
           aria-label=${() => label('viewport')}
           @pointerdown=${handlePointerDown}
           @pointerup=${handlePointerUp}
-          @pointercancel=${() => {
-            tapOrigin = undefined;
+          @pointercancel=${(event: PointerEvent) => {
+            if (event.pointerId === tapOrigin?.pointerId) tapOrigin = undefined;
           }}
           @keydown=${(event: KeyboardEvent) => {
             if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;

@@ -1,6 +1,240 @@
-import { axeCheck, expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test, touchSwipe } from '../../testing/fixtures';
+
+test.describe('Content touch gestures', () => {
+  test.use({ hasTouch: true, viewport: { height: 844, width: 390 } });
+
+  for (const dir of ['ltr', 'rtl']) {
+    for (const placement of ['bottom', 'top', 'right', 'left']) {
+      test(`dismisses ${placement} in ${dir} from its scroll boundary`, async ({ page, refinePage }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await refinePage.mountComponent(
+          `<ore-drawer default-open label="Reading" placement="${placement}" dir="${dir}">
+            <div style="width:1200px;height:1200px">Scrollable reading content</div>
+          </ore-drawer>`,
+        );
+        const body = page.locator('ore-drawer [part="body"]');
+        await body.evaluate(
+          (element, { placement, dir }) => {
+            if (placement === 'bottom') element.scrollTop = 60;
+            if (placement === 'top') element.scrollTop = element.scrollHeight - element.clientHeight - 60;
+            if (placement === 'left' || placement === 'right') {
+              const closesRight = (placement === 'right') !== (dir === 'rtl');
+              const max = element.scrollWidth - element.clientWidth;
+              element.scrollLeft = dir === 'rtl' ? (closesRight ? -max + 60 : -60) : closesRight ? 60 : max - 60;
+            }
+          },
+          { dir, placement },
+        );
+        const bounds = (await body.boundingBox())!;
+        const from = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+        const dx = placement === 'right' ? 100 : placement === 'left' ? -100 : 0;
+        const dy = placement === 'bottom' ? 100 : placement === 'top' ? -100 : 0;
+        const to = { x: from.x + dx * (dir === 'rtl' ? -1 : 1), y: from.y + dy };
+        await touchSwipe(page, { from, to });
+        await expect(page.locator('ore-drawer dialog')).toBeVisible();
+        await expect
+          .poll(() =>
+            body.evaluate(
+              (element, { placement, dir }) => {
+                if (placement === 'bottom') return element.scrollTop;
+                if (placement === 'top') return element.scrollHeight - element.clientHeight - element.scrollTop;
+                const max = element.scrollWidth - element.clientWidth;
+                const position = dir === 'rtl' ? max + element.scrollLeft : element.scrollLeft;
+                return (placement === 'right') !== (dir === 'rtl') ? position : max - position;
+              },
+              { dir, placement },
+            ),
+          )
+          .toBeLessThan(1);
+        await touchSwipe(page, { from, to });
+
+        await expect(page.locator('ore-drawer dialog')).toBeHidden();
+      });
+    }
+  }
+
+  test('keeps native scrolling and requires a fresh swipe after reaching the boundary', async ({
+    page,
+    refinePage,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      '<ore-drawer default-open label="Reading" placement="bottom" size="lg"><div style="height:2000px">Long content</div></ore-drawer>',
+    );
+    const body = page.locator('ore-drawer [part="body"]');
+    await body.evaluate((element) => {
+      element.scrollTop = 90;
+    });
+    const bounds = (await body.boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + 80 };
+    const to = { x: from.x, y: from.y + 220 };
+    await touchSwipe(page, { from, to });
+
+    await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBe(0);
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    expect(await page.locator('ore-drawer [part="panel"]').evaluate((element) => element.style.transform)).toBe('');
+
+    await touchSwipe(page, { from, to });
+    await expect(page.locator('ore-drawer dialog')).toBeHidden();
+  });
+
+  test('gives a nested scroller priority before allowing a fresh boundary swipe', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      '<ore-drawer default-open label="Nested" placement="bottom" size="lg"><div id="nested" style="height:220px;overflow:auto"><div style="height:1000px">Nested reading content</div></div></ore-drawer>',
+    );
+    const nested = page.locator('#nested');
+    await nested.evaluate((element) => {
+      element.scrollTop = 60;
+    });
+    const bounds = (await nested.boundingBox())!;
+    const from = { x: bounds.x + 100, y: bounds.y + 30 };
+    const to = { x: from.x, y: from.y + 150 };
+    await touchSwipe(page, { from, to });
+
+    await expect.poll(() => nested.evaluate((element) => element.scrollTop)).toBe(0);
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+
+    await touchSwipe(page, { from, to });
+    await expect(page.locator('ore-drawer dialog')).toBeHidden();
+  });
+
+  test('preserves vertical scrolling in side drawers', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      '<ore-drawer default-open label="Reading" placement="right"><div style="height:2000px">Long content</div></ore-drawer>',
+    );
+    const body = page.locator('ore-drawer [part="body"]');
+    const bounds = (await body.boundingBox())!;
+    const from = { x: bounds.x + 100, y: bounds.y + 300 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y - 180 } });
+
+    expect(await body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+  });
+
+  test('respects reversed flex scrollers with negative scroll offsets', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      '<ore-drawer default-open label="Chat" placement="bottom" size="lg"><div id="chat" style="height:220px;display:flex;flex-direction:column-reverse;overflow:auto"><div style="height:1000px;flex-shrink:0">Messages</div></div></ore-drawer>',
+    );
+    const chat = page.locator('#chat');
+    await chat.evaluate((element) => {
+      element.addEventListener('scrollend', () => element.setAttribute('data-scroll-ended', ''), { once: true });
+    });
+    const bounds = (await chat.boundingBox())!;
+    const from = { x: bounds.x + 100, y: bounds.y + 30 };
+    const to = { x: from.x, y: from.y + 120 };
+    await touchSwipe(page, { from, to });
+    expect(await chat.evaluate((element) => element.scrollTop)).toBeLessThan(0);
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    await expect(chat).toHaveAttribute('data-scroll-ended', '');
+
+    await chat.evaluate((element) => {
+      element.scrollTop = -element.scrollHeight;
+    });
+    expect(await chat.evaluate((element) => element.scrollTop + element.scrollHeight - element.clientHeight)).toBe(0);
+    await touchSwipe(page, { from, to });
+    await expect(page.locator('ore-drawer dialog')).toBeHidden();
+  });
+
+  test('restores the panel after the platform cancels an owned touch drag', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      '<ore-drawer default-open label="Reading" placement="bottom" size="lg"><div style="height:2000px">Long content</div></ore-drawer>',
+    );
+    const bounds = (await page.locator('ore-drawer [part="body"]').boundingBox())!;
+    const from = { x: bounds.x + 100, y: bounds.y + 60 };
+    const session = await page.context().newCDPSession(page);
+    try {
+      await session.send('Input.dispatchTouchEvent', { touchPoints: [from], type: 'touchStart' });
+      await session.send('Input.dispatchTouchEvent', {
+        touchPoints: [{ x: from.x, y: from.y + 100 }],
+        type: 'touchMove',
+      });
+      expect(await page.locator('ore-drawer [part="panel"]').evaluate((element) => element.style.transform)).not.toBe(
+        '',
+      );
+      await session.send('Input.dispatchTouchEvent', { touchPoints: [], type: 'touchCancel' });
+    } finally {
+      await session.detach();
+    }
+
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    await expect
+      .poll(() => page.locator('ore-drawer [part="panel"]').evaluate((element) => element.style.transform))
+      .toBe('');
+  });
+
+  test('keeps native pinch zoom available over content', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-drawer default-open label="Reading" placement="bottom" size="lg"><p>Reading content</p></ore-drawer>',
+    );
+    const bounds = (await page.locator('ore-drawer [part="body"]').boundingBox())!;
+    const session = await page.context().newCDPSession(page);
+    try {
+      await session.send('Input.synthesizePinchGesture', {
+        gestureSourceType: 'touch',
+        scaleFactor: 1.5,
+        x: bounds.x + bounds.width / 2,
+        y: bounds.y + bounds.height / 2,
+      });
+    } finally {
+      await session.detach();
+    }
+    await expect.poll(() => page.evaluate(() => window.visualViewport!.scale)).toBeGreaterThan(1);
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+  });
+
+  test('preserves content interactions and supports subtree and drawer opt-outs', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      '<ore-drawer default-open label="Reading" placement="bottom" size="lg"><button style="height:120px;width:100%">Action</button><div data-no-swipe style="height:120px">Custom gesture</div><p style="height:120px">Reading</p></ore-drawer>',
+    );
+    for (const target of [page.getByRole('button', { exact: true, name: 'Action' }), page.locator('[data-no-swipe]')]) {
+      const bounds = (await target.boundingBox())!;
+      const from = { x: bounds.x + 80, y: bounds.y + 10 };
+      await touchSwipe(page, { from, to: { x: from.x, y: from.y + 100 } });
+      await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    }
+    await page.locator('ore-drawer').evaluate((element) => element.setAttribute('swipe-from-content', 'false'));
+    const bounds = (await page.locator('ore-drawer p').boundingBox())!;
+    const from = { x: bounds.x + 80, y: bounds.y + 10 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y + 100 } });
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+  });
+});
 
 test.describe('Interaction', () => {
+  test('insets the drag handle by default for every placement', async ({ page, refinePage }) => {
+    const placements = ['left', 'right', 'top', 'bottom'] as const;
+    const drawers = placements
+      .flatMap((placement) => [
+        `<ore-drawer default-open label="Inset ${placement}" placement="${placement}"></ore-drawer>`,
+        `<ore-drawer default-open label="Outside ${placement}" placement="${placement}" drag-handle-placement="outside"></ore-drawer>`,
+      ])
+      .join('');
+    await refinePage.mountComponent(drawers);
+
+    const offsets = await page.locator('ore-drawer').evaluateAll((elements) => {
+      const handleSide = { bottom: 'top', left: 'right', right: 'left', top: 'bottom' };
+
+      return elements.map((element) => {
+        const handle = element.shadowRoot?.querySelector<HTMLElement>('[part="drag-handle"]');
+        const side = handleSide[element.getAttribute('placement') as keyof typeof handleSide];
+
+        if (!handle || !side) throw new Error('Expected each drawer to have a drag handle and placement.');
+
+        return Math.abs(Number.parseFloat(getComputedStyle(handle).getPropertyValue(side)));
+      });
+    });
+
+    expect(offsets).toHaveLength(placements.length * 2);
+    for (let index = 0; index < offsets.length; index += 2) {
+      expect(offsets[index]).toBeLessThan(offsets[index + 1]!);
+    }
+  });
+
   test('content-sized sheets fit short content and scroll long content', async ({ page, refinePage }) => {
     await page.setViewportSize({ height: 844, width: 390 });
     await refinePage.mountComponent(

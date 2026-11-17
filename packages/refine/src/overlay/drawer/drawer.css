@@ -302,15 +302,15 @@
     translate: 0 -50%;
   }
 
-  /* Left drawer: handle on the right (opposite side) */
+  /* Left drawer: handle on the right (opposite side), inset inside the panel */
   :host([placement='left']) .drag-handle {
-    right: calc(var(--_panel-bleed) * -1);
+    right: var(--_drag-handle-inset);
   }
 
-  /* Right drawer (default): handle on the left (opposite side) */
+  /* Right drawer (default): handle on the left (opposite side), inset inside the panel */
   :host([placement='right']) .drag-handle,
   :host(:not([placement])) .drag-handle {
-    left: calc(var(--_panel-bleed) * -1);
+    left: var(--_drag-handle-inset);
   }
 
   /* Vertical drawers (top/bottom): drag handle on the opposite edge */
@@ -322,32 +322,32 @@
     translate: -50% 0;
   }
 
-  /* Top drawer: handle at bottom (opposite side) */
+  /* Top drawer: handle at bottom (opposite side), inset inside the panel */
   :host([placement='top']) .drag-handle {
-    bottom: calc(var(--_panel-bleed) * -1);
-  }
-
-  /* Bottom drawer: handle at top (opposite side) */
-  :host([placement='bottom']) .drag-handle {
-    top: calc(var(--_panel-bleed) * -1);
-  }
-
-  /* Inset drag-handle placement keeps the handle fully inside the panel. */
-  :host([drag-handle-placement='inset'][placement='left']) .drag-handle {
-    right: var(--_drag-handle-inset);
-  }
-
-  :host([drag-handle-placement='inset'][placement='right']) .drag-handle,
-  :host([drag-handle-placement='inset']:not([placement])) .drag-handle {
-    left: var(--_drag-handle-inset);
-  }
-
-  :host([drag-handle-placement='inset'][placement='top']) .drag-handle {
     bottom: var(--_drag-handle-inset);
   }
 
-  :host([drag-handle-placement='inset'][placement='bottom']) .drag-handle {
+  /* Bottom drawer: handle at top (opposite side), inset inside the panel */
+  :host([placement='bottom']) .drag-handle {
     top: var(--_drag-handle-inset);
+  }
+
+  /* Outside drag-handle placement hangs the handle off the panel edge. */
+  :host([drag-handle-placement='outside'][placement='left']) .drag-handle {
+    right: calc(var(--_panel-bleed) * -1);
+  }
+
+  :host([drag-handle-placement='outside'][placement='right']) .drag-handle,
+  :host([drag-handle-placement='outside']:not([placement])) .drag-handle {
+    left: calc(var(--_panel-bleed) * -1);
+  }
+
+  :host([drag-handle-placement='outside'][placement='top']) .drag-handle {
+    bottom: calc(var(--_panel-bleed) * -1);
+  }
+
+  :host([drag-handle-placement='outside'][placement='bottom']) .drag-handle {
+    top: calc(var(--_panel-bleed) * -1);
   }
 
   /* Visual indicator: subtle bar in the center */

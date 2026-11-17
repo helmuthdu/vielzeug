@@ -12,6 +12,24 @@ describe('ore-sidebar', () => {
     fixture?.dispose();
   });
 
+  it('cancels a stale swipe when the drawer closes and reopens', async () => {
+    fixture = await mount('ore-sidebar');
+    const el = fixture.element as HTMLElement & { openDrawer(): void; closeDrawer(): void };
+    el.openDrawer();
+    await fixture.flush();
+    const handle = fixture.query<HTMLElement>('.swipe-handle')!;
+    const init = { bubbles: true, clientX: 200, composed: true, isPrimary: true, pointerId: 1, pointerType: 'touch' };
+    handle.dispatchEvent(new PointerEvent('pointerdown', init));
+    handle.dispatchEvent(new PointerEvent('pointermove', { ...init, clientX: 140 }));
+    expect(fixture.query<HTMLElement>('nav')!.style.transform).toBe('translateX(-60px)');
+    el.closeDrawer();
+    el.openDrawer();
+    handle.dispatchEvent(new PointerEvent('pointerup', { ...init, clientX: 140 }));
+    await fixture.flush();
+    expect(fixture.query<HTMLElement>('nav')!.style.transform).toBe('');
+    expect(el.hasAttribute('data-drawer-open')).toBe(true);
+  });
+
   it('renders a nav landmark with default label', async () => {
     fixture = await mount('ore-sidebar');
 

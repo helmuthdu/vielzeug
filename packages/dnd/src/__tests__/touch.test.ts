@@ -101,6 +101,40 @@ describe('sortable scope touch input', () => {
     expect(onDragStart).toHaveBeenCalledOnce();
   });
 
+  it.each(['input', 'textarea', 'button', '[contenteditable]', '[role="slider"]', '[data-no-drag]'])(
+    'does not sort from an embedded control: %s',
+    (selector) => {
+      const { element, items } = makeList('a');
+      const control = document.createElement(selector.startsWith('[') ? 'span' : selector);
+      if (selector === '[contenteditable]') control.setAttribute('contenteditable', 'plaintext-only');
+      if (selector === '[role="slider"]') control.setAttribute('role', 'slider');
+      if (selector === '[data-no-drag]') control.setAttribute('data-no-drag', '');
+      items[0]!.append(control);
+      const onDragStart = vi.fn();
+      using scope = createSortableScope({ touch: true });
+      using _sortable = createSortable({ element, getKey, onDragStart, scope });
+      dispatchPointer(control, 'pointerdown');
+      dispatchPointer(document, 'pointermove', { clientX: 20 });
+      expect(onDragStart).not.toHaveBeenCalled();
+    },
+  );
+
+  it('cancels sorting without committing when a second touch appears', () => {
+    const { element, items } = makeList('a', 'b');
+    const onReorder = vi.fn();
+    using scope = createSortableScope({ touch: true });
+    using _sortable = createSortable({ element, getKey, onReorder, scope });
+    mockElementFromPoint(items[1]!);
+    dispatchPointer(items[0]!, 'pointerdown');
+    dispatchPointer(document, 'pointermove', { clientX: 20 });
+    expect(scope.isDragging).toBe(true);
+    dispatchPointer(document, 'pointerdown', { isPrimary: false, pointerId: 2 });
+    dispatchPointer(document, 'pointerup', { clientX: 20 });
+    expect(scope.isDragging).toBe(false);
+    expect(onReorder).not.toHaveBeenCalled();
+    expect([...element.querySelectorAll<HTMLElement>('[data-sort-id]')].map(getKey)).toEqual(['a', 'b']);
+  });
+
   it('tracks only the initiating primary pointer', () => {
     const { element, items } = makeList('a');
     const onDragStart = vi.fn();

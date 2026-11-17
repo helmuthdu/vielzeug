@@ -237,6 +237,112 @@ describe('ore-card-picker', () => {
     expect(drag.defaultPrevented).toBe(true);
   });
 
+  describe('Gesture ownership', () => {
+    const pointer = {
+      bubbles: true,
+      button: 0,
+      cancelable: true,
+      clientX: 200,
+      clientY: 100,
+      composed: true,
+      isPrimary: true,
+      pointerId: 31,
+      pointerType: 'touch',
+    } as const;
+    const dispatch = (target: HTMLElement, type: string, init: PointerEventInit = {}): void => {
+      target.dispatchEvent(new PointerEvent(type, { ...pointer, ...init }));
+    };
+    const swipe = (target: HTMLElement): void => {
+      dispatch(target, 'pointerdown');
+      dispatch(target, 'pointermove', { clientX: 100 });
+      dispatch(target, 'pointerup', { clientX: 100 });
+    };
+
+    it.each([
+      '<div role="slider">Slider</div>',
+      '<div role="switch">Switch</div>',
+      '<div contenteditable="plaintext-only">Edit</div>',
+      '<div data-no-swipe>Custom gesture</div>',
+    ])('leaves %s gestures to the target', async (content) => {
+      fixture = await mount('ore-card-picker', {
+        html: `<ore-card-picker-item value="alpha">${content}</ore-card-picker-item>${cards}`,
+      });
+      swipe(fixture.element.querySelector<HTMLElement>('ore-card-picker-item > div')!);
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('active-index')).toBe('0');
+      expect(fixture.element.hasAttribute('data-dragging')).toBe(false);
+    });
+
+    it('does not browse when another touch interrupts the drag', async () => {
+      fixture = await mount('ore-card-picker', { attrs: { values: 'alpha' }, html: cards });
+      const target = fixture.element.querySelector<HTMLElement>('p')!;
+      dispatch(target, 'pointerdown');
+      dispatch(target, 'pointermove', { clientX: 100 });
+      expect(fixture.element.hasAttribute('data-dragging')).toBe(true);
+      document.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, isPrimary: false, pointerId: 32 }));
+      dispatch(target, 'pointerup', { clientX: 100 });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('active-index')).toBe('0');
+      expect(fixture.element.getAttribute('values')).toBe('alpha');
+      expect(fixture.element.hasAttribute('data-dragging')).toBe(false);
+      swipe(target);
+      await fixture.flush();
+      expect(fixture.element.getAttribute('active-index')).toBe('1');
+    });
+
+    it('does not claim a diagonal tie intended for vertical scrolling or dismissal', async () => {
+      fixture = await mount('ore-card-picker', { html: cards });
+      const target = fixture.element.querySelector<HTMLElement>('p')!;
+      dispatch(target, 'pointerdown');
+      dispatch(target, 'pointermove', { clientX: 100, clientY: 200 });
+      dispatch(target, 'pointerup', { clientX: 100, clientY: 200 });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('active-index')).toBe('0');
+      expect(fixture.element.hasAttribute('data-dragging')).toBe(false);
+    });
+
+    it('allows native drag-and-drop inside an excluded subtree', async () => {
+      fixture = await mount('ore-card-picker', {
+        html: '<ore-card-picker-item value="alpha"><div data-no-swipe><img></div></ore-card-picker-item>',
+      });
+      const drag = new Event('dragstart', { bubbles: true, cancelable: true, composed: true });
+      fixture.element.querySelector('img')!.dispatchEvent(drag);
+
+      expect(drag.defaultPrevented).toBe(false);
+    });
+
+    it('cancels the stale release when the active card is removed during a drag', async () => {
+      fixture = await mount('ore-card-picker', { html: cards });
+      const stage = fixture.query<HTMLElement>('[part="stage"]')!;
+      dispatch(stage, 'pointerdown');
+      dispatch(stage, 'pointermove', { clientX: 100 });
+      fixture.element.querySelector('ore-card-picker-item')!.remove();
+      await fixture.flush();
+      fixture.query('slot')!.dispatchEvent(new Event('slotchange'));
+      dispatch(stage, 'pointerup', { clientX: 100 });
+      await fixture.flush();
+
+      expect(fixture.element.querySelector('[data-active]')?.getAttribute('value')).toBe('beta');
+      expect(fixture.element.hasAttribute('data-dragging')).toBe(false);
+    });
+
+    it.each(['active-index', 'disabled'])('cancels a drag when %s changes externally', async (attribute) => {
+      fixture = await mount('ore-card-picker', { html: cards });
+      const stage = fixture.query<HTMLElement>('[part="stage"]')!;
+      dispatch(stage, 'pointerdown');
+      dispatch(stage, 'pointermove', { clientX: 100 });
+      await fixture.attr(attribute, attribute === 'active-index' ? '1' : 'true');
+      dispatch(stage, 'pointerup', { clientX: 100 });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('active-index')).toBe(attribute === 'active-index' ? '1' : '0');
+      expect(fixture.element.hasAttribute('data-dragging')).toBe(false);
+    });
+  });
+
   it('keeps disabled items browsable but prevents selection', async () => {
     fixture = await mount('ore-card-picker', {
       html: '<ore-card-picker-item disabled value="locked" label="Locked card">Locked</ore-card-picker-item><ore-card-picker-item value="open" label="Open card">Open</ore-card-picker-item>',

@@ -54,6 +54,28 @@ describe('ore-toast', () => {
     expect(fixture.element.getAttribute('max')).toBe('5');
   });
 
+  it('uses the projected fling direction for its exit animation', async () => {
+    service.add({ duration: 0, message: 'Swipe me' });
+    await fixture.flush();
+    const wrapper = fixture.query<HTMLElement>('.toast-wrapper')!;
+    let clock = 0;
+    const now = vi.spyOn(performance, 'now').mockImplementation(() => clock);
+    const init = { bubbles: true, composed: true, isPrimary: true, pointerId: 1, pointerType: 'touch' };
+    try {
+      wrapper.dispatchEvent(new PointerEvent('pointerdown', { ...init, clientX: 200 }));
+      clock = 100;
+      wrapper.dispatchEvent(new PointerEvent('pointermove', { ...init, clientX: 400 }));
+      clock = 120;
+      wrapper.dispatchEvent(new PointerEvent('pointermove', { ...init, clientX: 260 }));
+      wrapper.dispatchEvent(new PointerEvent('pointerup', { ...init, clientX: 260 }));
+      await fixture.flush();
+      expect(fixture.query<HTMLElement>('.toast-inner')!.style.transform).toBe('translateX(-120%)');
+      expect(fixture.query('.toast-inner.exiting')).toBeTruthy();
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it('dismisses from the service after the exit transition', async () => {
     const dismissed = vi.fn();
     const id = service.add({ duration: 0, message: 'Dismiss me', onDismiss: dismissed });

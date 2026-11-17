@@ -1,12 +1,14 @@
-import { bind, define, getHost, html, onMounted, prop, ref, useField } from '@vielzeug/ore';
+import { bind, define, getHost, html, onCleanup, onMounted, prop, ref, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { format, Temporal } from '@vielzeug/tempo';
 import {
   createDatePickerControl,
   createDropdownPositioner,
+  createOutsidePointerDismissal,
   type DatePickerView,
   formatDisplayDate,
   handleCalendarGridKeydown,
+  lifecycleSignal,
   parseIso,
   toIsoString,
 } from '../../core';
@@ -414,21 +416,18 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
       }
     }
 
-    function handleOutsideClick(e: PointerEvent | MouseEvent): void {
-      if (!isOpen.value) return;
-
-      const path = e.composedPath();
-
-      if (!path.includes(el)) closePicker();
-    }
+    createOutsidePointerDismissal({
+      getTargets: () => [el],
+      host: el,
+      isActive: () => isOpen.value,
+      onDismiss: () => closePicker(),
+      signal: lifecycleSignal(onCleanup),
+    });
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     onMounted(() => {
-      document.addEventListener('pointerdown', handleOutsideClick, { capture: true });
-
       return () => {
-        document.removeEventListener('pointerdown', handleOutsideClick, { capture: true });
         stopAutoUpdate?.();
         stopAutoUpdate = null;
       };

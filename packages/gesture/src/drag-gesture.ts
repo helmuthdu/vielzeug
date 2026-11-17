@@ -25,6 +25,8 @@ export type DragGestureOptions = Readonly<{
   onMove?: (detail: DragGestureDetail) => void;
   onStart?: (detail: DragGestureDetail) => void;
   pointerCapture?: boolean;
+  /** Evaluated after distance recognition, before pointer capture. False rejects the session. */
+  shouldActivate?: (detail: DragGestureDetail) => boolean;
   shouldStart?: (event: PointerEvent) => boolean;
   signal?: AbortSignal;
 }>;
@@ -47,7 +49,17 @@ function toDragDetail(detail: PointerSessionDetail): DragGestureDetail {
 }
 
 export function createDragGesture(target: Element, options: DragGestureOptions = {}): DragGesture {
-  const { activationDistance, disabled, onEnd, onMove, onStart, pointerCapture = true, shouldStart, signal } = options;
+  const {
+    activationDistance,
+    disabled,
+    onEnd,
+    onMove,
+    onStart,
+    pointerCapture = true,
+    shouldActivate,
+    shouldStart,
+    signal,
+  } = options;
 
   return createPointerSession(target, {
     activationDistance: resolveActivationDistance(activationDistance),
@@ -56,6 +68,7 @@ export function createDragGesture(target: Element, options: DragGestureOptions =
     onMove: onMove ? (detail) => onMove(toDragDetail(detail)) : undefined,
     onStart: onStart ? (detail) => onStart(toDragDetail(detail)) : undefined,
     pointerCapture,
+    shouldActivate: shouldActivate ? (detail) => shouldActivate(toDragDetail(detail)) : undefined,
     shouldStart,
     signal,
   });

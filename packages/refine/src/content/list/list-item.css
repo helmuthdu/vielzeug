@@ -29,7 +29,7 @@
     padding-inline-end: var(--_padding-inline-end, var(--size-6));
     font-size: var(--_font-size, var(--text-sm));
     text-align: start;
-    touch-action: pan-y;
+    touch-action: pan-y pinch-zoom;
     cursor: default;
     outline: none;
     background: var(--list-item-bg, var(--color-canvas));

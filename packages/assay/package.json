@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/assay",
-  "version": "26.11.19",
+  "version": "26.11.22",
   "description": "Framework-agnostic DOM testing primitives: scoped queries, event dispatch, async waiting",
   "repository": {
     "type": "git",
@@ -46,9 +46,9 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
-    "jsdom": "^31.0.0",
+    "jsdom": "^31.0.1",
     "typescript": "^6.0.3",
-    "vite": "^8.3.6",
+    "vite": "^8.3.8",
     "vitest": "^5.1.0"
   }
 }

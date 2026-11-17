@@ -193,19 +193,50 @@ define<OreCounterProps>(COUNTER_TAG, {
     let holdTimer: ReturnType<typeof setTimeout> | null = null;
     let repeatTimer: ReturnType<typeof setInterval> | null = null;
     let repeated = false;
+    let holdPointerId: number | null = null;
+    let releaseHoldEvents: (() => void) | null = null;
 
     const stopHold = (): void => {
       if (holdTimer) clearTimeout(holdTimer);
       if (repeatTimer) clearInterval(repeatTimer);
       holdTimer = null;
       repeatTimer = null;
+      releaseHoldEvents?.();
+      releaseHoldEvents = null;
+      holdPointerId = null;
     };
 
     const startHold = (amount: () => number, e: PointerEvent): void => {
-      if (!isInteractive.value || e.button !== 0) return;
+      if (!isInteractive.value || !e.isPrimary || e.button !== 0) return;
 
       stopHold();
       repeated = false;
+      holdPointerId = e.pointerId;
+
+      // A hold can only end on the initiating document: a pointerup or
+      // pointercancel anywhere (even outside the window), a second touch, a
+      // window blur, or a hidden tab all stop the repeat so it never runs
+      // unattended. Sliding off the button is already handled by @pointerleave.
+      const doc = (e.currentTarget as Element | null)?.ownerDocument ?? document;
+      const abort = new AbortController();
+      const signal = abort.signal;
+      const release = (): void => {
+        if (holdPointerId === null) return;
+
+        stopHold();
+      };
+      const onPointerDown = (event: PointerEvent): void => {
+        if (event.isPrimary || event.pointerId === holdPointerId) return;
+
+        if (event.pointerType === 'touch' && e.pointerType === 'touch') stopHold();
+      };
+      doc.addEventListener('pointerup', release, { capture: true, signal });
+      doc.addEventListener('pointercancel', release, { capture: true, signal });
+      doc.addEventListener('pointerdown', onPointerDown, { capture: true, signal });
+      doc.defaultView?.addEventListener('blur', release, { signal });
+      doc.addEventListener('visibilitychange', release, { signal });
+      releaseHoldEvents = () => abort.abort();
+
       holdTimer = setTimeout(() => {
         repeated = true;
         spinner.incrementBy(amount(), e);
@@ -241,6 +272,11 @@ define<OreCounterProps>(COUNTER_TAG, {
     onCleanup(() => {
       stopHold();
       if (bumpTimer) clearTimeout(bumpTimer);
+    });
+
+    // Disabling or making the counter readonly mid-hold must stop the repeat.
+    watch(isInteractive, (interactive) => {
+      if (!interactive) stopHold();
     });
 
     bind({

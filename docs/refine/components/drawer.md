@@ -115,7 +115,7 @@ Use the `header` slot to replace the default title bar and the `footer` slot for
 
 The drag handle is a decorative pointer-gesture affordance, not a keyboard control. Use the Close button or Escape to dismiss with a keyboard. Preventing a swipe `close-request` restores the panel without losing its contents.
 
-Use `drag-handle-placement` to control whether the swipe handle sits outside the panel edge or inset inside it.
+Use `drag-handle-placement` to control whether the swipe handle sits inset inside the panel edge (default) or outside it.
 
 <ComponentPreview height="400px">
 
@@ -129,7 +129,7 @@ Use `drag-handle-placement` to control whether the swipe handle sits outside the
   placement="right"
   drag-handle-placement="outside"
   dismissible>
-  <p>Default behavior. The drag handle sits outside the drawer edge.</p>
+  <p>The drag handle sits outside the drawer edge.</p>
 </ore-drawer>
 
 <ore-drawer
@@ -138,7 +138,7 @@ Use `drag-handle-placement` to control whether the swipe handle sits outside the
   placement="right"
   drag-handle-placement="inset"
   dismissible>
-  <p>Inset behavior. The drag handle stays inside the drawer edge.</p>
+  <p>Default behavior. The drag handle stays inside the drawer edge.</p>
 </ore-drawer>
 
 <script>
@@ -153,6 +153,40 @@ Use `drag-handle-placement` to control whether the swipe handle sits outside the
 ```
 
 </ComponentPreview>
+
+## Touch Swiping from Content
+
+Start a fresh outward touch swipe on the drawer body to drag the panel toward closed. The body and any nested scroll areas under your finger must already be at their closing boundary. If your swipe scrolls content to that boundary, lift your finger and swipe again; the drawer does not take over an active native scroll.
+
+| Placement     | Outward swipe | Required content boundary |
+| ------------- | ------------- | ------------------------- |
+| `bottom`      | Down          | Top                       |
+| `top`         | Up            | Bottom                    |
+| `right` (LTR) | Right         | Left                      |
+| `left` (LTR)  | Left          | Right                     |
+
+In RTL, side drawers mirror their physical edge, swipe direction, and horizontal boundary. Side drawers keep ordinary vertical scrolling. Non-scrollable content can start a drag immediately.
+
+Release uses the same distance threshold, fling projection, spring, and detents as the handle. A short drag settles back; a canceled gesture never dismisses. Content dismissal emits `close-request` with reason `swipe`, so you can prevent it without losing content or draft state. `persistent` does not disable swipe dismissal.
+
+Buttons, links, fields, editable content, and Refine's gesture-driven carousel, list item, pull-to-refresh, sidebar, toast, and nested drawer keep their own interactions. Header and footer content do not initiate body dragging. Mouse selection, wheel scrolling, and keyboard scrolling do not dismiss the drawer; native pinch zoom remains available.
+
+A [card picker](./card-picker.md) keeps horizontal swipes for browsing. In a bottom drawer, a fresh downward swipe on ordinary card content at the scroll chain's top boundary requests dismissal; a top drawer accepts the corresponding upward swipe at the bottom boundary. Side drawers do not claim horizontal swipes started inside a picker. The drawer owns the cancelable close request, and dismissal never changes card selection. Mark custom picker subtrees with `data-no-swipe` to protect them from both picker browsing and drawer dismissal.
+
+Opt out for the whole drawer or protect a custom gesture surface:
+
+```html
+<ore-drawer placement="bottom" title="Reading" swipe-from-content="false">
+  <p>Scroll or select this content; use the handle or Close button to dismiss.</p>
+</ore-drawer>
+
+<ore-drawer placement="right" title="Details">
+  <p>You can start an outward touch drag here.</p>
+  <div data-no-swipe>
+    <p>This subtree owns its touch gestures.</p>
+  </div>
+</ore-drawer>
+```
 
 ## Detents (Snap Points)
 
@@ -374,21 +408,24 @@ A bottom sheet: `size="content"` fits the actions, `detents` lets a dragged shee
 
 ### Attributes
 
-| Attribute               | Type                                     | Default     | Description                                                                                                    |
-| ----------------------- | ---------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------- |
-| `open`                  | `boolean`                                | N/A         | Controlled visibility                                                                                          |
-| `default-open`          | `boolean`                                | `false`     | Initial visibility when `open` is not provided                                                                 |
-| `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`   | Edge the drawer slides in from                                                                                 |
-| `size`                  | `'sm' \| 'lg' \| 'full' \| 'content'`    | unset       | Size preset; `content` fits top/bottom sheets to content with bounded body scrolling                           |
-| `detents`               | `string`                                 | N/A         | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only |
-| `title`                 | `string`                                 | N/A         | Visible header title text                                                                                      |
-| `label`                 | `string`                                 | N/A         | Accessible name (`aria-label`); also shown as the header title when `title` is not set                         |
-| `drag-handle-placement` | `'outside' \| 'inset'`                   | `'outside'` | Position of the swipe drag handle                                                                              |
-| `dismissible`           | `boolean`                                | `true`      | Shows a close (×) button in the header                                                                         |
-| `backdrop`              | `'opaque' \| 'blur' \| 'transparent'`    | `'opaque'`  | Backdrop style, matching `ore-dialog`                                                                          |
-| `persistent`            | `boolean`                                | `false`     | Prevents backdrop click from requesting close                                                                  |
+| Attribute               | Type                                     | Default    | Description                                                                                                    |
+| ----------------------- | ---------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
+| `open`                  | `boolean`                                | N/A        | Controlled visibility                                                                                          |
+| `default-open`          | `boolean`                                | `false`    | Initial visibility when `open` is not provided                                                                 |
+| `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`  | Edge the drawer slides in from                                                                                 |
+| `size`                  | `'sm' \| 'lg' \| 'full' \| 'content'`    | unset      | Size preset; `content` fits top/bottom sheets to content with bounded body scrolling                           |
+| `detents`               | `string`                                 | N/A        | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only |
+| `title`                 | `string`                                 | N/A        | Visible header title text                                                                                      |
+| `label`                 | `string`                                 | N/A        | Accessible name (`aria-label`); also shown as the header title when `title` is not set                         |
+| `drag-handle-placement` | `'outside' \| 'inset'`                   | `'inset'`  | Position of the swipe drag handle                                                                              |
+| `swipe-from-content`    | `boolean`                                | `true`     | Allow outward touch dragging from the body when its scroll chain starts at the closing boundary                |
+| `dismissible`           | `boolean`                                | `true`     | Shows a close (×) button in the header                                                                         |
+| `backdrop`              | `'opaque' \| 'blur' \| 'transparent'`    | `'opaque'` | Backdrop style, matching `ore-dialog`                                                                          |
+| `persistent`            | `boolean`                                | `false`    | Prevents backdrop click from requesting close                                                                  |
 
 Beyond these attributes, any element inside the drawer's content — in the body or the slots — accepts `data-drawer-close`: clicking it closes the drawer through the same cancelable `close-request` path as the close button (reason `trigger`).
+
+Add `data-no-swipe` to a body descendant to exclude its entire subtree from content dragging. This does not disable native scrolling or clicks. Set `swipe-from-content="false"` on the drawer to disable all content dragging; the handle remains available.
 
 ### Slots
 

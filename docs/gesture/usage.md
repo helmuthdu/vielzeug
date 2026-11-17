@@ -147,7 +147,7 @@ const pan = createPanGesture(panel, {
 
 ## Direction Recognition
 
-The gesture remains pending during small movement. It activates only after movement favors the configured axis. Cross-axis movement ends the pending interaction without invoking callbacks.
+The gesture remains pending during small movement and exact diagonal ties. It activates only after movement strictly favors the configured axis. Cross-axis movement ends the pending interaction without invoking callbacks.
 
 The default `activationDistance` is 6 pixels. Tune direction-recognition slop for touch density or component-specific needs:
 
@@ -166,13 +166,26 @@ Use the corresponding `touch-action` value so the browser retains native scrolli
 
 ```css
 .swipe-row {
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 ```
 
 ```ts
 const pan = createPanGesture(row, { axis: 'x', onMove });
 ```
+
+Use `shouldStart` to exclude controls at pointerdown. Use `shouldActivate` for direction or boundary checks that require movement; rejection happens before capture or callbacks.
+
+```ts
+const pan = createPanGesture(panel, {
+  axis: 'y',
+  shouldActivate: ({ distance }) => distance > 0 && scroller.scrollTop <= 0,
+  onMove: renderPull,
+  onEnd: settlePull,
+});
+```
+
+Gesture cancels pending and active touch recognition when a second finger touches the owner document. Reset presentation on `reason: 'cancel'`; never commit an action from cancellation. Native scroll and pinch behavior still depends on the surface's CSS and event handling. Once native scrolling owns a touch sequence, start a fresh swipe at the boundary rather than attempting a mid-scroll handoff.
 
 ## Pointer Capture
 

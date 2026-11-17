@@ -6,6 +6,48 @@
           {
             "author": "release-train",
             "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "d38b3498e471aacab3627c280a49ab3596e02314"
+          }
+        ]
+      },
+      "date": "Tue, 17 Nov 2026 07:34:49 GMT",
+      "tag": "@vielzeug/tempo_v26.11.22",
+      "version": "26.11.22"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "1333d918216e51a371fd73aa2a6b6964544cf63e"
+          }
+        ]
+      },
+      "date": "Mon, 16 Nov 2026 17:10:57 GMT",
+      "tag": "@vielzeug/tempo_v26.11.21",
+      "version": "26.11.21"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "b2106b8fdcef921273683e009010aa0623f1b77a"
+          }
+        ]
+      },
+      "date": "Mon, 16 Nov 2026 15:20:18 GMT",
+      "tag": "@vielzeug/tempo_v26.11.20",
+      "version": "26.11.20"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "9d7a8e0b193dab68ceec4882dd03712b281c44b6"
           }
         ]

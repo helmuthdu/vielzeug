@@ -6,7 +6,85 @@
  *
  * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
-import { expect, test } from '../../testing/fixtures';
+import { expect, test, touchSwipe } from '../../testing/fixtures';
+
+test.describe('Pointer interaction', () => {
+  for (const reason of ['blur', 'second-touch']) {
+    test(`uses the owner document for ${reason} cancellation`, async ({ page, refinePage }) => {
+      await refinePage.mountComponent('<iframe title="Rating owner"></iframe>');
+      const values = await page.evaluate(async (reason) => {
+        const ownerDocument = document.querySelector('iframe')!.contentDocument!;
+        ownerDocument.defaultView!.customElements.define('ore-rating', customElements.get('ore-rating')!);
+        const rating = document.createElement('ore-rating');
+        ownerDocument.body.append(rating);
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const first = rating.shadowRoot!.querySelector('[data-star="1"]')!;
+        const fourth = rating.shadowRoot!.querySelector('[data-star="4"]')!;
+        const value = () => String(rating.value);
+        const pointer = (target: EventTarget, type: string, pointerId = 1) =>
+          target.dispatchEvent(
+            new PointerEvent(type, {
+              bubbles: true,
+              composed: true,
+              isPrimary: pointerId === 1,
+              pointerId,
+              pointerType: 'touch',
+            }),
+          );
+        pointer(first, 'pointerdown');
+        pointer(document.body, 'pointerdown', 2);
+        pointer(fourth, 'pointermove');
+        const selected = value();
+        if (reason === 'blur') ownerDocument.defaultView!.dispatchEvent(new Event('blur'));
+        else pointer(ownerDocument.body, 'pointerdown', 2);
+        pointer(first, 'pointermove');
+        return { after: value(), selected };
+      }, reason);
+      expect(values.selected).toBe('4');
+      expect(values.after).toBe('4');
+    });
+  }
+
+  test('RTL half-star selection, capture and fill use the same leading edge', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent('<ore-rating id="r" dir="rtl" precision="0.5"></ore-rating>');
+    const rating = page.locator('#r');
+    const first = rating.locator('[data-star="1"]');
+    const second = rating.locator('[data-star="2"]');
+    const firstBox = (await first.boundingBox())!;
+    const secondBox = (await second.boundingBox())!;
+
+    await page.mouse.move(firstBox.x + firstBox.width * 0.75, firstBox.y + firstBox.height / 2);
+    await page.mouse.down();
+    await expect(rating).toHaveAttribute('value', '0.5');
+    const fill = (await first.locator('.star-fill').boundingBox())!;
+    expect(fill.x + fill.width).toBeCloseTo(firstBox.x + firstBox.width, 1);
+    expect(fill.width).toBeCloseTo(firstBox.width / 2, 1);
+    await page.mouse.move(secondBox.x + secondBox.width * 0.75, secondBox.y + secondBox.height / 2);
+    await expect(rating).toHaveAttribute('value', '1.5');
+    await rating.evaluate((el) => el.setAttribute('readonly', ''));
+    await page.mouse.move(secondBox.x + secondBox.width * 0.25, secondBox.y + secondBox.height / 2);
+    await page.mouse.up();
+    await expect(rating).toHaveAttribute('value', '1.5');
+    expect(await rating.locator('.stars').evaluate((el) => getComputedStyle(el).touchAction)).toBe('pan-y pinch-zoom');
+  });
+});
+
+test.describe('Touch interaction', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
+
+  test('allows native vertical scrolling from the stars', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<div id="scroll" style="height:200px;overflow:auto"><div style="height:100px"></div><ore-rating id="r"></ore-rating><div style="height:800px"></div></div>',
+    );
+    const box = (await page.locator('#r .stars').boundingBox())!;
+    await touchSwipe(page, {
+      from: { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+      to: { x: box.x + box.width / 2, y: box.y - 80 },
+    });
+    await expect.poll(() => page.locator('#scroll').evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  });
+});
 
 test.describe('Layout', () => {
   test('half-star fill clips to 50% of the star box', async ({ page, refinePage }) => {

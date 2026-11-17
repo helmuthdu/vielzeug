@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/forge",
-  "version": "26.11.19",
+  "version": "26.11.22",
   "description": "Typed form state, validation, submission",
   "repository": {
     "type": "git",
@@ -86,7 +86,7 @@
     "@vielzeug/spell": "workspace:*",
     "@vielzeug/vault": "workspace:*",
     "typescript": "^6.0.3",
-    "vite": "^8.3.6",
+    "vite": "^8.3.8",
     "vitest": "^5.1.0"
   }
 }

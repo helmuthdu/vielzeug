@@ -221,7 +221,7 @@ Override `--counter-value-size` and `--counter-button-size` to turn a counter in
 
 The root is a `role="group"` labelled by the visible label. The value is an `<output role="spinbutton">` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-readonly` and `aria-live="polite"`, so every change is announced without moving focus. The `hint` is linked through `aria-describedby`. The −/+ buttons are named `Decrease <label>` / `Increase <label>` (quick-step buttons add `by <large-step>`) and are removed from the tab order: keyboard users operate the spinbutton directly: `↑` / `↓` step, `Page Up` / `Page Down` step by `large-step`, `Home` / `End` jump to `min` / `max`.
 
-Buttons meet the 44 px touch target on coarse pointers and are separated by at least `--size-3` so a thumb cannot hit both. Press-and-hold auto-repeat starts after 400 ms and stops at either bound. The value bump animation is suppressed under `prefers-reduced-motion: reduce`.
+Buttons meet the 44 px touch target on coarse pointers and are separated by at least `--size-3` so a thumb cannot hit both. Press-and-hold auto-repeat starts after 400 ms and stops at either bound; it also stops as soon as the pointer is released or canceled, a second finger lands, or the tab goes to the background, so a hold can never keep counting unattended. The value bump animation is suppressed under `prefers-reduced-motion: reduce`.
 
 ## Related Components
 

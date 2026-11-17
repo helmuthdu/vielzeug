@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/arsenal",
-  "version": "26.11.19",
+  "version": "26.11.22",
   "description": "Non-trivial TypeScript utilities: retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections",
   "repository": {
     "type": "git",
@@ -130,7 +130,7 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "typescript": "^6.0.3",
-    "vite": "^8.3.6",
+    "vite": "^8.3.8",
     "vitest": "^5.1.0"
   }
 }

@@ -1,9 +1,80 @@
 ---
 title: Migration
-description: Migrate the viewport-only responsive breakpoints in Refine's sidebar, the async state container to ore-state, command palette categories and the item type, the mobile input font-size floor, the standardized overlay backdrop, the sidebar drawer backdrop default, toast statuses, the human-interface-guideline adoption, surface variants, tabs density, the tabs active pill, the sidebar drawer overlay, DataGrid sources, and framework type declarations to Refine.
+description: Migrate the viewport-only responsive breakpoints in Refine's sidebar, the async state container to ore-state, command palette categories and the item type, the mobile input font-size floor, the standardized overlay backdrop, the sidebar drawer backdrop default, the drawer drag handle default placement, toast statuses, the human-interface-guideline adoption, surface variants, tabs density, the tabs active pill, the sidebar drawer overlay, DataGrid sources, and framework type declarations to Refine.
 ---
 
 # Migration
+
+## Swipe ownership and cancellation
+
+List rows, carousels, and pull-to-refresh no longer consume gestures from independently interactive controls or editable content. Carousels still browse when you swipe over an ordinary clickable cover. A second touch cancels pending and active gestures instead of allowing an accidental browse, dismissal, or refresh.
+
+Use the shared subtree marker for custom controls:
+
+```html
+<!-- Before: an unrecognized custom control could start its parent's swipe. -->
+<div role="group">Custom gesture content</div>
+
+<!-- After: the subtree owns its pointer interaction. -->
+<div role="group" data-no-swipe>Custom gesture content</div>
+```
+
+Full-swipe list actions still confirm immediately at the threshold; cancellation after confirmation does not undo the action. Pull-to-refresh requires a fresh downward swipe starting at every nested scroll boundary, not a continuous handoff from native scrolling.
+
+Changing the carousel deck, selection, orientation, or variant cancels its old gesture. Closing and reopening a sidebar clears its drag state. Toast exits follow the same projected direction used to accept dismissal.
+
+Slider and rating drags now ignore non-primary presses and unrelated pointers, and stop on cancellation, capture loss, blur, hidden-document transitions, or disabling. Their interaction regions allow vertical scrolling and pinch zoom instead of blocking every native touch gesture. Rating half-star selection and fill follow RTL direction.
+
+## Drawer content supports touch dismissal by default
+
+`ore-drawer` now accepts outward touch swipes from the body on every placement. The body and nested scroll areas under the touch must already be at their closing boundary when the gesture starts. Reaching the boundary during native scrolling requires lifting your finger and starting a new swipe.
+
+Set `swipe-from-content="false"` to retain handle-only dragging:
+
+```html
+<!-- Before: only the handle initiated dragging. -->
+<ore-drawer placement="bottom">Reading content</ore-drawer>
+
+<!-- After: explicitly keep handle-only dragging. -->
+<ore-drawer placement="bottom" swipe-from-content="false">Reading content</ore-drawer>
+```
+
+Use `data-no-swipe` on a custom gesture surface to exclude only its subtree. Native controls and competing gesture components are excluded automatically. Card pickers retain horizontal browsing while allowing vertical drawer dismissal from ordinary card content at the appropriate scroll boundary. Existing cancelable swipe close requests, detents, keyboard dismissal, and focus management remain in place. Side-drawer dragging now follows the rendered edge in RTL.
+
+## Card picker gestures preserve native interactions
+
+`ore-card-picker` now preserves native pinch zoom, horizontal scrolling inside scrollable descendants, and interactions with ARIA controls and editable content. Adding a touch, changing the deck or active card, or disabling the picker cancels its pending drag instead of applying a stale release.
+
+Inside a bottom drawer, downward swipes from the top scroll boundary can now dismiss through ordinary picker content. The drawer owns this behavior; inline pickers and dialogs do not gain dismissal. Exclude custom gesture subtrees from both picker browsing and enclosing drawer dismissal:
+
+```html
+<!-- Before: custom gesture content could also initiate card browsing. -->
+<ore-card-picker-item value="map"><div id="map-preview"></div></ore-card-picker-item>
+
+<!-- After: the subtree owns its gestures. -->
+<ore-card-picker-item value="map"><div id="map-preview" data-no-swipe></div></ore-card-picker-item>
+```
+
+Use the drawer's `swipe-from-content="false"` for handle-only dismissal. Side drawers keep picker horizontal browsing without competing for the same gesture.
+
+## Drawer drag handle is inset by default
+
+`ore-drawer`'s swipe-to-close drag handle now sits inset inside the panel edge (`drag-handle-placement="inset"`)
+instead of hanging outside it. The inset handle stays within the panel's own bounds, so it never overlaps page
+content beside the drawer and stays inside the panel's shadow and rounded corners.
+
+Nothing to change unless you relied on the handle sitting outside the panel: opt back in explicitly.
+
+```html
+<!-- Before: outside was the default -->
+<ore-drawer>…</ore-drawer>
+
+<!-- After: same appearance as before -->
+<ore-drawer drag-handle-placement="outside">…</ore-drawer>
+```
+
+Swipe-to-close behavior, the handle's `drag-handle` part, and `--drawer-*` props are unchanged; only the resting
+position moved.
 
 ## Responsive breakpoints measure the viewport unless you opt into containers
 

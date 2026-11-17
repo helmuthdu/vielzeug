@@ -51,6 +51,30 @@ describe('ore-pull-to-refresh', () => {
     target.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientY: to, pointerId: id }));
   };
 
+  it('does not refresh through a nested scroller away from its top', async () => {
+    fixture = await mount('ore-pull-to-refresh', { html: '<div style="overflow-y:auto"><p>Nested</p></div>' });
+    const nested = fixture.element.firstElementChild as HTMLElement;
+    Object.defineProperties(nested, {
+      clientHeight: { value: 100 },
+      scrollHeight: { value: 500 },
+      scrollTop: { value: 100, writable: true },
+    });
+    const refresh = vi.fn();
+    fixture.element.addEventListener('refresh', refresh);
+    nested.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, pointerId: 1 }));
+    nested.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientY: 100, pointerId: 1 }));
+    nested.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientY: 100, pointerId: 1 }));
+    expect(refresh).not.toHaveBeenCalled();
+    expect(content().style.transform).toBe('');
+  });
+
+  it('rejects upward intent without displacing content', async () => {
+    fixture = await mountPtr();
+    drag(100, 0);
+    expect(content().style.transform).toBe('');
+    expect(phase()).toBeNull();
+  });
+
   // ─── Rendering ───────────────────────────────────────────────────────────────
 
   describe('Rendering', () => {

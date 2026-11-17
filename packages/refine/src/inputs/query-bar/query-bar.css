@@ -163,12 +163,6 @@
 
   .filters-drawer::part(body) {
     min-height: 0;
-    background: var(--color-contrast-50);
-  }
-
-  .filters-drawer::part(header),
-  .filters-drawer::part(footer) {
-    background: var(--color-canvas);
   }
 
   .filters-drawer[placement='bottom']::part(panel) {

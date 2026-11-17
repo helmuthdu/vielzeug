@@ -5,6 +5,43 @@ description: Migrate through Gesture 26.10 typed configuration errors and Gestur
 
 # Gesture Migration
 
+## Touch ownership and activation
+
+A second touch now cancels pending or active drag, pan, and long-press recognition rather than leaving the first pointer in control. Exact diagonal pans wait for strict axis dominance. No compatibility mode is provided.
+
+Commit only releases and reset canceled interactions:
+
+```ts
+// Before: cancellation could commit an action.
+createPanGesture(panel, { onEnd: ({ distance }) => commit(distance) });
+
+// After
+createPanGesture(panel, {
+  onEnd: ({ distance, reason }) => {
+    if (reason === 'release') commit(distance);
+    else reset();
+  },
+});
+```
+
+Move activation rejection out of `onStart` and into `shouldActivate`, which runs before capture:
+
+```ts
+// Before
+const pan = createPanGesture(panel, {
+  onStart: ({ distance }) => {
+    if (distance < 0) pan.cancel();
+  },
+});
+
+// After
+createPanGesture(panel, { shouldActivate: ({ distance }) => distance > 0 });
+```
+
+Velocity now includes pointerdown and release coordinates and removes samples older than 90 ms, including sparse samples. Short single-move flicks can therefore produce nonzero velocity. Keep distance-only completion logic when fling behavior is not desired.
+
+Long presses recheck dynamic disabling before firing and no longer swallow keyboard-generated clicks.
+
 ## 26.10
 
 Gesture 26.10 replaces raw `RangeError` throws with typed errors. `createGesture()`, `createPanGesture()`, and `createDragGesture()` calls with valid options continue to work without changes.

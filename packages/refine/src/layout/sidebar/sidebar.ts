@@ -496,6 +496,14 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
           },
         });
       }
+      const swipeState = watch(isDrawerOpen, () => {
+        swipe?.cancel();
+        const panel = el.shadowRoot?.querySelector<HTMLElement>('nav');
+        if (!panel) return;
+        panel.style.transition = '';
+        panel.style.transform = '';
+        panel.style.opacity = '';
+      });
 
       // Focus containment: createBackgroundLock inertes background siblings, but apps that wrap
       // the whole page in one root element (so nothing can be inerted) still let Tab walk out of
@@ -559,6 +567,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       nestedItemsObserver.observe(el, { childList: true, subtree: true });
 
       return () => {
+        swipeState.dispose();
         swipe?.dispose();
         swipe = undefined;
         observer.disconnect();

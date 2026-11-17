@@ -13,11 +13,12 @@ import {
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { signal } from '@vielzeug/ripple';
+import { signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
 import { type DialogCloseReason, type OverlayOpenChangeDetail, parseDetents, parseOptionalBool } from '../../core';
 import { getMotionMode } from '../../motion';
 import { projectFling } from '../../shared/fling';
+import { canScrollInDirection, SWIPE_EXCLUSIONS } from '../../shared/swipe';
 
 import { forcedColorsMixin, overlayMotionMixin, touchTargetMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
@@ -40,6 +41,10 @@ type DrawerSwipeConfig = {
   /** Transform placing the panel `closingDistance` px toward closed. */
   translateClosing: (closingDistance: number) => string;
 };
+
+function canScrollInClosingDirection(elements: readonly HTMLElement[], config: DrawerSwipeConfig): boolean {
+  return canScrollInDirection(elements, { axis: config.axis, direction: config.rawClosing(1) });
+}
 
 const drawerSwipeConfig: Record<DrawerPlacement, DrawerSwipeConfig> = {
   bottom: {
@@ -96,7 +101,7 @@ export type OreDrawerProps = {
   'default-open'?: boolean;
   /** Show the close (×) button in the header (default: true) */
   dismissible?: boolean;
-  /** Drag handle position used for swipe-to-close gestures */
+  /** Drag handle position used for swipe-to-close gestures: 'inset' (default) | 'outside' */
   'drag-handle-placement'?: DrawerDragHandlePlacement;
   /**
    * CSS selector for the element inside the drawer that should receive focus on open.
@@ -123,6 +128,8 @@ export type OreDrawerProps = {
   'return-focus'?: boolean;
   /** Drawer size preset. `content` fits top/bottom sheets to their content. */
   size?: DrawerSize;
+  /** Allow outward touch swipes from the body at its scroll boundary (default: true). */
+  'swipe-from-content'?: boolean;
   /**
    * Visible title text rendered inside the header.
    * Used as the dialog's accessible label via `aria-labelledby` when `label` is not set.
@@ -143,9 +150,10 @@ export type OreDrawerProps = {
  * @attr {string} title - Visible header title text
  * @attr {string} label - Invisible aria-label (for drawers without a visible title)
  * @attr {boolean} dismissible - Show the close (×) button (default: true)
- * @attr {string} drag-handle-placement - 'outside' (default) | 'inset'
+ * @attr {string} drag-handle-placement - 'inset' (default) | 'outside'
  * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
  * @attr {boolean} persistent - Prevent backdrop-click from closing (default: false)
+ * @attr {boolean} swipe-from-content - Allow touch dragging from the body at its scroll boundary (default: true)
  *
  * @fires open-change - When the drawer state changes. detail: { open, reason }
  *
@@ -190,7 +198,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
     'default-open': prop.bool(false),
     detents: prop.string(),
     dismissible: prop.bool(true),
-    'drag-handle-placement': prop.oneOf(['outside', 'inset'] as const, 'outside'),
+    'drag-handle-placement': prop.oneOf(['outside', 'inset'] as const, 'inset'),
     'initial-focus': prop.string(),
     label: prop.string(),
     open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
@@ -198,6 +206,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
     placement: prop.oneOf(['left', 'right', 'top', 'bottom'] as const, 'right'),
     'return-focus': prop.bool(true),
     size: prop.oneOf(DRAWER_SIZES),
+    'swipe-from-content': prop.bool(true),
     title: prop.string(),
   },
   setup(props) {
@@ -220,6 +229,9 @@ define<OreDrawerProps>(DRAWER_TAG, {
     // Position the current drag gesture started from, so the panel tracks the
     // finger relative to its resting spot, not the fully-open origin.
     let dragBaseClosing = 0;
+    let swipeOrigin: { config: DrawerSwipeConfig; contentPath?: readonly HTMLElement[] } | undefined;
+    let dragStarted = false;
+    let suppressContentClick = false;
     let detentsWarned = false;
 
     const getHeaderText = () => props.label.value ?? props.title.value ?? '';
@@ -231,7 +243,14 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
     const getPlacement = (): DrawerPlacement => props.placement.value || 'right';
 
-    const getSwipeConfig = (): DrawerSwipeConfig => drawerSwipeConfig[getPlacement()];
+    const getSwipeConfig = (): DrawerSwipeConfig => {
+      const placement = getPlacement();
+      const rtl = getComputedStyle(el).direction === 'rtl';
+
+      return drawerSwipeConfig[
+        rtl && placement === 'left' ? 'right' : rtl && placement === 'right' ? 'left' : placement
+      ];
+    };
 
     // Detents are the sheet pattern: a dragged panel can rest partway open.
     // They only make sense where the panel slides along its own long axis
@@ -421,12 +440,22 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
     const handleSwipeEnd = ({ distance, reason, velocity }: PanGestureEndDetail): void => {
       const panel = panelRef.value;
+      const started = dragStarted;
+
+      dragStarted = false;
 
       // A close already committed (Escape/backdrop mid-drag): it owns the panel.
-      if (!panel || isSwipeClosing.value) return;
+      if (!started || !panel || isSwipeClosing.value || !dialogRef.value?.open) return;
+
+      if (swipeOrigin?.config !== getSwipeConfig()) {
+        resetPanelDragStyles(panel);
+
+        return;
+      }
 
       const swipeConfig = getSwipeConfig();
-      const from = Math.max(0, dragBaseClosing + swipeConfig.rawClosing(distance));
+      const from =
+        reason === 'release' ? Math.max(0, dragBaseClosing + swipeConfig.rawClosing(distance)) : panelClosing;
 
       // A platform cancel is not a dismissal: the user never released, so the
       // panel returns to where the drag began (its detent or fully open) with
@@ -463,6 +492,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
     const { closeWithAnimation, mount, overlay, requestClose } = useDialogControl({
       beforeOpen: () => {
+        swipe?.cancel();
         // Clear any inline drag styles from a previous swipe-close so the CSS
         // entry animation starts from the correct base state.
         const panel = panelRef.value;
@@ -479,6 +509,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
       onCleanup,
       onEvent,
       onNativeClose: (reason) => {
+        swipe?.cancel();
         const panelEl = panelRef.value;
 
         // For swipe-close, keep the panel hidden and off-screen until the next
@@ -504,6 +535,8 @@ define<OreDrawerProps>(DRAWER_TAG, {
           return;
         }
 
+        swipe?.cancel();
+
         const panel = panelRef.value;
 
         // A panel resting at a detent carries an inline transform the CSS exit
@@ -523,6 +556,23 @@ define<OreDrawerProps>(DRAWER_TAG, {
     const handleCloseButtonClick = () => {
       requestClose('trigger');
     };
+
+    const placementWatcher = watch(props.placement, () => {
+      if (isSwipeClosing.value || dialogRef.value?.classList.contains('closing')) return;
+
+      swipe?.cancel();
+      const panel = panelRef.value;
+
+      if (panel) resetPanelDragStyles(panel);
+    });
+    const contentSwipeWatcher = watch(props['swipe-from-content'], (enabled) => {
+      if (!enabled && swipeOrigin?.contentPath) swipe?.cancel();
+    });
+
+    onCleanup(() => {
+      placementWatcher.dispose();
+      contentSwipeWatcher.dispose();
+    });
 
     // ────────────────────────────────────────────────────────────────
     // Lifecycle: Setup Drawer Integration
@@ -581,15 +631,60 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
       onEvent(el, 'click', handleContentClose);
 
-      // Drag-to-close handlers: scoped to the handle element only so interactions
-      // with panel content don't accidentally start a drag.
       const panel = panelRef.value;
       const dragHandleEl = panel?.querySelector<HTMLElement>('[part="drag-handle"]');
+      const body = panel?.querySelector<HTMLElement>('[part="body"]');
 
-      if (dragHandleEl) {
-        swipe = createPanGesture(dragHandleEl, {
+      if (panel && dragHandleEl && body) {
+        onEvent(
+          panel,
+          'pointerdown',
+          (event) => {
+            if (event.isPrimary) {
+              suppressContentClick = false;
+              swipeOrigin = undefined;
+            }
+          },
+          { capture: true },
+        );
+        onEvent(
+          panel,
+          'touchmove',
+          (event) => {
+            if (!swipeOrigin?.contentPath || !swipe?.active) return;
+
+            if (event.touches.length !== 1 || !event.cancelable) {
+              swipe.cancel();
+
+              return;
+            }
+
+            // Cancel only an owned drag; every other gesture keeps native scrolling and zoom.
+            event.preventDefault();
+          },
+          { passive: false },
+        );
+        onEvent(
+          panel,
+          'click',
+          (event) => {
+            if (!suppressContentClick || event.detail === 0) return;
+
+            suppressContentClick = false;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          },
+          { capture: true },
+        );
+
+        swipe = createPanGesture(panel, {
           axis: () => getSwipeConfig().axis,
-          disabled: () => isSwipeClosing.value,
+          disabled: () =>
+            isSwipeClosing.value ||
+            !dialog.open ||
+            dialog.classList.contains('closing') ||
+            (swipeOrigin?.contentPath !== undefined && !props['swipe-from-content'].value) ||
+            (swipeOrigin !== undefined && swipeOrigin.config !== getSwipeConfig()),
           onEnd: handleSwipeEnd,
           onMove: ({ distance }) => {
             const currentPanel = panelRef.value;
@@ -607,11 +702,44 @@ define<OreDrawerProps>(DRAWER_TAG, {
             );
           },
           onStart: () => {
+            dragStarted = true;
+            if (swipeOrigin?.contentPath) suppressContentClick = true;
             // Grab the panel wherever it currently is: mid-spring or resting
             // at a detent. The drag then tracks the finger relative to here.
             springHandle?.dispose();
             springHandle = undefined;
             dragBaseClosing = panelClosing;
+          },
+          shouldActivate: ({ distance }) =>
+            !swipeOrigin?.contentPath ||
+            (getSwipeConfig().rawClosing(distance) > 0 &&
+              !canScrollInClosingDirection(swipeOrigin.contentPath, getSwipeConfig())),
+          shouldStart: (event) => {
+            if (event.defaultPrevented) return false;
+
+            const path = event.composedPath();
+            const handleSwipe = path.includes(dragHandleEl);
+            let contentPath: HTMLElement[] | undefined;
+
+            if (!handleSwipe) {
+              if (!props['swipe-from-content'].value || event.pointerType !== 'touch' || !path.includes(body))
+                return false;
+
+              const elements = path
+                .slice(0, path.indexOf(body) + 1)
+                .filter((node): node is HTMLElement => node instanceof HTMLElement);
+
+              if (elements.some((node) => node.matches(SWIPE_EXCLUSIONS) || node.isContentEditable)) return false;
+              if (getSwipeConfig().axis === 'x' && elements.some((node) => node.matches('ore-card-picker')))
+                return false;
+              if (canScrollInClosingDirection(elements, getSwipeConfig())) return false;
+
+              contentPath = elements;
+            }
+
+            swipeOrigin = { config: getSwipeConfig(), contentPath };
+
+            return true;
           },
         });
       }

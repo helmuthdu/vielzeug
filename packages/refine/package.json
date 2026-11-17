@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/refine",
-  "version": "26.11.19",
+  "version": "26.11.22",
   "description": "Accessible, themeable web components built on ore",
   "keywords": [
     "web-components",
@@ -911,19 +911,19 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
-    "@biomejs/biome": "^2.6.5",
+    "@biomejs/biome": "^2.6.8",
     "@custom-elements-manifest/analyzer": "^0.11.0",
-    "@playwright/test": "^1.65.0",
+    "@playwright/test": "^1.65.1",
     "@types/culori": "^4.0.1",
     "@types/node": "^26.6.6",
     "@vielzeug/assay": "workspace:*",
-    "axe-core": "^4.14.0",
-    "browserslist": "^4.29.5",
+    "axe-core": "^4.14.1",
+    "browserslist": "^4.29.6",
     "culori": "^4.0.2",
     "lightningcss": "^1.33.0",
-    "lucide": "^1.70.0",
+    "lucide": "^1.74.0",
     "typescript": "^6.0.3",
-    "vite": "^8.3.6",
+    "vite": "^8.3.8",
     "vitest": "^5.1.0"
   },
   "customElements": "dist/custom-elements.json"

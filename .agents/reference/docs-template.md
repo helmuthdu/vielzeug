@@ -1,6 +1,6 @@
 # Vielzeug Documentation Template
 
-Shared page structure for `docs/<name>/`. This file states exactly what each page must contain; the `document` skill (`.agents/skills/document/SKILL.md`) says when to load it and how to sequence edits. The public guide at `docs/guide/docs-template.md` includes this file verbatim.
+Shared page structure for `docs/<name>/`. This file states exactly what each page must contain. The public guide at `docs/guide/docs-template.md` includes this file verbatim.
 
 ## Global writing rules
 
@@ -24,7 +24,7 @@ points, and `packages/<name>/AGENTS.md` before assuming the Library default.
 | ---------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Library** (default)        | `src/index.ts` exports functions/classes; imported by userland           | None: use the full template as written                                                                                                                                                                                                 |
 | **CLI / executable tool**    | `bin` field in `package.json`; primary interaction is a terminal command | Quick Start leads with the shell command, not TypeScript; `usage.md`'s Framework Integration becomes "Embedding in a `<Runtime>` Process" (programmatic use as secondary); comparison table compares invocation modes, not API surfaces |
-| **DOM-output / headless UI** | Renders DOM directly (`ore`, `prism`, `refine`); no REPL examples by convention | No REPL examples or Monaco types; Framework Integration shows web-component HTML/JS usage, not React/Vue/Svelte unless the package ships adapters                                                                                       |
+| **DOM-output / headless UI** | Renders DOM directly (`ore`, `prism`, `refine`); REPL Preview pane for live output | REPL examples mount into the iframe body and emit `repl:dom` (see `docs/AGENTS.md`); Framework Integration shows web-component HTML/JS usage, not React/Vue/Svelte unless the package ships adapters                                                                                       |
 
 ## Structural validator contracts
 

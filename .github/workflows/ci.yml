@@ -10,7 +10,43 @@ concurrency:
   group: ci-${{ github.event_name }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
+env:
+  WRANGLER_SEND_METRICS: "false"
+
 jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      src: ${{ github.event_name == 'push' || steps.filter.outputs.src == 'true' }}
+      docs: ${{ github.event_name == 'push' || steps.filter.outputs.docs == 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Prose-only PRs skip runtime tests, but published docs still build.
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          predicate-quantifier: some-with-excludes
+          filters: |
+            src:
+              - '**'
+              - '!**/*.md'
+              - '!changes/**'
+            docs:
+              - '**/*.md'
+              - '!**/AGENTS.md'
+              - '!.github/**'
+              - '!.junie/**'
+              - '!.agents/README.md'
+              - '!.agents/conventions.md'
+              - '!.agents/reference/security-checklist.md'
+              - '!changes/**'
+
   change-files:
     name: Verify change files
     if: github.event_name == 'pull_request'
@@ -26,8 +62,10 @@ jobs:
 
       - run: bun run check:change-files
 
-  test:
-    name: Build, test, docs
+  build:
+    name: Build packages
+    needs: changes
+    if: needs.changes.outputs.src == 'true' || needs.changes.outputs.docs == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -45,20 +83,101 @@ jobs:
       - name: Verify packed icon contract (refine)
         run: bun run --filter @vielzeug/refine check:packed-icons
 
+      # A tarball preserves executable bits and package-relative paths.
+      - name: Archive package outputs
+        run: tar -czf package-build.tar.gz packages/*/dist packages/codex/data
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-dist
+          path: package-build.tar.gz
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+
+  test:
+    name: Unit tests (sharded)
+    needs: [ changes, build ]
+    if: github.event_name == 'pull_request' && needs.changes.outputs.src == 'true' && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [ 1, 2, 3 ]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: package-dist
+
+      - run: tar -xzf package-build.tar.gz
+
       - name: Unit tests
-        run: bun run test --run ${{ github.event_name == 'push' && '--coverage' || '' }}
+        run: bun run test --run --shard=${{ matrix.shard }}/3
+
+  test-full:
+    name: Unit tests (coverage)
+    needs: build
+    if: github.event_name == 'push' && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: package-dist
+
+      - run: tar -xzf package-build.tar.gz
+
+      - name: Unit tests
+        run: bun run test --run --coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
+
+  integration:
+    name: Archive integration tests
+    needs: [ changes, build ]
+    if: needs.changes.outputs.src == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: package-dist
+
+      - run: tar -xzf package-build.tar.gz
 
       - name: Archive integration tests
-        env:
-          WRANGLER_SEND_METRICS: "false"
         run: bun run --filter @vielzeug/archive test:integration
 
-      # Real-browser tests against the built dist IIFE bundles (bun run build above produced
-      # them). The fixture loads bundles directly via page.setContent(), so no dev server.
-      # - name: Browser e2e tests (refine)
-      #   run: |
-      #     bun x playwright install --with-deps chromium
-      #     bun run --filter @vielzeug/refine test:e2e
+  demos:
+    name: Demos
+    needs: [ changes, build ]
+    if: needs.changes.outputs.src == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: package-dist
+
+      - run: tar -xzf package-build.tar.gz
 
       - name: Build and test demos
         run: bun run validate:demos
@@ -67,8 +186,6 @@ jobs:
       # (real workerd + local D1) + wrangler dry-run bundle check. The api:* scripts
       # build their workspace dependencies themselves.
       - name: Validate demo APIs
-        env:
-          WRANGLER_SEND_METRICS: "false"
         run: |
           for dir in demos/*/; do
             [ -f "${dir}package.json" ] || continue
@@ -77,19 +194,34 @@ jobs:
             fi
           done
 
+  docs:
+    name: REPL and docs site
+    needs: [ changes, build ]
+    if: needs.changes.outputs.src == 'true' || needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: package-dist
+
+      - run: tar -xzf package-build.tar.gz
+
       - name: Validate REPL examples
         run: bun run validate:repl
 
       - name: Build docs site
         run: bun run docs:build
 
-      - name: Upload coverage report
-        if: github.event_name == 'push'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: coverage
-          path: coverage/
-          retention-days: 14
+      # Real-browser tests against the built dist IIFE bundles (build job produced them).
+      # The fixture loads bundles directly via page.setContent(), so no dev server.
+      # - name: Browser e2e tests (refine)
+      #   run: |
+      #     bun x playwright install --with-deps chromium
+      #     bun run --filter @vielzeug/refine test:e2e
 
   lint:
     name: Lint and validate
@@ -118,3 +250,18 @@ jobs:
           bun run validate:docs
           bun run validate:readme
           bun run validate:sidebar
+
+  checks:
+    name: Build, test, docs
+    needs: [ changes, build, test, test-full, integration, demos, docs ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          if [[ "$RESULTS" == *failure* || "$RESULTS" == *cancelled* ]]; then
+            exit 1
+          fi

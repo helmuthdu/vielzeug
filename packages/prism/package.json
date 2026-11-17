@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/prism",
-  "version": "26.11.19",
+  "version": "26.11.22",
   "description": "Responsive SVG charts with explicit updates: line, bar, area, scatter, pie, radar, heatmap, sparkline",
   "keywords": [
     "chart",
@@ -62,9 +62,9 @@
     "@vielzeug/orbit": "workspace:*"
   },
   "devDependencies": {
-    "axe-core": "^4.14.0",
+    "axe-core": "^4.14.1",
     "typescript": "^6.0.3",
-    "vite": "^8.3.6",
+    "vite": "^8.3.8",
     "vitest": "^5.1.0"
   }
 }

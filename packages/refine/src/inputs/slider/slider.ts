@@ -300,6 +300,66 @@ define<OreSliderProps>(SLIDER_TAG, {
       dispatchNativeFieldEvent(el, 'change');
     };
 
+    const setupPointerInteraction = (
+      container: HTMLDivElement,
+      start: (clientX: number) => void,
+      move: (clientX: number) => void,
+      end: () => void = () => {},
+    ) => {
+      let pointerId: number | null = null;
+      let pointerType: string | null = null;
+      const ownerDocument = el.ownerDocument;
+      const cancel = () => {
+        const id = pointerId;
+
+        pointerId = null;
+        pointerType = null;
+        isDragging.value = false;
+        end();
+        if (id !== null && container.hasPointerCapture?.(id)) container.releasePointerCapture(id);
+      };
+
+      onEvent(container, 'pointerdown', (e: PointerEvent) => {
+        if (pointerId !== null || isDisabled.value || !e.isPrimary || e.button !== 0) return;
+
+        pointerId = e.pointerId;
+        pointerType = e.pointerType;
+        try {
+          container.setPointerCapture(e.pointerId);
+        } catch {
+          // Synthetic events and already-ended pointers cannot be captured.
+        }
+        start(e.clientX);
+      });
+      onEvent(container, 'pointermove', (e: PointerEvent) => {
+        if (e.pointerId !== pointerId || isDisabled.value) return;
+
+        isDragging.value = true;
+        move(e.clientX);
+      });
+      for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) {
+        onEvent(container, type, (e: PointerEvent) => {
+          if (e.pointerId === pointerId) cancel();
+        });
+      }
+      onEvent(
+        ownerDocument,
+        'pointerdown',
+        (e: PointerEvent) => {
+          if (pointerType === 'touch' && e.pointerType === 'touch' && e.pointerId !== pointerId) cancel();
+        },
+        { capture: true },
+      );
+      if (ownerDocument.defaultView) onEvent(ownerDocument.defaultView, 'blur', cancel);
+      onEvent(ownerDocument, 'visibilitychange', () => {
+        if (ownerDocument.hidden) cancel();
+      });
+      watch(isDisabled, (disabled) => {
+        if (disabled) cancel();
+      });
+      onCleanup(cancel);
+    };
+
     // ── Range mode setup ──────────────────────────────────────────
     const setupRangeMode = (container: HTMLDivElement, track: HTMLDivElement) => {
       updateRangeCSS();
@@ -320,48 +380,18 @@ define<OreSliderProps>(SLIDER_TAG, {
         emitValueChange();
       };
 
-      onEvent(
+      setupPointerInteraction(
         container,
-        'pointerdown',
-        guard(
-          () => !isDisabled.value,
-          (e: PointerEvent) => {
-            e.preventDefault();
+        (clientX) => {
+          const val = clientToValue(clientX);
 
-            const val = clientToValue(e.clientX);
-
-            dragging = Math.abs(val - startVal.value) <= Math.abs(val - endVal.value) ? 'start' : 'end';
-            (e.target as Element).setPointerCapture(e.pointerId);
-            applyDrag(val);
-          },
-        ),
-      );
-      onEvent(
-        container,
-        'pointermove',
-        guard(
-          () => !!dragging,
-          (e: PointerEvent) => {
-            e.preventDefault();
-
-            if (!isDragging.value) isDragging.value = true;
-
-            applyDrag(clientToValue(e.clientX));
-          },
-        ),
-      );
-      onEvent(
-        container,
-        'pointerup',
-        guard(
-          () => !!dragging,
-          (e: PointerEvent) => {
-            e.preventDefault();
-            dragging = null;
-            isDragging.value = false;
-            (e.target as Element).releasePointerCapture(e.pointerId);
-          },
-        ),
+          dragging = Math.abs(val - startVal.value) <= Math.abs(val - endVal.value) ? 'start' : 'end';
+          applyDrag(val);
+        },
+        (clientX) => applyDrag(clientToValue(clientX)),
+        () => {
+          dragging = null;
+        },
       );
 
       const makeThumbKeydown = (getVal: () => number, setVal: (v: number) => void) => (e: KeyboardEvent) => {
@@ -449,48 +479,7 @@ define<OreSliderProps>(SLIDER_TAG, {
           emitValueChange();
         }
       };
-      let isPointerDragging = false;
-
-      onEvent(
-        container,
-        'pointerdown',
-        guard(
-          () => !isDisabled.value,
-          (e: PointerEvent) => {
-            e.preventDefault();
-            isPointerDragging = true;
-            updateValue(e.clientX);
-            (e.target as Element).setPointerCapture(e.pointerId);
-          },
-        ),
-      );
-      onEvent(
-        container,
-        'pointermove',
-        guard(
-          () => isPointerDragging,
-          (e: PointerEvent) => {
-            e.preventDefault();
-
-            if (!isDragging.value) isDragging.value = true;
-
-            updateValue(e.clientX);
-          },
-        ),
-      );
-      onEvent(
-        container,
-        'pointerup',
-        guard(
-          () => isPointerDragging,
-          (e: PointerEvent) => {
-            e.preventDefault();
-            isPointerDragging = false;
-            isDragging.value = false;
-            (e.target as Element).releasePointerCapture(e.pointerId);
-          },
-        ),
-      );
+      setupPointerInteraction(container, updateValue, updateValue);
       onEvent(
         el,
         'keydown',

@@ -1,6 +1,6 @@
 # AGENTS.md: docs
 
-VitePress documentation site. Per-package docs live in `docs/<name>/` and follow the Diátaxis framework (structure: `.agents/reference/docs-template.md`; procedure: the `document` skill, `.agents/skills/document/SKILL.md`). Also hosts the interactive REPL (`docs/repl.md`) and the custom theme under `docs/.vitepress/`.
+VitePress documentation site. Per-package docs live in `docs/<name>/` and follow the Diátaxis framework (structure: `.agents/reference/docs-template.md`; procedure: the `docs` klugzeug skill). Also hosts the interactive REPL (`docs/repl.md`) and the custom theme under `docs/.vitepress/`. Agent contract layout: `.agents/README.md`. DOM-output REPL rules (Preview pane, `repl:dom`, registration) are authoritative in this file—not legacy “excluded from REPL” notes elsewhere.
 
 ## Local contracts
 

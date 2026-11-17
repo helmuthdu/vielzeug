@@ -33,7 +33,6 @@
     column-gap: var(--_gap, var(--size-3));
     align-items: center;
     min-width: var(--slider-min-width, 12rem);
-    touch-action: none;
     cursor: pointer;
     user-select: none;
   }
@@ -64,6 +63,7 @@
   min-width: 0;
   min-height: var(--_touch-target);
   padding-inline: var(--_thumb-inset);
+  touch-action: pan-y pinch-zoom;
 }
 
 .slider-track {

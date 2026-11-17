@@ -190,12 +190,11 @@ server subpaths) and their browsers (the root contract).
 
 ## Verification
 
-- Unit (fast, hermetic): `pnpm vitest run packages/archive/src/__tests__/`
-- Types: `pnpm --filter @vielzeug/archive test:types`
-- Integration (real workerd + local D1): `pnpm --filter @vielzeug/archive
-test:integration` — fixtures generate Wrangler configs into isolated run dirs;
-  never start a second suite run until the previous one has fully exited.
-- Exercise the canonical catalog/auth DDL directly; issuer production workerd
-  coverage must run the package factory, not only a signing fixture.
-- Lint/build: `pnpm --filter @vielzeug/archive lint` / `build`
+Default gates: root `AGENTS.md` → **Project profile**. Archive-specific commands use Bun, matching the root `packageManager`, and the scripts declared in `package.json`.
+
+- Unit (fast, hermetic): `bun x vitest run packages/archive/src/__tests__/`
+- Types: `bun run --filter @vielzeug/archive test:types`
+- Integration (real workerd + local D1): `bun run --filter @vielzeug/archive test:integration` — fixtures generate Wrangler configs into isolated run dirs; never start a second suite run until the previous one has fully exited.
+- Exercise the canonical catalog/auth DDL directly; issuer production workerd coverage must run the package factory, not only a signing fixture.
+- Lint/build: `bun run --filter @vielzeug/archive lint` / `build`
 - Deployment-adapter consumers: run the deployment's catalog and issuer smoke tests.

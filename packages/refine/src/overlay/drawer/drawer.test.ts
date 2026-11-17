@@ -157,10 +157,194 @@ describe('ore-drawer', () => {
       expect(fixture.element.getAttribute('backdrop')).toBe('transparent');
     });
 
-    it('reflects drag-handle-placement attribute on host', async () => {
-      fixture = await mount('ore-drawer', { attrs: { 'drag-handle-placement': 'inset' } });
+    it('defaults drag-handle-placement to inset', async () => {
+      fixture = await mount('ore-drawer');
 
       expect(fixture.element.getAttribute('drag-handle-placement')).toBe('inset');
+    });
+
+    it('reflects drag-handle-placement attribute on host', async () => {
+      fixture = await mount('ore-drawer', { attrs: { 'drag-handle-placement': 'outside' } });
+
+      expect(fixture.element.getAttribute('drag-handle-placement')).toBe('outside');
+    });
+  });
+
+  describe('Content swipes', () => {
+    const directions = [
+      { placement: 'bottom', x: 0, y: 120 },
+      { placement: 'top', x: 0, y: -120 },
+      { placement: 'right', x: 120, y: 0 },
+      { placement: 'left', x: -120, y: 0 },
+    ];
+
+    async function openDrawer(placement = 'bottom', html = '<p>Reading content</p>'): Promise<HTMLElement> {
+      fixture = await mount('ore-drawer', { attrs: { 'default-open': '', placement }, html });
+      driveFrames();
+      const panel = fixture.query<HTMLElement>('.panel')!;
+      Object.defineProperties(panel, {
+        offsetHeight: { configurable: true, value: 400 },
+        offsetWidth: { configurable: true, value: 400 },
+      });
+
+      return fixture.element.querySelector<HTMLElement>('p')!;
+    }
+
+    function swipeContent(target: HTMLElement, x: number, y: number, pointerType = 'touch'): void {
+      const init = { ...pointer, pointerId: 31, pointerType };
+      target.dispatchEvent(new PointerEvent('pointerdown', init));
+      target.dispatchEvent(new PointerEvent('pointermove', { ...init, clientX: x, clientY: y }));
+      target.dispatchEvent(new PointerEvent('pointerup', { ...init, clientX: x, clientY: y }));
+    }
+
+    it.each(directions)('dismisses the $placement drawer with an outward body swipe', async ({ placement, x, y }) => {
+      const content = await openDrawer(placement);
+      const change = vi.fn();
+      fixture.element.addEventListener('open-change', change);
+      swipeContent(content, x, y);
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeFalsy();
+      expect(change.mock.calls[0]?.[0].detail).toEqual({ open: false, reason: 'swipe' });
+    });
+
+    it.each(directions)('ignores an inward content swipe on the $placement drawer', async ({ placement, x, y }) => {
+      const content = await openDrawer(placement);
+      swipeContent(content, -x, -y);
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+      expect(fixture.query<HTMLElement>('.panel')!.style.transform).toBe('');
+    });
+
+    it('leaves mouse drags and cross-axis touch gestures alone', async () => {
+      const content = await openDrawer();
+      swipeContent(content, 0, 120, 'mouse');
+      swipeContent(content, 120, 0);
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+      expect(fixture.query<HTMLElement>('.panel')!.style.transform).toBe('');
+    });
+
+    it('allows disabling content swipes without disabling the handle', async () => {
+      const content = await openDrawer();
+      await fixture.attr('swipe-from-content', 'false');
+      swipeContent(content, 0, 120);
+      await fixture.flush();
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+
+      swipeContent(fixture.query<HTMLElement>('.drag-handle')!, 0, 120);
+      await fixture.flush();
+      expect(fixture.query('dialog[open]')).toBeFalsy();
+    });
+
+    it.each([
+      '<button><p>Action</p></button>',
+      '<div contenteditable="true"><p>Edit</p></div>',
+      '<div role="slider"><p>Slide</p></div>',
+      '<div data-no-swipe><p>Custom gesture</p></div>',
+      '<ore-carousel><p>Slide content</p></ore-carousel>',
+    ])('preserves gestures inside %s', async (html) => {
+      const content = await openDrawer('bottom', html);
+      swipeContent(content, 0, 120);
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+      expect(fixture.query<HTMLElement>('.panel')!.style.transform).toBe('');
+    });
+
+    it('restores a usable drawer when a content dismissal is prevented', async () => {
+      const content = await openDrawer();
+      fixture.element.addEventListener('close-request', (event) => event.preventDefault());
+      swipeContent(content, 0, 120);
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+      expect(fixture.query('dialog')!.classList.contains('closing')).toBe(false);
+      expect(fixture.query<HTMLElement>('.panel')!.style.transform).toBe('');
+      expect(fixture.element.textContent).toContain('Reading content');
+    });
+
+    it('cancels a content drag when a second touch starts', async () => {
+      const content = await openDrawer();
+      const init = { ...pointer, pointerId: 31 };
+      content.dispatchEvent(new PointerEvent('pointerdown', init));
+      content.dispatchEvent(new PointerEvent('pointermove', { ...init, clientY: 120 }));
+      content.dispatchEvent(new PointerEvent('pointerdown', { ...init, isPrimary: false, pointerId: 32 }));
+      content.dispatchEvent(new PointerEvent('pointerup', { ...init, clientY: 120 }));
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+      expect(fixture.query<HTMLElement>('.panel')!.style.transform).toBe('');
+    });
+
+    it('accepts a handle gesture after placement changes', async () => {
+      const content = await openDrawer();
+      swipeContent(content, 100, 0);
+      await fixture.attr('placement', 'right');
+      swipeContent(fixture.query<HTMLElement>('.drag-handle')!, 120, 0);
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeFalsy();
+    });
+
+    it('clears an interrupted drag before reopening', async () => {
+      const content = await openDrawer();
+      const init = { ...pointer, pointerId: 31 };
+      content.dispatchEvent(new PointerEvent('pointerdown', init));
+      content.dispatchEvent(new PointerEvent('pointermove', { ...init, clientY: 120 }));
+      fixture.query<HTMLDialogElement>('dialog')!.close();
+      await fixture.flush();
+      (fixture.element as DrawerElement).show();
+      content.dispatchEvent(new PointerEvent('pointerup', { ...init, clientY: 120 }));
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+      expect(fixture.query<HTMLElement>('.panel')!.style.transform).toBe('');
+    });
+
+    it('cancels a content drag when content swiping is disabled', async () => {
+      const content = await openDrawer();
+      const init = { ...pointer, pointerId: 31 };
+      content.dispatchEvent(new PointerEvent('pointerdown', init));
+      content.dispatchEvent(new PointerEvent('pointermove', { ...init, clientY: 120 }));
+      await fixture.attr('swipe-from-content', 'false');
+      content.dispatchEvent(new PointerEvent('pointerup', { ...init, clientY: 120 }));
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+      expect(fixture.query<HTMLElement>('.panel')!.style.transform).toBe('');
+    });
+
+    it('clears an active drag when placement changes', async () => {
+      const content = await openDrawer();
+      const init = { ...pointer, pointerId: 31 };
+      content.dispatchEvent(new PointerEvent('pointerdown', init));
+      content.dispatchEvent(new PointerEvent('pointermove', { ...init, clientY: 120 }));
+      await fixture.attr('placement', 'right');
+      content.dispatchEvent(new PointerEvent('pointerup', { ...init, clientY: 120 }));
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+      expect(fixture.query<HTMLElement>('.panel')!.style.transform).toBe('');
+    });
+
+    it('settles a content drag at a detent and restores it after cancellation', async () => {
+      vi.spyOn(performance, 'now').mockReturnValue(0);
+      const content = await openDrawer();
+      await fixture.attr('detents', '0.5');
+      swipeContent(content, 0, 180);
+      await fixture.flush();
+      expect(fixture.query<HTMLElement>('.panel')!.style.transform).toBe('translateY(200px)');
+
+      const init = { ...pointer, pointerId: 31 };
+      content.dispatchEvent(new PointerEvent('pointerdown', init));
+      content.dispatchEvent(new PointerEvent('pointermove', { ...init, clientY: 100 }));
+      content.dispatchEvent(new PointerEvent('pointercancel', init));
+      await fixture.flush();
+      expect(fixture.query<HTMLElement>('.panel')!.style.transform).toBe('translateY(200px)');
+      expect(fixture.query('dialog[open]')).toBeTruthy();
     });
   });
 
@@ -328,6 +512,7 @@ describe('ore-drawer', () => {
     });
 
     it('settles a dragged panel at a detent instead of fully open or closed', async () => {
+      vi.spyOn(performance, 'now').mockReturnValue(0);
       fixture = await mount('ore-drawer', { attrs: { detents: '0.5', open: '', placement: 'bottom' } });
       driveFrames();
 

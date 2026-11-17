@@ -2,6 +2,7 @@
 
 > Policy, commands, and workflow facts: root `AGENTS.md`
 > Package metadata and dependency graph: `packages/<name>/package.json` (summarized in `.agents/reference/packages.md`)
+> Task procedure, markers, findings format, and end-of-task report: klugzeug skills under `~/.agents/skills/` and `~/.agents/klugzeug/contract.md` (machine-local; not stored in this repository)
 
 ## Rule strength
 
