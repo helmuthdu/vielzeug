@@ -108,6 +108,8 @@
 
 /* Floating bottom tool dock shared by the board, flow, and map scenes. */
 .studio-toolbar {
+  --button-radius: var(--rounded-full);
+  --button-min-height: var(--size-9);
   position: absolute;
   bottom: var(--size-5);
   left: 50%;
@@ -123,18 +125,19 @@
   transform: translateX(-50%);
 }
 
-.board-dock .dock-group {
-  display: flex;
-  align-items: center;
-}
-
-.board-dock ore-tooltip {
+.studio-toolbar ore-tooltip {
   display: inline-flex;
 }
 
-.board-dock [data-tool].is-active {
+/* Active tool/toggle in any dock (board tools, flow routing). */
+.studio-toolbar .is-active {
   --button-bg: var(--color-primary-backdrop);
   --button-color: var(--color-primary-dark);
+}
+
+.board-dock .dock-group {
+  display: flex;
+  align-items: center;
 }
 
 .dock-sep {

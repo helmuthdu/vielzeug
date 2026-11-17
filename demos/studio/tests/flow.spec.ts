@@ -63,6 +63,22 @@ test('dragging from a port to another node connects them', async ({ page }) => {
   await expect(edges).toHaveCount(4);
 });
 
+test('releasing a wire over another node body connects to its in-port', async ({ page }) => {
+  const edges = page.locator('[data-testid="flow-edges"] .flow-edge:not(.flow-edge-temp)');
+  await expect(edges).toHaveCount(4);
+
+  // Out port of "Input" (node 0) dropped on the middle of "Output" (node 3).
+  const out = await centerOf(port(page, 0, 'out'));
+  const body = await centerOf(page.locator('[data-testid="flow-world"] [data-node-id]').nth(3));
+
+  await page.mouse.move(out.x, out.y);
+  await page.mouse.down();
+  await page.mouse.move(body.x, body.y, { steps: 8 });
+  await page.mouse.up();
+
+  await expect(edges).toHaveCount(5);
+});
+
 test('a cycle is detected, highlighted, and reported', async ({ page }) => {
   const status = page.locator('[data-testid="flow-status"]');
   await expect(status).toHaveAttribute('data-state', 'ok');
@@ -85,7 +101,10 @@ test('orthogonal routing toggles and keeps every edge visible', async ({ page })
   const bezierD = await edges.first().getAttribute('d');
 
   await page.keyboard.press('o');
-  await expect(page.locator('[data-testid="flow-toolbar"] [data-action="route"]')).toHaveText('Orthogonal');
+  await expect(page.locator('[data-testid="flow-toolbar"] [data-action="route"]')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   const orthoD = await edges.first().getAttribute('d');
   expect(orthoD).toMatch(/^M [\d.-]+ [\d.-]+ L/);
   expect(orthoD).not.toBe(bezierD);

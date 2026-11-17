@@ -24,16 +24,17 @@ body {
   overflow: hidden;
 }
 
-/* Height of the floating bar plus its top/bottom offsets: the strip the canvas
-   yields to it, since the bar owns the pointer there. */
+/* Height of the floating bar plus its top/bottom offsets: content that must
+   stay visible (like the palette page) steps below it by this much. */
 .studio-shell-root {
   --shell-inset: calc(var(--navbar-height, var(--size-14)) + var(--navbar-offset, var(--size-3)) * 2);
 }
 
-/* The canvas starts below the floating bar and runs to the window edges. */
+/* The canvas runs full-bleed under the floating bar, like the mockup: the bar
+   floats over the dot grid instead of cutting a flat strip out of it. */
 .studio-scene {
   position: absolute;
-  inset: var(--shell-inset) 0 0;
+  inset: 0;
 }
 
 .studio-shell {
@@ -51,6 +52,13 @@ body {
   --navbar-item-active-bg: var(--color-primary-backdrop);
   --navbar-item-active-color: var(--color-primary-dark);
 
+  /* The floating host spans the full window width; only the visible bar should
+     own the pointer. Empty margins around it fall through to the canvas, so a
+     pan or stroke that starts beside the bar still reaches the viewport. */
+  pointer-events: none;
+}
+
+.shell-navbar::part(bar) {
   pointer-events: auto;
 }
 

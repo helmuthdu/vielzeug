@@ -63,6 +63,15 @@ function screenPoint(viewport: HTMLElement, clientX: number, clientY: number): P
 }
 
 /**
+ * Pointer pressure for ink sampling. Mice and many trackpads report exactly 0
+ * (meaning "no pressure capability"), which ink would read as the lightest pen
+ * touch and halve the stroke width; treat it as absent pressure instead.
+ */
+function strokePressure(event: PointerEvent): number | undefined {
+  return event.pressure > 0 ? event.pressure : undefined;
+}
+
+/**
  * Mounts the board scene: an infinite pan/zoom canvas with rect creation,
  * selection, movement, marquee selection, and ledger-backed undo/redo.
  */
@@ -411,7 +420,7 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
         const last = interaction.points[interaction.points.length - 1];
         // Skip near-duplicate samples; smoothing handles the rest.
         if (!last || Math.hypot(worldPoint.x - last.x, worldPoint.y - last.y) >= 1.5) {
-          interaction.points.push({ pressure: detail.event.pressure, x: worldPoint.x, y: worldPoint.y });
+          interaction.points.push({ pressure: strokePressure(detail.event), x: worldPoint.x, y: worldPoint.y });
           previewPath.setAttribute(
             'd',
             `M ${interaction.points.map((pt) => `${String(pt.x)} ${String(pt.y)}`).join(' L ')}`,
@@ -481,7 +490,10 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
         return;
       }
       if (tool === 'pen') {
-        interaction = { kind: 'pen', points: [{ pressure: detail.event.pressure, x: worldPoint.x, y: worldPoint.y }] };
+        interaction = {
+          kind: 'pen',
+          points: [{ pressure: strokePressure(detail.event), x: worldPoint.x, y: worldPoint.y }],
+        };
         previewPath.style.display = '';
         previewPath.setAttribute('d', `M ${String(worldPoint.x)} ${String(worldPoint.y)}`);
         return;

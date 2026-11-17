@@ -3,6 +3,7 @@ import { createDragGesture, createPinchGesture, createWheelGesture } from '@viel
 import { createStage, type Matrix } from '@vielzeug/stage';
 import { createWorkerStage } from '@vielzeug/stage/worker';
 import '@vielzeug/refine/button';
+import '@vielzeug/refine/tooltip';
 import { createMapModel, FOV_RADIUS, type MapModel, TILE_SIZE } from '../core/map.ts';
 import { createMapLayers, MAP_LAYER_IDS, type MapSceneMessage } from '../core/map-layers.ts';
 import MapWorker from '../worker/map.worker.ts?worker&inline';
@@ -51,8 +52,9 @@ export function mountMapScene(container: HTMLElement): SceneHandle {
   toolbar.className = 'studio-toolbar map-toolbar';
   toolbar.dataset.testid = 'map-toolbar';
   toolbar.innerHTML = `
-    <ore-button data-action="export" variant="secondary">Export PNG</ore-button>
-    <ore-button data-action="mode" variant="secondary">Use worker</ore-button>
+    <ore-tooltip content="Export PNG" placement="top"><ore-button data-action="export" variant="ghost" icon-only label="Export PNG"><ore-icon name="image-down"></ore-icon></ore-button></ore-tooltip>
+    <ore-tooltip content="Render on a worker thread" placement="top"><ore-button data-action="mode" variant="ghost" icon-only label="Toggle render thread"><ore-icon name="cpu"></ore-icon></ore-button></ore-tooltip>
+    <span class="dock-sep" aria-hidden="true"></span>
     <span class="map-status" data-testid="map-status"></span>`;
   root.append(toolbar);
 
@@ -220,7 +222,11 @@ export function mountMapScene(container: HTMLElement): SceneHandle {
 
   modeButton?.addEventListener('click', () => {
     mode = mode === 'main' ? 'worker' : 'main';
-    modeButton.textContent = mode === 'main' ? 'Use worker' : 'Use main thread';
+    modeButton.classList.toggle('is-active', mode === 'worker');
+    modeButton.setAttribute('aria-pressed', String(mode === 'worker'));
+    modeButton
+      .closest('ore-tooltip')
+      ?.setAttribute('content', mode === 'worker' ? 'Rendering on a worker' : 'Render on a worker thread');
     modeButton.dataset.mode = mode;
     detached?.();
     detached = null;

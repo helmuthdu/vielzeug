@@ -5,6 +5,7 @@ import { createLedger } from '@vielzeug/ledger';
 import { bezierRoute, findCycles, orthogonalRoute, polylineToSvgPath, topologicalOrder } from '@vielzeug/wire';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/button-group';
+import '@vielzeug/refine/tooltip';
 import {
   addEdgeCommand,
   addNodeCommand,
@@ -275,6 +276,13 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
     return { node: nodeEl.dataset.nodeId as string, port: portId };
   }
 
+  /** A release over a node's body (missing the small port dot) targets its in-port. */
+  function nodeBodyTarget(event: PointerEvent | MouseEvent): { node: string; port: string } | null {
+    const nodeEl = nodeFromEvent(event);
+    if (!nodeEl) return null;
+    return { node: nodeEl.dataset.nodeId as string, port: 'in' };
+  }
+
   const drag = createDragGesture(viewport, {
     onEnd: (detail) => {
       const active = interaction;
@@ -291,8 +299,9 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
         pointerPort = null;
         tempPath.style.display = 'none';
         tempPath.setAttribute('d', '');
-        // Complete the connection when released over another node's in-port.
-        const target = portFromEvent(detail.event);
+        // Complete the connection when released over another node's in-port —
+        // or over its body, which is what people actually aim for.
+        const target = portFromEvent(detail.event) ?? nodeBodyTarget(detail.event);
         if (target && target.node !== active.fromNode && target.port !== 'out') {
           const edge: FlowEdge = {
             from: { node: active.fromNode, port: active.fromPort },
@@ -415,7 +424,12 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
   function toggleRouting(): void {
     orthogonal = !orthogonal;
     const routeButton = toolbarParent.querySelector<HTMLElement>('[data-action="route"]');
-    if (routeButton) routeButton.textContent = orthogonal ? 'Orthogonal' : 'Bezier';
+    if (routeButton) {
+      routeButton.classList.toggle('is-active', orthogonal);
+      routeButton.setAttribute('aria-pressed', String(orthogonal));
+      const tip = routeButton.closest('ore-tooltip');
+      tip?.setAttribute('content', orthogonal ? 'Orthogonal routing' : 'Bezier routing');
+    }
     syncEdges();
   }
 
@@ -423,13 +437,14 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
   toolbarParent.className = 'studio-toolbar';
   toolbarParent.dataset.testid = 'flow-toolbar';
   toolbarParent.innerHTML = `
-    <ore-button-group attached label="Flow tools" size="sm">
-      <ore-button data-action="add-node" variant="frost" effect="glass" size="sm">Add node</ore-button>
-      <ore-button data-action="route" variant="frost" effect="glass" size="sm">Bezier</ore-button>
+    <ore-button-group label="Flow tools" size="sm" class="dock-group">
+      <ore-tooltip content="Add node (N)" placement="top"><ore-button data-action="add-node" variant="ghost" icon-only label="Add node"><ore-icon name="plus"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="Bezier routing" placement="top"><ore-button data-action="route" variant="ghost" icon-only label="Toggle routing" aria-pressed="false"><ore-icon name="waypoints"></ore-icon></ore-button></ore-tooltip>
     </ore-button-group>
-    <ore-button-group attached label="History" size="sm">
-      <ore-button data-history="undo" variant="frost" effect="glass" size="sm">Undo</ore-button>
-      <ore-button data-history="redo" variant="frost" effect="glass" size="sm">Redo</ore-button>
+    <span class="dock-sep" aria-hidden="true"></span>
+    <ore-button-group label="History" size="sm" class="dock-group">
+      <ore-tooltip content="Undo (⌘Z)" placement="top"><ore-button data-history="undo" variant="ghost" icon-only label="Undo"><ore-icon name="undo-2"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="Redo (⇧⌘Z)" placement="top"><ore-button data-history="redo" variant="ghost" icon-only label="Redo"><ore-icon name="redo-2"></ore-icon></ore-button></ore-tooltip>
     </ore-button-group>`;
   container.append(toolbarParent);
 

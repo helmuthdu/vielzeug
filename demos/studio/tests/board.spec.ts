@@ -33,12 +33,15 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('[data-testid="board-viewport"]')).toBeVisible();
 });
 
+/** The canvas runs under the floating navbar; drawing starts below its tallest (mobile) extent. */
+const BELOW_BAR = 160;
+
 test('draws rectangles with the pen tool and selects them with a click', async ({ page }) => {
   const box = await viewportBox(page);
-  await drawRect(page, [box.x + 100, box.y + 100], [box.x + 220, box.y + 180]);
+  await drawRect(page, [box.x + 100, box.y + BELOW_BAR], [box.x + 220, box.y + BELOW_BAR + 80]);
   await expect.poll(() => shapeCount(page)).toBe(1);
 
-  await page.mouse.click(box.x + 150, box.y + 140);
+  await page.mouse.click(box.x + 150, box.y + BELOW_BAR + 40);
   await expect(page.locator('.studio-selection-toolbar')).toBeVisible();
 
   // Clear of the tool dock floating at the bottom edge of the canvas.
@@ -48,14 +51,14 @@ test('draws rectangles with the pen tool and selects them with a click', async (
 
 test('moves a shape and restores it with undo/redo', async ({ page }) => {
   const box = await viewportBox(page);
-  await drawRect(page, [box.x + 100, box.y + 100], [box.x + 220, box.y + 180]);
+  await drawRect(page, [box.x + 100, box.y + BELOW_BAR], [box.x + 220, box.y + BELOW_BAR + 80]);
   const shape = page.locator('.studio-shape').first();
   const before = await shape.boundingBox();
 
-  await page.mouse.click(box.x + 150, box.y + 140);
-  await page.mouse.move(box.x + 150, box.y + 140);
+  await page.mouse.click(box.x + 150, box.y + BELOW_BAR + 40);
+  await page.mouse.move(box.x + 150, box.y + BELOW_BAR + 40);
   await page.mouse.down();
-  await page.mouse.move(box.x + 250, box.y + 220, { steps: 5 });
+  await page.mouse.move(box.x + 250, box.y + BELOW_BAR + 120, { steps: 5 });
   await page.mouse.up();
   await expect
     .poll(async () => (await shape.boundingBox())?.x ?? 0, { message: 'shape moved' })
@@ -75,8 +78,8 @@ test('moves a shape and restores it with undo/redo', async ({ page }) => {
 
 test('marquee selects multiple shapes and Delete removes them with undo', async ({ page }) => {
   const box = await viewportBox(page);
-  await drawRect(page, [box.x + 60, box.y + 60], [box.x + 160, box.y + 140]);
-  await drawRect(page, [box.x + 200, box.y + 180], [box.x + 320, box.y + 260]);
+  await drawRect(page, [box.x + 60, box.y + BELOW_BAR], [box.x + 160, box.y + BELOW_BAR + 80]);
+  await drawRect(page, [box.x + 200, box.y + BELOW_BAR + 120], [box.x + 320, box.y + BELOW_BAR + 200]);
   await expect.poll(() => shapeCount(page)).toBe(2);
 
   // Start away from the toolbar pinned to the viewport's top-left corner.
