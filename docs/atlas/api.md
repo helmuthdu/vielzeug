@@ -216,7 +216,7 @@ From the `@vielzeug/atlas/grid` subpath:
 | `computeFov(origin, radius, options?)` | `Set<string>` of visible `tileKey`s (8-octant recursive shadowcasting)                                            |
 | `createFog()`                          | Three-state fog tracker: `reveal`/`revealKeys`/`demote`/`hide`/`state`/`visibleKeys`, `exportState`/`importState` |
 
-`grid` is `{ tileSize }` (positive; `worldToTile`/`tileToRect`/`tileCenter`/`visibleTileRange` throw `RangeError` otherwise, as do negative/non-integer `chunkSize` and a negative/non-integer FOV `radius`). `computeFov` options: `blocks(coord)` returns true when sight cannot pass through the tile; blocking tiles within range are themselves visible. The origin is always in the result. `TileCoord` is `{ col, row }`.
+`grid` is `{ tileSize }` (positive; `worldToTile`/`tileToRect`/`tileCenter`/`visibleTileRange` throw `AtlasConfigError` otherwise, as do negative/non-integer `chunkSize` and a negative/non-integer FOV `radius`). `computeFov` options: `blocks(coord)` returns true when sight cannot pass through the tile; blocking tiles within range are themselves visible. The origin is always in the result. `TileCoord` is `{ col, row }`.
 
 ---
 

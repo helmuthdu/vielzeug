@@ -1,6 +1,6 @@
-import type { Matrix, Rect } from './_shapes.js';
-import { invertMatrix } from './_shapes.js';
-import { StageConfigError, StageUnsupportedError } from './errors.js';
+import { StageConfigError, StageDisposedError, StageUnsupportedError } from './errors.js';
+import type { Matrix, Rect } from './shapes.js';
+import { invertMatrix } from './shapes.js';
 
 /** A backing surface a layer paints into. `OffscreenCanvas` on workers. */
 export type StageSurface = {
@@ -416,7 +416,7 @@ export function createStage(
       schedule();
     },
     async toBlob(options) {
-      if (disposed) throw new StageConfigError('Cannot export a disposed stage.');
+      if (disposed) throw new StageDisposedError('Cannot export a disposed stage.');
       const type = options?.type ?? 'image/png';
       const convertToBlob = (canvas as Partial<OffscreenCanvas>).convertToBlob;
       if (typeof convertToBlob === 'function') {

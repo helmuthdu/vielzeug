@@ -199,17 +199,22 @@ export function mountMapScene(container: HTMLElement): { dispose(): void } {
     if (!renderer) return;
     // Worker mode rasterizes on demand; main mode needs a sync flush first.
     renderer.render?.();
-    void renderer.toBlob({ type: 'image/png' }).then((blob) => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'vielzeug-map.png';
-      link.dataset.testid = 'map-export-link';
-      link.click();
-      link.remove();
-      // Let the download start before releasing the blob URL.
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    });
+    void renderer
+      .toBlob({ type: 'image/png' })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'vielzeug-map.png';
+        link.dataset.testid = 'map-export-link';
+        link.click();
+        link.remove();
+        // Let the download start before releasing the blob URL.
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      })
+      .catch((error: unknown) => {
+        status.textContent = `Export failed: ${String(error)}`;
+      });
   });
 
   modeButton?.addEventListener('click', () => {

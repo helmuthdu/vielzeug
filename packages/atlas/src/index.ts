@@ -1,5 +1,5 @@
 // Public root surface of @vielzeug/atlas. Every public export goes through this file.
-export type { Matrix, Point, Rect } from './_shapes.js';
+
 export {
   type AnimationOptions,
   type Camera,
@@ -44,6 +44,7 @@ export {
   rectsIntersect,
   unionRect,
 } from './rect.js';
+export type { Matrix, Point, Rect } from './shapes.js';
 export {
   type AlignEdge,
   alignRects,

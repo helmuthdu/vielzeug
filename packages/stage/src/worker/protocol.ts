@@ -1,5 +1,5 @@
 import { warn } from '../_dev.js';
-import type { Matrix } from '../_shapes.js';
+import type { Matrix } from '../shapes.js';
 
 /** Version of the stage worker protocol. Bumped whenever the message shapes change. */
 export const STAGE_WORKER_PROTOCOL = 1;
@@ -35,10 +35,13 @@ export type StageWorkerCommand =
 export type StageWorkerEvent =
   | { type: 'ready'; protocol: number }
   | { type: 'blob'; protocol: number; id: number; ok: true; blob: Blob }
-  | { type: 'blob'; protocol: number; id: number; ok: false; error: string }
+  | { type: 'blob'; protocol: number; id: number; ok: false; error: string; kind?: StageWorkerErrorKind }
   | { type: 'error'; protocol: number; error: string };
 
-/** @internal Verify a message carries the expected protocol version, warning on mismatch. */
+/** Coarse error taxonomy for failed blob exports, mapped back to typed errors main-side. */
+export type StageWorkerErrorKind = 'disposed' | 'unsupported' | 'failed';
+
+/** Verify a message carries the expected protocol version, warning on mismatch. */
 export function checkProtocol(message: { protocol?: number }, direction: string): boolean {
   if (message.protocol !== STAGE_WORKER_PROTOCOL) {
     warn(

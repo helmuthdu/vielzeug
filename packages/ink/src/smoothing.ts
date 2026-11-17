@@ -13,17 +13,18 @@ export interface SmoothStrokeOptions {
   tension?: number;
 }
 
-/** Catmull-Rom basis for one axis; `t` in `[0, 1]`, `alpha` scales the tangent terms. */
+/**
+ * Interpolation basis for one axis; `t` in `[0, 1]`. `alpha` blends linear
+ * interpolation (`alpha = 0`) with the standard uniform Catmull-Rom spline
+ * (`alpha = 1`), so `tension: 0` is genuinely linear.
+ */
 function catmullRomAxis(p0: number, p1: number, p2: number, p3: number, t: number, alpha: number): number {
+  const linear = p1 + (p2 - p1) * t;
   const t2 = t * t;
   const t3 = t2 * t;
-  return (
-    0.5 *
-    (2 * p1 +
-      alpha * t * (p2 - p0) +
-      alpha * t2 * (2 * p0 - 5 * p1 + 4 * p2 - p3) +
-      alpha * t3 * (3 * p1 - 3 * p2 - p0 + p3))
-  );
+  const spline =
+    0.5 * (2 * p1 + t * (p2 - p0) + t2 * (2 * p0 - 5 * p1 + 4 * p2 - p3) + t3 * (3 * p1 - 3 * p2 - p0 + p3));
+  return linear + alpha * (spline - linear);
 }
 
 function emitPoint(x: number, y: number, pressure?: number): StrokePoint {

@@ -6,14 +6,14 @@ import {
   oklchToOklab,
   srgbToHsl as srgbToHslImpl,
   srgbToOklab,
-} from './_convert';
-import { contrastRatio, mix, ramp, readableOn, relativeLuminance } from './_core';
-import { toHex, toHslString, toOklchString, toRgbString } from './_format';
-import { parseColor } from './_parse';
-import type { Hsla, Oklch, Rgba } from './types';
+} from './_convert.js';
+import { contrastRatio, mix, ramp, readableOn, relativeLuminance } from './_core.js';
+import { toHex, toHslString, toOklchString, toRgbString } from './_format.js';
+import { parseColor } from './_parse.js';
+import type { Hsla, Oklch, Rgba } from './types.js';
 
-export { PaletteConfigError, PaletteError, PaletteParseError } from './errors';
-export type { FormatOptions, Hsla, Oklab, Oklch, RampOptions, ReadableOnOptions, Rgba } from './types';
+export { PaletteConfigError, PaletteError, PaletteParseError } from './errors.js';
+export type { FormatOptions, Hsla, Oklab, Oklch, RampOptions, ReadableOnOptions, Rgba } from './types.js';
 export {
   contrastRatio,
   mix,

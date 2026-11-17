@@ -1,5 +1,5 @@
-import { clamp, oklabToOklch, srgbToHsl, srgbToOklab } from './_convert';
-import type { FormatOptions, Rgba } from './types';
+import { clamp, oklabToOklch, srgbToHsl, srgbToOklab } from './_convert.js';
+import type { FormatOptions, Rgba } from './types.js';
 
 /** Rounds to `digits` decimals without negative zero. */
 function round(value: number, digits: number): number {

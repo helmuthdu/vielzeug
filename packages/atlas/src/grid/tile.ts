@@ -3,7 +3,8 @@
  * grids. Tile (col, row) covers the world rect `[col*size, row*size)`;
  * world→tile floors, so negative coordinates land on negative tiles.
  */
-import type { Point, Rect } from '../_shapes.js';
+import { AtlasConfigError } from '../errors.js';
+import type { Point, Rect } from '../shapes.js';
 
 /** A tile addressed by integer column and row. */
 export type TileCoord = Readonly<{ col: number; row: number }>;
@@ -16,7 +17,7 @@ export type TileRange = Readonly<{ maxCol: number; maxRow: number; minCol: numbe
 
 function assertGrid(grid: GridConfig): void {
   if (!(grid.tileSize > 0)) {
-    throw new RangeError(`grid.tileSize must be positive, got ${grid.tileSize}`);
+    throw new AtlasConfigError(`grid.tileSize must be positive, got ${grid.tileSize}`);
   }
 }
 
@@ -66,7 +67,7 @@ export function tileKey(coord: TileCoord): string {
 /** The chunk (grouped tiles) a coordinate belongs to. */
 export function chunkOf(coord: TileCoord, chunkSize: number): Readonly<{ cx: number; cy: number }> {
   if (!Number.isInteger(chunkSize) || chunkSize < 1) {
-    throw new RangeError(`chunkSize must be a positive integer, got ${chunkSize}`);
+    throw new AtlasConfigError(`chunkSize must be a positive integer, got ${chunkSize}`);
   }
   return { cx: Math.floor(coord.col / chunkSize), cy: Math.floor(coord.row / chunkSize) };
 }

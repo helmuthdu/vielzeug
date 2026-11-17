@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AtlasConfigError } from '../errors.js';
 import { computeFov, createFog, tileKey } from '../grid/index.js';
 
 const origin = { col: 0, row: 0 };
@@ -6,7 +7,7 @@ const origin = { col: 0, row: 0 };
 describe('computeFov', () => {
   it('always includes the origin', () => {
     expect(computeFov(origin, 0)).toEqual(new Set(['0:0']));
-    expect(() => computeFov(origin, -1)).toThrow(RangeError);
+    expect(() => computeFov(origin, -1)).toThrow(AtlasConfigError);
   });
 
   it('opens a full 3x3 square at radius 1', () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AtlasConfigError } from '../errors.js';
 import type { Rect } from '../index.js';
 import { alignRects, distributeRects, snapRect } from '../index.js';
 
@@ -52,7 +53,7 @@ describe('snapRect', () => {
   });
 
   it('rejects a negative threshold', () => {
-    expect(() => snapRect(rect(0, 0), { candidates: [], threshold: -1 })).toThrow(RangeError);
+    expect(() => snapRect(rect(0, 0), { candidates: [], threshold: -1 })).toThrow(AtlasConfigError);
   });
 
   it('returns zero delta with no candidates', () => {

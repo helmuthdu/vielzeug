@@ -1,6 +1,6 @@
 import { warn } from '../_dev.js';
-import type { Matrix } from '../_shapes.js';
-import { StageDisposedError, StageUnsupportedError } from '../errors.js';
+import { StageDisposedError, StageError, StageUnsupportedError } from '../errors.js';
+import type { Matrix } from '../shapes.js';
 import type { StageWorkerCommand, StageWorkerEvent } from './protocol.js';
 import { checkProtocol, STAGE_WORKER_PROTOCOL } from './protocol.js';
 
@@ -98,7 +98,11 @@ export function createWorkerStage(
       }
       pending.delete(message.id);
       if (message.ok) entry.resolve(message.blob);
-      else entry.reject(new StageUnsupportedError(`Worker blob export failed: ${message.error}`));
+      else if (message.kind === 'disposed')
+        entry.reject(new StageDisposedError(`Worker blob export failed: ${message.error}`));
+      else if (message.kind === 'unsupported')
+        entry.reject(new StageUnsupportedError(`Worker blob export failed: ${message.error}`));
+      else entry.reject(new StageError(`Worker blob export failed: ${message.error}`));
       return;
     }
     if (message.type === 'error') {

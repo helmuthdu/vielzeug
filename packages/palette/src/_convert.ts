@@ -1,4 +1,4 @@
-import type { Hsla, Oklab, Oklch, Rgba } from './types';
+import type { Hsla, Oklab, Oklch, Rgba } from './types.js';
 
 /** Clamps to the inclusive range. */
 export function clamp(value: number, min: number, max: number): number {

@@ -1,7 +1,7 @@
-import type { Matrix, Point, Rect } from './_shapes.js';
 import { AtlasConfigError } from './errors.js';
 import { boundsOf } from './geometry.js';
 import { apply, IDENTITY, invert, multiply, rotate, scale, translate } from './matrix.js';
+import type { Matrix, Point, Rect } from './shapes.js';
 
 export type CameraState = Readonly<{
   /** World point that maps to the viewport origin (screen 0,0). */

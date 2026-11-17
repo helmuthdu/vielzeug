@@ -1,5 +1,5 @@
-import type { Point, Rect } from './_shapes.js';
 import { rectFromPoints } from './rect.js';
+import type { Point, Rect } from './shapes.js';
 
 /**
  * Oriented bounding box: a rect rotated by `rotation` radians (positive clockwise on

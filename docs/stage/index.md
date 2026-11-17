@@ -4,7 +4,7 @@ description: 'Retained-mode 2D canvas stage engine with DPR-aware layers, dirty 
 package: stage
 category: utilities
 keywords: [canvas, rendering, layers, dpr, offscreencanvas, sprite-sheet, png-export, 2d]
-exports: [createStage, StageError, StageConfigError, StageUnsupportedError]
+exports: [createStage, StageError, StageConfigError, StageDisposedError, StageUnsupportedError]
 related: [atlas, gesture, ink]
 environments: [browser, worker]
 ---

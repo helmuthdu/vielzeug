@@ -1,6 +1,6 @@
-import { clamp, hslToSrgb, oklabToSrgb, oklchToOklab } from './_convert';
-import { PaletteParseError } from './errors';
-import type { Oklab, Oklch, Rgba } from './types';
+import { clamp, hslToSrgb, oklabToSrgb, oklchToOklab } from './_convert.js';
+import { PaletteParseError } from './errors.js';
+import type { Oklab, Oklch, Rgba } from './types.js';
 
 const HEX_RE = /^#(?:([\da-f])([\da-f])([\da-f])([\da-f])?|([\da-f]{2})([\da-f]{2})([\da-f]{2})([\da-f]{2})?)$/i;
 const FUNCTION_RE = /^(rgba?|hsla?|oklab|oklch)\(([^)]*)\)$/i;

@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
-import { StageDisposedError, StageUnsupportedError } from '../errors.js';
+import { StageDisposedError, StageError, StageUnsupportedError } from '../errors.js';
 import type { WorkerScope } from '../worker/main.js';
 import { createWorkerStage } from '../worker/main.js';
 import type { StageWorkerCommand, StageWorkerEvent, StageWorkerInit } from '../worker/protocol.js';
@@ -108,35 +108,46 @@ describe('createWorkerStage', () => {
     stage.dispose();
   });
 
-  test('toBlob rejects with a typed error when the worker reports failure', async () => {
+  test('toBlob maps worker failure kinds to typed errors', async () => {
     const pair = createFakePair();
     const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, layers: [], width: 10 });
     const originalPost = pair.main.postMessage;
-    pair.main.postMessage = (message: unknown, transfer?: Transferable[]) => {
-      originalPost(message, transfer);
-      const msg = message as StageWorkerCommand;
-      if (msg.type === 'blob') {
-        pair.self.postMessage({
-          error: 'convertToBlob failed',
-          id: msg.id,
-          ok: false,
-          protocol: STAGE_WORKER_PROTOCOL,
-          type: 'blob',
-        });
-      }
+    const respond = (kind?: string) => {
+      pair.main.postMessage = (message: unknown, transfer?: Transferable[]) => {
+        originalPost(message, transfer);
+        const msg = message as StageWorkerCommand;
+        if (msg.type === 'blob') {
+          pair.self.postMessage({
+            error: 'convertToBlob failed',
+            id: msg.id,
+            ...(kind === undefined ? {} : { kind }),
+            ok: false,
+            protocol: STAGE_WORKER_PROTOCOL,
+            type: 'blob',
+          });
+        }
+      };
     };
+    respond('unsupported');
     await expect(stage.toBlob()).rejects.toThrow(StageUnsupportedError);
+    respond('disposed');
+    await expect(stage.toBlob()).rejects.toThrow(StageDisposedError);
+    respond(undefined);
+    await expect(stage.toBlob()).rejects.toThrow(StageError);
     stage.dispose();
   });
 
   test('dispose rejects pending blob requests with StageDisposedError', async () => {
     const pair = createFakePair();
-    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, layers: [], width: 10 });
+    const removeEventListener = vi.fn(pair.main.removeEventListener);
+    const scope: WorkerScope = { ...pair.main, removeEventListener };
+    const stage = createWorkerStage(fakeCanvas(), scope, { height: 10, layers: [], width: 10 });
     const pending = stage.toBlob();
     stage.dispose();
     await expect(pending).rejects.toThrow(StageDisposedError);
     const last = pair.posted[pair.posted.length - 1] as StageWorkerCommand;
     expect(last.type).toBe('dispose');
+    expect(removeEventListener).toHaveBeenCalledWith('message', expect.any(Function));
   });
 
   test('commands after dispose are not posted', () => {
@@ -260,5 +271,65 @@ describe('serveStage', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+
+  test('a second init warns and does not recreate the stage', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { pair, server } = serve(() => ({ layers: [] }));
+      pair.main.postMessage(initMessage());
+      await Promise.resolve();
+      const stage = server.stage;
+      pair.main.postMessage(initMessage());
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('second init'));
+      expect(server.stage).toBe(stage);
+      server.dispose();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  test('commands after dispose are ignored even without removeEventListener', async () => {
+    const onStart = vi.fn();
+    const { pair, server } = serve(() => ({ layers: [], onStart }));
+    pair.main.postMessage(initMessage());
+    await Promise.resolve();
+    expect(onStart).toHaveBeenCalledOnce();
+    server.dispose();
+    // The fake self scope has no removeEventListener, so queued messages still
+    // arrive; the disposed guard must swallow them instead of recreating.
+    const events: StageWorkerEvent[] = [];
+    pair.main.addEventListener('message', (event) => events.push(event.data as StageWorkerEvent));
+    pair.main.postMessage(initMessage());
+    pair.main.postMessage({ id: 1, protocol: STAGE_WORKER_PROTOCOL, type: 'blob' });
+    await Promise.resolve();
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(server.stage).toBeUndefined();
+    expect(events.filter((m) => m.type === 'ready' || m.type === 'blob')).toHaveLength(0);
+  });
+
+  test('non-object message payloads warn and are ignored', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { pair, server } = serve(() => ({ layers: [] }));
+      pair.main.postMessage('not-a-message');
+      pair.main.postMessage(null);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('unrecognized'));
+      expect(server.stage).toBeUndefined();
+      server.dispose();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  test('dispose removes the message listener when the scope supports it', async () => {
+    const pair = createFakePair();
+    const removeEventListener = vi.fn(pair.self.removeEventListener ?? (() => {}));
+    const scope: WorkerSelfScope = { ...pair.self, removeEventListener };
+    const server = serveStage(scope, () => ({ layers: [] }));
+    pair.main.postMessage(initMessage());
+    await Promise.resolve();
+    server.dispose();
+    expect(removeEventListener).toHaveBeenCalledWith('message', expect.any(Function));
   });
 });

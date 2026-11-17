@@ -1,7 +1,7 @@
 // Public root surface of @vielzeug/stage. Every public export goes through this file.
 
-export type { Matrix, Point, Rect } from './_shapes.js';
 export { StageConfigError, StageDisposedError, StageError, StageUnsupportedError } from './errors.js';
+export type { Matrix, Point, Rect } from './shapes.js';
 export {
   type CreateSurface,
   createStage,

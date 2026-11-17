@@ -11,7 +11,8 @@ description: API reference for the Stage retained-mode 2D canvas engine.
 | --------------------------- | ---------------------------------------------------- | --------- | ----------------------------------------------------------------- |
 | `createStage()`             | Retained-mode layered canvas renderer                | Sync      | Paint callbacks draw in world units; the stage applies the matrix |
 | `StageError`                | Base class for all stage errors                      | Sync      | Narrow with `instanceof StageError`                               |
-| `StageConfigError`          | Invalid sizes, unknown layer ids, disposed usage     | Sync      | Thrown at call time                                               |
+| `StageConfigError`          | Invalid sizes, unknown layer ids                     | Sync      | Thrown at call time                                               |
+| `StageDisposedError`        | Blob export or worker request after disposal         | Sync      | Worker blob failures carry a `kind` mapped to this class          |
 | `StageUnsupportedError`     | Missing browser capability (2D context, blob export) | Sync      | No silent degradation to a lesser path                            |
 | `Point` / `Rect` / `Matrix` | Structural shapes shared across the canvas toolkit   | Sync      | All readonly; treat as values                                     |
 
@@ -139,8 +140,9 @@ Paint callbacks receive a context whose transform is `dpr × matrix`, so they dr
 
 ## Errors
 
-| Class                   | Thrown when                                                    |
-| ----------------------- | -------------------------------------------------------------- |
-| `StageError`            | Base class; catch all stage failures with `instanceof`         |
-| `StageConfigError`      | Non-positive sizes, non-finite matrices, duplicate/unknown ids |
-| `StageUnsupportedError` | No 2D context on a surface, or `canvas.toBlob` missing/failing |
+| Class                   | Thrown when                                                       |
+| ----------------------- | ----------------------------------------------------------------- |
+| `StageError`            | Base class; catch all stage failures with `instanceof`            |
+| `StageConfigError`      | Non-positive sizes, non-finite matrices, duplicate/unknown ids    |
+| `StageDisposedError`    | `toBlob()` after `dispose()`, or worker blob rejected on disposal |
+| `StageUnsupportedError` | No 2D context on a surface, or `canvas.toBlob` missing/failing    |

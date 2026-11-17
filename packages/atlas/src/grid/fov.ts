@@ -8,6 +8,7 @@
  * mirroring and transposition in open space.
  */
 
+import { AtlasConfigError } from '../errors.js';
 import type { TileCoord } from './tile.js';
 
 /** Decides whether a tile blocks sight. */
@@ -30,7 +31,7 @@ export interface FovOptions {
  */
 export function computeFov(origin: TileCoord, radius: number, options: FovOptions = {}): Set<string> {
   if (!Number.isInteger(radius) || radius < 0) {
-    throw new RangeError(`FOV radius must be a non-negative integer, got ${radius}`);
+    throw new AtlasConfigError(`FOV radius must be a non-negative integer, got ${radius}`);
   }
   const blocks = options.blocks ?? _noBlocks;
   const lit = new Set<string>();

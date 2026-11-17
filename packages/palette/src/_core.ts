@@ -1,6 +1,6 @@
-import { clamp, delinearize, linearize, oklabToSrgb, srgbToOklab } from './_convert';
-import { PaletteConfigError } from './errors';
-import type { RampOptions, ReadableOnOptions, Rgba } from './types';
+import { clamp, delinearize, linearize, oklabToSrgb, srgbToOklab } from './_convert.js';
+import { PaletteConfigError } from './errors.js';
+import type { RampOptions, ReadableOnOptions, Rgba } from './types.js';
 
 /** WCAG 2.x relative luminance of a color, computed on channels clamped to 0–255. */
 export function relativeLuminance(color: Rgba): number {

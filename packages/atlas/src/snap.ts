@@ -1,6 +1,7 @@
-import type { Point, Rect } from './_shapes.js';
+import { AtlasConfigError } from './errors.js';
 import { boundsOf } from './geometry.js';
 import { rectBottom, rectCenter, rectRight } from './rect.js';
+import type { Point, Rect } from './shapes.js';
 
 /** A snap line to render: a guide with axis `'x'` sits at a fixed x position. */
 export interface SnapGuide {
@@ -91,7 +92,7 @@ function spanFor(
 export function snapRect(rect: Rect, options: SnapOptions): SnapResult {
   const { candidates, grid, threshold } = options;
   if (!(threshold >= 0)) {
-    throw new RangeError(`threshold must be a non-negative finite number; received ${String(threshold)}.`);
+    throw new AtlasConfigError(`threshold must be a non-negative finite number; received ${String(threshold)}.`);
   }
   let movedX = rect.x;
   let movedY = rect.y;
@@ -158,7 +159,7 @@ export function alignRects(rects: readonly Rect[], edge: AlignEdge): Rect[] {
       case 'bottom':
         return { ...rect, y: rectBottom(bounds) - rect.height };
       default:
-        throw new RangeError(`unknown align edge: ${String(edge)}.`);
+        throw new AtlasConfigError(`unknown align edge: ${String(edge)}.`);
     }
   });
 }

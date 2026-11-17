@@ -1,6 +1,6 @@
-import type { Point, Rect } from './_shapes.js';
 import { AtlasConfigError } from './errors.js';
-import { containsPoint, rectsIntersect } from './rect.js';
+import { containsPoint, containsRect, rectsIntersect } from './rect.js';
+import type { Point, Rect } from './shapes.js';
 
 export type SpatialEntry<T> = Readonly<{ id: string; rect: Rect; value: T }>;
 
@@ -204,7 +204,10 @@ export function createSpatialIndex<T>(options: SpatialIndexOptions = {}): Spatia
     const branch = node as Branch<T>;
     for (let i = branch.children.length - 1; i >= 0; i--) {
       const child = branch.children[i];
-      if (child.rect && rectsIntersect(child.rect, entry.rect)) {
+      // Prune by containment, not intersection: a branch rect is the union of
+      // its children, so the entry's rect is always contained in the child
+      // that holds it — even for zero-area rects, which never "intersect".
+      if (child.rect && containsRect(child.rect, entry.rect)) {
         if (removeFrom(child, entry)) branch.children.splice(i, 1);
       }
     }

@@ -67,6 +67,25 @@ describe('smoothStroke', () => {
     expect(smoothStroke(input)).toEqual(smoothStroke(input));
   });
 
+  it('interpolates linearly at tension 0', () => {
+    // tension 0 must blend to plain linear interpolation, not collapse onto
+    // the segment start (each emitted sample lies on the straight segment).
+    const input = [
+      { x: 0, y: 0 },
+      { x: 10, y: 10 },
+      { x: 20, y: 20 },
+      { x: 30, y: 30 },
+    ];
+    const smoothed = smoothStroke(input, { steps: 4, tension: 0 });
+    for (const point of smoothed) {
+      expect(point.x).toBeCloseTo(point.y, 9);
+    }
+    const xs = smoothed.map((p) => p.x);
+    expect(new Set(xs).size).toBe(xs.length); // strictly increasing, no duplicates
+    expect(smoothed[0]).toEqual({ x: 0, y: 0 });
+    expect(smoothed[smoothed.length - 1]).toEqual({ x: 30, y: 30 });
+  });
+
   it('keeps input length with the streamline algorithm', () => {
     const input = noisyLine(15, 5);
     expect(smoothStroke(input, { algorithm: 'streamline' })).toHaveLength(input.length);

@@ -1,4 +1,4 @@
-import type { Matrix, Point } from './_shapes.js';
+import type { Matrix, Point } from './shapes.js';
 
 export const IDENTITY: Matrix = Object.freeze([1, 0, 0, 1, 0, 0]) as Matrix;
 

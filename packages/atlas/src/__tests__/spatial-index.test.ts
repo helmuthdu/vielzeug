@@ -58,6 +58,20 @@ describe('createSpatialIndex', () => {
     index.dispose();
   });
 
+  it('removes zero-area entries from a split tree', () => {
+    // Zero-area rects never "intersect" under rect semantics, so removal must
+    // prune the descent by containment, not intersection, or the leaf stays
+    // in the tree as a phantom query hit after remove() reports success.
+    const index = createSpatialIndex();
+    for (let i = 0; i < 40; i++) index.insert(`k${i}`, rect(i * 10, (i % 7) * 10, 8, 8));
+    index.insert('zero', rect(100, 0, 0, 5));
+    expect(index.queryPoint({ x: 100, y: 2 }).map((e) => e.id)).toContain('zero');
+    expect(index.remove('zero')).toBe(true);
+    expect(index.queryPoint({ x: 100, y: 2 }).map((e) => e.id)).not.toContain('zero');
+    expect(index.queryRect(rect(99, -1, 3, 7)).map((e) => e.id)).not.toContain('zero');
+    index.dispose();
+  });
+
   it('re-inserts after removal and keeps working', () => {
     const index = createSpatialIndex();
     for (let i = 0; i < 50; i++) index.insert(`k${i}`, rect(i * 10, 0, 5, 5));

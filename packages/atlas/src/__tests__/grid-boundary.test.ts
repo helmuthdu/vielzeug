@@ -1,7 +1,7 @@
 /**
  * Import-boundary test: the `grid` subpath stays independent of the atlas
- * root surface. Only the structural shape types in `_shapes.ts` may be
- * shared, and the root must not import from `grid/`.
+ * root surface. Only the structural shape types in `shapes.ts` and the shared
+ * error classes may be shared, and the root must not import from `grid/`.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -27,10 +27,13 @@ function importsOf(file: string): string[] {
 }
 
 describe('grid subpath boundary', () => {
-  it('grid modules import only grid siblings and the structural shapes module', () => {
+  it('grid modules import only grid siblings, the structural shapes module, and shared errors', () => {
     for (const file of tsFiles(join(SRC, 'grid'))) {
       for (const specifier of importsOf(file)) {
-        expect(specifier === '../_shapes.js' || specifier.startsWith('./'), `${file} imports ${specifier}`).toBe(true);
+        expect(
+          specifier === '../shapes.js' || specifier === '../errors.js' || specifier.startsWith('./'),
+          `${file} imports ${specifier}`,
+        ).toBe(true);
       }
     }
   });

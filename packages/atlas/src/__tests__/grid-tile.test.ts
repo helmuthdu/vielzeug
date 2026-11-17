@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AtlasConfigError } from '../errors.js';
 import {
   chunkKey,
   iterateTileRange,
@@ -27,7 +28,7 @@ describe('tile conversion', () => {
   });
 
   it('rejects non-positive tile sizes', () => {
-    expect(() => worldToTile({ x: 0, y: 0 }, { tileSize: 0 })).toThrow(RangeError);
+    expect(() => worldToTile({ x: 0, y: 0 }, { tileSize: 0 })).toThrow(AtlasConfigError);
   });
 });
 
@@ -44,6 +45,6 @@ describe('visible ranges and keys', () => {
     expect(tileKey({ col: 3, row: -1 })).toBe('3:-1');
     expect(chunkKey({ col: 3, row: -1 }, 8)).toBe('c0,-1');
     expect(chunkKey({ col: -9, row: 16 }, 8)).toBe('c-2,2');
-    expect(() => chunkKey({ col: 0, row: 0 }, 0)).toThrow(RangeError);
+    expect(() => chunkKey({ col: 0, row: 0 }, 0)).toThrow(AtlasConfigError);
   });
 });

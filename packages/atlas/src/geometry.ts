@@ -1,4 +1,4 @@
-import type { Point, Rect } from './_shapes.js';
+import type { Point, Rect } from './shapes.js';
 
 /**
  * Ray-casting point-in-polygon test. `polygon` is an open ring; an implicit closing

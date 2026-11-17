@@ -1,4 +1,4 @@
-import type { Point, Rect } from './_shapes.js';
+import type { Point, Rect } from './shapes.js';
 
 export function rectFromPoints(points: Iterable<Point>): Rect | null {
   let minX = Infinity;

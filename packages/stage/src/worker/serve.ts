@@ -1,7 +1,8 @@
 import { warn } from '../_dev.js';
+import { StageDisposedError, StageUnsupportedError } from '../errors.js';
 import type { Stage, StageLayerOptions } from '../stage.js';
 import { createStage } from '../stage.js';
-import type { StageWorkerCommand, StageWorkerInit } from './protocol.js';
+import type { StageWorkerCommand, StageWorkerErrorKind, StageWorkerInit } from './protocol.js';
 import { checkProtocol, STAGE_WORKER_PROTOCOL } from './protocol.js';
 
 /** The message scope available inside a worker (`self` in production). */
@@ -47,6 +48,9 @@ export function serveStage(scope: WorkerSelfScope, setup: (init: StageWorkerInit
 
   const handle = (message: StageWorkerCommand | StageWorkerInit): void => {
     if (!checkProtocol(message, 'main→worker')) return;
+    // After dispose the scope may still deliver queued messages (a scope
+    // without removeEventListener cannot be fully detached).
+    if (disposed) return;
     switch (message.type) {
       case 'init': {
         if (stage) {
@@ -87,6 +91,7 @@ export function serveStage(scope: WorkerSelfScope, setup: (init: StageWorkerInit
           scope.postMessage({
             error: 'Stage is not initialized.',
             id: message.id,
+            kind: 'failed',
             ok: false,
             protocol: STAGE_WORKER_PROTOCOL,
             type: 'blob',
@@ -100,9 +105,16 @@ export function serveStage(scope: WorkerSelfScope, setup: (init: StageWorkerInit
             scope.postMessage({ blob, id: message.id, ok: true, protocol: STAGE_WORKER_PROTOCOL, type: 'blob' });
           })
           .catch((error: unknown) => {
+            const kind: StageWorkerErrorKind =
+              error instanceof StageDisposedError
+                ? 'disposed'
+                : error instanceof StageUnsupportedError
+                  ? 'unsupported'
+                  : 'failed';
             scope.postMessage({
               error: String(error),
               id: message.id,
+              kind,
               ok: false,
               protocol: STAGE_WORKER_PROTOCOL,
               type: 'blob',
