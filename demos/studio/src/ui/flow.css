@@ -49,6 +49,9 @@
   position: absolute;
   top: 0;
   left: 0;
+  /* Border-box so the rendered box matches the model's width/height exactly;
+     otherwise padding + border push the ports past the wire anchor points. */
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
