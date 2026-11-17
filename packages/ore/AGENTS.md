@@ -14,7 +14,7 @@ Functional web-component authoring primitives built on `ripple`; the foundation 
 - **`model(signal, options?)` is a per-binding `ModelSource`**, a branded wrapper consumed by the attr binding engine: its two-way and stale-write-guard behavior belongs to that one binding site, not the signal. It drives only a plain `value`/`checked` attribute binding and throws on the boolean (`?checked=`) form. Write-back uses the control's native change event; `options.event`/`options.get` override it for custom controls and non-string signals.
 - **Error policy lives in `src/errors.ts`'s header**: API misuse throws `OreApiError`; user-code failures inside ore's execution report via `reportRuntimeError()`; recoverable oddities dev-`warn` and continue; internal impossibilities `invariant()`-throw. Never swallow silently.
 - `useField` is a root export and owns only native `ElementInternals` integration; application form policy belongs to Forge.
-- **DOM-output package**: excluded from the REPL (no preview container). Do not add `docs/.vitepress/.../repl/examples/ore/`.
+- **DOM-output package**: REPL examples mount into the Preview pane (`docs/AGENTS.md`). Register under `docs/.vitepress/theme/components/repl/examples/ore/`; ship an IIFE bundle (`vite.bundle.config.ts` + `build:bundle`).
 
 ## Accessibility testing
 
@@ -26,6 +26,8 @@ Functional web-component authoring primitives built on `ripple`; the foundation 
 - **Why the distinction matters:** breaking the primitive plumbing (e.g. a prop reflection bug that drops an `aria-*` attribute) would silently break all consuming components. The goal is to catch those regressions here, not to duplicate `refine`'s full-pattern tests.
 
 ## Verification
+
+Default gates: root `AGENTS.md` → **Project profile**. Package-specific additions below.
 
 - Tests: `bun x vitest run packages/ore/src/__tests__/`
 - Lint: `bun run --filter @vielzeug/ore lint`

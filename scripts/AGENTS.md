@@ -54,6 +54,7 @@ There is deliberately no `cli.mjs` discovery/router entrypoint. `bun run` (no ar
 - New codegen script with a `--check` mode: build on `lib/marker-sync.mjs`'s `syncFile` + `replaceBetweenMarkers`, don't reimplement the write-vs-check branching.
 - New tool that needs "what packages exist / how do they depend on each other": build on `lib/packages.mjs`'s `readPackageManifests()`, don't re-scan `packages/*/package.json` by hand.
 - Adding a new top-level tool: give it the same shape as its neighbors (pure functions + `isMain()` guard), add a `bun` script for it in the root `package.json`, add it to this file's Layout table, and write `scripts/__tests__/<name>.test.ts(x)` alongside it.
+- Adding hand-authored files under `.agents/`: list them in `.agents/README.md` and root `AGENTS.md` → **`.agents/` contents** so agents can discover them. Committed prose must not reference missing `.agents/skills/<workflow>/SKILL.md` paths (`check:ai-data` validates in-repo `.agents/...` references); point workflow skills at `~/.agents/skills/` instead.
 
 ## Verification
 

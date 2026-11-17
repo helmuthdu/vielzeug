@@ -1045,6 +1045,12 @@ We welcome contributions! Here's how you can help:
 2. **Suggest Features**: [Start a discussion](https://github.com/helmuthdu/vielzeug/discussions)
 3. **Submit PRs**: Fork, create a branch, and submit a pull request
 
+### AI-assisted development
+
+- **Humans and agents**: root [`AGENTS.md`](AGENTS.md) is the canonical contract (commands, validation gates, versioning). Engineering detail for packages: [`.agents/conventions.md`](.agents/conventions.md); layout: [`.agents/README.md`](.agents/README.md).
+- **Workflow skills** (`plan`, `build`, `test`, `review`, …): klugzeug skills installed per machine under `~/.agents/skills/`, not vendored in this repository.
+- **Downstream apps**: `npx @vielzeug/codex skills install` adds only the consumer skill for `@vielzeug/*` usage (see [codex usage](docs/codex/usage.md)).
+
 ### Contribution Guidelines
 
 1. Fork the repository

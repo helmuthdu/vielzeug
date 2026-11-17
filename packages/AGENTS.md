@@ -8,6 +8,8 @@ Every `packages/<name>/` is an independent, publishable `@vielzeug/*` library. `
 
 ## Verification
 
+Default gates live in root `AGENTS.md` → **Project profile** (Commands and Validation gates). Package-specific additions belong in this package's `AGENTS.md` only when they differ.
+
 - Tests: `bun x vitest run packages/<name>/src/__tests__/`
 - Lint: `bun run --filter @vielzeug/<name> lint`
 - Build: `bun run --filter @vielzeug/<name> build`

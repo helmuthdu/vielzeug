@@ -138,6 +138,12 @@ describe('extractAiReferences()', () => {
     ).toEqual(['.agents/conventions.md']);
   });
 
+  it('does not treat home-directory workflow skill paths as repository references', () => {
+    expect(
+      extractAiReferences('Procedure: `~/.agents/skills/build/SKILL.md`; conventions: `.agents/conventions.md`.'),
+    ).toEqual(['.agents/conventions.md']);
+  });
+
   it('extracts every distinct .agents/... path token', () => {
     const text =
       'See `.agents/conventions.md` and `.agents/skills/build/SKILL.md`. Also `.agents/conventions.md` again.';

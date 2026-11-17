@@ -4,7 +4,7 @@ Responsive SVG charting library with explicit data updates. Each chart factory m
 
 ## Local contracts
 
-- **DOM-output package**: renders SVG into the host DOM. Excluded from the REPL.
+- **DOM-output package**: renders SVG into the host DOM. REPL examples use the Preview pane (`docs/AGENTS.md`); register under `docs/.vitepress/theme/components/repl/examples/prism/`.
 - Depends on `@vielzeug/orbit` (`workspace:*`). No other external runtime dependencies.
 - Tests live in `src/__tests__/`, one file per chart type plus shared suites for scales, animation, and internals. `vitest.setup.ts` stubs `ResizeObserver` (jsdom has none) and exposes the `axeCheck` global.
 
@@ -19,6 +19,8 @@ Responsive SVG charting library with explicit data updates. Each chart factory m
 - Why: axe-core targets real browsers; jsdom has no CSS box model and a stubbed `getComputedStyle`, so layout/colour rules produce false positives/negatives. (If a browser test harness is added later, move the visual rules there.)
 
 ## Verification
+
+Default gates: root `AGENTS.md` → **Project profile**.
 
 - Tests: `bun x vitest run packages/prism/src/__tests__/` (or `bun run --filter @vielzeug/prism test`)
 - Lint: `bun run --filter @vielzeug/prism lint`

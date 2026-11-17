@@ -1,6 +1,6 @@
 # Junie Project Guidelines
 
-Follow the root `AGENTS.md`; it is the canonical entrypoint for every AI client and is not restated here.
+Follow the root `AGENTS.md`; it is the canonical entrypoint for every AI client and is not restated here. Task procedure comes from the installed klugzeug skills (`~/.agents/skills/`) when available; the profile and validation gates are in root `AGENTS.md` → **Project profile**.
 
 ## IDE-first workflow
 

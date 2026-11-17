@@ -38,6 +38,8 @@ npx -y @vielzeug/codex skills install --force   # overwrite an existing copy
 
 Without `--target`, the first existing directory among `.agents/skills`, `.github/skills`, and `.claude/skills` is used; when none exists, `.agents/skills` is created. The command refuses to overwrite an installed skill unless `--force` is passed. Rerun after upgrading codex to pick up the current package list, which is generated from the published manifests. The skill pairs with the MCP server: its lookups (`get-docs`, `refine-get-component`, `refine-validate-usage`, …) assume codex is connected, and it documents `node_modules` fallbacks for when it is not.
 
+This installs only the **vielzeug consumer** skill (package discovery, Refine lookups). It does **not** install klugzeug workflow skills (`plan`, `build`, `test`, `review`, `docs`, `deliver`, `pipeline`, `onboard`). In the Vielzeug monorepo, workflow procedure lives under `~/.agents/skills/`; repo policy and validation gates live in root `AGENTS.md`.
+
 ## Local Development
 
 Requires Node 22+ and root setup:

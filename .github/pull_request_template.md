@@ -27,7 +27,7 @@
 
 ## Validation \*
 
-<!-- Exact commands you ran and their results (passed/failed). See AGENTS.md for the per-surface commands. -->
+<!-- Exact commands you ran and their results (passed/failed). See AGENTS.md → Project profile → Validation gates by changed surface. -->
 
 -
 
