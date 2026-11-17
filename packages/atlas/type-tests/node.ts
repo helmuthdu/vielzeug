@@ -95,6 +95,8 @@ void removed;
 void snapped;
 void aligned;
 void distributed;
+void tileRect;
+void center;
 void tiles;
 void fov;
 void chunk;

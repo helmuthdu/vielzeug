@@ -105,7 +105,7 @@ export function createShell(): Shell {
   const shareButton = root.querySelector<HTMLElement>('[data-testid="shell-share"]');
 
   let camera: Camera | null = null;
-  let fit: (() => void) | null = null;
+  let sceneFit: (() => void) | null = null;
   let unsubscribeCamera: (() => void) | null = null;
 
   function updateZoomLabel(): void {
@@ -137,7 +137,7 @@ export function createShell(): Shell {
   }
 
   function fitScene(): void {
-    if (fit) fit();
+    if (sceneFit) sceneFit();
     else if (camera) resetZoom();
   }
 
@@ -194,7 +194,7 @@ export function createShell(): Shell {
     attachCamera(nextCamera, nextFit) {
       unsubscribeCamera?.();
       camera = nextCamera;
-      fit = nextFit ?? null;
+      sceneFit = nextFit ?? null;
       unsubscribeCamera = camera ? camera.subscribe(updateZoomLabel) : null;
       updateZoomEnabled();
       updateZoomLabel();

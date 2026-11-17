@@ -69,8 +69,8 @@ Routes an axis-aligned polyline over a visibility graph of obstacle corners and 
 
 | Parameter | Type                     | Description                                                                                       |
 | --------- | ------------------------ | ------------------------------------------------------------------------------------------------- |
-| `from`    | `PortPoint`              | Start point; `side` (when set) fixes the direction the route leaves the port                       |
-| `to`      | `PortPoint`              | Goal point; `side` (when set) fixes the direction the route enters the port                        |
+| `from`    | `PortPoint`              | Start point; `side` (when set) fixes the direction the route leaves the port                      |
+| `to`      | `PortPoint`              | Goal point; `side` (when set) fixes the direction the route enters the port                       |
 | `options` | `OrthogonalRouteOptions` | `obstacles`, `padding` (default 8), `bendPenalty` (default 12), `stub` (default 16, `0` disables) |
 
 **Returns:** waypoints (`from` first, `to` last, bends only) or `null` when unreachable or when an endpoint sits inside a padded obstacle. Points exactly on a padded boundary are free: routes may hug obstacle margins.
