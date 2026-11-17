@@ -48,6 +48,7 @@ Two contracts matter for editors:
 
 - **Unreachable returns `null`.** When every route is blocked (a port inside another node, a sealed ring), you get `null` — never a path through a wall. Show a dashed straight-line fallback while the user drags.
 - **Exclude the edge's own nodes from `obstacles`.** An endpoint inside a padded obstacle is blocked, so a route whose source node is also its own obstacle returns `null`. Filter the two endpoints' nodes out of the obstacle list.
+- **Port sides add stubs.** When a port names a `side`, the route runs `stub` units (default 16) straight out of that port before bending, and straight into the target port, so wires leave and enter ports perpendicular to the node edge. Pass `stub: 0` to opt out.
 - **Output is deterministic.** The same inputs always produce the same polyline, so edges don't shimmer between frames. The returned polyline carries waypoints only at bends.
 
 Inflate node bounds before passing them as obstacles if you want clearance beyond `padding`; routes may hug the padded boundary exactly.

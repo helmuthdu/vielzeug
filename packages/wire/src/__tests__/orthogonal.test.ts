@@ -90,5 +90,74 @@ describe('orthogonalRoute', () => {
   it('validates options', () => {
     expect(() => orthogonalRoute({ x: 0, y: 0 }, { x: 1, y: 1 }, { padding: -1 })).toThrow(WireConfigError);
     expect(() => orthogonalRoute({ x: 0, y: 0 }, { x: 1, y: 1 }, { bendPenalty: Number.NaN })).toThrow(WireConfigError);
+    expect(() => orthogonalRoute({ x: 0, y: 0 }, { x: 1, y: 1 }, { stub: -1 })).toThrow(WireConfigError);
+  });
+
+  it('stubs straight out of a sided source port before bending', () => {
+    const route = orthogonalRoute({ side: 'right', x: 0, y: 0 }, { side: 'left', x: 50, y: 50 }) as Point[];
+    expect(axisAligned(route)).toBe(true);
+    expect(route[0]).toEqual({ x: 0, y: 0 });
+    // First segment leaves the right-facing port horizontally, never vertically.
+    expect((route[1] as Point).y).toBe(0);
+    expect((route[1] as Point).x).toBeGreaterThan(0);
+    // Final segment enters the left-facing port horizontally from the left.
+    const last = route[route.length - 1] as Point;
+    const before = route[route.length - 2] as Point;
+    expect(last).toEqual({ x: 50, y: 50 });
+    expect(before.y).toBe(50);
+    expect(before.x).toBeLessThan(50);
+  });
+
+  it('keeps a straight route straight when ports face each other', () => {
+    const route = orthogonalRoute({ side: 'right', x: 0, y: 0 }, { side: 'left', x: 100, y: 0 }) as Point[];
+    expect(route).toEqual([
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+    ]);
+  });
+
+  it('falls back to unstubbed routing when the stub would cross an obstacle', () => {
+    // Wall right in front of the source port: the stub is unusable, but a route
+    // around the wall must still be found rather than failing.
+    const wall = { height: 200, width: 10, x: 8, y: -100 };
+    const route = orthogonalRoute(
+      { side: 'right', x: 0, y: 0 },
+      { side: 'left', x: 100, y: 0 },
+      {
+        obstacles: [wall],
+      },
+    );
+    expect(route).not.toBeNull();
+    const points = route as Point[];
+    expect(points[0]).toEqual({ x: 0, y: 0 });
+    expect(points[points.length - 1]).toEqual({ x: 100, y: 0 });
+    expect(axisAligned(points)).toBe(true);
+    expect(crosses(points, wall)).toBe(false);
+  });
+
+  it('honors a custom stub length', () => {
+    const route = orthogonalRoute(
+      { side: 'right', x: 0, y: 0 },
+      { side: 'left', x: 200, y: 100 },
+      {
+        stub: 30,
+      },
+    ) as Point[];
+    expect(axisAligned(route)).toBe(true);
+    const first = route[1] as Point;
+    expect(first.y).toBe(0);
+    expect(first.x).toBeGreaterThanOrEqual(30);
+  });
+
+  it('treats stub 0 as no stubs', () => {
+    const route = orthogonalRoute(
+      { side: 'right', x: 0, y: 0 },
+      { side: 'left', x: 50, y: 50 },
+      {
+        stub: 0,
+      },
+    ) as Point[];
+    expect(route).toHaveLength(3);
+    expect(route[1]).toEqual({ x: 50, y: 0 });
   });
 });

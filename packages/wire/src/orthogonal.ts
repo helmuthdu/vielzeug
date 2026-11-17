@@ -1,5 +1,5 @@
 import { WireConfigError } from './errors.js';
-import type { Point, PortPoint, Rect } from './types.js';
+import type { Point, PortPoint, PortSide, Rect } from './types.js';
 
 /** Configuration for `orthogonalRoute()`. */
 export interface OrthogonalRouteOptions {
@@ -9,6 +9,11 @@ export interface OrthogonalRouteOptions {
   obstacles?: readonly Rect[];
   /** Distance obstacles are inflated by; routes may travel along the inflated boundary. Defaults to 8. */
   padding?: number;
+  /**
+   * Distance the route stubs straight out of a port that names a `side` before it may
+   * bend, and straight into the target port. Defaults to 16; `0` disables stubs.
+   */
+  stub?: number;
 }
 
 /** Grid movement directions; 0 marks the start state with no incoming direction. */
@@ -20,6 +25,21 @@ const DELTA: Readonly<Record<Exclude<Dir, 0>, Point>> = {
   [Dir.Right]: { x: 1, y: 0 },
   [Dir.Up]: { x: 0, y: -1 },
   [Dir.Down]: { x: 0, y: 1 },
+};
+
+/** Outward direction a port on the given side faces. */
+const SIDE_DIR: Readonly<Record<PortSide, Exclude<Dir, 0>>> = {
+  bottom: Dir.Down,
+  left: Dir.Left,
+  right: Dir.Right,
+  top: Dir.Up,
+};
+
+const OPPOSITE: Readonly<Record<Exclude<Dir, 0>, Exclude<Dir, 0>>> = {
+  [Dir.Down]: Dir.Up,
+  [Dir.Left]: Dir.Right,
+  [Dir.Right]: Dir.Left,
+  [Dir.Up]: Dir.Down,
 };
 
 interface PaddedRect {
@@ -121,11 +141,15 @@ class OpenSet {
 export function orthogonalRoute(from: PortPoint, to: PortPoint, options: OrthogonalRouteOptions = {}): Point[] | null {
   const padding = options.padding ?? 8;
   const bendPenalty = options.bendPenalty ?? 12;
+  const stub = options.stub ?? 16;
   if (!Number.isFinite(padding) || padding < 0) {
     throw new WireConfigError(`Orthogonal padding must be a finite non-negative number, received ${String(padding)}.`);
   }
   if (!Number.isFinite(bendPenalty) || bendPenalty < 0) {
     throw new WireConfigError(`Bend penalty must be a finite non-negative number, received ${String(bendPenalty)}.`);
+  }
+  if (!Number.isFinite(stub) || stub < 0) {
+    throw new WireConfigError(`Stub must be a finite non-negative number, received ${String(stub)}.`);
   }
 
   const start: Point = { x: from.x, y: from.y };
@@ -134,9 +158,45 @@ export function orthogonalRoute(from: PortPoint, to: PortPoint, options: Orthogo
 
   const obstacles = (options.obstacles ?? []).map((rect) => padRect(rect, padding));
 
+  // Port stubs: the route leaves the source port straight along its side and enters
+  // the target port along that side, so wires never peel off a port sideways.
+  const fromDir = stub > 0 && from.side ? SIDE_DIR[from.side] : Dir.None;
+  const toDir = stub > 0 && to.side ? SIDE_DIR[to.side] : Dir.None;
+
+  // Straight shot: when the direct segment agrees with both port sides and is clear,
+  // it is optimal by construction (also covers facing ports closer than two stubs).
+  if (start.x === goal.x || start.y === goal.y) {
+    const dir: Dir =
+      start.x !== goal.x ? (goal.x > start.x ? Dir.Right : Dir.Left) : goal.y > start.y ? Dir.Down : Dir.Up;
+    const agreesWithStart = fromDir === Dir.None || fromDir === dir;
+    const agreesWithGoal = toDir === Dir.None || (OPPOSITE[toDir as Exclude<Dir, 0>] as Dir) === dir;
+    if (agreesWithStart && agreesWithGoal && !spanBlocked(start, goal, obstacles)) return [start, goal];
+  }
+
+  const stubPoint = (point: Point, dir: Dir): Point => {
+    if (dir === Dir.None) return point;
+    const delta = DELTA[dir as Exclude<Dir, 0>];
+    return { x: point.x + delta.x * stub, y: point.y + delta.y * stub };
+  };
+  const fromStub = stubPoint(start, fromDir);
+  const toStub = stubPoint(goal, toDir);
+  // A stub that runs into an obstacle (or a blocked stub tip) cannot be honored;
+  // route without stubs instead of failing.
+  const stubsUsable =
+    (fromDir === Dir.None || !spanBlocked(start, fromStub, obstacles)) &&
+    (toDir === Dir.None || !spanBlocked(goal, toStub, obstacles));
+
+  const routeStart = stubsUsable ? fromStub : start;
+  const routeGoal = stubsUsable ? toStub : goal;
+  const startDir = stubsUsable ? fromDir : Dir.None;
+  // The route must not arrive at the goal stub moving along the port's outward
+  // direction (that would overshoot the port and double back); any other incoming
+  // direction continues smoothly into the final stub segment.
+  const forbiddenIncoming = stubsUsable && toDir !== Dir.None ? (toDir as Dir) : (Dir.None as Dir);
+
   // Grid lines: every obstacle edge plus the endpoints' own rows and columns.
-  const xs = new Set<number>([start.x, goal.x]);
-  const ys = new Set<number>([start.y, goal.y]);
+  const xs = new Set<number>([routeStart.x, routeGoal.x]);
+  const ys = new Set<number>([routeStart.y, routeGoal.y]);
   for (const rect of obstacles) {
     xs.add(rect.x0);
     xs.add(rect.x1);
@@ -153,8 +213,8 @@ export function orthogonalRoute(from: PortPoint, to: PortPoint, options: Orthogo
   const nodeY = (node: number): number => yLines[Math.floor(node / columns)] as number;
   const nodeAt = (x: number, y: number): number => yLines.indexOf(y) * columns + xLines.indexOf(x);
 
-  const startNode = nodeAt(start.x, start.y);
-  const goalNode = nodeAt(goal.x, goal.y);
+  const startNode = nodeAt(routeStart.x, routeStart.y);
+  const goalNode = nodeAt(routeGoal.x, routeGoal.y);
   if (pointBlocked(nodeX(startNode), nodeY(startNode), obstacles)) return null;
   if (pointBlocked(nodeX(goalNode), nodeY(goalNode), obstacles)) return null;
 
@@ -164,11 +224,11 @@ export function orthogonalRoute(from: PortPoint, to: PortPoint, options: Orthogo
   const parent = new Int32Array(stateCount).fill(-1);
   const closed = new Uint8Array(stateCount);
 
-  const heuristic = (node: number): number => Math.abs(nodeX(node) - goal.x) + Math.abs(nodeY(node) - goal.y);
+  const heuristic = (node: number): number => Math.abs(nodeX(node) - routeGoal.x) + Math.abs(nodeY(node) - routeGoal.y);
   const stateId = (node: number, dir: Dir): number => node * 5 + dir;
 
   const open = new OpenSet();
-  const startState = stateId(startNode, Dir.None);
+  const startState = stateId(startNode, startDir);
   gScore[startState] = 0;
   open.push(heuristic(startNode), startState);
 
@@ -180,7 +240,7 @@ export function orthogonalRoute(from: PortPoint, to: PortPoint, options: Orthogo
 
     const node = Math.floor(current / 5);
     const incoming = (current % 5) as Dir;
-    if (node === goalNode) {
+    if (node === goalNode && (forbiddenIncoming === Dir.None || incoming !== forbiddenIncoming)) {
       goalState = current;
       break;
     }
@@ -229,7 +289,7 @@ export function orthogonalRoute(from: PortPoint, to: PortPoint, options: Orthogo
   nodes.reverse();
 
   // Collapse collinear runs so the polyline carries waypoints only at bends.
-  const points: Point[] = nodes
+  const collapsed: Point[] = nodes
     .filter((node, i) => {
       if (i === 0 || i === nodes.length - 1) return true;
       const prev = nodes[i - 1] as number;
@@ -241,8 +301,17 @@ export function orthogonalRoute(from: PortPoint, to: PortPoint, options: Orthogo
     })
     .map((node) => ({ x: nodeX(node), y: nodeY(node) }));
 
-  // Preserve the exact endpoints even when the first/last grid node was collapsed away.
-  points[0] = start;
-  points[points.length - 1] = goal;
+  // Re-attach the exact ports outside the stub tips, then drop stub tips that are
+  // collinear with their neighbours so a straight-through route keeps two points.
+  const points = [start, ...collapsed, goal];
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const prev = points[i - 1] as Point;
+    const cur = points[i] as Point;
+    const next = points[i + 1] as Point;
+    if ((prev.x === cur.x && cur.x === next.x) || (prev.y === cur.y && cur.y === next.y)) {
+      points.splice(i, 1);
+      i -= 1;
+    }
+  }
   return points;
 }

@@ -65,13 +65,13 @@ Throws `WireConfigError` for a negative or non-finite `offset`.
 function orthogonalRoute(from: PortPoint, to: PortPoint, options?: OrthogonalRouteOptions): Point[] | null;
 ```
 
-Routes an axis-aligned polyline over a visibility graph of obstacle corners and endpoint rows/columns using A\*. Cost is length plus `bendPenalty` per bend; expansion order is deterministic.
+Routes an axis-aligned polyline over a visibility graph of obstacle corners and endpoint rows/columns using A\*. Cost is length plus `bendPenalty` per bend; expansion order is deterministic. When a port names a `side`, the route stubs straight out of (and into) that port before bending, so wires never peel off a port sideways.
 
-| Parameter | Type                     | Description                                                    |
-| --------- | ------------------------ | -------------------------------------------------------------- |
-| `from`    | `PortPoint`              | Start point                                                    |
-| `to`      | `PortPoint`              | Goal point                                                     |
-| `options` | `OrthogonalRouteOptions` | `obstacles`, `padding` (default 8), `bendPenalty` (default 12) |
+| Parameter | Type                     | Description                                                                                       |
+| --------- | ------------------------ | ------------------------------------------------------------------------------------------------- |
+| `from`    | `PortPoint`              | Start point; `side` (when set) fixes the direction the route leaves the port                       |
+| `to`      | `PortPoint`              | Goal point; `side` (when set) fixes the direction the route enters the port                        |
+| `options` | `OrthogonalRouteOptions` | `obstacles`, `padding` (default 8), `bendPenalty` (default 12), `stub` (default 16, `0` disables) |
 
 **Returns:** waypoints (`from` first, `to` last, bends only) or `null` when unreachable or when an endpoint sits inside a padded obstacle. Points exactly on a padded boundary are free: routes may hug obstacle margins.
 
