@@ -1,6 +1,6 @@
 # AGENTS.md: Vielzeug
 
-Canonical entrypoint for every AI client. `.github/copilot-instructions.md` and `.junie/AGENTS.md` point here instead of restating it. Repo-wide rules live in this file, and the `## Project profile` section below supplies the commands and gates the workflow skills use. Task procedure comes from the klugzeug skills (`plan`, `build`, `test`, `review`, `docs`, `deliver`, `pipeline`), installed per machine. The only skill stored in this repository is the Codex consumer skill, `.agents/skills/vielzeug/`. Engineering conventions live in `.agents/conventions.md`.
+Canonical entrypoint for every AI client. `.github/copilot-instructions.md` and `.junie/AGENTS.md` point here instead of restating it. Repo-wide rules live in this file, and the `## Project profile` section below supplies the commands and gates the workflow skills use. Task procedure comes from the klugzeug skills (`plan`, `build`, `test`, `review`, `docs`, `deliver`, `pipeline`, `onboard`), installed per machine under `~/.agents/skills/` (shared contract in `~/.agents/klugzeug/contract.md`). The only skill stored in this repository is the Codex consumer skill, `packages/codex/skills/vielzeug/` (`.agents/skills/vielzeug` is a symlink to it). Engineering conventions live in `.agents/conventions.md`.
 
 Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeug/*`. Packages target ES2022, use strict TypeScript, and ship ESM and CJS builds through Vite.
 
