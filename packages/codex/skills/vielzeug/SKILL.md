@@ -11,7 +11,7 @@ Vielzeug is a monorepo of independently published TypeScript packages. "Zero dep
 
 1. If codex's MCP server is connected, call `check-install` once per project: it compares every declared `@vielzeug/*` dependency with the snapshot. Offline, read `package.json` (`dependencies`, `devDependencies`, `peerDependencies`) and list every `@vielzeug/*` entry, resolving each installed version from `node_modules/@vielzeug/<pkg>/package.json` when present, otherwise from the package-manager lockfile.
 2. Note whether `@vielzeug/refine` is installed. If it is, the **Refine** and **Theme** sections below are mandatory for any UI work.
-3. Read the project's own agent contract (`AGENTS.md`, `.github/copilot-instructions.md`) first: project rules win over this skill.
+3. Read the project's own agent contract (`AGENTS.md`, `.github/copilot-instructions.md`) first: project rules win over this skill. Also load the nearest subtree `AGENTS.md` before editing inside it (index at the end of root `AGENTS.md`).
 
 ## Discover, don't recall
 

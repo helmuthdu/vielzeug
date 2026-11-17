@@ -14,7 +14,7 @@ Accessible, themeable web components built on `ore`. Largest package; one custom
 - Build also emits a Custom Elements Manifest (`dist/custom-elements.json`) via `analyze`, and copies `src/styles/*.css` to `dist/styles`. CSS ships through the `./styles*` exports.
 - `sideEffects` covers `dist/*.js`, `dist/*.cjs`, `dist/core/*`, `dist/icons/**`, `dist/styles/**`, `src/content/icon/icon.ts`, `src/icons/defaults.ts`, and `src/icons/lucide/all.ts`: keep new side-effectful entry points covered. Both icon registrars and the icon component must survive production tree-shaking, including source-aliased consumers such as VitePress. Defaults never overwrite app registrations, in either import order.
 - `src/_dev.ts` is private: never re-export.
-- **DOM-output package**: excluded from the REPL. Do not add REPL examples or Monaco types for refine.
+- **DOM-output package**: REPL examples render in the Preview pane (`docs/AGENTS.md`); register under `docs/.vitepress/theme/components/repl/examples/refine/`. Examples mount web components into the sandbox `document.body`; do not rely on Monaco types for Refine-only APIs in the REPL editor.
 - **`--_*`-prefixed custom properties are a private contract between a component's own stylesheet and the shared mixins it composes in `styles: [...]`** (e.g. `sizeVariantMixin()` emits `--_gap`/`--_font-size`/`--_padding`; `colorThemeMixin` emits `--_theme-focus`/`--_theme-base`/`--_theme-shadow`/`--_theme-backdrop`). There is no compile-time check that a component's own CSS only reads `--_*` names an included mixin actually emits: a typo or a removed mixin silently no-ops (the variable falls back to its `var(..., fallback)` or to nothing) instead of erroring. When touching a component's `styles` array or its CSS, verify by inspection that every `--_*` variable it reads is emitted by one of its own `styles` entries.
 
 ## Accessibility testing
@@ -113,6 +113,8 @@ Named improvement lenses to guide AI-driven design work on components. Each list
 Create it under the right category folder, then run `sync:exports` so its sub-path export and types are wired.
 
 ## Verification
+
+Default gates: root `AGENTS.md` → **Project profile**. Refine-specific paths below.
 
 - **Unit/component tests** (jsdom): while iterating run the component's own test file (`bun x vitest run packages/refine/src/<category>/<component>/<component>.test.ts`); the full-suite final gate is `bun x vitest run packages/refine/src/` or `bun run --filter @vielzeug/refine test`. Tests are **co-located** next to components (`src/<category>/<component>/<component>.test.ts`) plus shared suites under `src/core/__tests__/` and `src/inputs/__tests__/`. The `.../src/__tests__/` path used by other packages misses most refine tests.
 - **E2E tests** (Playwright/Chromium): scope `bun run --filter @vielzeug/refine test:e2e` to the affected `src/<category>/<component>/<component>.e2e.ts` files. Reuse fresh output from the required final package build; use `build:e2e` only when an earlier browser check needs artifacts. Follow Layer 2 above for artifact freshness and dependency changes; shared harness lives in `src/testing/fixtures.ts`.
