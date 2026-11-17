@@ -13,9 +13,14 @@ type IsReadonly<T, K extends keyof T> = Equal<Pick<T, K>, Readonly<Pick<T, K>>>;
 const options: PanGestureOptions = {
   activationDistance: 0,
   disabled: () => undefined,
+  shouldActivate: ({ distance }) => distance > 0,
   signal: new AbortController().signal,
 };
-const dragOptions: DragGestureOptions = { activationDistance: 0, pointerCapture: false };
+const dragOptions: DragGestureOptions = {
+  activationDistance: 0,
+  pointerCapture: false,
+  shouldActivate: ({ delta }) => delta.x > 0,
+};
 const optionsReadonly: IsReadonly<PanGestureOptions, 'onMove'> = true;
 const detailReadonly: IsReadonly<PanGestureDetail, 'distance'> = true;
 const dragDetailReadonly: IsReadonly<DragGestureDetail, 'delta'> = true;

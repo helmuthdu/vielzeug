@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Harden card-picker touch gestures, preserve native zoom and nested scrolling, cancel stale drags, and coordinate vertical drawer dismissal with subtree opt-outs.",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

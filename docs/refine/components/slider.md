@@ -201,4 +201,5 @@ The slider follows WAI-ARIA best practices. Each thumb carries `role="slider"` w
 Keyboard navigation is fully supported: `Arrow Right` / `Arrow Up` increases the value by one step, `Arrow Left` / `Arrow Down` decreases it, `Home` jumps to the minimum, and `End` jumps to the maximum. `Tab` focuses the slider; `Shift+Tab` blurs it.
 
 The visual rail and thumb stay compact on touch devices; a separate 44 × 44 px interaction surface makes dragging
-reliable without turning the control into a large pill.
+reliable without turning the control into a large pill. Vertical scrolling and pinch zoom remain available over the rail.
+Cancelling a pointer interaction or disabling the slider ends the drag; already selected values remain.

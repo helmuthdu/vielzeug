@@ -22,7 +22,7 @@ Listen for changes:
 
 ## Half Stars
 
-Set `precision="0.5"` to allow half steps. The left half of a star selects `n - 0.5`, the right half selects `n`; arrow keys also step by half. Values set from code are snapped onto the grid.
+Set `precision="0.5"` to allow half steps. The leading half of a star selects `n - 0.5`, and the trailing half selects `n`: left to right in LTR and right to left in RTL. Arrow keys also step by half. Values set from code are snapped onto the grid.
 
 <ComponentPreview vertical>
 
@@ -207,6 +207,8 @@ The rating follows the WAI-ARIA slider rating pattern. The star row is one focus
 Keyboard: `←`/`→` (and `↑`/`↓`) adjust by `precision`, `Home` unsets the rating, `End` selects the maximum, `Tab` moves focus in and out as a single stop.
 
 Selected stars are always rendered solid-filled while empty stars keep the outline, so the value reads by shape, not only by color. A short scale "pop" on the committed star is suppressed under `prefers-reduced-motion`. In `forced-colors` environments empty stars use `ButtonText` and the fill uses `Highlight`.
+
+Vertical scrolling and pinch zoom remain available over the stars. Cancelling an interaction or switching to disabled or readonly ends the drag without reverting already selected values.
 
 ## Related Components
 

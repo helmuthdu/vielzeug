@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-import { axeCheck, expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test, touchSwipe } from '../../testing/fixtures';
 
 const cards = `
   <ore-card-picker label="Choose action cards" values="alpha">
@@ -38,11 +38,12 @@ async function swipe(
 
   try {
     await session.send('Input.dispatchTouchEvent', { touchPoints: [{ x, y }], type: 'touchStart' });
-    for (let step = 1; step <= 6; step++) {
+    for (let step = 1; step <= 12; step++) {
       await session.send('Input.dispatchTouchEvent', {
-        touchPoints: [{ x: x + (deltaX * step) / 6, y: y + (deltaY * step) / 6 }],
+        touchPoints: [{ x: x + (deltaX * step) / 12, y: y + (deltaY * step) / 12 }],
         type: 'touchMove',
       });
+      await page.waitForTimeout(16);
     }
     await beforeRelease?.();
     await session.send('Input.dispatchTouchEvent', { touchPoints: [], type: 'touchEnd' });
@@ -429,5 +430,274 @@ test.describe('Touch navigation', () => {
 
     await page.getByRole('checkbox', { name: 'Select Beta' }).click();
     await expect(page.locator('ore-card-picker')).toHaveAttribute('values', 'alpha,beta');
+  });
+
+  test('preserves native vertical page scrolling over card content', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`${cards}<div style="height:2000px">More content</div>`);
+    const bounds = (await page.locator('[part="stage"]').boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + 120 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y - 100 } });
+
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
+    await expect(page.locator('ore-card-picker')).not.toHaveAttribute('data-dragging');
+  });
+
+  test('keeps nested horizontal scrolling native instead of browsing cards', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      `<ore-card-picker>
+        <ore-card-picker-item value="alpha">
+          <div id="scroller" style="overflow:auto;width:200px;height:120px">
+            <div style="width:1000px;height:100%">Wide content</div>
+          </div>
+        </ore-card-picker-item>
+        <ore-card-picker-item value="beta">Beta</ore-card-picker-item>
+      </ore-card-picker>`,
+    );
+    const bounds = (await page.locator('#scroller').boundingBox())!;
+    const from = { x: bounds.x + 160, y: bounds.y + 40 };
+    await touchSwipe(page, { from, to: { x: from.x - 100, y: from.y } });
+
+    await expect.poll(() => page.locator('#scroller').evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
+  });
+
+  for (const content of [
+    '<div role="slider" tabindex="0">Custom slider</div>',
+    '<div contenteditable="plaintext-only">Editable text</div>',
+    '<div data-no-swipe>Custom gesture</div>',
+  ]) {
+    test(`does not browse from ${content}`, async ({ page, refinePage }) => {
+      await refinePage.mountComponent(
+        `<ore-card-picker><ore-card-picker-item value="alpha">${content}</ore-card-picker-item><ore-card-picker-item value="beta">Beta</ore-card-picker-item></ore-card-picker>`,
+      );
+      await swipe(page, -100, 0, 'ore-card-picker-item[data-active] > div');
+      await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
+      await expect(page.locator('ore-card-picker')).not.toHaveAttribute('data-dragging');
+    });
+  }
+
+  test('cancels the stale release after the deck changes', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(cards);
+    await swipe(page, -100, 0, '[part="stage"]', async () => {
+      await page
+        .locator('ore-card-picker-item')
+        .first()
+        .evaluate((element) => element.remove());
+      await expect(page.locator('ore-card-picker')).not.toHaveAttribute('data-dragging');
+    });
+
+    await expect(page.locator('ore-card-picker-item[data-active]')).toHaveAttribute('value', 'beta');
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('values', 'alpha');
+  });
+
+  test('cancels on platform interruption and accepts the next swipe', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(cards);
+    const bounds = (await page.locator('[part="stage"]').boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + 40 };
+    const session = await page.context().newCDPSession(page);
+    try {
+      await session.send('Input.dispatchTouchEvent', { touchPoints: [from], type: 'touchStart' });
+      await session.send('Input.dispatchTouchEvent', {
+        touchPoints: [{ x: from.x - 70, y: from.y }],
+        type: 'touchMove',
+      });
+      await expect(page.locator('ore-card-picker')).toHaveAttribute('data-dragging', '');
+      await session.send('Input.dispatchTouchEvent', { touchPoints: [], type: 'touchCancel' });
+    } finally {
+      await session.detach();
+    }
+
+    await expect(page.locator('ore-card-picker')).not.toHaveAttribute('data-dragging');
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
+    await swipe(page, -100);
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '1');
+  });
+
+  test('permits a two-finger pinch without browsing or selecting', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(cards);
+    const bounds = (await page.locator('[part="stage"]').boundingBox())!;
+    const x = bounds.x + bounds.width / 2;
+    const y = bounds.y + 80;
+    const points = (distance: number) => [
+      { id: 1, x: x - distance, y },
+      { id: 2, x: x + distance, y },
+    ];
+    const session = await page.context().newCDPSession(page);
+    try {
+      await session.send('Input.dispatchTouchEvent', { touchPoints: points(25), type: 'touchStart' });
+      for (let distance = 30; distance <= 80; distance += 5) {
+        await session.send('Input.dispatchTouchEvent', { touchPoints: points(distance), type: 'touchMove' });
+        await page.waitForTimeout(16);
+      }
+      await session.send('Input.dispatchTouchEvent', { touchPoints: [], type: 'touchEnd' });
+    } finally {
+      await session.detach();
+    }
+
+    await expect.poll(() => page.evaluate(() => window.visualViewport!.scale)).toBeGreaterThan(1);
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('values', 'alpha');
+    await expect(page.locator('ore-card-picker')).not.toHaveAttribute('data-dragging');
+  });
+});
+
+test.describe('Drawer gesture ownership', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
+  const deck = `<ore-card-picker values="alpha">
+    <ore-card-picker-item value="alpha"><p style="height:160px">Alpha content</p></ore-card-picker-item>
+    <ore-card-picker-item value="beta"><p style="height:160px">Beta content</p></ore-card-picker-item>
+    <ore-card-picker-item value="gamma"><p style="height:160px">Gamma content</p></ore-card-picker-item>
+  </ore-card-picker>`;
+
+  test('browses horizontally then dismisses downward without changing selection', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      `<ore-drawer default-open label="Cards" placement="bottom" size="lg">${deck}</ore-drawer>`,
+    );
+    await swipe(page, -100, 0, '[data-active] p');
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '1');
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    await swipe(page, 0, 180, '[data-active] p');
+    await expect(page.locator('ore-drawer dialog')).toBeHidden();
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '1');
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('values', 'alpha');
+  });
+
+  test('honors canceled drawer close requests and remains usable', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      `<ore-drawer default-open label="Cards" placement="bottom" size="lg">${deck}</ore-drawer>`,
+    );
+    await page.locator('ore-drawer').evaluate((element) => {
+      element.addEventListener('close-request', (event) => {
+        event.preventDefault();
+        element.setAttribute('data-close-reason', (event as CustomEvent<{ reason: string }>).detail.reason);
+      });
+    });
+    await swipe(page, 0, 180, '[data-active] p');
+    await expect(page.locator('ore-drawer')).toHaveAttribute('data-close-reason', 'swipe');
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    await swipe(page, -100, 0, '[data-active] p');
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '1');
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('values', 'alpha');
+  });
+
+  test('keeps exact diagonal ties pending and dismisses with vertical dominance', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      `<ore-drawer default-open label="Cards" placement="bottom" size="lg">${deck}</ore-drawer>`,
+    );
+    await page.locator('[data-active] p').evaluate((target) => {
+      const init = {
+        bubbles: true,
+        clientX: 200,
+        clientY: 100,
+        composed: true,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: 'touch',
+      };
+      target.dispatchEvent(new PointerEvent('pointerdown', init));
+      target.dispatchEvent(new PointerEvent('pointermove', { ...init, clientX: 60, clientY: 240 }));
+      target.dispatchEvent(new PointerEvent('pointerup', { ...init, clientX: 60, clientY: 240 }));
+    });
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
+    await expect(page.locator('ore-card-picker')).not.toHaveAttribute('data-dragging');
+    await swipe(page, -40, 180, '[data-active] p');
+    await expect(page.locator('ore-drawer dialog')).toBeHidden();
+  });
+
+  test('dismisses upward through card content in a top drawer', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      `<ore-drawer default-open label="Cards" placement="top" size="lg">${deck}</ore-drawer>`,
+    );
+    await swipe(page, 0, -180, '[data-active] p');
+    await expect(page.locator('ore-drawer dialog')).toBeHidden();
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
+  });
+
+  test('cancels an active card drag when a second finger starts over the drawer', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      `<ore-drawer default-open label="Cards" placement="bottom" size="lg">${deck}</ore-drawer>`,
+    );
+    const bounds = (await page.locator('[data-active] p').boundingBox())!;
+    const first = { id: 1, x: bounds.x + bounds.width / 2, y: bounds.y + 40 };
+    const session = await page.context().newCDPSession(page);
+    try {
+      await session.send('Input.dispatchTouchEvent', { touchPoints: [first], type: 'touchStart' });
+      const moved = { ...first, x: first.x - 70 };
+      await session.send('Input.dispatchTouchEvent', { touchPoints: [moved], type: 'touchMove' });
+      await expect(page.locator('ore-card-picker')).toHaveAttribute('data-dragging', '');
+      await session.send('Input.dispatchTouchEvent', {
+        touchPoints: [moved, { id: 2, x: first.x + 30, y: first.y }],
+        type: 'touchStart',
+      });
+      await expect(page.locator('ore-card-picker')).not.toHaveAttribute('data-dragging');
+      await session.send('Input.dispatchTouchEvent', { touchPoints: [], type: 'touchEnd' });
+    } finally {
+      await session.detach();
+    }
+
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('values', 'alpha');
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    await swipe(page, -100, 0, '[data-active] p');
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '1');
+  });
+
+  test('scrolls nested content to its top before accepting a fresh dismissal swipe', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      `<ore-drawer default-open label="Cards" placement="bottom" size="lg">${deck.replace(
+        '<p style="height:160px">Alpha content</p>',
+        '<div id="reading" style="height:180px;overflow:auto"><div style="height:1000px">Alpha rules</div></div>',
+      )}</ore-drawer>`,
+    );
+    const reading = page.locator('#reading');
+    await reading.evaluate((element) => {
+      element.scrollTop = 60;
+    });
+    const bounds = (await reading.boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + 20 };
+    const to = { x: from.x, y: from.y + 180 };
+    await touchSwipe(page, { from, to });
+    await expect.poll(() => reading.evaluate((element) => element.scrollTop)).toBe(0);
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    await touchSwipe(page, { from, to });
+    await expect(page.locator('ore-drawer dialog')).toBeHidden();
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
+  });
+
+  for (const dir of ['ltr', 'rtl']) {
+    for (const placement of ['left', 'right']) {
+      test(`keeps horizontal browsing inside the ${dir} ${placement} drawer`, async ({ page, refinePage }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await refinePage.mountComponent(
+          `<ore-drawer default-open label="Cards" placement="${placement}" dir="${dir}">${deck}</ore-drawer>`,
+        );
+        await swipe(page, dir === 'rtl' ? 100 : -100, 0, '[data-active] p');
+        await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '1');
+        await swipe(page, dir === 'rtl' ? -100 : 100, 0, '[data-active] p');
+        await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
+        await expect(page.locator('ore-drawer dialog')).toBeVisible();
+      });
+    }
+  }
+
+  test('protects data-no-swipe content from drawer dismissal', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      `<ore-drawer default-open label="Cards" placement="bottom" size="lg">${deck.replace(
+        '<p style="height:160px">',
+        '<p data-no-swipe style="height:160px">',
+      )}</ore-drawer>`,
+    );
+    await swipe(page, 0, 180, '[data-active] p');
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
   });
 });

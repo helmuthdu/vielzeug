@@ -73,6 +73,7 @@ export function createLongPress(target: Element, options: LongPressOptions = {})
   const removeTracking = (): void => {
     if (!trackingDocument) return;
     trackingDocument.removeEventListener('pointermove', onPointerMove, true);
+    trackingDocument.removeEventListener('pointerdown', onAdditionalPointerDown, true);
     trackingDocument.removeEventListener('pointerup', onPointerUp, true);
     trackingDocument.removeEventListener('pointercancel', onPointerCancel, true);
     trackingDocument.removeEventListener('visibilitychange', onVisibilityChange);
@@ -92,7 +93,7 @@ export function createLongPress(target: Element, options: LongPressOptions = {})
     timer = null;
     pending = null;
     removeTracking();
-    if (!hold) return;
+    if (!hold || isDisabled()) return;
     swallowClick = true;
     onLongPress?.({
       event: hold.event,
@@ -120,6 +121,11 @@ export function createLongPress(target: Element, options: LongPressOptions = {})
   };
 
   const matchesPointer = (event: PointerEvent): boolean => pending?.pointerId === event.pointerId;
+  const onAdditionalPointerDown: EventListener = (event) => {
+    const pointer = event as PointerEvent;
+    if (pending?.pointerType === 'touch' && pointer.pointerType === 'touch' && pending.pointerId !== pointer.pointerId)
+      cancel();
+  };
 
   const onVisibilityChange = (): void => {
     if (trackingDocument?.visibilityState === 'hidden') cancel();
@@ -130,7 +136,7 @@ export function createLongPress(target: Element, options: LongPressOptions = {})
   };
 
   const onClickCapture = (event: Event): void => {
-    if (!swallowClick) return;
+    if (!swallowClick || (event instanceof MouseEvent && event.detail === 0)) return;
     swallowClick = false;
     event.preventDefault();
     event.stopPropagation();
@@ -153,6 +159,7 @@ export function createLongPress(target: Element, options: LongPressOptions = {})
     };
     trackingDocument = target.ownerDocument;
     trackingDocument.addEventListener('pointermove', onPointerMove, true);
+    trackingDocument.addEventListener('pointerdown', onAdditionalPointerDown, true);
     trackingDocument.addEventListener('pointerup', onPointerUp, true);
     trackingDocument.addEventListener('pointercancel', onPointerCancel, true);
     trackingDocument.addEventListener('visibilitychange', onVisibilityChange);

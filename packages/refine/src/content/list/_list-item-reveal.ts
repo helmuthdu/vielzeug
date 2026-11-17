@@ -1,6 +1,7 @@
 import { createPanGesture, type PanGesture, type PanGestureDetail } from '@vielzeug/gesture';
-import type { Readable } from '@vielzeug/ripple';
+import { type Readable, watch } from '@vielzeug/ripple';
 import { projectFling } from '../../shared/fling';
+import { SWIPE_EXCLUSIONS, swipePath } from '../../shared/swipe';
 import type { ListItemRevealSide } from './list-item';
 
 /** Drag distance (px) past which the action panel snaps fully open on release. */
@@ -45,6 +46,16 @@ export function createRevealState(el: HTMLElement, target: Element, options: Rev
   };
 
   let pan: PanGesture;
+  let suppressClick = false;
+  const resetClick = (event: PointerEvent): void => {
+    if (event.isPrimary) suppressClick = false;
+  };
+  const preventSwipeClick = (event: MouseEvent): void => {
+    if (!suppressClick || event.detail === 0) return;
+    suppressClick = false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
 
   pan = createPanGesture(target, {
     axis: 'x',
@@ -82,8 +93,33 @@ export function createRevealState(el: HTMLElement, target: Element, options: Rev
       el.toggleAttribute('data-confirming', distance / CONFIRM_THRESHOLD >= CONFIRM_WARNING_RATIO);
       el.style.setProperty('--_swipe-x', String((side === 'left' ? 1 : -1) * revealProgress));
     },
+    onStart: () => {
+      suppressClick = true;
+    },
     pointerCapture: false,
+    shouldStart: (event) =>
+      !event.defaultPrevented &&
+      (options.hasActions('left') || options.hasActions('right')) &&
+      !swipePath(event, target).some(
+        (node) => node.matches(`${SWIPE_EXCLUSIONS}, ore-card-picker`) || node.isContentEditable,
+      ),
   });
+
+  target.addEventListener('pointerdown', resetClick as EventListener, true);
+  target.addEventListener('click', preventSwipeClick as EventListener, true);
+  const disabledWatcher = watch(options.disabled, (disabled) => {
+    if (disabled) pan.cancel();
+  });
+  pan.disposalSignal.addEventListener(
+    'abort',
+    () => {
+      disabledWatcher.dispose();
+      resetInline();
+      target.removeEventListener('pointerdown', resetClick as EventListener, true);
+      target.removeEventListener('click', preventSwipeClick as EventListener, true);
+    },
+    { once: true },
+  );
 
   return pan;
 }

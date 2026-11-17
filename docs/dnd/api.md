@@ -220,7 +220,7 @@ type SortableTouchOptions = Readonly<{
 
 `preview` returns a template that Dnd clones before mounting it as a transient touch preview, so returning an element from the sortable item does not reparent or remove caller-owned DOM. Return `false` to disable the preview.
 
-Touch sorting delegates one-pointer activation, movement, identity, and cancellation to Gesture's `createDragGesture()` with pointer capture disabled for document hit-testing. Dnd retains preview rendering, hit-testing, synthetic drag events, and sortable transactions. Non-primary pointers are ignored, and cancellation restores the pre-drag order without firing `onReorder`.
+Touch sorting delegates activation, movement, identity, and cancellation to Gesture's `createDragGesture()` with pointer capture disabled for document hit-testing. Dnd retains preview rendering, hit-testing, synthetic drag events, and sortable transactions. A second touch cancels sorting and restores the pre-drag order without firing `onReorder` or `onMove`. Without a configured handle, touch starts on editing controls, buttons, links, ARIA controls, and `[data-no-drag]` subtrees are excluded. Explicit handles remain eligible, including button handles.
 
 ## `createDropZone()`
 

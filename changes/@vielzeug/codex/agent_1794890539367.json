@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Refresh drawer documentation with content swipe directions, native scroll boundaries, and opt-outs.",
+      "packageName": "@vielzeug/codex",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

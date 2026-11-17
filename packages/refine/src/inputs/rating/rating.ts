@@ -1,5 +1,5 @@
-import { bind, createId, define, getHost, html, prop, useField, useSlots } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
+import { bind, createId, define, getHost, html, onCleanup, onEvent, prop, useField, useSlots } from '@vielzeug/ore';
+import { computed, signal, watch } from '@vielzeug/ripple';
 import { createSliderControl } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, sizeVariantMixin, touchTargetMixin } from '../../styles';
@@ -63,7 +63,7 @@ export type OreRatingProps = {
  *
  * Implements the WAI-ARIA slider rating pattern: the star row is a single
  * focusable `role="slider"`, arrows adjust by `precision`, Home/End jump to
- * 0/max, click or drag sets the star (the right half of a star with
+ * 0/max, click or drag sets the star (the leading half of a star with
  * `precision="0.5"` selects the half step). Selected stars are always filled,
  * so filled-vs-outline carries the value without relying on color.
  *
@@ -167,9 +167,10 @@ define<OreRatingProps>(RATING_TAG, {
     const normalizedValue = computed(() => ratingControl.snap(Number(props.value.value)));
     const hovered = signal<number | null>(null);
     const displayValue = computed(() => hovered.value ?? normalizedValue.value);
-    const dragging = signal(false);
-
     let starsEl: HTMLDivElement | null = null;
+    let activePointer: number | null = null;
+    let activePointerType: string | null = null;
+    const ownerDocument = el.ownerDocument;
 
     defineFieldValue(
       el,
@@ -207,38 +208,56 @@ define<OreRatingProps>(RATING_TAG, {
 
     // ── Pointer interaction ────────────────────────────────────────────────────
     function pointerValue(e: PointerEvent): number | null {
-      const starEl = (e.target as Element | null)?.closest?.('[data-star]') as HTMLElement | null;
+      if (!starsEl) return null;
+
+      const target = (e.target as Element | null)?.closest?.<HTMLElement>('[data-star]');
+      const starElements = [...starsEl.querySelectorAll<HTMLElement>('[data-star]')];
+      const rtl = getComputedStyle(starsEl).direction === 'rtl';
+      // Capture retargets moves to the row, so use the nearest actual star box.
+      const starEl =
+        target && starsEl.contains(target)
+          ? target
+          : starElements.reduce<HTMLElement | null>((nearest, star) => {
+              const rect = star.getBoundingClientRect();
+              if (!rect.width) return nearest;
+              if (!nearest) return star;
+              const oldRect = nearest.getBoundingClientRect();
+              return Math.abs(e.clientX - (rect.left + rect.width / 2)) <
+                Math.abs(e.clientX - (oldRect.left + oldRect.width / 2))
+                ? star
+                : nearest;
+            }, null);
 
       if (starEl) {
         const index = Number(starEl.dataset.star);
 
         if (stepSize.value < 1) {
-          const width = starEl.clientWidth;
+          const rect = starEl.getBoundingClientRect();
 
-          if (width > 0) {
-            const x = (e as PointerEvent & MouseEvent).clientX - starEl.getBoundingClientRect().left;
-
-            if (x < width / 2) return ratingControl.snap(index - 0.5);
-          }
+          if (rect.width > 0 && (rtl ? e.clientX > rect.left + rect.width / 2 : e.clientX < rect.left + rect.width / 2))
+            return ratingControl.snap(index - 0.5);
         }
 
         return ratingControl.snap(index);
       }
 
-      // During a drag, pointer capture retargets events to the row; map by X.
-      if (starsEl) {
-        const rect = starsEl.getBoundingClientRect();
-
-        if (rect.width > 0) return ratingControl.fromClientX((e as PointerEvent & MouseEvent).clientX, rect);
-      }
-
       return null;
     }
 
-    function handlePointerDown(e: PointerEvent): void {
-      if (!isInteractive.value) return;
+    function cancelPointer(): void {
+      const id = activePointer;
 
-      dragging.value = true;
+      activePointer = null;
+      activePointerType = null;
+      hovered.value = null;
+      if (id !== null && starsEl?.hasPointerCapture?.(id)) starsEl.releasePointerCapture(id);
+    }
+
+    function handlePointerDown(e: PointerEvent): void {
+      if (!isInteractive.value || activePointer !== null || !e.isPrimary || e.button !== 0) return;
+
+      activePointer = e.pointerId;
+      activePointerType = e.pointerType;
 
       if (starsEl && 'setPointerCapture' in starsEl) {
         try {
@@ -254,18 +273,19 @@ define<OreRatingProps>(RATING_TAG, {
     }
 
     function handlePointerMove(e: PointerEvent): void {
-      if (!isInteractive.value) return;
+      if (!isInteractive.value || (activePointer !== null && e.pointerId !== activePointer)) return;
+      if (activePointer === null && e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
 
       const next = pointerValue(e);
 
       if (next === null) return;
 
       hovered.value = next;
-      if (dragging.value) commit(next, false);
+      if (activePointer !== null) commit(next, false);
     }
 
-    function handlePointerUp(): void {
-      dragging.value = false;
+    function handlePointerUp(e: PointerEvent): void {
+      if (e.pointerId === activePointer) cancelPointer();
     }
 
     function handlePointerLeave(): void {
@@ -273,8 +293,27 @@ define<OreRatingProps>(RATING_TAG, {
     }
 
     function handleKeydown(e: KeyboardEvent): void {
+      hovered.value = null;
       ratingControl.handleKeydown(e, normalizedValue.value, (next) => commit(next, false));
     }
+
+    onEvent(
+      ownerDocument,
+      'pointerdown',
+      (e: PointerEvent) => {
+        if (activePointerType === 'touch' && e.pointerType === 'touch' && e.pointerId !== activePointer)
+          cancelPointer();
+      },
+      { capture: true },
+    );
+    if (ownerDocument.defaultView) onEvent(ownerDocument.defaultView, 'blur', cancelPointer);
+    onEvent(ownerDocument, 'visibilitychange', () => {
+      if (ownerDocument.hidden) cancelPointer();
+    });
+    watch(isInteractive, (interactive) => {
+      if (!interactive) cancelPointer();
+    });
+    onCleanup(cancelPointer);
 
     const stars = computed(() => Array.from({ length: maxValue.value }, (_, i) => i + 1));
 
@@ -312,6 +351,7 @@ define<OreRatingProps>(RATING_TAG, {
           @pointermove="${handlePointerMove}"
           @pointerup="${handlePointerUp}"
           @pointercancel="${handlePointerUp}"
+          @lostpointercapture="${handlePointerUp}"
           @pointerleave="${handlePointerLeave}"
           @keydown="${handleKeydown}">
           ${() =>

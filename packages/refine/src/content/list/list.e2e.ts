@@ -6,7 +6,21 @@
  *
  * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
-import { axeCheck, expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test, touchSwipe } from '../../testing/fixtures';
+
+test('does not execute a full-swipe action while adjusting an embedded slider', async ({ page, refinePage }) => {
+  await refinePage.mountComponent(
+    '<ore-list><ore-list-item><input aria-label="Volume" type="range" style="width:280px"><button slot="actions-right" onclick="this.dataset.clicked=\'true\'">Delete</button></ore-list-item></ore-list>',
+  );
+  const box = await page.locator('input').boundingBox();
+  if (!box) throw new Error('Slider is not visible');
+  await touchSwipe(page, {
+    from: { x: box.x + 250, y: box.y + box.height / 2 },
+    to: { x: box.x + 10, y: box.y + box.height / 2 },
+  });
+  await expect(page.locator('[slot="actions-right"]')).not.toHaveAttribute('data-clicked');
+  await expect(page.locator('ore-list-item')).not.toHaveAttribute('revealed');
+});
 
 test.describe('Accessibility', () => {
   test('plain list passes a11y checks', async ({ page, refinePage }) => {

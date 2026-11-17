@@ -198,6 +198,8 @@ createSortable({
 });
 ```
 
+Touch sorting ignores controls inside an item unless they belong to the configured handle. Put `data-no-drag` on a custom interaction subtree to exclude it when sorting whole items. A second finger cancels the drag and restores the original order; it never commits a reorder.
+
 ### Keyboard reordering
 
 Focus an item and use arrow keys to move it. `Home` and `End` move to the boundary positions.

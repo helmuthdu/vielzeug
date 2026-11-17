@@ -466,8 +466,7 @@ describe('createPanGesture', () => {
     vi.advanceTimersByTime(10);
     dispatch('pointermove', { clientX: 30, clientY: 0 });
 
-    // Trailing window spans the last two samples: 10→30px over 10ms = 2000 px/s.
-    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ velocity: 2000 }));
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ velocity: 1500 }));
     vi.useRealTimers();
   });
 
@@ -486,5 +485,68 @@ describe('createPanGesture', () => {
 
     expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ reason: 'release', velocity: 0 }));
     vi.useRealTimers();
+  });
+
+  it('rejects activation before capturing or notifying consumers', () => {
+    const onStart = vi.fn();
+    const { dispatch, target, gesture } = createGesture({ onStart, shouldActivate: ({ distance }) => distance > 0 });
+    const capture = vi.fn();
+    Object.defineProperty(target, 'setPointerCapture', { value: capture });
+    dispatch('pointerdown', { clientX: 20 });
+    dispatch('pointermove', { clientX: 0 });
+    dispatch('pointermove', { clientX: 60 });
+    expect(gesture.active).toBe(false);
+    expect(capture).not.toHaveBeenCalled();
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it('waits for axis dominance on diagonal ties', () => {
+    const x = vi.fn();
+    const y = vi.fn();
+    const { target, dispatch } = createGesture({ axis: 'x', onStart: x });
+    gestures.push(createPanGesture(target, { axis: 'y', onStart: y }));
+    dispatch('pointerdown');
+    dispatch('pointermove', { clientX: 10, clientY: 10 });
+    expect(x).not.toHaveBeenCalled();
+    expect(y).not.toHaveBeenCalled();
+    dispatch('pointermove', { clientX: 20, clientY: 11 });
+    expect(x).toHaveBeenCalledOnce();
+    expect(y).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('cancels a touch session when a second finger appears (active=%s)', (active) => {
+    const onEnd = vi.fn();
+    const onStart = vi.fn();
+    const { dispatch, gesture } = createGesture({ onEnd, onStart });
+    dispatch('pointerdown');
+    if (active) dispatch('pointermove', { clientX: 10 });
+    dispatch('pointerdown', { isPrimary: false, pointerId: 2 }, document);
+    dispatch('pointermove', { clientX: 30 });
+    dispatch('pointerup', { clientX: 30 });
+    expect(gesture.active).toBe(false);
+    expect(onStart).toHaveBeenCalledTimes(active ? 1 : 0);
+    if (active) expect(onEnd).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ reason: 'cancel' }));
+    else expect(onEnd).not.toHaveBeenCalled();
+  });
+
+  it('uses the release point for a single-move flick and discards stale samples', () => {
+    vi.useFakeTimers();
+    try {
+      const onEnd = vi.fn();
+      const { dispatch } = createGesture({ onEnd });
+      dispatch('pointerdown');
+      vi.advanceTimersByTime(10);
+      dispatch('pointermove', { clientX: 10 });
+      vi.advanceTimersByTime(10);
+      dispatch('pointerup', { clientX: 40 });
+      expect(onEnd).toHaveBeenLastCalledWith(expect.objectContaining({ velocity: 2000 }));
+      dispatch('pointerdown');
+      vi.advanceTimersByTime(500);
+      dispatch('pointermove', { clientX: 20 });
+      dispatch('pointerup', { clientX: 20 });
+      expect(onEnd).toHaveBeenLastCalledWith(expect.objectContaining({ velocity: 0 }));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

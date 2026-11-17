@@ -1,6 +1,26 @@
 import { fireKeyDown } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
+function pointer(
+  target: Element,
+  type: string,
+  options: { button?: number; clientX?: number; isPrimary?: boolean; pointerId?: number; pointerType?: string } = {},
+): void {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    button: options.button ?? 0,
+    clientX: options.clientX ?? 0,
+    composed: true,
+  });
+
+  Object.assign(event, {
+    isPrimary: options.isPrimary ?? true,
+    pointerId: options.pointerId ?? 1,
+    pointerType: options.pointerType ?? 'mouse',
+  });
+  target.dispatchEvent(event);
+}
+
 describe('ore-slider', () => {
   let fixture: Fixture<HTMLElement>;
 
@@ -112,6 +132,69 @@ describe('ore-slider', () => {
       const target = (changeHandler.mock.calls[0][0] as Event).target as HTMLElement & { value: string };
 
       expect(target.value).toBeDefined();
+    });
+
+    describe.each([false, true])('Pointer lifecycle (range: %s)', (range) => {
+      const setup = async () => {
+        fixture = await mount('ore-slider', { attrs: range ? { from: '20', range: '', to: '80' } : { value: '20' } });
+        const track = fixture.query<HTMLElement>('.slider-track')!;
+
+        vi.spyOn(track, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100 } as DOMRect);
+        return fixture.query<HTMLElement>('.slider-container')!;
+      };
+      const value = () => (fixture.element as HTMLElement & { value: string }).value;
+
+      it.each(['mouse', 'pen'])('does not cancel a %s drag when a touch appears', async (pointerType) => {
+        const container = await setup();
+        pointer(container, 'pointerdown', { clientX: 30, pointerType });
+        const selected = value();
+        pointer(document.body, 'pointerdown', { pointerId: 2, pointerType: 'touch' });
+        pointer(container, 'pointermove', { clientX: 40, pointerType });
+        expect(value()).not.toBe(selected);
+      });
+
+      it('accepts only a primary button and tracks the initiating pointer', async () => {
+        const container = await setup();
+        const initial = value();
+
+        pointer(container, 'pointerdown', { button: 2, clientX: 40 });
+        pointer(container, 'pointerdown', { clientX: 40, isPrimary: false });
+        expect(value()).toBe(initial);
+        pointer(container, 'pointerdown', { clientX: 30 });
+        const selected = value();
+
+        pointer(container, 'pointermove', { clientX: 60, pointerId: 2 });
+        pointer(container, 'pointerup', { pointerId: 2 });
+        expect(value()).toBe(selected);
+        pointer(container, 'pointermove', { clientX: 40 });
+        expect(value()).not.toBe(selected);
+      });
+
+      it.each(['pointercancel', 'lostpointercapture', 'blur', 'visibilitychange', 'second-touch', 'disabled'])(
+        'stops updates after %s',
+        async (reason) => {
+          const container = await setup();
+
+          pointer(container, 'pointerdown', { clientX: 30, pointerType: 'touch' });
+          pointer(container, 'pointermove', { clientX: 40, pointerType: 'touch' });
+          const selected = value();
+
+          if (reason === 'blur') window.dispatchEvent(new Event('blur'));
+          else if (reason === 'visibilitychange') {
+            vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+            document.dispatchEvent(new Event('visibilitychange'));
+            vi.restoreAllMocks();
+          } else if (reason === 'second-touch')
+            pointer(container, 'pointerdown', { isPrimary: false, pointerId: 2, pointerType: 'touch' });
+          else if (reason === 'disabled') await fixture.attr('disabled', '');
+          else pointer(container, reason, { pointerType: 'touch' });
+
+          pointer(container, 'pointermove', { clientX: 60, pointerType: 'touch' });
+          await fixture.flush();
+          expect(value()).toBe(selected);
+          expect(fixture.element.hasAttribute('data-dragging')).toBe(false);
+        },
+      );
     });
 
     it('increases value on ArrowRight', async () => {

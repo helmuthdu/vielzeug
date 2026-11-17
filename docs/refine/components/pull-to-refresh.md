@@ -116,8 +116,9 @@ The current phase is reflected on the host as `data-phase`, so you can restyle p
 
 ## Behavior Notes
 
-- A pull only begins when the content is already scrolled to the top (`scrollTop <= 0`). Mid-scroll drags belong to the scroller, so nested scrolling stays intact.
-- The gesture is pointer-based with `overscroll-behavior-y: contain`, so the browser's own overscroll glow does not compete with the custom pull.
+- A pull begins only with downward intent when this container and every nested scroller under the touch are already at their top boundary. After native scrolling reaches the top, lift your finger and start a fresh swipe.
+- Controls, editable content, nested gesture components, and `[data-no-swipe]` subtrees retain their interactions. A second touch cancels the pull without refreshing; pinch zoom and unclaimed scrolling remain native.
+- The gesture prevents native touch scrolling only after accepting the pull. `overscroll-behavior-y: none` suppresses the browser's competing overscroll effect.
 - The indicator springs back on a spring seeded with the release velocity, so a flick retracts with momentum and a slow release settles without overshoot. The motion honors Motion Mode.
 
 ## Accessibility

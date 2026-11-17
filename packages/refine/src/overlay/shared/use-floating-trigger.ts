@@ -334,6 +334,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
   const stopOutsidePointerDismissal = createOutsidePointerDismissal({
     getTargets: () => [currentTrigger, getPanel(), options.getHost?.()],
+    host: options.getHost?.() ?? currentTrigger,
     isActive: () => visible.value && (options.outsidePointerDismissal?.value ?? triggers.value.includes('click')),
     onDismiss: () => close('outsideClick'),
     signal: abortSignal,

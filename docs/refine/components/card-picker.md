@@ -168,6 +168,40 @@ The picker focuses on the current card. Present a selected-card list or count in
 - Selection is always an explicit checkbox action. A swipe never selects or removes a card.
 - Reduced-motion preferences keep direct drag feedback but settle released cards immediately instead of springing.
 
+Native vertical scrolling and pinch zoom remain available over the cards. An additional touch, platform cancellation, a changed card deck, external navigation, or disabling the picker cancels an outstanding drag without applying its release to another card. Horizontally scrollable descendants keep their native scrolling instead of browsing cards.
+
+Controls, links, editable content, and nested gesture components keep their own interactions. Add `data-no-swipe` to a custom gesture surface to exclude its entire subtree from picker browsing and enclosing drawer dismissal:
+
+```html
+<ore-card-picker label="Choose equipment">
+  <ore-card-picker-item value="shield" label="Shield">
+    <p>Inspect the shield before selecting it.</p>
+    <div data-no-swipe>
+      <canvas aria-label="Shield inspection"></canvas>
+    </div>
+  </ore-card-picker-item>
+</ore-card-picker>
+```
+
+### Swipe Dismissal inside a Drawer
+
+Put the picker in a bottom drawer when its preview should support downward dismissal. Horizontal swipes browse cards. A fresh downward swipe on ordinary card content requests drawer dismissal only when every scroll area under the touch starts at its top boundary. If a gesture scrolls to the top, lift your finger and swipe again. A top drawer uses upward swiping at the bottom boundary instead.
+
+```html
+<ore-drawer placement="bottom" title="Choose equipment">
+  <ore-card-picker label="Equipment" values="shield">
+    <ore-card-picker-item value="shield" label="Shield">
+      <p>Block the next attack.</p>
+    </ore-card-picker-item>
+    <ore-card-picker-item value="sword" label="Sword">
+      <p>Strike an adjacent target.</p>
+    </ore-card-picker-item>
+  </ore-card-picker>
+</ore-drawer>
+```
+
+Register `@vielzeug/refine/drawer` alongside the picker. The drawer emits its existing cancelable `close-request` with reason `swipe`; the picker emits no close event. Closing never changes `values`. Set `swipe-from-content="false"` on the drawer for handle-only dismissal, or use `data-no-swipe` to protect a subtree. The marker excludes both gesture recognizers. Side drawers leave horizontal gestures to the picker. Inline pickers and pickers inside dialogs do not gain swipe dismissal.
+
 ## Item Slots
 
 | Slot      | Purpose                              |
@@ -204,6 +238,8 @@ Each `ore-card-picker-item` requires a stable `value`. `label` names the card fo
 CSS custom properties: `--card-picker-gap` (stage-to-controls spacing), `--card-picker-min-height` (optional minimum stage height, default `0`), `--card-picker-media-max-height` (image height limit), and `--card-picker-transition-duration` (non-drag preview transitions, default `var(--duration-300)`, zero under reduced motion). Swipe settling uses a physical spring rather than this duration.
 
 Parts: `stage`, `navigation`, `navigation-bar`, `indicators`, `indicator`, `controls`, `previous`, and `next`.
+
+Subtree marker: `data-no-swipe` excludes an element and its descendants from picker browsing and enclosing drawer content swipes. It is not a picker property and emits no event.
 
 ### `ore-card-picker-item`
 

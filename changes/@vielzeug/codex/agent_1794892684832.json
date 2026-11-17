@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Document gesture activation, touch cancellation, and component swipe ownership",
+      "packageName": "@vielzeug/codex",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

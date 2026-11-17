@@ -1565,6 +1565,34 @@ describe('ore-datagrid', () => {
   // ── F4: column resizing ───────────────────────────────────────────────────
 
   describe('Column resizing (F4)', () => {
+    it('tracks only the initiating pointer and stops resizing when it is canceled', async () => {
+      fixture = await mount('ore-datagrid', {});
+      const el = fixture.element as GridElement;
+      el.columns = [{ key: 'name', label: 'Name', resizable: true }];
+      el.rows = ROWS;
+      await fixture.flush();
+
+      const handle = fixture.query<HTMLElement>('.dg-col-resize')!;
+      const header = handle.closest('th')!;
+      header.getBoundingClientRect = () => ({ width: 100 }) as DOMRect;
+      const pointer = (type: string, pointerId: number, clientX: number) =>
+        new PointerEvent(type, { bubbles: true, button: 0, clientX, isPrimary: pointerId === 1, pointerId });
+
+      handle.dispatchEvent(pointer('pointerdown', 1, 100));
+      document.dispatchEvent(pointer('pointermove', 2, 200));
+      await fixture.flush();
+      expect(header.style.width).not.toBe('200px');
+
+      document.dispatchEvent(pointer('pointermove', 1, 130));
+      await fixture.flush();
+      expect(header.style.width).toBe('130px');
+
+      document.dispatchEvent(pointer('pointercancel', 1, 130));
+      document.dispatchEvent(pointer('pointermove', 1, 180));
+      await fixture.flush();
+      expect(header.style.width).toBe('130px');
+    });
+
     it('adds dg-col-resize handle to resizable columns', async () => {
       fixture = await mount('ore-datagrid', {});
 

@@ -149,6 +149,8 @@ the slot's own first element (so a real action button's own click handler runs) 
 `confirm`; the panel closes on its own afterward. The row and action panel tint slightly once the
 drag is close to that point, as a heads-up before it fires.
 
+Confirmation happens immediately at the full-swipe threshold, not on release. Embedded controls, editable content, nested gesture surfaces, and `[data-no-swipe]` subtrees never initiate row swipes. A second touch cancels an unconfirmed swipe; it cannot undo an action that has already confirmed. Pinch zoom and vertical scrolling remain native.
+
 On hover-capable fine pointers, a hovered row peeks a few pixels of its first populated action
 panel so the swipe affordance is discoverable without a gesture: touch discovers the swipe
 natively. The peek distance is `--list-item-peek`, a fraction of the panel width (default

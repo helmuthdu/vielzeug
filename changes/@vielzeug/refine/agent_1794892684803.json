@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Harden gesture ownership, input cancellation, RTL rating, native touch refresh, and swipe lifecycle",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

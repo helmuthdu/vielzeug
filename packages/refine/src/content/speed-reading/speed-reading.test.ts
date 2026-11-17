@@ -494,7 +494,9 @@ describe('ore-speed-reading', () => {
     const tap = async (ratio: number) => {
       const point = { clientX: 100 + ratio * 300, clientY: 10 };
       await fixture.act(() =>
-        display.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', ...point })),
+        display.dispatchEvent(
+          new PointerEvent('pointerdown', { bubbles: true, isPrimary: true, pointerType: 'touch', ...point }),
+        ),
       );
       await fixture.act(() =>
         display.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch', ...point })),
@@ -514,6 +516,63 @@ describe('ore-speed-reading', () => {
       ),
     );
     expect(position()).toBe(0);
+  });
+
+  it('ignores a non-primary touch so a second finger cannot move the tap origin', async () => {
+    await mountReader({ text: 'One two three' });
+    const display = query('viewport');
+    display.getBoundingClientRect = () => ({ height: 128, left: 100, top: 0, width: 300 }) as DOMRect;
+    // First finger presses in the forward third; a second finger lands in the
+    // middle third and lifts — the original forward tap must still apply.
+    await fixture.act(() =>
+      display.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          clientX: 370,
+          clientY: 10,
+          isPrimary: true,
+          pointerId: 1,
+          pointerType: 'touch',
+        }),
+      ),
+    );
+    await fixture.act(() =>
+      display.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          clientX: 250,
+          clientY: 10,
+          isPrimary: false,
+          pointerId: 2,
+          pointerType: 'touch',
+        }),
+      ),
+    );
+    await fixture.act(() =>
+      display.dispatchEvent(
+        new PointerEvent('pointerup', {
+          bubbles: true,
+          clientX: 250,
+          clientY: 10,
+          isPrimary: false,
+          pointerId: 2,
+          pointerType: 'touch',
+        }),
+      ),
+    );
+    await fixture.act(() =>
+      display.dispatchEvent(
+        new PointerEvent('pointerup', {
+          bubbles: true,
+          clientX: 370,
+          clientY: 10,
+          isPrimary: true,
+          pointerId: 1,
+          pointerType: 'touch',
+        }),
+      ),
+    );
+    expect(position()).toBe(1);
   });
 
   it('reflects the fullscreen attribute from the browser state without changing playback', async () => {

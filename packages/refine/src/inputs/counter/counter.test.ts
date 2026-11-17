@@ -279,6 +279,75 @@ describe('ore-counter', () => {
 
       expect(changes.map((c) => c.value)).toEqual([1, 2]);
     });
+
+    it('stops repeating when the pointer is canceled outside the button', async () => {
+      fixture = await mount('ore-counter', { attrs: { value: 0 } });
+      await fixture.flush();
+      vi.useFakeTimers();
+      const increment = getIncrement(fixture)!;
+      const changes = listenChanges(fixture);
+
+      increment.dispatchEvent(new PointerEvent('pointerdown', pointerInit));
+      vi.advanceTimersByTime(COUNTER_HOLD_DELAY_MS);
+      expect(changes.length).toBe(1);
+
+      document.dispatchEvent(new PointerEvent('pointercancel', pointerInit));
+      vi.advanceTimersByTime(COUNTER_HOLD_REPEAT_MS * 3);
+      expect(changes.length).toBe(1);
+    });
+
+    it('stops repeating when a second touch lands', async () => {
+      fixture = await mount('ore-counter', { attrs: { value: 0 } });
+      await fixture.flush();
+      vi.useFakeTimers();
+      const increment = getIncrement(fixture)!;
+      const changes = listenChanges(fixture);
+
+      increment.dispatchEvent(new PointerEvent('pointerdown', { ...pointerInit, pointerId: 1, pointerType: 'touch' }));
+      vi.advanceTimersByTime(COUNTER_HOLD_DELAY_MS);
+      expect(changes.length).toBe(1);
+
+      document.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          bubbles: true,
+          composed: true,
+          isPrimary: false,
+          pointerId: 2,
+          pointerType: 'touch',
+        }),
+      );
+      vi.advanceTimersByTime(COUNTER_HOLD_REPEAT_MS * 3);
+      expect(changes.length).toBe(1);
+    });
+
+    it('stops repeating when the window loses focus', async () => {
+      fixture = await mount('ore-counter', { attrs: { value: 0 } });
+      await fixture.flush();
+      vi.useFakeTimers();
+      const increment = getIncrement(fixture)!;
+      const changes = listenChanges(fixture);
+
+      increment.dispatchEvent(new PointerEvent('pointerdown', pointerInit));
+      vi.advanceTimersByTime(COUNTER_HOLD_DELAY_MS);
+      expect(changes.length).toBe(1);
+
+      window.dispatchEvent(new Event('blur'));
+      vi.advanceTimersByTime(COUNTER_HOLD_REPEAT_MS * 3);
+      expect(changes.length).toBe(1);
+    });
+
+    it('ignores a non-primary pointerdown', async () => {
+      fixture = await mount('ore-counter', { attrs: { value: 0 } });
+      await fixture.flush();
+      vi.useFakeTimers();
+      const increment = getIncrement(fixture)!;
+      const changes = listenChanges(fixture);
+
+      increment.dispatchEvent(new PointerEvent('pointerdown', { ...pointerInit, isPrimary: false }));
+      vi.advanceTimersByTime(COUNTER_HOLD_DELAY_MS + COUNTER_HOLD_REPEAT_MS * 3);
+
+      expect(changes.length).toBe(0);
+    });
   });
 
   // ─── Keyboard ────────────────────────────────────────────────────────────────

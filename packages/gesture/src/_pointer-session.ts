@@ -37,6 +37,7 @@ type PointerSessionOptions = Readonly<{
   onMove?: (detail: PointerSessionDetail) => void;
   onStart?: (detail: PointerSessionDetail) => void;
   pointerCapture: boolean;
+  shouldActivate?: (detail: PointerSessionDetail) => boolean;
   shouldStart?: (event: PointerEvent) => boolean;
   signal?: AbortSignal;
 }>;
@@ -72,7 +73,18 @@ const resolveAxis = (value: PointerSessionOptions['axis']): PointerAxis | undefi
 };
 
 export function createPointerSession(target: Element, options: PointerSessionOptions): GestureHandle {
-  const { activationDistance, axis, disabled, onEnd, onMove, onStart, pointerCapture, shouldStart, signal } = options;
+  const {
+    activationDistance,
+    axis,
+    disabled,
+    onEnd,
+    onMove,
+    onStart,
+    pointerCapture,
+    shouldActivate,
+    shouldStart,
+    signal,
+  } = options;
   const disposalController = new AbortController();
   const fixedAxis = typeof axis === 'function' ? undefined : resolveAxis(axis);
   let trackingDocument: Document | null = null;
@@ -86,7 +98,7 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
   const recordSample = (x: number, y: number): void => {
     const t = performance.now();
     samples.push({ t, x, y });
-    while (samples.length > 2 && t - samples[0].t > VELOCITY_WINDOW_MS) samples.shift();
+    while (samples.length > 1 && t - samples[0].t > VELOCITY_WINDOW_MS) samples.shift();
   };
 
   // Velocity is the slope across the trailing window (recordSample keeps every
@@ -106,17 +118,18 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
   };
 
   const createDetail = (event: PointerEvent): PointerSessionDetail | null => {
-    if (!active) return null;
+    const pointer = active ?? pending;
+    if (!pointer) return null;
     const { velocityX, velocityY } = readVelocity();
     return {
-      axis: active.axis,
+      axis: pointer.axis,
       currentX: event.clientX,
       currentY: event.clientY,
       event,
-      pointerId: active.pointerId,
-      pointerType: active.pointerType,
-      startX: active.startX,
-      startY: active.startY,
+      pointerId: pointer.pointerId,
+      pointerType: pointer.pointerType,
+      startX: pointer.startX,
+      startY: pointer.startY,
       target,
       velocityX,
       velocityY,
@@ -126,6 +139,7 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
   const removeTrackingListeners = (): void => {
     if (!trackingDocument) return;
     trackingDocument.removeEventListener('pointermove', onPointerMove, true);
+    trackingDocument.removeEventListener('pointerdown', onAdditionalPointerDown, true);
     trackingDocument.removeEventListener('pointerup', onPointerUp, true);
     trackingDocument.removeEventListener('pointercancel', onPointerCancel, true);
     trackingDocument.removeEventListener('visibilitychange', onVisibilityChange);
@@ -184,6 +198,7 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
   const startTracking = (): void => {
     trackingDocument = target.ownerDocument;
     trackingDocument.addEventListener('pointermove', onPointerMove, true);
+    trackingDocument.addEventListener('pointerdown', onAdditionalPointerDown, true);
     trackingDocument.addEventListener('pointerup', onPointerUp, true);
     trackingDocument.addEventListener('pointercancel', onPointerCancel, true);
     trackingDocument.addEventListener('visibilitychange', onVisibilityChange);
@@ -203,12 +218,19 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
       const primaryDistance = pending.axis === 'x' ? Math.abs(deltaX) : Math.abs(deltaY);
       const crossDistance = pending.axis === 'x' ? Math.abs(deltaY) : Math.abs(deltaX);
       if (Math.max(primaryDistance, crossDistance) < activationDistance) return false;
+      if (crossDistance === primaryDistance) return false;
       if (crossDistance > primaryDistance) {
         clearSession();
         return false;
       }
     }
 
+    const detail = createDetail(event);
+    if (detail && shouldActivate && !shouldActivate(detail)) {
+      clearSession();
+      return false;
+    }
+    if (!pending) return false;
     active = { ...pending, captured: false, event };
     pending = null;
     if (pointerCapture && typeof target.setPointerCapture === 'function') {
@@ -220,7 +242,6 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
       }
     }
 
-    const detail = createDetail(event);
     if (detail) onStart?.(detail);
     return active?.pointerId === event.pointerId;
   };
@@ -236,6 +257,7 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
       startX: event.clientX,
       startY: event.clientY,
     };
+    recordSample(event.clientX, event.clientY);
     startTracking();
     return true;
   };
@@ -247,10 +269,10 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
       clearSession();
       return true;
     }
+    recordSample(event.clientX, event.clientY);
     if (!active && !activate(event)) return true;
     if (!active) return true;
     active.event = event;
-    recordSample(event.clientX, event.clientY);
     const detail = createDetail(event);
     if (detail) onMove?.(detail);
     return true;
@@ -262,6 +284,7 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
       clearSession();
       return true;
     }
+    recordSample(event.clientX, event.clientY);
     return finish(event, isDisabled() ? 'cancel' : 'release');
   };
 
@@ -275,6 +298,16 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
   };
 
   const onPointerDown: EventListener = (event) => handlePointerDown(event as PointerEvent);
+  const onAdditionalPointerDown: EventListener = (event) => {
+    const pointer = active ?? pending;
+    const additional = event as PointerEvent;
+    if (
+      pointer?.pointerType === 'touch' &&
+      additional.pointerType === 'touch' &&
+      additional.pointerId !== pointer.pointerId
+    )
+      cancel();
+  };
   const onPointerMove: EventListener = (event) => handlePointerMove(event as PointerEvent);
   const onPointerUp: EventListener = (event) => handlePointerUp(event as PointerEvent);
   const onPointerCancel: EventListener = (event) => handlePointerCancel(event as PointerEvent);

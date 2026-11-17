@@ -1,6 +1,6 @@
-import { bind, define, getHost, html, onMounted, prop, ref, useField } from '@vielzeug/ore';
+import { bind, define, getHost, html, onCleanup, onMounted, prop, ref, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-import { createDropdownPositioner } from '../../core';
+import { createDropdownPositioner, createOutsidePointerDismissal, lifecycleSignal } from '../../core';
 import {
   disablableBundle,
   FIELD_VARIANTS,
@@ -406,17 +406,16 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
 
     // ── Outside click ─────────────────────────────────────────────────────────
 
-    function handleOutsideClick(e: PointerEvent | MouseEvent): void {
-      if (!isOpen.value) return;
-
-      if (!e.composedPath().includes(el)) closePicker();
-    }
+    createOutsidePointerDismissal({
+      getTargets: () => [el],
+      host: el,
+      isActive: () => isOpen.value,
+      onDismiss: () => closePicker(),
+      signal: lifecycleSignal(onCleanup),
+    });
 
     onMounted(() => {
-      document.addEventListener('pointerdown', handleOutsideClick, { capture: true });
-
       return () => {
-        document.removeEventListener('pointerdown', handleOutsideClick, { capture: true });
         stopAutoUpdate?.();
         stopAutoUpdate = null;
       };

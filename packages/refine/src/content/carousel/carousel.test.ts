@@ -37,6 +37,25 @@ describe('ore-carousel', () => {
 
   const slides = SLIDES_HTML;
 
+  it('leaves embedded controls native and invalidates a gesture when its deck changes', async () => {
+    fixture = await mount('ore-carousel', {
+      html: `<ore-carousel-slide><input type="range"></ore-carousel-slide>${slides}`,
+    });
+    const pointer = { bubbles: true, composed: true, isPrimary: true, pointerId: 1, pointerType: 'touch' };
+    const input = fixture.element.querySelector('input')!;
+    input.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 200 }));
+    input.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 0 }));
+    input.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 0 }));
+    expect(fixture.element.getAttribute('slide-index')).toBe('0');
+    const slide = getSlides(fixture)[0];
+    slide.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 200 }));
+    slide.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 0 }));
+    slide.remove();
+    await fixture.flush();
+    fixture.element.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 0 }));
+    expect(fixture.element.getAttribute('slide-index')).toBe('0');
+  });
+
   // ── Core Functionality ───────────────────────────────────────────────────────
 
   describe('Core functionality', () => {
@@ -224,9 +243,12 @@ describe('ore-carousel', () => {
     } as const;
 
     const swipe = (target: Element, x: number, y = 0, end = 'pointerup'): void => {
+      const clock = vi.spyOn(performance, 'now').mockReturnValue(0);
       target.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 100, clientY: 100 }));
       target.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 100 + x, clientY: 100 + y }));
+      clock.mockReturnValue(200);
       target.dispatchEvent(new PointerEvent(end, { ...pointer, clientX: 100 + x, clientY: 100 + y }));
+      clock.mockRestore();
     };
 
     it('changes slide only after a qualifying pan is released', async () => {

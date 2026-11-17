@@ -7,7 +7,7 @@
  *
  * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
-import { axeCheck, expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test, touchSwipe } from '../../testing/fixtures';
 
 const FEED =
   '<ore-pull-to-refresh threshold="64" style="height: 20rem; width: 20rem"><p style="margin: 0; padding: 1rem">Row one</p><p style="margin: 0; padding: 1rem">Row two</p></ore-pull-to-refresh>';
@@ -41,6 +41,39 @@ const geometry = (page: import('@playwright/test').Page) =>
   });
 
 test.describe('Pull to refresh', () => {
+  test('refreshes with trusted touch while retaining ordinary upward scrolling', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-pull-to-refresh style="height:320px"><div style="height:1200px">Feed</div></ore-pull-to-refresh>',
+    );
+    const feed = page.locator('ore-pull-to-refresh');
+    const box = await feed.boundingBox();
+    if (!box) throw new Error('Feed is not visible');
+    const from = { x: box.x + 100, y: box.y + 100 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y + 120 } });
+    await expect(feed).toHaveAttribute('data-phase', 'refreshing');
+    await feed.evaluate((el) => (el as HTMLElement & { refreshed(): void }).refreshed());
+    await expect(feed).toHaveAttribute('data-phase', 'idle');
+    await touchSwipe(page, { from: { x: from.x, y: from.y + 120 }, to: from });
+    await expect
+      .poll(() => feed.evaluate((el) => el.shadowRoot!.querySelector('.scroll')!.scrollTop))
+      .toBeGreaterThan(0);
+    await expect(feed).toHaveAttribute('data-phase', 'idle');
+  });
+
+  test('leaves nested scrollers and editing controls in charge', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-pull-to-refresh style="height:320px"><div id="nested" style="height:220px;overflow-y:auto"><div style="height:1000px">Nested feed</div></div><input value="Edit"></ore-pull-to-refresh>',
+    );
+    await page.locator('#nested').evaluate((el) => {
+      el.scrollTop = 180;
+    });
+    const box = await page.locator('#nested').boundingBox();
+    if (!box) throw new Error('Nested feed is not visible');
+    await touchSwipe(page, { from: { x: box.x + 80, y: box.y + 50 }, to: { x: box.x + 80, y: box.y + 150 } });
+    await expect(page.locator('ore-pull-to-refresh')).not.toHaveAttribute('data-phase', 'refreshing');
+    await expect.poll(() => page.locator('#nested').evaluate((el) => el.scrollTop)).toBeLessThan(180);
+  });
+
   test('the content follows the finger 1:1, without the indicator pushing it twice', async ({ page, refinePage }) => {
     await refinePage.mountComponent(FEED);
 

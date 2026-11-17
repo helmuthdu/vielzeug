@@ -523,6 +523,8 @@ Swipe or drag slide content at least 48 CSS pixels along the carousel's orientat
 
 Horizontal carousels preserve vertical page scrolling; vertical carousels preserve horizontal scrolling. Both allow pinch zoom. The carousel's own controls and indicators do not start swipes.
 
+Editing controls, sliders, nested swipe surfaces, and `[data-no-swipe]` subtrees keep their own interactions. Ordinary clickable covers still support browsing by swipe and selection by tap. Adding a second touch, changing the slides, changing orientation or variant, or changing the active slide cancels the pending gesture so a stale release cannot navigate the replacement deck.
+
 After a drag activates, its pointer-generated click is suppressed so a cover picker or other clickable slide does not select an unintended item. Taps and keyboard activation still work. You do not need app-level touch handlers.
 
 ## Accessibility

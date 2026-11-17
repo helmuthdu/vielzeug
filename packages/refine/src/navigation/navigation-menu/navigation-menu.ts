@@ -230,6 +230,7 @@ define<OreNavigationMenuProps>(NAVIGATION_MENU_TAG, {
 
     createOutsidePointerDismissal({
       getTargets: () => [host, activePanel],
+      host,
       isActive: () => activeValue.value !== null,
       onDismiss: () => requestActive(null, 'outsideClick'),
       signal: abortSignal,
