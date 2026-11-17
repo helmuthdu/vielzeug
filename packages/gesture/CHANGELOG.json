@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Cancel touch recognition on additional fingers, guard activation before capture, and correct velocity and long-press lifecycle",
+            "commit": "d38b3498e471aacab3627c280a49ab3596e02314"
+          }
+        ]
+      },
+      "date": "Tue, 17 Nov 2026 07:34:49 GMT",
+      "tag": "@vielzeug/gesture_v26.11.22",
+      "version": "26.11.22"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

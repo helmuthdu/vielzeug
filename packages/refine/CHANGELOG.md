@@ -1,7 +1,20 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Mon, 16 Nov 2026 17:10:57 GMT and should not be manually modified.
+This log was last generated on Tue, 17 Nov 2026 07:34:49 GMT and should not be manually modified.
 
+## 26.11.22
+
+Tue, 17 Nov 2026 07:34:49 GMT
+
+### Major changes
+
+- Enable boundary-start content swipe dismissal on every drawer placement, with native scrolling, protected controls, content opt-outs, and corrected RTL drag directions.
+
+### Minor changes
+
+- Harden gesture ownership, input cancellation, RTL rating, native touch refresh, and swipe lifecycle
+- Harden counter hold, datagrid resize, accordion touch taps, reader tap zones, and outside-pointer dismissal against stray pointers and background tabs
+- Harden card-picker touch gestures, preserve native zoom and nested scrolling, cancel stale drags, and coordinate vertical drawer dismissal with subtree opt-outs.
 ## 26.11.21
 
 Mon, 16 Nov 2026 17:10:57 GMT

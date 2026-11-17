@@ -2,6 +2,37 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Enable boundary-start content swipe dismissal on every drawer placement, with native scrolling, protected controls, content opt-outs, and corrected RTL drag directions.",
+            "commit": "d38b3498e471aacab3627c280a49ab3596e02314"
+          }
+        ],
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Harden gesture ownership, input cancellation, RTL rating, native touch refresh, and swipe lifecycle",
+            "commit": "d38b3498e471aacab3627c280a49ab3596e02314"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Harden counter hold, datagrid resize, accordion touch taps, reader tap zones, and outside-pointer dismissal against stray pointers and background tabs",
+            "commit": "d38b3498e471aacab3627c280a49ab3596e02314"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Harden card-picker touch gestures, preserve native zoom and nested scrolling, cancel stale drags, and coordinate vertical drawer dismissal with subtree opt-outs.",
+            "commit": "d38b3498e471aacab3627c280a49ab3596e02314"
+          }
+        ]
+      },
+      "date": "Tue, 17 Nov 2026 07:34:49 GMT",
+      "tag": "@vielzeug/refine_v26.11.22",
+      "version": "26.11.22"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "agent@vielzeug",

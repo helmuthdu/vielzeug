@@ -1,7 +1,16 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Mon, 16 Nov 2026 17:10:57 GMT and should not be manually modified.
+This log was last generated on Tue, 17 Nov 2026 07:34:49 GMT and should not be manually modified.
 
+## 26.11.22
+
+Tue, 17 Nov 2026 07:34:49 GMT
+
+### Patches
+
+- Refresh drawer documentation with content swipe directions, native scroll boundaries, and opt-outs.
+- Document card-picker gesture ownership, native interactions, subtree exclusions, and drawer swipe dismissal.
+- Document gesture activation, touch cancellation, and component swipe ownership
 ## 26.11.21
 
 Mon, 16 Nov 2026 17:10:57 GMT

@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/wayfinder",
-  "version": "26.11.21",
+  "version": "26.11.22",
   "description": "Client-side router with middleware and guards",
   "repository": {
     "type": "git",
