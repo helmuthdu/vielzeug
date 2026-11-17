@@ -96,7 +96,7 @@ jobs:
           retention-days: 1
 
   test:
-    name: Unit tests (${{ matrix.shard }}/3)
+    name: Unit tests (sharded)
     needs: [ changes, build ]
     if: github.event_name == 'pull_request' && needs.changes.outputs.src == 'true' && needs.build.result == 'success'
     runs-on: ubuntu-latest
