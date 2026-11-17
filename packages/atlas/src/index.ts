@@ -50,9 +50,13 @@ export {
   alignRects,
   distributeRects,
   type SnapGuide,
+  type SnapGuideKind,
   type SnapOptions,
   type SnapResult,
+  type SpacingGuide,
+  type SpacingResult,
   snapRect,
+  snapSpacing,
 } from './snap.js';
 export {
   createSpatialIndex,

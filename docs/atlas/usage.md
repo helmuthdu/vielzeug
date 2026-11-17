@@ -118,10 +118,26 @@ import { snapRect } from '@vielzeug/atlas';
 
 const snap = snapRect(dragRect, { candidates: otherSelectedOutRects, grid: { x: 50, y: 50 }, threshold: 8 });
 const snapped = { ...dragRect, x: dragRect.x + snap.delta.x, y: dragRect.y + snap.delta.y };
-// snap.guides: [{ axis, position, from, to }] in world coordinates — draw them through the camera.
+// snap.guides: [{ axis, kind, position, from, to }] in world coordinates — draw them through the camera.
 ```
 
 Each axis snaps independently to its nearest anchor (left/center/right, top/center/bottom) within `threshold`. On drop, commit `snapped` to your model so undo history records the final position, not the raw pointer position.
+
+For img.ly-style spacing hints, run `snapSpacing` on the same drag and prefer the alignment snap where both engage. It centers the moving rect between its nearest neighbors when the two gaps can be made equal within `threshold`:
+
+```ts
+import { snapRect, snapSpacing } from '@vielzeug/atlas';
+
+const align = snapRect(dragRect, { candidates, grid: { x: 50, y: 50 }, threshold: 8 });
+const spacing = snapSpacing(dragRect, { candidates, threshold: 8 });
+const delta = {
+  x: align.delta.x !== 0 ? align.delta.x : spacing.delta.x,
+  y: align.delta.y !== 0 ? align.delta.y : spacing.delta.y,
+};
+// spacing.guides: [{ gapAxis, position, from, to, marks }] — draw the line and an × at each mark.
+```
+
+A candidate only counts as a neighbor when it overlaps the moving rect on the perpendicular axis, and both sides need one, so a lone shape never spacing-snaps.
 
 After a multi-select, align or distribute with the pure helpers and record one command:
 

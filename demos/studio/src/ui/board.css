@@ -164,6 +164,42 @@
   left: 0;
   background-color: var(--color-warning);
 }
+.studio-guide.is-grid {
+  background: repeating-linear-gradient(to right, var(--color-warning) 0 4px, transparent 4px 8px);
+}
+.studio-guide.is-grid.is-vertical {
+  background: repeating-linear-gradient(to bottom, var(--color-warning) 0 4px, transparent 4px 8px);
+}
+.studio-guide-cap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: var(--text-xs);
+  line-height: 1;
+  color: var(--color-warning);
+  pointer-events: none;
+  translate: -50% -50%;
+}
+.studio-spacing-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-top: 1px dashed var(--color-error);
+}
+.studio-spacing-line.is-vertical {
+  border-top: none;
+  border-left: 1px dashed var(--color-error);
+}
+.studio-spacing-mark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: var(--text-xs);
+  line-height: 1;
+  color: var(--color-error);
+  pointer-events: none;
+  translate: -50% -50%;
+}
 
 /* Konva-style selection chrome (screen space, constant size at any zoom). */
 .studio-selection-frame {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AtlasConfigError } from '../errors.js';
 import type { Rect } from '../index.js';
-import { alignRects, distributeRects, snapRect } from '../index.js';
+import { alignRects, distributeRects, snapRect, snapSpacing } from '../index.js';
 
 const rect = (x: number, y: number, width = 10, height = 10): Rect => ({ height, width, x, y });
 
@@ -9,7 +9,7 @@ describe('snapRect', () => {
   it('snaps the left edge to a candidate left edge within threshold', () => {
     const result = snapRect(rect(102, 0), { candidates: [rect(100, 50)], threshold: 5 });
     expect(result.delta).toEqual({ x: -2, y: 0 });
-    expect(result.guides).toEqual([{ axis: 'x', from: 0, position: 100, to: 60 }]);
+    expect(result.guides).toEqual([{ axis: 'x', from: 0, kind: 'object', position: 100, to: 60 }]);
   });
 
   it('snaps center-to-center on both axes', () => {
@@ -36,8 +36,8 @@ describe('snapRect', () => {
     const result = snapRect(rect(48, 101), { candidates: [], grid: { x: 50, y: 50 }, threshold: 4 });
     expect(result.delta).toEqual({ x: 2, y: -1 });
     expect(result.guides).toEqual([
-      { axis: 'x', from: 100, position: 50, to: 110 },
-      { axis: 'y', from: 50, position: 100, to: 60 },
+      { axis: 'x', from: 100, kind: 'grid', position: 50, to: 110 },
+      { axis: 'y', from: 50, kind: 'grid', position: 100, to: 60 },
     ]);
   });
 
@@ -121,5 +121,87 @@ describe('distributeRects', () => {
     const spread = distributeRects(rects, 'x');
     expect(spread).toEqual(rects);
     expect(spread[0]).not.toBe(rects[0]);
+  });
+});
+
+describe('snapSpacing', () => {
+  it('centers the moving rect between two neighbors on x', () => {
+    // neighbors end at 40 and start at 100; a 20-wide rect centers at x 60.
+    const result = snapSpacing(rect(63, 5, 20, 10), {
+      candidates: [rect(0, 0, 40, 20), rect(100, 0, 40, 20)],
+      threshold: 8,
+    });
+    expect(result.delta).toEqual({ x: -3, y: 0 });
+    expect(result.guides).toEqual([{ from: 40, gapAxis: 'x', marks: [50, 90], position: 10, to: 100 }]);
+  });
+
+  it('centers on y when neighbors sit above and below', () => {
+    const result = snapSpacing(rect(5, 63, 10, 20), {
+      candidates: [rect(0, 0, 20, 40), rect(0, 100, 20, 40)],
+      threshold: 8,
+    });
+    expect(result.delta).toEqual({ x: 0, y: -3 });
+    expect(result.guides).toEqual([{ from: 40, gapAxis: 'y', marks: [50, 90], position: 10, to: 100 }]);
+  });
+
+  it('snaps both axes independently', () => {
+    const result = snapSpacing(rect(55, 55, 20, 20), {
+      candidates: [rect(0, 0, 40, 100), rect(100, 0, 40, 100), rect(0, 0, 100, 40), rect(0, 100, 100, 40)],
+      threshold: 8,
+    });
+    expect(result.delta).toEqual({ x: 5, y: 5 });
+    expect(result.guides.map((guide) => guide.gapAxis)).toEqual(['x', 'y']);
+  });
+
+  it('ignores candidates that do not overlap the perpendicular axis', () => {
+    const result = snapSpacing(rect(63, 5, 20, 10), {
+      candidates: [rect(0, 0, 40, 20), rect(100, 200, 40, 20)],
+      threshold: 8,
+    });
+    expect(result.delta).toEqual({ x: 0, y: 0 });
+    expect(result.guides).toEqual([]);
+  });
+
+  it('needs a neighbor on both sides', () => {
+    const result = snapSpacing(rect(63, 5, 20, 10), {
+      candidates: [rect(0, 0, 40, 20)],
+      threshold: 8,
+    });
+    expect(result.guides).toEqual([]);
+  });
+
+  it('stays put beyond the threshold and snaps exactly at it', () => {
+    const candidates = [rect(0, 0, 40, 20), rect(100, 0, 40, 20)];
+    const beyond = snapSpacing(rect(67, 5, 20, 10), { candidates, threshold: 3 });
+    expect(beyond.delta.x).toBe(0);
+    const exact = snapSpacing(rect(63, 5, 20, 10), { candidates, threshold: 3 });
+    expect(exact.delta.x).toBe(-3);
+  });
+
+  it('marks the centers of the two equal gaps', () => {
+    const result = snapSpacing(rect(63, 5, 20, 10), {
+      candidates: [rect(0, 0, 40, 20), rect(100, 0, 40, 20)],
+      threshold: 8,
+    });
+    const guide = result.guides[0];
+    expect(guide?.from).toBe(40);
+    expect(guide?.to).toBe(100);
+    expect(guide?.marks).toEqual([50, 90]);
+  });
+
+  it('rejects a negative threshold', () => {
+    expect(() => snapSpacing(rect(0, 0), { candidates: [], threshold: -1 })).toThrow(AtlasConfigError);
+  });
+});
+
+describe('snapRect guide kinds', () => {
+  it('marks a guide object when a candidate anchor shares the position', () => {
+    const result = snapRect(rect(102, 0), { candidates: [rect(100, 50)], grid: { x: 100 }, threshold: 5 });
+    expect(result.guides[0]?.kind).toBe('object');
+  });
+
+  it('marks a guide grid when only a grid line produced the position', () => {
+    const result = snapRect(rect(48, 0), { candidates: [rect(200, 0)], grid: { x: 50 }, threshold: 4 });
+    expect(result.guides[0]?.kind).toBe('grid');
   });
 });

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "add snapSpacing equal-gap spacing guides",
+      "packageName": "@vielzeug/atlas",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/atlas"
+}

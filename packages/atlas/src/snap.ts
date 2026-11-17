@@ -3,11 +3,16 @@ import { boundsOf } from './geometry.js';
 import { rectBottom, rectCenter, rectRight } from './rect.js';
 import type { Point, Rect } from './shapes.js';
 
+/** What a guide was snapped to: a grid line or another shape's anchor. */
+export type SnapGuideKind = 'grid' | 'object';
+
 /** A snap line to render: a guide with axis `'x'` sits at a fixed x position. */
 export interface SnapGuide {
   axis: 'x' | 'y';
   /** Span endpoints along the guide's own axis (world coordinates). */
   from: number;
+  /** Render hint: draw grid guides dashed and object guides solid. */
+  kind: SnapGuideKind;
   /** The coordinate the guide sits on, perpendicular to `axis`. */
   position: number;
   to: number;
@@ -84,6 +89,15 @@ function spanFor(
   return axis === 'x' ? { from: bounds.y, to: rectBottom(bounds) } : { from: bounds.x, to: rectRight(bounds) };
 }
 
+/** A snapped coordinate that matches a candidate anchor came from an object. */
+function guideKind(position: number, candidates: readonly Rect[], axis: 'x' | 'y'): SnapGuideKind {
+  for (const candidate of candidates) {
+    const anchors = axis === 'x' ? xAnchors(candidate) : yAnchors(candidate);
+    if (anchors.some((anchor) => anchor === position)) return 'object';
+  }
+  return 'grid';
+}
+
 /**
  * Snap a moving rect against candidate shapes and an optional grid. Each axis
  * snaps independently to the nearest target within `threshold`; ties resolve
@@ -119,13 +133,115 @@ export function snapRect(rect: Rect, options: SnapOptions): SnapResult {
   const guides: SnapGuide[] = [];
   if (xSnap !== null) {
     const span = spanFor(xSnap.position, movedRect, candidates, 'x');
-    guides.push({ axis: 'x', from: span.from, position: xSnap.position, to: span.to });
+    const kind = guideKind(xSnap.position, candidates, 'x');
+    guides.push({ axis: 'x', from: span.from, kind, position: xSnap.position, to: span.to });
   }
   if (ySnap !== null) {
     const span = spanFor(ySnap.position, movedRect, candidates, 'y');
-    guides.push({ axis: 'y', from: span.from, position: ySnap.position, to: span.to });
+    const kind = guideKind(ySnap.position, candidates, 'y');
+    guides.push({ axis: 'y', from: span.from, kind, position: ySnap.position, to: span.to });
   }
   return { delta, guides };
+}
+
+/**
+ * An equal-spacing indicator. Unlike `SnapGuide.axis` (the axis the line is
+ * perpendicular to), `gapAxis` is the axis the equal gaps are measured along —
+ * the same axis the delta applies to. The line runs along `gapAxis` from
+ * `from` to `to` at `position`; `marks` are the centers of the two equal gaps.
+ */
+export interface SpacingGuide {
+  /** Span endpoints along `gapAxis` (world coordinates). */
+  from: number;
+  /** Axis the equal gaps sit on, and the axis `snapSpacing` moved the rect. */
+  gapAxis: 'x' | 'y';
+  /** Centers of the left/right (or top/bottom) equal gaps, drawn as markers. */
+  marks: readonly [number, number];
+  /** World coordinate the line sits on, on the axis perpendicular to `gapAxis`. */
+  position: number;
+  to: number;
+}
+
+export interface SpacingResult {
+  /** Offset to apply to the moving rect; zero on an axis with no spacing snap. */
+  delta: Point;
+  /** Spacing guides for the axes that snapped. */
+  guides: SpacingGuide[];
+}
+
+/** Overlap test on the axis perpendicular to `axis`. */
+function overlapsPerpendicular(a: Rect, b: Rect, axis: 'x' | 'y'): boolean {
+  return axis === 'x' ? a.y < rectBottom(b) && b.y < rectBottom(a) : a.x < rectRight(b) && b.x < rectRight(a);
+}
+
+function axisSpacingSnap(
+  rect: Rect,
+  candidates: readonly Rect[],
+  axis: 'x' | 'y',
+  threshold: number,
+): (AxisSnap & { marks: readonly [number, number]; span: readonly [number, number] }) | null {
+  const start = axis === 'x' ? (r: Rect) => r.x : (r: Rect) => r.y;
+  const end = axis === 'x' ? (r: Rect) => rectRight(r) : (r: Rect) => rectBottom(r);
+  let leftEnd = -Infinity;
+  let rightStart = Infinity;
+  for (const candidate of candidates) {
+    if (!overlapsPerpendicular(rect, candidate, axis)) continue;
+    if (end(candidate) <= start(rect) && end(candidate) > leftEnd) leftEnd = end(candidate);
+    if (start(candidate) >= end(rect) && start(candidate) < rightStart) rightStart = start(candidate);
+  }
+  if (leftEnd === -Infinity || rightStart === Infinity) return null;
+  const free = rightStart - leftEnd - (axis === 'x' ? rect.width : rect.height);
+  if (free < 0) return null;
+  const ideal = leftEnd + free / 2;
+  const delta = ideal - start(rect);
+  if (Math.abs(delta) > threshold) return null;
+  const gap = free / 2;
+  return {
+    delta,
+    marks: [leftEnd + gap / 2, rightStart - gap / 2],
+    position: axis === 'x' ? rectCenter(rect).y : rectCenter(rect).x,
+    span: [leftEnd, rightStart],
+  };
+}
+
+/**
+ * Snap a moving rect so its gaps to the nearest neighbors on each axis are
+ * equal (img.ly-style spacing guides). A candidate qualifies as a neighbor on
+ * an axis only when it overlaps the moving rect on the perpendicular axis.
+ * Each axis snaps independently within `threshold`; use after `snapRect` finds
+ * no alignment snap on that axis.
+ */
+export function snapSpacing(rect: Rect, options: { candidates: readonly Rect[]; threshold: number }): SpacingResult {
+  const { candidates, threshold } = options;
+  if (!(threshold >= 0)) {
+    throw new AtlasConfigError(`threshold must be a non-negative finite number; received ${String(threshold)}.`);
+  }
+  let deltaX = 0;
+  let deltaY = 0;
+  const guides: SpacingGuide[] = [];
+  const xSnap = axisSpacingSnap(rect, candidates, 'x', threshold);
+  if (xSnap !== null) {
+    deltaX = xSnap.delta;
+    guides.push({
+      from: xSnap.span[0],
+      gapAxis: 'x',
+      marks: xSnap.marks,
+      position: xSnap.position,
+      to: xSnap.span[1],
+    });
+  }
+  const ySnap = axisSpacingSnap(rect, candidates, 'y', threshold);
+  if (ySnap !== null) {
+    deltaY = ySnap.delta;
+    guides.push({
+      from: ySnap.span[0],
+      gapAxis: 'y',
+      marks: ySnap.marks,
+      position: ySnap.position,
+      to: ySnap.span[1],
+    });
+  }
+  return { delta: { x: deltaX, y: deltaY }, guides };
 }
 
 /** Which edge/center line to align rects on. */

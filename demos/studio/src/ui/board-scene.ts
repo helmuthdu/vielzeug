@@ -8,7 +8,9 @@ import {
   type Rect,
   rectFromPoints,
   type SnapGuide,
+  type SpacingGuide,
   snapRect,
+  snapSpacing,
   unionRect,
 } from '@vielzeug/atlas';
 import { createDragGesture, createPinchGesture, createWheelGesture } from '@vielzeug/gesture';
@@ -202,6 +204,11 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   guidesEl.dataset.testid = 'board-guides';
   guidesEl.hidden = true;
 
+  const spacingEl = document.createElement('div');
+  spacingEl.className = 'studio-guides studio-spacing';
+  spacingEl.dataset.testid = 'board-spacing';
+  spacingEl.hidden = true;
+
   // Konva-style selection chrome, drawn in screen space so the dashed frame and
   // handles stay a constant size at every zoom level.
   const frameEl = document.createElement('div');
@@ -220,7 +227,7 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     handlesEl.append(handle);
   }
 
-  overlay.append(guidesEl, marqueeEl, frameEl, handlesEl, toolbar);
+  overlay.append(guidesEl, spacingEl, marqueeEl, frameEl, handlesEl, toolbar);
   viewport.append(world, overlay);
   container.append(viewport);
 
@@ -272,33 +279,86 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
 
   const guideEls: HTMLElement[] = [];
 
-  /** Draws world-space snap guides as screen-space lines in the overlay. */
+  /**
+   * Draws world-space snap guides as screen-space lines: grid snaps render as
+   * dashed lines, object snaps as solid lines with an × cap at each aligned edge.
+   */
   function renderGuides(guides: readonly SnapGuide[]): void {
-    while (guideEls.length < guides.length) {
-      const line = document.createElement('div');
-      line.className = 'studio-guide';
-      guidesEl.append(line);
-      guideEls.push(line);
+    while (guideEls.length < guides.length * 3) {
+      for (let i = 0; i < 3; i++) {
+        const el = document.createElement('div');
+        el.className = i === 0 ? 'studio-guide' : 'studio-guide-cap';
+        el.textContent = i === 0 ? '' : '\u00d7';
+        guidesEl.append(el);
+        guideEls.push(el);
+      }
     }
     guides.forEach((guide, i) => {
-      const el = guideEls[i];
-      if (!el) return;
-      const from = camera.toScreen(
-        guide.axis === 'x' ? { x: guide.position, y: guide.from } : { x: guide.from, y: guide.position },
-      );
-      const to = camera.toScreen(
-        guide.axis === 'x' ? { x: guide.position, y: guide.to } : { x: guide.to, y: guide.position },
-      );
-      const x = Math.min(from.x, to.x);
-      const y = Math.min(from.y, to.y);
-      el.style.transform = `translate(${String(x)}px, ${String(y)}px)`;
-      el.style.width = `${String(Math.max(1, Math.abs(to.x - from.x)))}px`;
-      el.style.height = `${String(Math.max(1, Math.abs(to.y - from.y)))}px`;
-      el.hidden = false;
+      const line = guideEls[i * 3];
+      const capA = guideEls[i * 3 + 1];
+      const capB = guideEls[i * 3 + 2];
+      if (!line || !capA || !capB) return;
+      const along = (value: number) =>
+        camera.toScreen(guide.axis === 'x' ? { x: guide.position, y: value } : { x: value, y: guide.position });
+      const from = along(guide.from);
+      const to = along(guide.to);
+      line.classList.toggle('is-grid', guide.kind === 'grid');
+      line.classList.toggle('is-vertical', guide.axis === 'x');
+      line.style.transform = `translate(${String(Math.min(from.x, to.x))}px, ${String(Math.min(from.y, to.y))}px)`;
+      line.style.width = `${String(Math.max(1, Math.abs(to.x - from.x)))}px`;
+      line.style.height = `${String(Math.max(1, Math.abs(to.y - from.y)))}px`;
+      line.hidden = false;
+      for (const [el, end] of [
+        [capA, guide.from],
+        [capB, guide.to],
+      ] as const) {
+        const at = along(end);
+        el.style.transform = `translate(${String(at.x)}px, ${String(at.y)}px)`;
+        el.hidden = guide.kind !== 'object';
+      }
     });
-    for (let i = guides.length; i < guideEls.length; i++) guideEls[i]?.remove();
-    guideEls.length = guides.length;
+    for (let i = guides.length * 3; i < guideEls.length; i++) guideEls[i]?.remove();
+    guideEls.length = guides.length * 3;
     guidesEl.hidden = guides.length === 0;
+  }
+
+  const spacingEls: HTMLElement[] = [];
+
+  /** Draws equal-spacing guides: a dashed line with an × marker in each gap. */
+  function renderSpacing(guides: readonly SpacingGuide[]): void {
+    while (spacingEls.length < guides.length * 3) {
+      for (let i = 0; i < 3; i++) {
+        const el = document.createElement('div');
+        el.className = i === 0 ? 'studio-spacing-line' : 'studio-spacing-mark';
+        el.textContent = i === 0 ? '' : '×';
+        spacingEl.append(el);
+        spacingEls.push(el);
+      }
+    }
+    guides.forEach((guide, i) => {
+      const line = spacingEls[i * 3];
+      const markA = spacingEls[i * 3 + 1];
+      const markB = spacingEls[i * 3 + 2];
+      if (!line || !markA || !markB) return;
+      const along = (value: number) =>
+        camera.toScreen(guide.gapAxis === 'x' ? { x: value, y: guide.position } : { x: guide.position, y: value });
+      const from = along(guide.from);
+      const to = along(guide.to);
+      line.style.transform = `translate(${String(Math.min(from.x, to.x))}px, ${String(Math.min(from.y, to.y))}px)`;
+      line.style.width = `${String(Math.max(1, Math.abs(to.x - from.x)))}px`;
+      line.style.height = `${String(Math.max(1, Math.abs(to.y - from.y)))}px`;
+      line.classList.toggle('is-vertical', guide.gapAxis === 'y');
+      for (const [el, mark] of [
+        [markA, guide.marks[0]],
+        [markB, guide.marks[1]],
+      ] as const) {
+        const at = along(mark);
+        el.style.transform = `translate(${String(at.x)}px, ${String(at.y)}px)`;
+      }
+    });
+    for (let i = guides.length * 3; i < spacingEls.length; i++) spacingEls[i]?.remove();
+    spacingEls.length = guides.length * 3;
+    spacingEl.hidden = guides.length === 0;
   }
 
   function selectionBounds(): Rect | null {
@@ -512,6 +572,7 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
         marqueeEl.hidden = true;
       } else if (interaction.kind === 'move') {
         renderGuides([]);
+        renderSpacing([]);
         const ids = [...interaction.from.keys()];
         if (cancelled) {
           for (const [id, from] of interaction.from) model.moveTo(id, from);
@@ -585,10 +646,17 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
           grid: { x: GRID_SPACING, y: GRID_SPACING },
           threshold: SNAP_THRESHOLD,
         });
+        // Equal-spacing snap fills the axes where no alignment snap engaged.
+        const spacing = snapSpacing(movedBounds, { candidates, threshold: SNAP_THRESHOLD });
+        const total = {
+          x: snap.delta.x !== 0 ? snap.delta.x : spacing.delta.x,
+          y: snap.delta.y !== 0 ? snap.delta.y : spacing.delta.y,
+        };
         for (const [id, from] of move.from) {
-          model.moveTo(id, { x: from.x + dx + snap.delta.x, y: from.y + dy + snap.delta.y });
+          model.moveTo(id, { x: from.x + dx + total.x, y: from.y + dy + total.y });
         }
         renderGuides(snap.guides);
+        renderSpacing(spacing.guides.filter((guide) => (guide.gapAxis === 'x' ? snap.delta.x : snap.delta.y) === 0));
       }
     },
     onStart: (detail) => {

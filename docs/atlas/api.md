@@ -17,6 +17,7 @@ description: API reference for the Atlas camera, spatial index, matrix, rect, OB
 | `pointInPolygon()`          | Even-odd ray-cast containment                            | Sync      | Boundary points are implementation-defined; add tolerance  |
 | `distanceToPolyline()`      | Distance to the nearest segment                          | Sync      | Returns `Infinity` for empty paths                         |
 | `snapRect()`                | Magnetic snapping with guide descriptors                 | Sync      | Each axis snaps independently to its nearest target        |
+| `snapSpacing()`             | Equal-gap spacing snap between neighbors                 | Sync      | Needs a qualifying neighbor on both sides of the axis      |
 | `alignRects()`              | Align rects to a shared edge or center                   | Sync      | Pure: returns new rects, input untouched                   |
 | `distributeRects()`         | Equalize gaps along one axis                             | Sync      | Needs 3+ rects; outermost rects stay fixed                 |
 | `AtlasError`                | Base class for all atlas errors                          | Sync      | Narrow with `instanceof AtlasError`                        |
@@ -192,10 +193,13 @@ All matrices use Canvas2D element order `[a, b, c, d, e, f]`; composition `multi
 | Function                       | Description                                                                                    |
 | ------------------------------ | ---------------------------------------------------------------------------------------------- |
 | `snapRect(rect, options)`      | Snapped `{ delta, guides }` against candidate rects and grid lines                             |
+| `snapSpacing(rect, options)`   | Snapped `{ delta, guides }` so gaps to the nearest neighbors on each axis are equal            |
 | `alignRects(rects, edge)`      | Copies aligned to a shared `left`/`horizontal-center`/`right`/`top`/`vertical-center`/`bottom` |
 | `distributeRects(rects, axis)` | Copies with equalized gaps along `'x'` or `'y'`                                                |
 
-`snapRect` options: `candidates` (rects to snap to), `grid` (`{ x?, y? }` line spacing), `threshold` (max snap distance, default `8`). Anchors are the rect's left/center/right and top/center/bottom edges; each axis picks its nearest target within `threshold` (inclusive). A `SnapGuide` is `{ axis, position, from, to }`: `axis` is the axis the guide line is perpendicular to, `position` is the world coordinate of the line, and `from`/`to` span the line along the other axis. `alignRects` and `distributeRects` are pure; distribution keeps the outermost rects fixed and returns input copies unchanged for fewer than three rects.
+`snapRect` options: `candidates` (rects to snap to), `grid` (`{ x?, y? }` line spacing), `threshold` (max snap distance, default `8`). Anchors are the rect's left/center/right and top/center/bottom edges; each axis picks its nearest target within `threshold` (inclusive). A `SnapGuide` is `{ axis, kind, position, from, to }`: `axis` is the axis the guide line is perpendicular to, `kind` is `'grid'` or `'object'` (what the snap engaged, for dashed vs solid rendering), `position` is the world coordinate of the line, and `from`/`to` span the line along the other axis. `alignRects` and `distributeRects` are pure; distribution keeps the outermost rects fixed and returns input copies unchanged for fewer than three rects.
+
+`snapSpacing` options: `candidates` (neighbor rects; the moving rect itself must not be included), `threshold` (max snap distance). A candidate counts as a neighbor on an axis only when it overlaps the moving rect on the perpendicular axis, and both sides need one. When the moving rect can be centered between its nearest left/right (or top/bottom) neighbors within `threshold`, that axis gets a delta. A `SpacingGuide` is `{ gapAxis, position, from, to, marks }`: `gapAxis` is the axis the equal gaps sit on (and the axis the delta applies to — note this is the opposite convention from `SnapGuide.axis`), the line runs along `gapAxis` from `from` to `to` at `position` (the moving rect's center on the perpendicular axis), and `marks` are the centers of the two equal gaps to draw as markers. Run it after `snapRect` and prefer the alignment snap on any axis where both engage.
 
 ---
 

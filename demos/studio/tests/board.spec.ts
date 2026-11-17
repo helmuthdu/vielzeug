@@ -265,3 +265,34 @@ test('dragging the southeast handle resizes the shape, with undo', async ({ page
     .poll(async () => (await shape.boundingBox())?.width ?? 0, { message: 'undo restores width' })
     .toBeCloseTo(before?.width ?? 0, 0);
 });
+
+test('dragging between two shapes shows equal-spacing guides and snaps centered', async ({ page }) => {
+  const box = await viewportBox(page);
+  // A at x 100..160, C at x 392..452; B (60 wide) centers at x 246 with equal 86px gaps.
+  // At the drop point (x 243) no anchor is within 8 of a grid line (32) or a neighbor
+  // edge, so only the spacing snap can engage on x.
+  await drawRect(page, [box.x + 100, box.y + 200], [box.x + 160, box.y + 260]);
+  await drawRect(page, [box.x + 392, box.y + 200], [box.x + 452, box.y + 260]);
+  await drawRect(page, [box.x + 300, box.y + 200], [box.x + 360, box.y + 260]);
+  await expect.poll(() => shapeCount(page)).toBe(3);
+
+  await page.mouse.click(box.x + 330, box.y + 230);
+  await page.mouse.move(box.x + 330, box.y + 230);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 273, box.y + 230, { steps: 6 });
+  await expect(page.locator('[data-testid="board-spacing"] .studio-spacing-line')).toBeVisible();
+  await expect(page.locator('[data-testid="board-spacing"] .studio-spacing-mark')).toHaveCount(2);
+  await page.mouse.up();
+  await expect(page.locator('[data-testid="board-spacing"]')).toBeHidden();
+
+  // Equal gaps: B.x - A.right === C.x - B.right in world coordinates.
+  const gaps = await page.evaluate(() => {
+    const xs = [...document.querySelectorAll<HTMLElement>('.studio-shape')].map((el) => {
+      const match = /translate\((-?\d+(?:\.\d+)?)px/.exec(el.style.transform);
+      return Number(match?.[0] ?? NaN);
+    });
+    const [a, c, b] = xs;
+    return { left: (b ?? 0) - ((a ?? 0) + 60), right: (c ?? 0) - ((b ?? 0) + 60) };
+  });
+  expect(gaps.left).toBe(gaps.right);
+});
