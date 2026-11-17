@@ -130,6 +130,14 @@ describe('collectAiReferenceSources()', () => {
 });
 
 describe('extractAiReferences()', () => {
+  it('ignores home-directory contracts while retaining repository references', () => {
+    expect(
+      extractAiReferences(
+        'Load `~/.agents/klugzeug/contract.md` and `.agents/conventions.md`.',
+      ),
+    ).toEqual(['.agents/conventions.md']);
+  });
+
   it('extracts every distinct .agents/... path token', () => {
     const text =
       'See `.agents/conventions.md` and `.agents/skills/build/SKILL.md`. Also `.agents/conventions.md` again.';

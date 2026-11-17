@@ -100,7 +100,7 @@ const AI_REF_IGNORE_DIRS = new Set([
 ]);
 const AI_REF_EXTENSIONS = new Set(['.md', '.mjs', '.mts', '.ts', '.vue', '.yml', '.yaml']);
 const AI_REF_IGNORE_BASENAMES = new Set(['CHANGELOG.md']);
-const AI_REF_PATTERN = /\.agents\/[A-Za-z0-9._/-]+\.md/g;
+const AI_REF_PATTERN = /(?<!~\/)\.agents\/[A-Za-z0-9._/-]+\.md/g;
 
 /** Text files that may legitimately carry `.agents/...` references. Changelogs are release history
  * and are allowed to mention paths that no longer exist. */
@@ -129,7 +129,9 @@ export function collectAiReferenceSources(root = ROOT) {
   return files.sort();
 }
 
-/** Pulls every literal `.agents/...` path token out of `text`, deduplicated. Skips obvious placeholders (e.g. `.agents/skills/<name>/SKILL.md`): anything
+/** Pulls repository `.agents/...` path tokens out of `text`, deduplicated. Home-directory
+ * `~/.agents/...` contracts are machine-local, not repository references.
+ * Skips obvious placeholders (e.g. `.agents/skills/<name>/SKILL.md`): anything
  * containing `<` is a template, not a real reference to validate. */
 export function extractAiReferences(text) {
   const matches = text.match(AI_REF_PATTERN) ?? [];
