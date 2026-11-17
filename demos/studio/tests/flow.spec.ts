@@ -63,7 +63,7 @@ test('dragging from a port to another node connects them', async ({ page }) => {
   await expect(edges).toHaveCount(4);
 });
 
-test('releasing a wire over another node body connects to its in-port', async ({ page }) => {
+test('releasing a wire anywhere over another node connects it', async ({ page }) => {
   const edges = page.locator('[data-testid="flow-edges"] .flow-edge:not(.flow-edge-temp)');
   await expect(edges).toHaveCount(4);
 
@@ -77,6 +77,33 @@ test('releasing a wire over another node body connects to its in-port', async ({
   await page.mouse.up();
 
   await expect(edges).toHaveCount(5);
+
+  // Dropped on the target's out-port dot (the only visible target on that side).
+  const out3 = await centerOf(port(page, 3, 'out'));
+  const out1 = await centerOf(port(page, 1, 'out'));
+  await page.mouse.move(out1.x, out1.y);
+  await page.mouse.down();
+  await page.mouse.move(out3.x, out3.y, { steps: 8 });
+  await page.mouse.up();
+
+  await expect(edges).toHaveCount(6);
+});
+
+test('a wire pulled from an in-port connects backwards, keeping out to in flow', async ({ page }) => {
+  const edges = page.locator('[data-testid="flow-edges"] .flow-edge:not(.flow-edge-temp)');
+  await expect(edges).toHaveCount(4);
+
+  // Grab "Output".in (node 3) and release over "Input" (node 0): edge is Input -> Output.
+  const inn = await centerOf(port(page, 3, 'in'));
+  const target = await centerOf(page.locator('[data-testid="flow-world"] [data-node-id]').nth(0));
+
+  await page.mouse.move(inn.x, inn.y);
+  await page.mouse.down();
+  await page.mouse.move(target.x, target.y, { steps: 8 });
+  await page.mouse.up();
+
+  await expect(edges).toHaveCount(5);
+  await expect(page.locator('[data-testid="flow-status"]')).toHaveText(/Topological order/);
 });
 
 test('a cycle is detected, highlighted, and reported', async ({ page }) => {

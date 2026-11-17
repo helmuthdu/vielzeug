@@ -76,8 +76,18 @@
   position: absolute;
   width: var(--size-3);
   height: var(--size-3);
+  cursor: crosshair;
   background-color: var(--color-neutral-lighter);
   border: var(--border-2) solid var(--color-primary);
+  border-radius: var(--rounded-full);
+}
+
+/* Invisible hit ring: the visible dot is tiny, so grab area is doubled to make
+   wires easy to start without accidentally grabbing the node body instead. */
+.flow-port::after {
+  position: absolute;
+  inset: calc(var(--size-3) * -0.66);
+  content: '';
   border-radius: var(--rounded-full);
 }
 

@@ -276,8 +276,12 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
     return { node: nodeEl.dataset.nodeId as string, port: portId };
   }
 
-  /** A release over a node's body (missing the small port dot) targets its in-port. */
-  function nodeBodyTarget(event: PointerEvent | MouseEvent): { node: string; port: string } | null {
+  /**
+   * A wire release anywhere over another node — its body, in-port, or even its
+   * out-port dot (the only visible target on that side) — targets its in-port.
+   * Missing the 12px port dot must never silently drop the wire.
+   */
+  function wireTarget(event: PointerEvent | MouseEvent): { node: string; port: string } | null {
     const nodeEl = nodeFromEvent(event);
     if (!nodeEl) return null;
     return { node: nodeEl.dataset.nodeId as string, port: 'in' };
@@ -299,14 +303,16 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
         pointerPort = null;
         tempPath.style.display = 'none';
         tempPath.setAttribute('d', '');
-        // Complete the connection when released over another node's in-port —
-        // or over its body, which is what people actually aim for.
-        const target = portFromEvent(detail.event) ?? nodeBodyTarget(detail.event);
-        if (target && target.node !== active.fromNode && target.port !== 'out') {
+        // Complete the connection when released anywhere over another node.
+        // A wire pulled from an in-port runs backwards, so flip the direction
+        // and keep the flow out → in.
+        const target = wireTarget(detail.event);
+        if (target && target.node !== active.fromNode) {
+          const backward = active.fromPort === 'in';
           const edge: FlowEdge = {
-            from: { node: active.fromNode, port: active.fromPort },
+            from: backward ? { node: target.node, port: 'out' } : { node: active.fromNode, port: active.fromPort },
             id: `edge-${String(nextEdgeId++)}`,
-            to: { node: target.node, port: target.port },
+            to: backward ? { node: active.fromNode, port: 'in' } : { node: target.node, port: 'in' },
           };
           // record() only stores history; the mutation happens here (board-scene convention).
           model.addEdge(edge);
