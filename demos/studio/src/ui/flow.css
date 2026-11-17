@@ -11,12 +11,16 @@
   left: 0;
 }
 
+/* The world layer is zero-sized (it only carries a transform), so a
+   percentage-sized SVG would compute to 0x0 — and Chrome paints nothing at
+   all for a zero-sized SVG, even with overflow: visible. A 1px box keeps the
+   overflow rendering path alive. */
 .flow-edges {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 1px;
+  height: 1px;
   overflow: visible;
   pointer-events: none;
 }

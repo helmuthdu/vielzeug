@@ -29,12 +29,14 @@
   border-radius: var(--rounded-lg);
 }
 
+/* Same as .flow-edges: the world layer is zero-sized, so a percentage-sized
+   SVG computes to 0x0 and Chrome paints nothing; 1px keeps overflow visible. */
 .studio-strokes {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 1px;
+  height: 1px;
   overflow: visible;
   pointer-events: none;
 }
