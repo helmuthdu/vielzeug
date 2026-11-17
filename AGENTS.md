@@ -1,24 +1,102 @@
 # AGENTS.md: Vielzeug
 
-Canonical entrypoint for every AI client. `.github/copilot-instructions.md` and `.junie/AGENTS.md` point here instead of restating it. Repo-wide rules live in this file; task procedure lives in `.agents/skills/*/SKILL.md` (vendor-neutral agent skills: Copilot discovers `.agents/skills/` directly; Devin and Junie read them as plain files; clients with their own skills directory can symlink it to `.agents/skills`); engineering conventions live in `.agents/conventions.md`.
+Canonical entrypoint for every AI client. `.github/copilot-instructions.md` and `.junie/AGENTS.md` point here instead of restating it. Repo-wide rules live in this file, and the `## Project profile` section below supplies the commands and gates the workflow skills use. Task procedure comes from the klugzeug skills (`plan`, `build`, `test`, `review`, `docs`, `deliver`, `pipeline`), installed per machine. The only skill stored in this repository is the Codex consumer skill, `.agents/skills/vielzeug/`. Engineering conventions live in `.agents/conventions.md`.
 
 Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeug/*`. Packages target ES2022, use strict TypeScript, and ship ESM and CJS builds through Vite.
+
+## Project profile
+
+Read by the klugzeug skills. Rules elsewhere in this file still apply; this section supplies the commands, gates, and project-specific facts.
+
+- **Stack**: TypeScript strict monorepo; Bun workspaces (`packages/*`, `demos/*`); Vite library builds (ESM and CJS); Vitest with jsdom; Biome; VitePress docs; Lefthook hooks. Node 22 for tests and docs.
+- **Plan file**: `packages/<name>/.plan.md`. Not gitignored: keep it out of commits.
+- **Conventions**: `.agents/conventions.md`, load before editing `packages/**`. Package facts come from `packages/<name>/package.json`; `.agents/reference/packages.md` is a generated view.
+- **Public API**: `packages/<name>/src/index.ts`; errors in `src/errors.ts`; `_dev.ts` is internal.
+
+### Commands
+
+| Purpose           | Command                                                                                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install           | `bun install`                                                                                                                                              |
+| Test, one package | `bun x vitest run packages/<name>/src/__tests__/`                                                                                                          |
+| Test, one file    | `bun x vitest run <file>`                                                                                                                                  |
+| Test, all         | `bun run test`                                                                                                                                             |
+| Lint              | `bun run --filter @vielzeug/<name> lint` (all: `bun run lint`)                                                                                             |
+| Lint fix          | `bun run fix`                                                                                                                                              |
+| Build             | `bun run --filter @vielzeug/<name> build` (all: `bun run build`)                                                                                           |
+| Type tests        | `bun run --filter @vielzeug/<name> test:types` where declared; `build` emits declarations. No root typecheck script: `[VERIFY]` for packages without these |
+| E2E               | `bun run --filter @vielzeug/<name> test:e2e` where declared                                                                                                |
+| Docs build        | `bun run --filter @vielzeug/codex build && bun run docs:build`                                                                                             |
+| Docs dev          | `bun run docs:dev`                                                                                                                                         |
+| Demos             | `bun run validate:demos`                                                                                                                                   |
+
+### Validation gates by changed surface
+
+Final gates run once, per Build Scheduling above. Focused checks run while iterating.
+
+| Changed surface                              | Gate                                                                                                                         |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Package source                               | focused vitest on `packages/<name>/src/__tests__/`, `lint`, `build` for the package                                          |
+| Real-browser behaviour (`test:e2e` declared) | `test:e2e` scoped to the affected component; refine needs `build:e2e` first                                                  |
+| Public API                                   | package gate plus `bun run validate:docs`, `validate:readme`, `validate:repl`, `validate:sidebar` with `-- --package=<name>` |
+| Tests only                                   | focused tests; lint and build only when config or imports changed                                                            |
+| Cross-package call sites                     | focused tests, lint, and build for every affected package                                                                    |
+| Demo or integration                          | owning-package gate when the library changed; demo test and build; `bun run validate:demos` for shared impact                |
+| Build config or `_dev.ts` gating             | `bun run verify:prod-gate`                                                                                                   |
+| Tooling (`scripts/`)                         | `bun x vitest run scripts/` and a direct smoke run of the changed script                                                     |
+| `.agents/` or package manifests              | `bun run check:ai-data`; `bun run check:package-manifests` for manifests                                                     |
+| Docs                                         | `validate:docs`, then `bun run --filter @vielzeug/codex build && bun run docs:build`                                         |
+| Change files                                 | `bun run check:change-files`                                                                                                 |
+| Publish or release verification              | `bun run verify:packed -- --package=@vielzeug/<name>` (only when asked)                                                      |
+| `.github/workflows`                          | `bun run ci:local` (needs `act`); workflow edits need approval                                                               |
+
+### Conventions and references
+
+- `.agents/reference/docs-template.md`: structure for `docs/<name>/` pages. It is included verbatim in `docs/guide/docs-template.md`, so edit it deliberately.
+- `.agents/reference/readme-template.md`: README structure; the description blockquote equals `package.json#description`.
+- `.agents/reference/security-checklist.md`: vulnerability classes for a security review of this repository's packages.
+- Demo UI and `@vielzeug/*` usage: also load `.agents/skills/vielzeug/SKILL.md` (Codex consumer skill) when changing demos.
+
+### Project rules that always apply
+
+- **Versioning** is CalVer lockstep trains, `YY.MM.N`, see `RELEASE.md`. Never pick a patch, minor, or major bump for versioning. A change file's type only selects the changelog section.
+- **Change files**: `bun scripts/change.mjs <name> <patch|minor|major> "<message>"`, one package per call, written under `changes/@vielzeug/<name>/`. Never scan the working tree for pending change files. Docs changes add a codex change file through the pre-commit hook.
+- **Breaking changes** ride the next train: describe them in the changelog entry and the package's `docs/<name>/migration.md`.
+- **Commits**: conventional commits, for example `feat(courier): add retry logic`.
+- **New packages**: `bun run new:package <name> "<description>"`. Do not hand-create the scaffold.
+- **Worktrees**: `bun run worktree:add <pkg>` only for packages with no `@vielzeug/*` dependency edge in either direction.
+- **Generated files**: `.agents/reference/packages.md`, generated blocks in `packages/codex/skills/vielzeug/SKILL.md`, and docs alias maps. Change their sources and regenerate.
+
+### Protected paths
+
+- `packages/codex/skills/vielzeug/`: the consumer skill. Edit it there; `.agents/skills/vielzeug` is a symlink to it.
+- `.github/workflows/`, `.github/AGENTS.md`: approval required before any change.
+- `changes/@vielzeug/codex/`: written by the pre-commit hook for docs changes.
+
+### Delivery
+
+- PR template: `.github/pull_request_template.md`. Keep its headings; the Validation section lists the exact commands and results.
+- Pre-commit hooks (Lefthook): Biome, related Vitest files, `check:ai-data` for `.agents/**`, and the codex change file for `docs/**`. Never bypass them with `--no-verify`.
+- Publishing and releasing are outside the workflow skills; they need explicit approval for each action.
 
 ## Start work
 
 1. Inspect the worktree and preserve changes you did not make.
-2. Select every row in the table that matches the task; do not load skills for rows that do not match (clients with skill support load them automatically; otherwise read the files):
+2. Use the klugzeug skill that matches the task. Clients with skill support load them automatically; otherwise read the skill file. Load the Codex consumer skill for demo changes that consume `@vielzeug/*`:
 
-| Situation                                              | Skill                              |
-| ------------------------------------------------------ | ---------------------------------- |
-| Change code, tests, tooling, or CI                     | `.agents/skills/build/SKILL.md`    |
-| Investigate, audit, plan, or redesign                  | `.agents/skills/review/SKILL.md`   |
-| Update docs, README, recipes, or REPL examples         | `.agents/skills/document/SKILL.md` |
-| Prepare releases, commits, or pull requests            | `.agents/skills/release/SKILL.md`  |
-| Consume `@vielzeug/*` packages (demos, Refine UI work) | `.agents/skills/vielzeug/SKILL.md` |
+| Situation                                              | Skill                                         |
+| ------------------------------------------------------ | --------------------------------------------- |
+| Change code, tests, tooling, or CI                     | `build`                                       |
+| Improve or audit tests                                 | `test`                                        |
+| Review, audit security, accessibility, or performance  | `review` (lens `security`, `a11y`, or `perf`) |
+| Plan, audit, spec, or redesign before changing         | `plan`                                        |
+| Update docs, README, recipes, or REPL examples         | `docs`                                        |
+| Prepare commits, pull requests, or change files        | `deliver`                                     |
+| Full pass from plan to delivery                        | `pipeline`                                    |
+| Consume `@vielzeug/*` packages (demos, Refine UI work) | `.agents/skills/vielzeug/SKILL.md`            |
 
 3. When a task matches multiple rows, load each matching skill. In particular, code changes to demos that consume `@vielzeug/*` require both `build` and `vielzeug`.
-4. Load the files in each skill's `Load` section. Reuse instruction files already present in the task context instead of reading them again; load missing files and reread only when their content changes. This applies across all skills and subtree contracts. Load `.agents/conventions.md` before editing package source.
+4. Read the `## Project profile` above and the files it links, and reuse instruction files already in the task context. Load `.agents/conventions.md` before editing package source.
 5. Read the nearest subtree `AGENTS.md` before editing inside it (see the index at the end).
 
 ## Source of truth
@@ -124,7 +202,7 @@ Repository-wide: `bun run build`, `bun run test`, `bun run lint`, `bun run fix`.
 ### `.agents/` contents
 
 - `conventions.md`: engineering conventions: public API design, disposal, errors, tests, diagnostics, file layout.
-- `skills/<name>/SKILL.md`: task skills (`build`, `review`, `document`, `release`); `skills/vielzeug` is a symlink to `packages/codex/skills/vielzeug`, the consumer skill codex ships (`codex skills install`): edit it there. For demo code changes that consume `@vielzeug/*`, load it alongside `build` as described in Start work.
+- `skills/vielzeug`: a symlink to `packages/codex/skills/vielzeug`, the consumer skill codex ships (`codex skills install`): edit it there. For demo code changes that consume `@vielzeug/*`, load it alongside `build` as described in Start work. The workflow skills (`plan`, `build`, `test`, `review`, `docs`, `deliver`, `pipeline`) are klugzeug skills installed per machine, not stored here.
 - `reference/packages.md`: generated package table; `docs-template.md`, `readme-template.md`, `security-checklist.md`: hand-curated, shared by skills.
 
 Every `.agents/...` path mentioned anywhere in the repo must resolve; `bun run check:ai-data` fails on a dangling reference.

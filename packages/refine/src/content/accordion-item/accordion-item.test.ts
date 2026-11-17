@@ -119,9 +119,9 @@ describe('ore-accordion-item', () => {
       const touch = (y: number) => new Touch({ clientY: y, identifier: 1, target });
 
       target.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch(startY)] }));
-      target.dispatchEvent(
-        new TouchEvent('touchend', { bubbles: true, cancelable: true, changedTouches: [touch(endY)] }),
-      );
+      const end = new TouchEvent('touchend', { bubbles: true, cancelable: true, changedTouches: [touch(endY)] });
+      target.dispatchEvent(end);
+      return end;
     };
 
     it('opens on touchend tap', async () => {
@@ -157,16 +157,48 @@ describe('ore-accordion-item', () => {
       expect(details.open).toBe(false);
     });
 
-    it('does not double-toggle when synthesized click follows touchend', async () => {
+    it('prevents the touchend default to suppress the synthesized click', async () => {
+      fixture = await mount('ore-accordion-item');
+
+      const summary = fixture.query<HTMLElement>('summary')!;
+      const details = fixture.query<HTMLDetailsElement>('details')!;
+
+      const end = fireTap(summary);
+
+      expect(end.defaultPrevented).toBe(true);
+      expect(details.open).toBe(true);
+    });
+
+    it('ignores a second-finger tap while the first finger is still down', async () => {
+      fixture = await mount('ore-accordion-item');
+
+      const summary = fixture.query<HTMLElement>('summary')!;
+      const details = fixture.query<HTMLDetailsElement>('details')!;
+      const first = new Touch({ clientY: 100, identifier: 1, target: summary });
+      const second = new Touch({ clientY: 100, identifier: 2, target: summary });
+
+      summary.dispatchEvent(
+        new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [first, second] }),
+      );
+      summary.dispatchEvent(
+        new TouchEvent('touchend', { bubbles: true, cancelable: true, changedTouches: [second], touches: [first] }),
+      );
+
+      expect(details.open).toBe(false);
+    });
+
+    it('does not swallow an immediate mouse click after a touch tap', async () => {
       fixture = await mount('ore-accordion-item');
 
       const summary = fixture.query<HTMLElement>('summary')!;
       const details = fixture.query<HTMLDetailsElement>('details')!;
 
       fireTap(summary);
+      expect(details.open).toBe(true);
+
       summary.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
-      expect(details.open).toBe(true);
+      expect(details.open).toBe(false);
     });
   });
 

@@ -32,6 +32,8 @@ export type PanGestureOptions = Readonly<{
   onMove?: (detail: PanGestureDetail) => void;
   onStart?: (detail: PanGestureDetail) => void;
   pointerCapture?: boolean;
+  /** Evaluated after axis/distance recognition, before pointer capture. False rejects the session. */
+  shouldActivate?: (detail: PanGestureDetail) => boolean;
   shouldStart?: (event: PointerEvent) => boolean;
   signal?: AbortSignal;
 }>;
@@ -64,6 +66,7 @@ export function createPanGesture(target: Element, options: PanGestureOptions = {
     onMove,
     onStart,
     pointerCapture = true,
+    shouldActivate,
     shouldStart,
     signal,
   } = options;
@@ -76,6 +79,7 @@ export function createPanGesture(target: Element, options: PanGestureOptions = {
     onMove: onMove ? (detail) => onMove(toPanDetail(detail)) : undefined,
     onStart: onStart ? (detail) => onStart(toPanDetail(detail)) : undefined,
     pointerCapture,
+    shouldActivate: shouldActivate ? (detail) => shouldActivate(toPanDetail(detail)) : undefined,
     shouldStart,
     signal,
   });

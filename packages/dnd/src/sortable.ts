@@ -904,7 +904,14 @@ export function createSortable(options: SortableOptions): Sortable {
 
       if (!item || !getItems().includes(item)) return null;
 
-      if (handle === undefined) return item;
+      if (handle === undefined) {
+        const interactive = target.closest(
+          'input, textarea, select, button, a[href], summary, [contenteditable]:not([contenteditable="false"]), ' +
+            '[role="button"], [role="link"], [role="slider"], [role="spinbutton"], [role="textbox"], ' +
+            '[role="checkbox"], [role="radio"], [role="switch"], [role="combobox"], [data-no-drag]',
+        );
+        return interactive && item.contains(interactive) ? null : item;
+      }
       if (!handleSelector) return null;
 
       const handleTarget = target.closest<HTMLElement>(handleSelector);

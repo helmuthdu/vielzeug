@@ -4,6 +4,7 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 import { createElementSize } from '@vielzeug/sentinel';
 import { announce, elementDirection } from '../../core';
 import { projectFling } from '../../shared/fling';
+import { SWIPE_EDITABLE_SELECTOR, SWIPE_SURFACES, swipePath } from '../../shared/swipe';
 import { THEME_COLORS, type ThemeColor } from '../../types';
 import { clearCoverflow, syncCoverflow } from './_coverflow';
 import componentStyles from './carousel.css?inline';
@@ -462,6 +463,12 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         goTo(index);
       };
       const handleDragStart = (event: DragEvent): void => {
+        if (
+          swipePath(event, el).some((node) =>
+            node.matches(`${SWIPE_EDITABLE_SELECTOR}, ${SWIPE_SURFACES}, ore-card-picker`),
+          )
+        )
+          return;
         if (event.composedPath().some((node) => node instanceof HTMLElement && slides.includes(node))) {
           event.preventDefault();
         }
@@ -489,18 +496,31 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         shouldStart: (event) => {
           const path = event.composedPath();
 
-          return !path.some(
-            (node) =>
-              node instanceof Element && node.getRootNode() === el.shadowRoot && node.matches('ore-media-navigation'),
+          return (
+            !event.defaultPrevented &&
+            !swipePath(event, el).some(
+              (node) =>
+                node.matches(`${SWIPE_EDITABLE_SELECTOR}, ${SWIPE_SURFACES}, ore-card-picker`) ||
+                node.isContentEditable,
+            ) &&
+            !path.some(
+              (node) =>
+                node instanceof Element && node.getRootNode() === el.shadowRoot && node.matches('ore-media-navigation'),
+            )
           );
         },
       });
+      const gestureState = watch(
+        () => [activeIndex.value, props.orientation.value, props.variant.value],
+        () => pan.cancel(),
+      );
       const shadowRoot = el.shadowRoot!;
       const slot = shadowRoot.querySelector<HTMLSlotElement>('slot')!;
 
       // slotchange replaces MutationObserver: fires exactly when assigned
       // nodes change, scoped to this component's slot, no polling overhead.
       const onSlotChange = (): void => {
+        pan.cancel();
         const previous = slides;
 
         refreshSlides();
@@ -527,6 +547,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         if (layoutFrame !== undefined) cancelAnimationFrame(layoutFrame);
         slides.forEach(clearCoverflow);
         pan.dispose();
+        gestureState.dispose();
         stopAutoplay();
         slot.removeEventListener('slotchange', onSlotChange);
         el.removeEventListener('pointerdown', resetClick, true);

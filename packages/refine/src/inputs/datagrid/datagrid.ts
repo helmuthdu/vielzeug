@@ -634,28 +634,47 @@ define<OreDataGridProps>(DATAGRID_TAG, {
     // Only columns with `resizable: true` get a drag handle.
 
     const colWidths = signal<Record<string, number>>({});
+    let resizeController: AbortController | undefined;
+
+    onCleanup(() => resizeController?.abort());
 
     const createColResizeHandler =
       (key: string, th: HTMLElement): ((e: PointerEvent) => void) =>
       (e: PointerEvent): void => {
+        if (!e.isPrimary || e.button !== 0) return;
+
         e.preventDefault();
 
         const startX = e.clientX;
         const startW = th.getBoundingClientRect().width;
-        // AbortController ensures listeners are removed even if the component
-        // is destroyed mid-drag (e.g. during SPA navigation).
+        resizeController?.abort();
         const ac = new AbortController();
+        resizeController = ac;
         const { signal: sig } = ac;
+        const doc = th.ownerDocument;
 
-        window.addEventListener(
+        doc.addEventListener(
           'pointermove',
           (mv: PointerEvent) => {
+            if (mv.pointerId !== e.pointerId) return;
             colWidths.value = { ...colWidths.value, [key]: Math.max(40, startW + mv.clientX - startX) };
           },
           { signal: sig },
         );
 
-        window.addEventListener('pointerup', () => ac.abort(), { signal: sig });
+        const stopResize = (event: PointerEvent): void => {
+          if (event.pointerId === e.pointerId) ac.abort();
+        };
+        doc.addEventListener('pointerup', stopResize, { signal: sig });
+        doc.addEventListener('pointercancel', stopResize, { signal: sig });
+        doc.defaultView?.addEventListener('blur', () => ac.abort(), { signal: sig });
+        doc.addEventListener(
+          'visibilitychange',
+          () => {
+            if (doc.visibilityState === 'hidden') ac.abort();
+          },
+          { signal: sig },
+        );
       };
 
     // ── Visible columns (respects hide/show from column menu) ────────────────

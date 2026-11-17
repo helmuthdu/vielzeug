@@ -206,6 +206,8 @@ The drawer offers three ways to dismiss it, covering touch, pointer, and keyboar
 - **Close button** — when the sidebar has header content, an `×` button appears in the drawer header, in the same row position the collapse toggle holds on desktop, labelled by `drawer-close-label`. A sidebar without header content (the app-shell pattern above) keeps the drawer headerless so the panel matches its desktop and tablet layout; it closes through the other routes.
 - **Swipe** — dragging the grabber nub on the panel's trailing edge past a threshold closes the drawer; releasing early snaps back.
 
+Closing or reopening cancels an in-progress swipe and clears its visual offset. A second touch also cancels the swipe, and pinch zoom remains available over the handle. The sidebar does not claim swipes from the navigation content.
+
 `Escape` also closes the drawer, and focus returns to the element that opened it. Selecting a navigation item closes the drawer by default; set `close-on-select="false"` to keep it open.
 
 The backdrop is click-to-close only by default. `backdrop="opaque"` dims the page with the theme scrim and `backdrop="blur"` adds a blur behind the panel; both are built from the theme's darkening veil, so they dim in either light or dark scheme rather than inverting into a bright fog. `backdrop="transparent"` is the same as the default. The values match `ore-drawer`, whose backdrop dims by default because a dialog replaces the page rather than sliding in beside it.

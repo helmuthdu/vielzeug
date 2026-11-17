@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Harden counter hold, datagrid resize, accordion touch taps, reader tap zones, and outside-pointer dismissal against stray pointers and background tabs",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

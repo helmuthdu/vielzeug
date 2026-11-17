@@ -1,8 +1,9 @@
 import { createPanGesture, type PanGesture } from '@vielzeug/gesture';
 import { type SpringHandle, spring } from '@vielzeug/necromancer';
-import { define, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
+import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
+import { computed, signal, watch } from '@vielzeug/ripple';
 import { getMotionMode } from '../../motion';
+import { canScrollInDirection, SWIPE_EXCLUSIONS, swipePath } from '../../shared/swipe';
 import componentStyles from './pull-to-refresh.css?inline';
 
 /**
@@ -193,6 +194,7 @@ define<OrePullToRefreshProps>(PULL_TO_REFRESH_TAG, {
 
       if (!scrollEl || !content) return;
 
+      let origin: HTMLElement[] = [];
       pan = createPanGesture(scrollEl, {
         axis: 'y',
         disabled: () => props.disabled.value,
@@ -220,11 +222,37 @@ define<OrePullToRefreshProps>(PULL_TO_REFRESH_TAG, {
           dragBase = offset.value;
         },
         pointerCapture: false,
-        // A pull only starts from the top of the scroll: mid-scroll drags
-        // belong to the scroller.
-        shouldStart: () =>
-          !props.disabled.value && phase.value !== 'refreshing' && (scrollRef.value?.scrollTop ?? 0) <= 0,
+        shouldActivate: ({ distance }) => distance > 0 && !canScrollInDirection(origin, { axis: 'y', direction: 1 }),
+        shouldStart: (event) => {
+          origin = [...swipePath(event, scrollEl), scrollEl];
+          return (
+            !event.defaultPrevented &&
+            phase.value !== 'refreshing' &&
+            !origin
+              .slice(0, -1)
+              .some((node) => node.matches(`${SWIPE_EXCLUSIONS}, ore-card-picker`) || node.isContentEditable) &&
+            !canScrollInDirection(origin, { axis: 'y', direction: 1 }) &&
+            scrollEl.scrollTop <= 0
+          );
+        },
       });
+      onEvent(
+        scrollEl,
+        'touchmove',
+        (event) => {
+          if (!pan?.active) return;
+          if (event.touches.length !== 1 || !event.cancelable) {
+            pan.cancel();
+            return;
+          }
+          event.preventDefault();
+        },
+        { passive: false },
+      );
+      const disabledWatcher = watch(props.disabled, (disabled) => {
+        if (disabled) pan?.cancel();
+      });
+      onCleanup(() => disabledWatcher.dispose());
     });
 
     (el as PullToRefreshElement).refreshed = endRefresh;

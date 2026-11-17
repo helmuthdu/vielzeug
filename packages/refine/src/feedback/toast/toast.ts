@@ -6,6 +6,7 @@ import { lifecycleSignal } from '../../core';
 import type { ButtonEmphasis, ButtonVariant } from '../../inputs/button/button';
 import { animateReflow } from '../../reflow';
 import { projectFling } from '../../shared/fling';
+import { SWIPE_EXCLUSIONS, swipePath } from '../../shared/swipe';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './toast.css?inline';
 
@@ -674,7 +675,8 @@ define<OreToastProps>(TOAST_TAG, {
           // Velocity-aware: a short fast flick projects past the threshold just
           // like a long drag (see shared/fling), while a counter-flick at the
           // end pulls the projection back and cancels the dismiss.
-          if (reason !== 'release' || Math.abs(projectFling(distance, velocity)) < 48) {
+          const projected = projectFling(distance, velocity);
+          if (reason !== 'release' || Math.abs(projected) < 48) {
             reset();
 
             return;
@@ -699,7 +701,7 @@ define<OreToastProps>(TOAST_TAG, {
             return;
           }
 
-          const direction = distance >= 0 ? 1 : -1;
+          const direction = projected >= 0 ? 1 : -1;
 
           inner.style.transition = `transform ${flight}ms ease-out, opacity ${flight}ms ease-out`;
           // Force a style flush so the transition starts from the current
@@ -721,9 +723,10 @@ define<OreToastProps>(TOAST_TAG, {
         },
         pointerCapture: false,
         shouldStart: (event) =>
-          !event
-            .composedPath()
-            .some((node) => node instanceof Element && node.matches('button, a, input, select, textarea, ore-button')),
+          !event.defaultPrevented &&
+          !swipePath(event, wrapper).some(
+            (node) => node.matches(`${SWIPE_EXCLUSIONS}, ore-card-picker`) || node.isContentEditable,
+          ),
       });
     };
 

@@ -64,8 +64,8 @@ describe('ore-prose', () => {
   describe('Error handling', () => {
     it('falls back to plain text and emits error for oversized source', async () => {
       fixture = await mount('ore-prose');
-      const events: CustomEvent[] = [];
-      fixture.element.addEventListener('error', (event) => events.push(event as CustomEvent));
+      const events: Event[] = [];
+      fixture.element.addEventListener('error', (event) => events.push(event));
 
       fixture.element.setAttribute('markdown', 'x'.repeat(200_001));
       await new Promise((resolve) => setTimeout(resolve, 0));

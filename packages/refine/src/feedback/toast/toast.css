@@ -97,7 +97,7 @@
   .toast-wrapper {
     position: relative;
     pointer-events: auto;
-    touch-action: pan-y;
+    touch-action: pan-y pinch-zoom;
   }
 
   /* ── Inner (motion target) ────────────────────────────────────────────── */

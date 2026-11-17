@@ -148,6 +148,7 @@ export const createListboxDropdown = <T extends ListboxItem>(
 
   createOutsidePointerDismissal({
     getTargets: () => [options.getBoundary(), options.getPanel()],
+    host: options.getBoundary(),
     isActive: () => isOpen.value,
     onDismiss: () => close('outsideClick'),
     signal: options.signal,

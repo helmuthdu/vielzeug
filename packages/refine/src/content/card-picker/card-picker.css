@@ -23,7 +23,6 @@
     min-height: var(--card-picker-min-height, 0);
     padding-inline: var(--size-2);
     overflow: hidden;
-    touch-action: pan-y;
   }
 
   :host([data-empty]) .stage {

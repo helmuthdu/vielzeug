@@ -12,9 +12,10 @@ import {
 import { getMotionMode } from '../../motion';
 import { disablableBundle } from '../../shared';
 import { projectFling } from '../../shared/fling';
+import { SWIPE_EXCLUSIONS, SWIPE_INTERACTIVE_SELECTOR } from '../../shared/swipe';
 import { CARD_PICKER_CTX } from './_card-picker-context';
 import componentStyles from './card-picker.css?inline';
-import './card-picker-item';
+import './card-picker-item'; // Marks the child as absorbed by this entry in manifest discovery.
 
 export { MEDIA_NAVIGATION_TAG } from '../../navigation/media-navigation/media-navigation';
 export type { OreCardPickerItemProps } from './card-picker-item';
@@ -67,9 +68,6 @@ export type OreCardPickerProps = {
   values?: string;
 };
 
-const INTERACTIVE_SELECTOR =
-  'a[href], button, input, select, textarea, [role="button"], [role="checkbox"], [contenteditable=""], [contenteditable="true"], ore-button, ore-checkbox';
-
 const itemLabel = (item: HTMLElement): string =>
   item.getAttribute('label')?.trim() || item.getAttribute('value')?.trim() || 'Card';
 
@@ -95,6 +93,7 @@ const itemLabel = (item: HTMLElement): string =>
  * @fires change - Emitted when selection changes. detail: { labels: string[]; originalEvent?: Event; value: string; values: string[] }
  *
  * @slot - Place `ore-card-picker-item` elements here
+ * @remarks Mark custom gesture subtrees with `data-no-swipe` to exclude them from picker and drawer swipes.
  *
  * @cssprop --card-picker-gap - Space between the card stage and navigation controls
  * @cssprop --card-picker-min-height - Optional minimum card stage height (default `0`)
@@ -344,7 +343,9 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
 
       const interactiveTarget = event
         .composedPath()
-        .some((node) => node instanceof HTMLElement && (node.matches(INTERACTIVE_SELECTOR) || node.isContentEditable));
+        .some(
+          (node) => node instanceof HTMLElement && (node.matches(SWIPE_INTERACTIVE_SELECTOR) || node.isContentEditable),
+        );
       if (interactiveTarget) return;
 
       navigation.set(activeIndex.value);
@@ -382,6 +383,8 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
       let springHandle: SpringHandle | undefined;
       let dragOffset = 0;
       let dragOrigin = 0;
+      let dragDirection = elementDirection(el);
+      let dragging = false;
       // Every drag frame re-measures the inset anchor, so the navigation bar slides with the card
       // it belongs to rather than sitting still while the artwork moves.
       const applyDrag = (offset: number): void => {
@@ -395,6 +398,7 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
         dragOffset = 0;
         stage.style.removeProperty('--_drag-offset');
         el.removeAttribute('data-dragging');
+        syncNavigationAnchor();
       };
       const settleDrag = (velocity: number): void => {
         springHandle?.dispose();
@@ -411,8 +415,10 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
           resetDrag();
         });
       };
-      const resetClick = (): void => {
+      const preparePointer = (event: PointerEvent): void => {
+        if (!event.isPrimary) return;
         suppressClick = false;
+        dragDirection = elementDirection(el);
       };
       const preventSwipeClick = (event: MouseEvent): void => {
         if (!suppressClick || event.detail === 0) return;
@@ -421,18 +427,24 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
         event.preventDefault();
         event.stopImmediatePropagation();
       };
-      // Native image dragging (starting on a card's artwork) would hijack the swipe, so a drag
-      // begun inside an item is always the picker's own gesture instead.
+      // Artwork must not start native dragging unless its subtree owns the interaction.
       const handleDragStart = (event: DragEvent): void => {
+        const composedPath = event.composedPath();
+        const path = composedPath.slice(0, composedPath.indexOf(stage));
+        if (path.some((node) => node instanceof Element && node.matches(SWIPE_EXCLUSIONS))) return;
+
         const items = getItems();
-        if (event.composedPath().some((node) => node instanceof HTMLElement && items.includes(node))) {
+        if (path.some((node) => node instanceof HTMLElement && items.includes(node))) {
           event.preventDefault();
         }
       };
       const pan = createPanGesture(stage, {
         axis: 'x',
-        disabled: () => Boolean(props.disabled.value) || getItems().length < 2,
+        disabled: () =>
+          Boolean(props.disabled.value) || getItems().length < 2 || dragDirection !== elementDirection(el),
         onEnd: ({ distance, reason, velocity }) => {
+          if (!dragging) return;
+          dragging = false;
           if (reason === 'release') {
             const projected = projectFling(distance, velocity);
             if (Math.abs(projected) >= 48) {
@@ -446,7 +458,13 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
                 applyDrag(dragOffset + before - after);
               }
             }
-          } else suppressClick = false;
+          } else {
+            suppressClick = false;
+            springHandle?.dispose();
+            springHandle = undefined;
+            resetDrag();
+            return;
+          }
           settleDrag(reason === 'release' ? velocity : 0);
         },
         onMove: ({ distance }) => {
@@ -455,19 +473,59 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
           applyDrag(dragOrigin + (atBoundary ? distance * 0.3 : distance));
         },
         onStart: () => {
+          dragging = true;
           springHandle?.dispose();
           springHandle = undefined;
           dragOrigin = dragOffset;
           el.setAttribute('data-dragging', '');
           suppressClick = true;
         },
-        shouldStart: (event) =>
-          !event.composedPath().some((node) => node instanceof Element && node.matches(INTERACTIVE_SELECTOR)),
+        shouldStart: (event) => {
+          if (event.defaultPrevented) return false;
+
+          const path = event.composedPath();
+          const elements = path
+            .slice(0, path.indexOf(stage))
+            .filter((node): node is HTMLElement => node instanceof HTMLElement);
+
+          if (
+            elements.some((node) => {
+              if (node.matches(SWIPE_EXCLUSIONS) || node.isContentEditable) return true;
+              if (node.scrollWidth <= node.clientWidth) return false;
+
+              return /^(auto|scroll|overlay)$/.test(getComputedStyle(node).overflowX);
+            })
+          )
+            return false;
+
+          return true;
+        },
       });
-      const refreshItems = (): void => {
+      const cancelDrag = (): void => {
+        pan.cancel();
         springHandle?.dispose();
         springHandle = undefined;
+        suppressClick = false;
         resetDrag();
+      };
+      const handleTouchMove = (event: TouchEvent): void => {
+        if (!pan.active) return;
+        if (event.touches.length !== 1 || !event.cancelable) {
+          cancelDrag();
+          return;
+        }
+
+        // Claim only an accepted horizontal drag; scrolling and pinch stay native otherwise.
+        event.preventDefault();
+      };
+      const indexWatcher = watch(activeIndex, () => {
+        if (pan.cancel() || springHandle) cancelDrag();
+      });
+      const disabledWatcher = watch(props.disabled, (disabled) => {
+        if (disabled) cancelDrag();
+      });
+      const refreshItems = (): void => {
+        cancelDrag();
         const count = getItems().length;
         setActiveIndex(Math.min(activeIndex.value, Math.max(0, count - 1)), false);
         syncItems();
@@ -477,19 +535,23 @@ define<OreCardPickerProps>(CARD_PICKER_TAG, {
       };
 
       slot.addEventListener('slotchange', refreshItems);
-      stage.addEventListener('pointerdown', resetClick, true);
+      stage.addEventListener('pointerdown', preparePointer, true);
       stage.addEventListener('click', preventSwipeClick, true);
+      stage.addEventListener('touchmove', handleTouchMove, { passive: false });
       el.addEventListener('dragstart', handleDragStart);
       refreshItems();
 
       return () => {
         pan.dispose();
+        indexWatcher.dispose();
+        disabledWatcher.dispose();
         springHandle?.dispose();
         springHandle = undefined;
         resetDrag();
         slot.removeEventListener('slotchange', refreshItems);
-        stage.removeEventListener('pointerdown', resetClick, true);
+        stage.removeEventListener('pointerdown', preparePointer, true);
         stage.removeEventListener('click', preventSwipeClick, true);
+        stage.removeEventListener('touchmove', handleTouchMove);
         el.removeEventListener('dragstart', handleDragStart);
       };
     });

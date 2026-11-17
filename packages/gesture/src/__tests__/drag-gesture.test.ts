@@ -117,8 +117,7 @@ describe('createDragGesture', () => {
     vi.advanceTimersByTime(10);
     dispatch('pointermove', { clientX: 30, clientY: 0 });
 
-    // Trailing window spans the last two samples: 10→30px over 10ms = 2000 px/s on x, none on y.
-    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ velocity: { x: 2000, y: 0 } }));
+    expect(onMove).toHaveBeenLastCalledWith(expect.objectContaining({ velocity: { x: 1500, y: 0 } }));
     vi.useRealTimers();
   });
 

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Document card-picker gesture ownership, native interactions, subtree exclusions, and drawer swipe dismissal.",
+      "packageName": "@vielzeug/codex",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

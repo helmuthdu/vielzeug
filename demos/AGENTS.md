@@ -14,4 +14,4 @@ Integration demos (`crm`, `eshop`, `voyage`) prove the packages compose into rea
 
 - Build + unit tests for every demo: `bun run validate:demos`.
 - One demo: `bun run --filter <demo-package-name> build && bun run --filter <demo-package-name> test` (names differ from folder names: read `demos/<name>/package.json`). `crm` and `eshop` also carry `test:e2e` (Playwright).
-- Shared or broad demo impact: `bun run validate:demos`. Library behavior change: also run the owning package's validation row (`.agents/skills/build/SKILL.md`).
+- Shared or broad demo impact: `bun run validate:demos`. Library behavior change: also run the owning package's validation row (the `build` klugzeug skill).

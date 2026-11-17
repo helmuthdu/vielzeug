@@ -51,7 +51,7 @@
     gap: var(--_gap);
     align-items: center;
     min-height: var(--_touch-target);
-    touch-action: none;
+    touch-action: pan-y pinch-zoom;
     cursor: pointer;
     user-select: none;
     border-radius: var(--rounded-sm);
@@ -87,13 +87,15 @@
      steps and readonly averages render exactly. */
   .star-fill {
     position: absolute;
+    inset-inline-start: 0;
     top: 0;
     bottom: 0;
-    left: 0;
     overflow: hidden;
   }
 
   .star-fill-inner {
+    position: absolute;
+    inset-inline-start: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;

@@ -1,4 +1,4 @@
-import { axeCheck, expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test, touchSwipe } from '../../testing/fixtures';
 
 type QueryBarElement = HTMLElement & { 'quick-filters': unknown; dir: string; state: unknown; vocabulary: unknown };
 
@@ -49,6 +49,37 @@ async function clickInput(page: import('@playwright/test').Page): Promise<void> 
 
 test.describe('Touch targets', () => {
   test.use({ hasTouch: true });
+
+  test('preserves dirty filters when content swiping requests dismissal', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ height: 844, width: 390 });
+    await mountBar(page, refinePage);
+    await page.getByRole('button', { exact: true, name: 'Filters' }).click();
+    await page.getByRole('radio', { exact: true, name: 'Alice' }).click();
+
+    const drawer = page.locator('ore-query-bar ore-drawer');
+    const body = drawer.locator('[part="body"]');
+    const bounds = (await body.boundingBox())!;
+    const from = { x: bounds.x + 4, y: bounds.y + 20 };
+    const to = { x: from.x, y: from.y + 140 };
+    await drawer.evaluate((element) => {
+      element.addEventListener('close-request', (event) => {
+        element.setAttribute('data-last-close-reason', (event as CustomEvent<{ reason: string }>).detail.reason);
+      });
+    });
+    await touchSwipe(page, { from, to });
+
+    await expect(drawer).toHaveAttribute('data-last-close-reason', 'swipe');
+    await expect(drawer.locator('dialog')).toBeVisible();
+    await expect(page.getByRole('radio', { exact: true, name: 'Alice' })).toBeChecked();
+    await expect(drawer.locator('[part="panel"]')).toHaveCSS('opacity', '1');
+    await page.getByRole('button', { exact: true, name: 'Apply filters' }).click();
+    await expect(drawer.locator('dialog')).toBeHidden();
+    await expect(page.locator('ore-query-bar')).toHaveJSProperty('state', {
+      text: '',
+      tokens: [{ key: 'author', value: 'alice' }],
+    });
+  });
 
   test('keeps secondary controls and inline removals at least 44px on coarse pointers', async ({
     page,

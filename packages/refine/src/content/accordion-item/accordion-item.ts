@@ -7,6 +7,7 @@ import { ACCORDION_CTX } from '../accordion/accordion';
 import styles from './accordion-item.css?inline';
 
 export { ICON_TAG } from '../../content/icon/icon';
+
 /** Accordion item component properties */
 
 export type OreAccordionItemEvents = {
@@ -174,7 +175,7 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
       }
     };
 
-    let touchHandled = false;
+    let touchTapId: number | null = null;
     let touchStartY = 0;
 
     const toggleDetails = () => {
@@ -192,27 +193,34 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
     };
 
     const handleSummaryTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0]?.clientY ?? 0;
-    };
-
-    const handleSummaryTouchEnd = (e: TouchEvent) => {
-      const dy = Math.abs((e.changedTouches[0]?.clientY ?? 0) - touchStartY);
-
-      if (dy > 10) return;
-
-      e.preventDefault();
-      touchHandled = true;
-      toggleDetails();
-    };
-
-    const handleSummaryClick = (e: Event) => {
-      if (touchHandled) {
-        touchHandled = false;
-        e.preventDefault();
+      // Only track a genuine single-finger touch; extra fingers must not hijack the tap.
+      if (e.touches.length !== 1) {
+        touchTapId = null;
 
         return;
       }
 
+      touchTapId = e.touches[0]?.identifier ?? null;
+      touchStartY = e.touches[0]?.clientY ?? 0;
+    };
+
+    const handleSummaryTouchEnd = (e: TouchEvent) => {
+      const changed = e.changedTouches[0];
+
+      // Ignore lifts that aren't the tracked finger (second-finger taps) or that
+      // happen while other fingers are still down; the tap state can never strand.
+      if (touchTapId === null || changed?.identifier !== touchTapId || e.touches.length > 0) return;
+
+      touchTapId = null;
+
+      // A vertical drag is a scroll gesture, not a tap: leave it to the browser.
+      if (Math.abs((changed.clientY ?? touchStartY) - touchStartY) > 10) return;
+
+      e.preventDefault();
+      toggleDetails();
+    };
+
+    const handleSummaryClick = (e: Event) => {
       e.preventDefault();
       toggleDetails();
     };

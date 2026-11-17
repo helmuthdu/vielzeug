@@ -80,7 +80,7 @@ export function patchSkillPackages(source, packages) {
 
 // ---------------------------------------------------------------------------
 // Reference integrity: any text file in the repo may cross-reference an `.agents/...` path
-// (e.g. "see .agents/conventions.md", ".agents/skills/build/SKILL.md"). A dangling
+// (e.g. "see .agents/conventions.md", ".agents/reference/packages.md"). A dangling
 // reference silently sends an agent to a missing contract, so both generation and check mode
 // treat it as a hard error.
 // ---------------------------------------------------------------------------

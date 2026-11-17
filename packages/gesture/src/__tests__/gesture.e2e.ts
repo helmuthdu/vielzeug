@@ -62,6 +62,28 @@ test.afterEach(async ({ page }) => {
   await page.evaluate(() => (window as TestWindow).pan?.dispose());
 });
 
+test('cancels trusted touch dragging when another finger touches elsewhere', async ({ page }) => {
+  await loadGesture(page, '<style>#target{touch-action:none;width:200px;height:200px}</style><div id="target"></div>');
+  await installDrag(page);
+  const session = await page.context().newCDPSession(page);
+  try {
+    await session.send('Input.dispatchTouchEvent', { touchPoints: [{ id: 1, x: 30, y: 30 }], type: 'touchStart' });
+    await session.send('Input.dispatchTouchEvent', { touchPoints: [{ id: 1, x: 60, y: 30 }], type: 'touchMove' });
+    await session.send('Input.dispatchTouchEvent', {
+      touchPoints: [
+        { id: 1, x: 60, y: 30 },
+        { id: 2, x: 280, y: 40 },
+      ],
+      type: 'touchStart',
+    });
+    await expect.poll(() => page.evaluate(() => (window as TestWindow).result?.reason)).toBe('cancel');
+    await session.send('Input.dispatchTouchEvent', { touchPoints: [], type: 'touchEnd' });
+    expect(await page.evaluate(() => (window as TestWindow).pan?.active)).toBe(false);
+  } finally {
+    await session.detach();
+  }
+});
+
 test('honors pointer-capture policy in a real browser', async ({ page }) => {
   await loadGesture(page);
   const target = page.locator('#target');

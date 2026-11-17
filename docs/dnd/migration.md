@@ -5,6 +5,20 @@ description: Migrate to focused entry points, application-owned rollback, explic
 
 # Dnd 3.0 Migration
 
+## Touch ownership
+
+Touch sorting now cancels when a second finger touches the document. Whole-item sorting no longer starts from embedded controls or `[data-no-drag]` subtrees. Use an explicit handle when a button is intentionally the drag affordance:
+
+```ts
+// Before: a button inside a whole-item sortable could start sorting.
+createSortable({ element: list, getKey, scope });
+
+// After: only the intentional handle starts sorting.
+createSortable({ element: list, getKey, scope, handle: '.drag-handle' });
+```
+
+Cancellation restores the original order without firing persistence callbacks. Keep the existing `touch-action: none` requirement on the item or configured handle; use handles when the rest of the item should scroll natively.
+
 Dnd 3.0 separates file-drop and sortable entry points, removes controller-owned rollback, and hardens DOM ownership, callback snapshots, configuration, keyboard controls, and disposal.
 
 ### Use focused entry points

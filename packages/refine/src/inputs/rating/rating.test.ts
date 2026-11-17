@@ -4,7 +4,30 @@ import { type Fixture, mount } from '@vielzeug/ore/testing';
 function pressStar(fixture: Fixture<HTMLElement>, star: number): void {
   const starEl = fixture.shadow?.querySelector<HTMLElement>(`[data-star="${star}"]`);
 
-  if (starEl) starEl.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+  if (starEl) {
+    pointer(starEl, 'pointerdown');
+    pointer(starEl, 'pointerup');
+  }
+}
+
+function pointer(
+  target: Element,
+  type: string,
+  options: { button?: number; clientX?: number; isPrimary?: boolean; pointerId?: number; pointerType?: string } = {},
+): void {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    button: options.button ?? 0,
+    clientX: options.clientX ?? 0,
+    composed: true,
+  });
+
+  Object.assign(event, {
+    isPrimary: options.isPrimary ?? true,
+    pointerId: options.pointerId ?? 1,
+    pointerType: options.pointerType ?? 'mouse',
+  });
+  target.dispatchEvent(event);
 }
 
 describe('ore-rating', () => {
@@ -125,6 +148,94 @@ describe('ore-rating', () => {
       await fixture.flush();
 
       expect(fixture.element.getAttribute('value')).toBe('3');
+    });
+
+    describe('Pointer lifecycle', () => {
+      it.each(['mouse', 'pen'])('does not cancel a %s drag when a touch appears', async (pointerType) => {
+        fixture = await mount('ore-rating');
+        const first = fixture.query<HTMLElement>('[data-star="1"]')!;
+        const fourth = fixture.query<HTMLElement>('[data-star="4"]')!;
+        pointer(first, 'pointerdown', { pointerType });
+        pointer(document.body, 'pointerdown', { pointerId: 2, pointerType: 'touch' });
+        pointer(fourth, 'pointermove', { pointerType });
+        expect(fixture.element.getAttribute('value')).toBe('4');
+      });
+
+      it('ignores non-primary presses and unrelated pointers', async () => {
+        fixture = await mount('ore-rating');
+        const first = fixture.query<HTMLElement>('[data-star="1"]')!;
+        const fourth = fixture.query<HTMLElement>('[data-star="4"]')!;
+
+        pointer(first, 'pointerdown', { button: 2 });
+        pointer(first, 'pointerdown', { isPrimary: false });
+        expect(fixture.element.getAttribute('value')).toBe('0');
+        pointer(first, 'pointerdown');
+        pointer(fourth, 'pointermove', { pointerId: 2 });
+        pointer(fourth, 'pointerup', { pointerId: 2 });
+        expect(fixture.element.getAttribute('value')).toBe('1');
+        pointer(fourth, 'pointermove');
+        expect(fixture.element.getAttribute('value')).toBe('4');
+      });
+
+      it.each([
+        'pointercancel',
+        'lostpointercapture',
+        'blur',
+        'visibilitychange',
+        'second-touch',
+        'disabled',
+        'readonly',
+      ])('ends a drag and clears preview on %s', async (reason) => {
+        fixture = await mount('ore-rating');
+        const first = fixture.query<HTMLElement>('[data-star="1"]')!;
+        const fourth = fixture.query<HTMLElement>('[data-star="4"]')!;
+        const row = fixture.query<HTMLElement>('.stars')!;
+
+        pointer(first, 'pointerdown', { pointerType: 'touch' });
+        pointer(fourth, 'pointermove', { pointerType: 'touch' });
+        if (reason === 'blur') window.dispatchEvent(new Event('blur'));
+        else if (reason === 'visibilitychange') {
+          vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+          document.dispatchEvent(new Event('visibilitychange'));
+          vi.restoreAllMocks();
+        } else if (reason === 'second-touch')
+          pointer(row, 'pointerdown', { isPrimary: false, pointerId: 2, pointerType: 'touch' });
+        else if (reason === 'disabled' || reason === 'readonly') await fixture.attr(reason, '');
+        else pointer(row, reason, { pointerType: 'touch' });
+
+        pointer(first, 'pointermove', { pointerType: 'touch' });
+        await fixture.flush();
+        expect(fixture.element.getAttribute('value')).toBe('4');
+        expect(fixture.query<HTMLElement>('[data-star="4"] .star-fill')!.style.width).toBe('100%');
+      });
+
+      it('maps captured half-star drags from the leading edge in RTL', async () => {
+        fixture = await mount('ore-rating', { attrs: { precision: '0.5' } });
+        const row = fixture.query<HTMLElement>('.stars')!;
+        const stars = [...fixture.shadow!.querySelectorAll<HTMLElement>('[data-star]')];
+
+        row.style.direction = 'rtl';
+        for (const [index, star] of stars.entries()) {
+          vi.spyOn(star, 'getBoundingClientRect').mockReturnValue({ left: 80 - index * 20, width: 20 } as DOMRect);
+        }
+        pointer(stars[0], 'pointerdown', { clientX: 95 });
+        expect(fixture.element.getAttribute('value')).toBe('0.5');
+        pointer(row, 'pointermove', { clientX: 75 });
+        expect(fixture.element.getAttribute('value')).toBe('1.5');
+        pointer(row, 'pointermove', { clientX: 65 });
+        expect(fixture.element.getAttribute('value')).toBe('2');
+      });
+
+      it('clears the hover preview when the keyboard changes the value', async () => {
+        fixture = await mount('ore-rating', { attrs: { value: '1' } });
+        const row = fixture.query<HTMLElement>('.stars')!;
+
+        pointer(fixture.query<HTMLElement>('[data-star="4"]')!, 'pointermove');
+        fireKeyDown(row, { key: 'ArrowRight' });
+        await fixture.flush();
+        expect(fixture.element.getAttribute('value')).toBe('2');
+        expect(fixture.query<HTMLElement>('[data-star="4"] .star-fill')!.style.width).toBe('0%');
+      });
     });
 
     it('pressing the selected star clears back to 0', async () => {

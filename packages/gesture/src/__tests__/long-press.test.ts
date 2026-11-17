@@ -112,10 +112,42 @@ describe('createLongPress', () => {
     dispatch('pointerdown', { clientX: 10, clientY: 10 });
     vi.advanceTimersByTime(500);
     dispatch('pointerup', { clientX: 10, clientY: 10 });
-    dispatch('click', {});
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
 
     expect(onLongPress).toHaveBeenCalledTimes(1);
     expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('does not fire after becoming disabled during the hold', () => {
+    vi.useFakeTimers();
+    let disabled = false;
+    const onLongPress = vi.fn();
+    const { dispatch } = createHold({ disabled: () => disabled, onLongPress });
+    dispatch('pointerdown');
+    disabled = true;
+    vi.advanceTimersByTime(500);
+    expect(onLongPress).not.toHaveBeenCalled();
+  });
+
+  it('cancels a pending hold on a second touch', () => {
+    vi.useFakeTimers();
+    const onLongPress = vi.fn();
+    const { dispatch } = createHold({ onLongPress });
+    dispatch('pointerdown');
+    dispatch('pointerdown', { isPrimary: false, pointerId: 2 }, document);
+    vi.advanceTimersByTime(500);
+    expect(onLongPress).not.toHaveBeenCalled();
+  });
+
+  it('preserves keyboard activation after a fired hold', () => {
+    vi.useFakeTimers();
+    const { dispatch, target } = createHold();
+    const click = vi.fn();
+    target.addEventListener('click', click);
+    dispatch('pointerdown');
+    vi.advanceTimersByTime(500);
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+    expect(click).toHaveBeenCalledOnce();
   });
 
   it('does not swallow clicks when no hold fired', () => {

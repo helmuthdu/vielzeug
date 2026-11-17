@@ -127,7 +127,7 @@ const hold = createLongPress(list, {
 });
 ```
 
-Movement beyond `slopPx` cancels back to a normal press, and window blur or a hidden document cancels a pending hold. The click that follows a fired hold is swallowed through a capture-phase listener on `target`, so releasing never commits what the hold opened; bind `target` to a stable ancestor of the pressed controls so the swallow precedes their click handlers.
+Movement beyond `slopPx`, a second touch, window blur, or a hidden document cancels a pending hold. The dynamic `disabled` predicate is checked again before the timer fires. The pointer-generated click following a fired hold is swallowed through a capture-phase listener on `target`; keyboard clicks (`detail: 0`) remain available. Bind `target` to a stable ancestor of the pressed controls so the swallow precedes their click handlers.
 
 ## Types
 
@@ -149,6 +149,7 @@ type DragGestureDetail = Readonly<{
   pointerType: string;
   start: DragPoint;
   target: Element;
+  velocity: DragPoint;
 }>;
 
 type DragGestureEndDetail = DragGestureDetail &
@@ -163,6 +164,7 @@ type DragGestureOptions = Readonly<{
   onMove?: (detail: DragGestureDetail) => void;
   onStart?: (detail: DragGestureDetail) => void;
   pointerCapture?: boolean;
+  shouldActivate?: (detail: DragGestureDetail) => boolean;
   shouldStart?: (event: PointerEvent) => boolean;
   signal?: AbortSignal;
 }>;
@@ -185,6 +187,7 @@ type PanGestureDetail = Readonly<{
   pointerType: string;
   start: number;
   target: Element;
+  velocity: number;
 }>;
 
 type PanGestureEndDetail = PanGestureDetail &
@@ -200,12 +203,15 @@ type PanGestureOptions = Readonly<{
   onMove?: (detail: PanGestureDetail) => void;
   onStart?: (detail: PanGestureDetail) => void;
   pointerCapture?: boolean;
+  shouldActivate?: (detail: PanGestureDetail) => boolean;
   shouldStart?: (event: PointerEvent) => boolean;
   signal?: AbortSignal;
 }>;
 ```
 
 Pan details project `start`, `current`, and `distance` onto `axis`. The default axis is `'x'`.
+
+Velocity is signed CSS pixels per second over the trailing 90 ms. Samples include pointerdown, movement (including activation), and release. A window with fewer than two distinct sample times reports zero velocity; a pause longer than the window removes earlier movement.
 
 ### Long-press types
 
@@ -246,21 +252,22 @@ type PanGesture = DragGesture;
 
 ### Shared option behavior
 
-| Option               | Default | Contract                                                                                               |
-| -------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
-| `activationDistance` | `6`     | Non-negative finite CSS pixels; drag uses Euclidean distance, pan waits for dominant-axis intent       |
-| `axis`               | `'x'`   | Pan only; fixed value or getter sampled when each interaction starts                                   |
-| `disabled`           | `false` | Fixed value or getter; blocks starts and cancels active recognition on the next matching pointer event |
-| `pointerCapture`     | `true`  | Best-effort capture after activation; document tracking continues when capture is disabled or fails    |
-| `shouldStart`        | N/A     | Admission predicate evaluated for the primary pointer before tracking starts                           |
-| `signal`             | N/A     | Disposes the handle when the external owner aborts                                                     |
-| `onStart`            | N/A     | Runs once on the activating movement                                                                   |
-| `onMove`             | N/A     | Runs on the activating movement and each later matching movement                                       |
-| `onEnd`              | N/A     | Runs once for active release or cancellation; pending interactions end without callbacks               |
+| Option               | Default | Contract                                                                                                                     |
+| -------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `activationDistance` | `6`     | Non-negative finite CSS pixels; drag uses Euclidean distance, pan waits for dominant-axis intent                             |
+| `axis`               | `'x'`   | Pan only; fixed value or getter sampled when each interaction starts                                                         |
+| `disabled`           | `false` | Fixed value or getter; blocks starts and cancels active recognition on the next matching pointer event                       |
+| `pointerCapture`     | `true`  | Best-effort capture after activation; document tracking continues when capture is disabled or fails                          |
+| `shouldStart`        | N/A     | Admission predicate evaluated for the primary pointer before tracking starts                                                 |
+| `shouldActivate`     | N/A     | Drag/pan predicate evaluated once after distance/axis recognition and before capture or callbacks; false rejects the session |
+| `signal`             | N/A     | Disposes the handle when the external owner aborts                                                                           |
+| `onStart`            | N/A     | Runs once on the activating movement                                                                                         |
+| `onMove`             | N/A     | Runs on the activating movement and each later matching movement                                                             |
+| `onEnd`              | N/A     | Runs once for active release or cancellation; pending interactions end without callbacks                                     |
 
 Options and callback details are readonly. Fixed callbacks and capture policy are snapshotted at construction. Function-valued `axis` and `disabled` options remain dynamic.
 
-Gesture tracks accepted movement with capture-phase listeners on the target's current owner document. Window blur, hidden-document transition, `pointercancel`, and pointer capture loss on the gesture target cancel active recognition. A `lostpointercapture` event bubbling from a descendant does not cancel the target's gesture.
+Gesture tracks accepted movement with capture-phase listeners on the target's current owner document. Window blur, hidden-document transition, `pointercancel`, pointer capture loss on the gesture target, and a second touch anywhere in that document cancel recognition. A `lostpointercapture` event bubbling from a descendant does not cancel the target's gesture. Exact diagonal ties remain pending until one axis dominates; cross-axis dominance rejects the pending pan. Gesture does not arbitrate ownership between recognizers on the same axis.
 
 ## Errors
 

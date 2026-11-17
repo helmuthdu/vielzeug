@@ -427,7 +427,7 @@
     display: none;
     width: var(--size-4);
     height: var(--size-14);
-    touch-action: pan-y;
+    touch-action: pan-y pinch-zoom;
     cursor: grab;
     transform: translateY(-50%);
   }

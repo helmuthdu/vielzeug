@@ -1,12 +1,83 @@
 import type { Page } from '@playwright/test';
 
-import { axeCheck, expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test, touchSwipe } from '../../testing/fixtures';
 
 const SIZES = {
   lg: { rail: 16, thumb: 24 },
   md: { rail: 12, thumb: 20 },
   sm: { rail: 8, thumb: 16 },
 } as const;
+
+test.describe('Pointer interaction', () => {
+  for (const range of [false, true]) {
+    for (const reason of ['blur', 'second-touch']) {
+      test(`uses the owner document for ${reason} cancellation (range: ${range})`, async ({ page, refinePage }) => {
+        await refinePage.mountComponent('<iframe title="Slider owner"></iframe>');
+        const values = await page.evaluate(
+          async ({ range, reason }) => {
+            const ownerDocument = document.querySelector('iframe')!.contentDocument!;
+            ownerDocument.defaultView!.customElements.define('ore-slider', customElements.get('ore-slider')!);
+            const slider = document.createElement('ore-slider');
+            if (range) {
+              slider.setAttribute('range', '');
+              slider.setAttribute('from', '20');
+              slider.setAttribute('to', '80');
+            } else slider.setAttribute('value', '20');
+            ownerDocument.body.append(slider);
+            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+            const container = slider.shadowRoot!.querySelector('.slider-container')!;
+            const track = slider.shadowRoot!.querySelector('.slider-track')!.getBoundingClientRect();
+            const value = () => (slider as HTMLElement & { value: string }).value;
+            const pointer = (target: EventTarget, type: string, fraction: number, pointerId = 1) =>
+              target.dispatchEvent(
+                new PointerEvent(type, {
+                  bubbles: true,
+                  clientX: track.left + track.width * fraction,
+                  clientY: track.top + track.height / 2,
+                  composed: true,
+                  isPrimary: pointerId === 1,
+                  pointerId,
+                  pointerType: 'touch',
+                }),
+              );
+            pointer(container, 'pointerdown', 0.3);
+            const initial = value();
+            pointer(document.body, 'pointerdown', 0, 2);
+            pointer(container, 'pointermove', 0.4);
+            const selected = value();
+            if (reason === 'blur') ownerDocument.defaultView!.dispatchEvent(new Event('blur'));
+            else pointer(ownerDocument.body, 'pointerdown', 0, 2);
+            pointer(container, 'pointermove', 0.6);
+            return { after: value(), initial, selected };
+          },
+          { range, reason },
+        );
+        expect(values.selected).not.toBe(values.initial);
+        expect(values.after).toBe(values.selected);
+      });
+    }
+  }
+
+  test('disabling a range during a captured drag stops further changes', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-slider id="s" range from="20" to="80">Range</ore-slider>');
+    const slider = page.locator('#s');
+    const track = slider.locator('.slider-track');
+    const box = (await track.boundingBox())!;
+
+    await page.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.4, box.y + box.height / 2);
+    await slider.evaluate((el) => el.setAttribute('disabled', ''));
+    const selected = await slider.evaluate((el) => (el as HTMLElement & { value: string }).value);
+    await page.mouse.move(box.x + box.width * 0.7, box.y + box.height / 2);
+    await page.mouse.up();
+    expect(await slider.evaluate((el) => (el as HTMLElement & { value: string }).value)).toBe(selected);
+    await expect(slider).not.toHaveAttribute('data-dragging');
+    expect(await slider.locator('.slider-container').evaluate((el) => getComputedStyle(el).touchAction)).toBe(
+      'pan-y pinch-zoom',
+    );
+  });
+});
 
 test.describe('Focus', () => {
   // Single-value sliders keep keyboard focus on the host, so the stylesheet
@@ -162,6 +233,18 @@ test.describe('Layout', () => {
 
 test.describe('Touch layout', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
+
+  test('allows native vertical scrolling from the slider', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<div id="scroll" style="height:200px;overflow:auto"><div style="height:100px"></div><ore-slider id="s">Value</ore-slider><div style="height:800px"></div></div>',
+    );
+    const box = (await page.locator('#s .slider-container').boundingBox())!;
+    await touchSwipe(page, {
+      from: { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+      to: { x: box.x + box.width / 2, y: box.y - 80 },
+    });
+    await expect.poll(() => page.locator('#scroll').evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  });
 
   for (const [size, expected] of Object.entries(SIZES) as [keyof typeof SIZES, (typeof SIZES)[keyof typeof SIZES]][]) {
     test(`${size} preserves the visual scale`, async ({ page, refinePage }) => {

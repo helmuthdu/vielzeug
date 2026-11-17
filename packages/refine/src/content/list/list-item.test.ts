@@ -17,6 +17,24 @@ describe('ore-list-item', () => {
     fixture?.dispose();
   });
 
+  it.each([
+    '<input>',
+    '<span role="slider">Slider</span>',
+    '<span contenteditable="plaintext-only">Edit</span>',
+    '<span data-no-swipe>Custom</span>',
+  ])('does not confirm an action from a protected descendant: %s', async (html) => {
+    fixture = await mount('ore-list-item', { html: `${html}<button slot="actions-right">Delete</button>` });
+    const action = fixture.element.querySelector('button')!;
+    const click = vi.fn();
+    action.addEventListener('click', click);
+    const target = fixture.element.firstElementChild!;
+    target.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 250, pointerId: 1 }));
+    target.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 0, pointerId: 1 }));
+    target.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 0, pointerId: 1 }));
+    expect(click).not.toHaveBeenCalled();
+    expect(fixture.element.hasAttribute('revealed')).toBe(false);
+  });
+
   describe('Rendering', () => {
     it('renders the row and title slot content', async () => {
       fixture = await mount('ore-list-item', { html: 'Inbox' });

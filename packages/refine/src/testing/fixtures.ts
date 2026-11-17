@@ -19,7 +19,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
-import { test as base } from '@playwright/test';
+import { test as base, type Page } from '@playwright/test';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PKG = path.resolve(__dirname, '../../..');
@@ -132,6 +132,28 @@ export const test = base.extend<{ refinePage: RefinePage }>({
 });
 
 export { expect } from '@playwright/test';
+
+/** Trusted Chromium touch input: synthetic PointerEvents do not exercise native scrolling. */
+export async function touchSwipe(
+  page: Page,
+  { from, to }: { from: { x: number; y: number }; to: { x: number; y: number } },
+): Promise<void> {
+  const session = await page.context().newCDPSession(page);
+
+  try {
+    await session.send('Input.dispatchTouchEvent', { touchPoints: [from], type: 'touchStart' });
+    for (let step = 1; step <= 12; step++) {
+      await session.send('Input.dispatchTouchEvent', {
+        touchPoints: [{ x: from.x + ((to.x - from.x) * step) / 12, y: from.y + ((to.y - from.y) * step) / 12 }],
+        type: 'touchMove',
+      });
+      await page.waitForTimeout(16);
+    }
+    await session.send('Input.dispatchTouchEvent', { touchPoints: [], type: 'touchEnd' });
+  } finally {
+    await session.detach();
+  }
+}
 
 // Page-level rules that produce false positives for component-level axe scans (axe still runs
 // on the full document; these rules target <html>/<head> structure that `.frame` doesn't own).

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Enable boundary-start content swipe dismissal on every drawer placement, with native scrolling, protected controls, content opt-outs, and corrected RTL drag directions.",
+      "packageName": "@vielzeug/refine",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}
