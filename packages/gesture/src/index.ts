@@ -23,3 +23,19 @@ export {
   type PanGestureEndDetail,
   type PanGestureOptions,
 } from './pan-gesture.js';
+export {
+  createPinchGesture,
+  type PinchEndReason,
+  type PinchGesture,
+  type PinchGestureDetail,
+  type PinchGestureEndDetail,
+  type PinchGestureOptions,
+  type PinchPoint,
+} from './pinch-gesture.js';
+export {
+  createWheelGesture,
+  normalizeWheel,
+  type WheelDetail,
+  type WheelGesture,
+  type WheelOptions,
+} from './wheel-gesture.js';

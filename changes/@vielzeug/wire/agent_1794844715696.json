@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add @vielzeug/wire with bezier and orthogonal edge routing plus deterministic graph ordering and cycle detection.",
+      "packageName": "@vielzeug/wire",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/wire"
+}

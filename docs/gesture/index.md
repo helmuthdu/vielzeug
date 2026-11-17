@@ -1,10 +1,11 @@
 ---
 title: 'Gesture: Pointer movement primitives'
-description: Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles.
+description: Framework-neutral pointer drag, pan, pinch, and wheel recognition with lifecycle-owned handles.
 package: gesture
 category: input
-keywords: [pointer, pan, swipe, gesture, touch, drag, long press]
-exports: [createDragGesture, createPanGesture, createLongPress, GestureConfigError]
+keywords: [pointer, pan, swipe, gesture, touch, drag, long press, pinch, zoom, wheel]
+exports:
+  [createDragGesture, createPanGesture, createLongPress, createPinchGesture, createWheelGesture, GestureConfigError]
 related: [refine, dnd, keymap]
 environments: [browser]
 ---
@@ -100,6 +101,8 @@ window.addEventListener('pagehide', () => pan.dispose(), { once: true });
 - `createDragGesture()`: unrestricted two-dimensional pointer movement tracking
 - `createPanGesture()`: one-axis pointer movement with direction intent recognition
 - `createLongPress()`: hold recognition with slop cancellation and click swallowing
+- `createPinchGesture()`: two-pointer scale and rotation with per-frame deltas
+- `createWheelGesture()`: wheel and trackpad input with pixel-normalized deltas
 - Direction locking: activates only when movement favors the configured axis
 - Configurable pointer capture: own the pointer by default or preserve native targeting
 - Configurable `activationDistance`: tune slop for touch density and component needs

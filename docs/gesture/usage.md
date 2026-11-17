@@ -77,6 +77,57 @@ const hold = createLongPress(grid, {
 
 Movement beyond `slopPx` cancels back to a normal press, so scrolling never triggers the hold. The click that follows a fired hold is swallowed through a capture-phase listener on `target`: bind `target` to a stable ancestor of the pressed controls so the swallow precedes their click handlers, and gate `shouldStart` to the elements the hold belongs to.
 
+## Recognize Pinch and Rotate
+
+Use `createPinchGesture()` for two-pointer scale and rotation. `scale` and `rotation` are relative to the positions where the two pointers went down, so a transform applied from `onStart` onward composes against the gesture's own baseline:
+
+```ts
+import { createPinchGesture } from '@vielzeug/gesture';
+
+const stage = document.querySelector<HTMLElement>('[data-stage]');
+if (!stage) throw new Error('Missing [data-stage] element');
+
+const card = stage.querySelector<HTMLElement>('[data-card]');
+if (!card) throw new Error('Missing [data-card] element');
+
+let x = 0;
+let y = 0;
+createPinchGesture(stage, {
+  onMove: ({ scale, rotation, deltaCentroid }) => {
+    x += deltaCentroid.x;
+    y += deltaCentroid.y;
+    card.style.transform = `translate(${x}px, ${y}px) scale(${scale}) rotate(${rotation}rad)`;
+  },
+});
+```
+
+The gesture activates once the pointer span changes by `activationDistance` pixels (default 6), which keeps two-finger taps from jittering the canvas. `deltaScale`, `deltaRotation`, and `deltaCentroid` carry the movement since the previous event, which is what incremental camera transforms consume. The session ends when either pointer lifts; the remaining pointer never continues the gesture. Set `touch-action: none` on the target.
+
+Centroid coordinates are client-space, like every other pointer coordinate in this package. When the target is offset from the viewport origin, convert to target-local coordinates with `getBoundingClientRect()` before applying them to content.
+
+Pair pinch with a single-pointer drag or pan by cancelling the single-pointer gesture from pinch's `onStart`; the drag handle's `cancel()` ends its active session without firing `onEnd`, so dragging and pinching never fight over the same surface.
+
+## Recognize Wheel and Trackpad Zoom
+
+Use `createWheelGesture()` for scroll-wheel and trackpad input. Deltas are normalized to CSS pixels regardless of the browser's `deltaMode` (pixels, lines, or pages), and `pinch` marks the ctrl-key wheel events macOS sends for trackpad pinch-zoom:
+
+```ts
+import { createWheelGesture } from '@vielzeug/gesture';
+
+const wheel = createWheelGesture(stage, {
+  preventDefault: (event) => event.ctrlKey || stage.contains(event.target as Node),
+  onWheel: ({ deltaX, deltaY, pinch }) => {
+    if (pinch) {
+      camera.zoomBy(Math.exp(-deltaY * 0.01));
+    } else {
+      camera.panBy(-deltaX, -deltaY);
+    }
+  },
+});
+```
+
+The recognizer never prevents silently: `preventDefault` defaults to `false`, and the listener is registered non-passive so prevention works when you opt in. `normalizeWheel()` is exported for code that already listens for wheel events and only needs the normalization.
+
 ## Completion Rules
 
 Gesture reports movement and terminal state but does not decide what constitutes a swipe. Apply thresholds and allowed directions in `onEnd`.

@@ -105,6 +105,32 @@
         "vitest": "5.1.0",
       },
     },
+    "demos/studio": {
+      "name": "vielzeug-studio-demo",
+      "version": "0.0.0",
+      "dependencies": {
+        "@vielzeug/atlas": "workspace:*",
+        "@vielzeug/clockwork": "workspace:*",
+        "@vielzeug/gesture": "workspace:*",
+        "@vielzeug/ink": "workspace:*",
+        "@vielzeug/keymap": "workspace:*",
+        "@vielzeug/ledger": "workspace:*",
+        "@vielzeug/orbit": "workspace:*",
+        "@vielzeug/palette": "workspace:*",
+        "@vielzeug/refine": "workspace:*",
+        "@vielzeug/ripple": "workspace:*",
+        "@vielzeug/stage": "workspace:*",
+        "@vielzeug/wire": "workspace:*",
+      },
+      "devDependencies": {
+        "@vielzeug/assay": "workspace:*",
+        "lucide": "^1.70.0",
+        "playwright": "^1.65.0",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.6",
+        "vitest": "5.1.0",
+      },
+    },
     "demos/voyage": {
       "name": "vielzeug-voyage-demo",
       "version": "0.0.0",
@@ -126,7 +152,7 @@
     },
     "packages/archive": {
       "name": "@vielzeug/archive",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/spell": "workspace:*",
         "jose": "6.2.17",
@@ -141,7 +167,7 @@
     },
     "packages/arsenal": {
       "name": "@vielzeug/arsenal",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -151,7 +177,7 @@
     },
     "packages/assay": {
       "name": "@vielzeug/assay",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -163,9 +189,19 @@
         "vitest": "^5.1.0",
       },
     },
+    "packages/atlas": {
+      "name": "@vielzeug/atlas",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^26.6.6",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.6",
+        "vitest": "^5.1.0",
+      },
+    },
     "packages/bard": {
       "name": "@vielzeug/bard",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -175,7 +211,7 @@
     },
     "packages/beacon": {
       "name": "@vielzeug/beacon",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/ripple": "workspace:*",
       },
@@ -189,7 +225,7 @@
     },
     "packages/clockwork": {
       "name": "@vielzeug/clockwork",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -202,7 +238,7 @@
     },
     "packages/codex": {
       "name": "@vielzeug/codex",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "bin": {
         "codex": "./dist/cli.js",
       },
@@ -218,7 +254,7 @@
     },
     "packages/coins": {
       "name": "@vielzeug/coins",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -228,7 +264,7 @@
     },
     "packages/conduit": {
       "name": "@vielzeug/conduit",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -238,7 +274,7 @@
     },
     "packages/courier": {
       "name": "@vielzeug/courier",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -251,7 +287,7 @@
     },
     "packages/dnd": {
       "name": "@vielzeug/dnd",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/gesture": "workspace:*",
         "@vielzeug/keymap": "workspace:*",
@@ -265,7 +301,7 @@
     },
     "packages/familiar": {
       "name": "@vielzeug/familiar",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -278,7 +314,7 @@
     },
     "packages/flux": {
       "name": "@vielzeug/flux",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -291,7 +327,7 @@
     },
     "packages/focus": {
       "name": "@vielzeug/focus",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/keymap": "workspace:*",
       },
@@ -304,7 +340,7 @@
     },
     "packages/forge": {
       "name": "@vielzeug/forge",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -319,7 +355,7 @@
     },
     "packages/gesture": {
       "name": "@vielzeug/gesture",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@playwright/test": "^1.65.1",
         "@types/node": "^26.6.6",
@@ -330,7 +366,7 @@
     },
     "packages/herald": {
       "name": "@vielzeug/herald",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -340,7 +376,7 @@
     },
     "packages/illusionist": {
       "name": "@vielzeug/illusionist",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
         "@vielzeug/coins": "workspace:*",
@@ -353,9 +389,19 @@
         "vitest": "^5.1.0",
       },
     },
+    "packages/ink": {
+      "name": "@vielzeug/ink",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^26.6.6",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.6",
+        "vitest": "^5.1.0",
+      },
+    },
     "packages/keymap": {
       "name": "@vielzeug/keymap",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -365,7 +411,7 @@
     },
     "packages/ledger": {
       "name": "@vielzeug/ledger",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -375,7 +421,7 @@
     },
     "packages/lingua": {
       "name": "@vielzeug/lingua",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "@vielzeug/ripple": "workspace:*",
@@ -392,7 +438,7 @@
     },
     "packages/mesh": {
       "name": "@vielzeug/mesh",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -405,7 +451,7 @@
     },
     "packages/necromancer": {
       "name": "@vielzeug/necromancer",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@playwright/test": "^1.65.1",
         "@types/node": "^26.6.6",
@@ -417,7 +463,7 @@
     },
     "packages/orbit": {
       "name": "@vielzeug/orbit",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -437,7 +483,7 @@
     },
     "packages/ore": {
       "name": "@vielzeug/ore",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "@vielzeug/assay": "workspace:*",
@@ -456,9 +502,19 @@
         "@vielzeug/assay",
       ],
     },
+    "packages/palette": {
+      "name": "@vielzeug/palette",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^26.6.6",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.6",
+        "vitest": "^5.1.0",
+      },
+    },
     "packages/patchwork": {
       "name": "@vielzeug/patchwork",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -468,7 +524,7 @@
     },
     "packages/postmaster": {
       "name": "@vielzeug/postmaster",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
         "@vielzeug/vault": "workspace:*",
@@ -484,7 +540,7 @@
     },
     "packages/prism": {
       "name": "@vielzeug/prism",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/orbit": "workspace:*",
       },
@@ -497,7 +553,7 @@
     },
     "packages/pulse": {
       "name": "@vielzeug/pulse",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -510,7 +566,7 @@
     },
     "packages/refine": {
       "name": "@vielzeug/refine",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
         "@vielzeug/dnd": "workspace:*",
@@ -552,7 +608,7 @@
     },
     "packages/ripple": {
       "name": "@vielzeug/ripple",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -562,7 +618,7 @@
     },
     "packages/rune": {
       "name": "@vielzeug/rune",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -572,7 +628,7 @@
     },
     "packages/sandbox": {
       "name": "@vielzeug/sandbox",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "jsdom": "^31.0.1",
@@ -583,7 +639,7 @@
     },
     "packages/scout": {
       "name": "@vielzeug/scout",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -596,7 +652,7 @@
     },
     "packages/scribe": {
       "name": "@vielzeug/scribe",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -606,7 +662,7 @@
     },
     "packages/scroll": {
       "name": "@vielzeug/scroll",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
@@ -616,7 +672,7 @@
     },
     "packages/sentinel": {
       "name": "@vielzeug/sentinel",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -630,7 +686,7 @@
     },
     "packages/sigil": {
       "name": "@vielzeug/sigil",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "jsqr": "^1.4.0",
@@ -641,7 +697,7 @@
     },
     "packages/sourcerer": {
       "name": "@vielzeug/sourcerer",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -654,7 +710,7 @@
     },
     "packages/spell": {
       "name": "@vielzeug/spell",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -665,9 +721,19 @@
         "vitest": "^5.1.0",
       },
     },
+    "packages/stage": {
+      "name": "@vielzeug/stage",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^26.6.6",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.6",
+        "vitest": "^5.1.0",
+      },
+    },
     "packages/tabula": {
       "name": "@vielzeug/tabula",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/spell": "workspace:*",
       },
@@ -680,7 +746,7 @@
     },
     "packages/tandem": {
       "name": "@vielzeug/tandem",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -693,7 +759,7 @@
     },
     "packages/tavern": {
       "name": "@vielzeug/tavern",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/mesh": "workspace:*",
       },
@@ -706,7 +772,7 @@
     },
     "packages/tempo": {
       "name": "@vielzeug/tempo",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@js-temporal/polyfill": "^0.5.1",
       },
@@ -719,7 +785,7 @@
     },
     "packages/vault": {
       "name": "@vielzeug/vault",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "devDependencies": {
         "@types/node": "^26.6.6",
         "@vielzeug/spell": "workspace:*",
@@ -731,7 +797,7 @@
     },
     "packages/ward": {
       "name": "@vielzeug/ward",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/arsenal": "workspace:*",
       },
@@ -744,7 +810,7 @@
     },
     "packages/wayfinder": {
       "name": "@vielzeug/wayfinder",
-      "version": "26.11.21",
+      "version": "26.11.22",
       "dependencies": {
         "@vielzeug/ripple": "workspace:*",
       },
@@ -752,6 +818,16 @@
         "@types/node": "^26.6.6",
         "typescript": "^6.0.3",
         "vite": "^8.3.8",
+        "vitest": "^5.1.0",
+      },
+    },
+    "packages/wire": {
+      "name": "@vielzeug/wire",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^26.6.6",
+        "typescript": "^6.0.3",
+        "vite": "^8.3.6",
         "vitest": "^5.1.0",
       },
     },
@@ -1105,6 +1181,8 @@
 
     "@vielzeug/assay": ["@vielzeug/assay@workspace:packages/assay"],
 
+    "@vielzeug/atlas": ["@vielzeug/atlas@workspace:packages/atlas"],
+
     "@vielzeug/bard": ["@vielzeug/bard@workspace:packages/bard"],
 
     "@vielzeug/beacon": ["@vielzeug/beacon@workspace:packages/beacon"],
@@ -1135,6 +1213,8 @@
 
     "@vielzeug/illusionist": ["@vielzeug/illusionist@workspace:packages/illusionist"],
 
+    "@vielzeug/ink": ["@vielzeug/ink@workspace:packages/ink"],
+
     "@vielzeug/keymap": ["@vielzeug/keymap@workspace:packages/keymap"],
 
     "@vielzeug/ledger": ["@vielzeug/ledger@workspace:packages/ledger"],
@@ -1148,6 +1228,8 @@
     "@vielzeug/orbit": ["@vielzeug/orbit@workspace:packages/orbit"],
 
     "@vielzeug/ore": ["@vielzeug/ore@workspace:packages/ore"],
+
+    "@vielzeug/palette": ["@vielzeug/palette@workspace:packages/palette"],
 
     "@vielzeug/patchwork": ["@vielzeug/patchwork@workspace:packages/patchwork"],
 
@@ -1179,6 +1261,8 @@
 
     "@vielzeug/spell": ["@vielzeug/spell@workspace:packages/spell"],
 
+    "@vielzeug/stage": ["@vielzeug/stage@workspace:packages/stage"],
+
     "@vielzeug/tabula": ["@vielzeug/tabula@workspace:packages/tabula"],
 
     "@vielzeug/tandem": ["@vielzeug/tandem@workspace:packages/tandem"],
@@ -1192,6 +1276,8 @@
     "@vielzeug/ward": ["@vielzeug/ward@workspace:packages/ward"],
 
     "@vielzeug/wayfinder": ["@vielzeug/wayfinder@workspace:packages/wayfinder"],
+
+    "@vielzeug/wire": ["@vielzeug/wire@workspace:packages/wire"],
 
     "@vitejs/plugin-vue": ["@vitejs/plugin-vue@6.0.8", "", { "dependencies": { "@rolldown/pluginutils": "1.0.1" }, "peerDependencies": { "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0", "vue": "^3.2.25" } }, "sha512-0ZjgOg7oO6farnNGup7yvoM/YXZV84OZxHAwtflItNa/6zzQyVb5LNxyea3FEKEX2XlagIKzrlH7wwxkKgtiew=="],
 
@@ -1646,6 +1732,8 @@
     "vielzeug-crm-demo": ["vielzeug-crm-demo@workspace:demos/crm"],
 
     "vielzeug-motors-demo": ["vielzeug-motors-demo@workspace:demos/eshop"],
+
+    "vielzeug-studio-demo": ["vielzeug-studio-demo@workspace:demos/studio"],
 
     "vielzeug-voyage-demo": ["vielzeug-voyage-demo@workspace:demos/voyage"],
 

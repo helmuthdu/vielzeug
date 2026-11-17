@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "ESNext.Disposable"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "skipLibCheck": false,
+    "strict": true,
+    "target": "ES2022",
+    "types": []
+  },
+  "include": ["type-tests/node.ts"]
+}

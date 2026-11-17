@@ -3,12 +3,16 @@ import { fileURLToPath } from 'node:url';
 import { expect, type Page, test } from '@playwright/test';
 import type { PanGesture } from '../index.ts';
 
-type GestureRuntime = Pick<typeof import('../index.ts'), 'createDragGesture' | 'createPanGesture'>;
+type GestureRuntime = Pick<
+  typeof import('../index.ts'),
+  'createDragGesture' | 'createPanGesture' | 'createPinchGesture'
+>;
 type TestWindow = Window & {
   Gesture?: GestureRuntime;
   captureCalls?: number;
   pan?: PanGesture;
   result?: { distance: number; reason: string; vertical?: number };
+  pinchResult?: { reason: string; scale: number };
 };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -160,4 +164,49 @@ test('tracks a target owned by a same-origin iframe document', async ({ page }) 
       distance: 170,
       reason: 'release',
     });
+});
+
+test('pinch gesture reports baseline-relative scale from real touch input', async ({ page }) => {
+  await loadGesture(page, '<div id="target" style="width:300px;height:300px;touch-action:none"></div>');
+  await page.evaluate(() => {
+    const testWindow = window as TestWindow;
+    const gesture = testWindow.Gesture;
+    const target = document.getElementById('target');
+    if (!gesture || !target) throw new Error('Gesture test fixture did not load.');
+
+    gesture.createPinchGesture(target, {
+      activationDistance: 0,
+      onEnd: (detail) => {
+        testWindow.pinchResult = { reason: detail.reason, scale: detail.scale };
+      },
+      onMove: (detail) => {
+        testWindow.pinchResult = { reason: 'move', scale: detail.scale };
+      },
+    });
+  });
+
+  const cdp = await page.context().newCDPSession(page);
+  const send = (type: string, points: { x: number; y: number }[]) =>
+    cdp.send('Input.dispatchTouchEvent', {
+      touchPoints: points.map((point, index) => ({ ...point, id: index })),
+      type,
+    });
+
+  await send('touchStart', [
+    { x: 100, y: 100 },
+    { x: 200, y: 100 },
+  ]);
+  // Double the span: (100,100)-(300,100) against the (100,100)-(200,100) baseline.
+  await send('touchMove', [
+    { x: 100, y: 100 },
+    { x: 300, y: 100 },
+  ]);
+  await expect
+    .poll(() => page.evaluate(() => (window as TestWindow).pinchResult))
+    .toEqual({ reason: 'move', scale: 2 });
+
+  await send('touchEnd', [{ x: 100, y: 100 }]);
+  await expect
+    .poll(() => page.evaluate(() => (window as TestWindow).pinchResult))
+    .toEqual({ reason: 'release', scale: 2 });
 });

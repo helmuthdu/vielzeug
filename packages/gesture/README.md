@@ -1,6 +1,6 @@
 # @vielzeug/gesture
 
-> Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles
+> Framework-neutral pointer drag, pan, pinch, and wheel recognition with lifecycle-owned handles
 
 ## Installation
 

@@ -1,0 +1,113 @@
+/* Studio app shell: full-bleed canvas with floating chrome.
+   All visuals come from Refine design tokens. */
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-neutral-900);
+  background-color: var(--color-neutral-50);
+}
+
+.studio-app,
+.studio-shell-root {
+  height: 100%;
+}
+
+.studio-shell-root {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Height of the floating bar plus its top/bottom offsets: content that must
+   stay visible (like the palette page) steps below it by this much. */
+.studio-shell-root {
+  --shell-inset: calc(var(--navbar-height, var(--size-14)) + var(--navbar-offset, var(--size-3)) * 2);
+}
+
+/* The canvas runs full-bleed under the floating bar, like the mockup: the bar
+   floats over the dot grid instead of cutting a flat strip out of it. */
+.studio-scene {
+  position: absolute;
+  inset: 0;
+}
+
+.studio-shell {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  /* Above the canvas overlays; the shell itself is transparent to pointer
+     events except for the navbar, so drags over empty bar space still pan. */
+  z-index: var(--z-sticky);
+  pointer-events: none;
+}
+
+.shell-navbar {
+  --navbar-item-active-bg: var(--color-primary-backdrop);
+  --navbar-item-active-color: var(--color-primary-dark);
+
+  /* The floating host spans the full window width; only the visible bar should
+     own the pointer. Empty margins around it fall through to the canvas, so a
+     pan or stroke that starts beside the bar still reaches the viewport. */
+  pointer-events: none;
+}
+
+.shell-navbar::part(bar) {
+  pointer-events: auto;
+}
+
+.shell-brand {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+  padding-inline: var(--size-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-primary);
+}
+
+.shell-brand-name {
+  white-space: nowrap;
+}
+
+.shell-tabs {
+  display: flex;
+  align-items: center;
+}
+
+.shell-actions {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+}
+
+/* Mockup's zoom cluster: light primary tint with primary ink. */
+.zoom-group {
+  --button-bg: var(--color-primary-backdrop);
+  --button-color: var(--color-primary);
+  --button-border-color: transparent;
+  --button-selected-bg: var(--color-primary-light);
+}
+
+.shell-divider {
+  width: var(--border-2);
+  height: var(--size-5);
+  background-color: var(--color-divider);
+  border-radius: var(--rounded-full);
+}
+
+/* Secondary chrome steps aside on narrow screens; tabs and actions win. */
+@media (max-width: 639px) {
+  .shell-crumb,
+  .shell-brand-name,
+  .shell-divider,
+  .shell-actions ore-avatar-group {
+    display: none;
+  }
+}

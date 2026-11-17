@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(palette): color parsing, conversion, mixing, and contrast",
+      "packageName": "@vielzeug/palette",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/palette"
+}

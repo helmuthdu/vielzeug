@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(stage): initial release",
+      "packageName": "@vielzeug/stage",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/stage"
+}

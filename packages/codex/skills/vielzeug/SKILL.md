@@ -50,6 +50,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/archive`: Community content publishing for Cloudflare Workers + D1: a hardened Worker core over per-collection payload schemas
 - `@vielzeug/arsenal`: Non-trivial TypeScript utilities: retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections
 - `@vielzeug/assay`: Framework-agnostic DOM testing primitives: scoped queries, event dispatch, async waiting
+- `@vielzeug/atlas`: Spatial math, camera, and indexing primitives for 2D canvases
 - `@vielzeug/bard`: Lifecycle-owned Web Audio mixing: buses with ducking, buffered SFX and sprites, procedural synth, streamed tracks, and crossfading music decks
 - `@vielzeug/beacon`: Guided onboarding and contextual product tours for web applications
 - `@vielzeug/clockwork`: Framework-neutral finite state machines with pure transitions and actors
@@ -61,9 +62,10 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/flux`: Minimal push streams with explicit ownership, bounded buffering, and structural bridges
 - `@vielzeug/focus`: Framework-neutral list navigation and focus restoration primitives
 - `@vielzeug/forge`: Typed form state, validation, submission
-- `@vielzeug/gesture`: Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles
+- `@vielzeug/gesture`: Framework-neutral pointer drag, pan, pinch, and wheel recognition with lifecycle-owned handles
 - `@vielzeug/herald`: Typed synchronous event bus with wildcard subscriptions, one-shot waits, and lifecycle tracing
 - `@vielzeug/illusionist`: Typed, deterministic, locale-aware fake data generator with seeded PRNG
+- `@vielzeug/ink`: Freehand stroke smoothing, width profiling, and SVG path output
 - `@vielzeug/keymap`: Headless keyboard shortcut manager with chord sequences
 - `@vielzeug/ledger`: Serialized reversible command history with atomic framework-neutral state and cancellation ownership
 - `@vielzeug/lingua`: Typed i18n with pluralization and lazy locale loading
@@ -71,6 +73,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/necromancer`: Lifecycle-owned Web Animations API primitives with native access, per-handle groups, and additive FLIP
 - `@vielzeug/orbit`: Floating UI positioning with lifecycle-owned geometry and middleware
 - `@vielzeug/ore`: Functional web-component authoring on top of ripple
+- `@vielzeug/palette`: Color parsing, conversion, mixing, and contrast for design tools
 - `@vielzeug/patchwork`: RFC 6902 JSON Patch: structural diff, immutable apply, and guarded tryApply for sync protocols.
 - `@vielzeug/postmaster`: Typed durable job outbox with leased processing, retries, and dead-letter recovery
 - `@vielzeug/prism`: Responsive SVG charts with explicit updates: line, bar, area, scatter, pie, radar, heatmap, sparkline
@@ -86,6 +89,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/sigil`: QR code generation and scanning: pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning
 - `@vielzeug/sourcerer`: Reactive collection sources with local, page, cursor, and infinite pagination
 - `@vielzeug/spell`: Zero-dependency schema validation with Standard Schema interoperability
+- `@vielzeug/stage`: Retained-mode 2D canvas stage engine with DPR-aware layers, dirty repaints, and PNG export
 - `@vielzeug/tabula`: Typed CSV and TSV: RFC 4180 parser with schema-validated rows, streaming reader, and safe serializer.
 - `@vielzeug/tandem`: Offline-first sync engine with rev baselines, tombstoned deletions, and idle-batched pushes
 - `@vielzeug/tavern`: Table sessions over mesh: host-owned state replication with guest command forwarding
@@ -93,6 +97,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/vault`: Adapter-free typed storage core with focused browser and SQLite subpaths
 - `@vielzeug/ward`: Ordered authorization rules with immutable policies and typed decisions
 - `@vielzeug/wayfinder`: Client-side router with middleware and guards
+- `@vielzeug/wire`: Edge routing and graph ordering for node editors
 
 <!-- GENERATED:skill-packages:END -->
 

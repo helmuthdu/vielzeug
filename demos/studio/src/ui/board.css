@@ -1,0 +1,252 @@
+/* Board scene: viewport, transformed world layer, and overlays.
+   All visuals come from Refine design tokens. */
+
+.studio-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--color-neutral-backdrop);
+  background-image: radial-gradient(var(--color-neutral) 1px, transparent 1px);
+  background-size: var(--size-8) var(--size-8);
+}
+
+.studio-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+
+.studio-shape {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--color-primary-backdrop);
+  border: var(--border-2) solid var(--color-primary);
+  border-radius: var(--rounded-lg);
+}
+
+/* Same as .flow-edges: the world layer is zero-sized, so a percentage-sized
+   SVG computes to 0x0 and Chrome paints nothing; 1px keeps overflow visible. */
+.studio-strokes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.studio-stroke {
+  pointer-events: auto;
+  fill: var(--color-primary);
+  stroke: var(--color-primary-dark);
+  stroke-width: var(--border-2);
+}
+
+.studio-stroke.is-selected {
+  filter: drop-shadow(0 0 var(--size-1) var(--color-primary-light));
+  fill: var(--color-primary-dark);
+}
+
+.studio-stroke-preview {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: var(--border-2);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.studio-shape.is-selected {
+  border-color: var(--color-primary-dark);
+  box-shadow: 0 0 0 var(--border-2) var(--color-primary-light);
+}
+
+.studio-draft {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--color-primary-backdrop);
+  border: var(--border-2) dashed var(--color-primary);
+  border-radius: var(--rounded-lg);
+}
+
+.studio-marquee {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--color-secondary-backdrop);
+  border: var(--border-2) solid var(--color-secondary);
+}
+
+.studio-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.studio-selection-toolbar {
+  /* Mockup's dark contextual pill: fixed-dark recipe derived from the
+     contrast ramp (contrast-900 is the darkest ink in light mode). */
+  --button-bg: var(--color-contrast-900);
+  --button-color: var(--color-contrast-50);
+  --button-border-color: transparent;
+
+  position: absolute;
+  /* Contextual toolbar: stays clickable when it overlaps the floating chrome. */
+  z-index: 1;
+}
+
+.studio-selection-toolbar ore-button-group {
+  --button-radius: var(--rounded-full);
+  --button-min-height: var(--size-9);
+}
+
+/* Floating bottom tool dock shared by the board, flow, and map scenes. */
+.studio-toolbar {
+  --button-radius: var(--rounded-full);
+  --button-min-height: var(--size-9);
+  position: absolute;
+  bottom: var(--size-5);
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  gap: var(--size-1);
+  align-items: center;
+  padding: var(--size-1);
+  background-color: var(--surface-base);
+  border: var(--border) solid var(--color-neutral-border);
+  border-radius: var(--rounded-full);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(-50%);
+}
+
+.studio-toolbar ore-tooltip {
+  display: inline-flex;
+}
+
+/* Active tool/toggle in any dock (board tools, flow routing). */
+.studio-toolbar .is-active {
+  --button-bg: var(--color-primary-backdrop);
+  --button-color: var(--color-primary-dark);
+}
+
+.board-dock .dock-group {
+  display: flex;
+  align-items: center;
+}
+
+.dock-sep {
+  width: var(--border-2);
+  height: var(--size-5);
+  margin-inline: var(--size-1);
+  background-color: var(--color-divider);
+  border-radius: var(--rounded-full);
+}
+
+.studio-guides {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.studio-guide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--color-warning);
+}
+.studio-guide.is-grid {
+  background: repeating-linear-gradient(to right, var(--color-warning) 0 4px, transparent 4px 8px);
+}
+.studio-guide.is-grid.is-vertical {
+  background: repeating-linear-gradient(to bottom, var(--color-warning) 0 4px, transparent 4px 8px);
+}
+.studio-guide-cap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: var(--text-xs);
+  line-height: 1;
+  color: var(--color-warning);
+  pointer-events: none;
+  translate: -50% -50%;
+}
+.studio-spacing-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-top: 1px dashed var(--color-error);
+}
+.studio-spacing-line.is-vertical {
+  border-top: none;
+  border-left: 1px dashed var(--color-error);
+}
+.studio-spacing-mark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: var(--text-xs);
+  line-height: 1;
+  color: var(--color-error);
+  pointer-events: none;
+  translate: -50% -50%;
+}
+
+/* Konva-style selection chrome (screen space, constant size at any zoom). */
+.studio-selection-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  border: var(--border-2) dashed var(--color-primary);
+}
+
+.studio-handles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Handles sit above the frame and shapes. */
+  z-index: 1;
+  width: 0;
+  height: 0;
+}
+
+.studio-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* --size-3 dot, centred on its anchor point. */
+  width: var(--size-3);
+  height: var(--size-3);
+  margin: calc(var(--size-3) / -2);
+  cursor: nwse-resize;
+  background-color: var(--surface-raised);
+  border: var(--border-2) solid var(--color-primary);
+  border-radius: var(--rounded-full);
+  /* Offset by half the handle so the dot straddles the bounds corner. */
+  transform-origin: 0 0;
+}
+
+.studio-handle[data-handle='n'],
+.studio-handle[data-handle='s'] {
+  cursor: ns-resize;
+}
+
+.studio-handle[data-handle='e'],
+.studio-handle[data-handle='w'] {
+  cursor: ew-resize;
+}
+
+.studio-handle[data-handle='ne'],
+.studio-handle[data-handle='sw'] {
+  cursor: nesw-resize;
+}

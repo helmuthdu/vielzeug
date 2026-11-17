@@ -9,6 +9,7 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/archive` | Community content publishing for Cloudflare Workers + D1: a hardened Worker core over per-collection payload schemas | `spell` | N/A | N/A |
 | `@vielzeug/arsenal` | Non-trivial TypeScript utilities: retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections | N/A | N/A | N/A |
 | `@vielzeug/assay` | Framework-agnostic DOM testing primitives: scoped queries, event dispatch, async waiting | `arsenal` | N/A | N/A |
+| `@vielzeug/atlas` | Spatial math, camera, and indexing primitives for 2D canvases | N/A | N/A | N/A |
 | `@vielzeug/bard` | Lifecycle-owned Web Audio mixing: buses with ducking, buffered SFX and sprites, procedural synth, streamed tracks, and crossfading music decks | N/A | N/A | N/A |
 | `@vielzeug/beacon` | Guided onboarding and contextual product tours for web applications | `ripple` | N/A | N/A |
 | `@vielzeug/clockwork` | Framework-neutral finite state machines with pure transitions and actors | `arsenal` | N/A | N/A |
@@ -21,9 +22,10 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/flux` | Minimal push streams with explicit ownership, bounded buffering, and structural bridges | `arsenal` | N/A | N/A |
 | `@vielzeug/focus` | Framework-neutral list navigation and focus restoration primitives | `keymap` | N/A | N/A |
 | `@vielzeug/forge` | Typed form state, validation, submission | `arsenal` | N/A | N/A |
-| `@vielzeug/gesture` | Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles | N/A | N/A | N/A |
+| `@vielzeug/gesture` | Framework-neutral pointer drag, pan, pinch, and wheel recognition with lifecycle-owned handles | N/A | N/A | N/A |
 | `@vielzeug/herald` | Typed synchronous event bus with wildcard subscriptions, one-shot waits, and lifecycle tracing | N/A | N/A | N/A |
 | `@vielzeug/illusionist` | Typed, deterministic, locale-aware fake data generator with seeded PRNG | `arsenal`, `coins`, `tempo` | N/A | N/A |
+| `@vielzeug/ink` | Freehand stroke smoothing, width profiling, and SVG path output | N/A | N/A | N/A |
 | `@vielzeug/keymap` | Headless keyboard shortcut manager with chord sequences | N/A | N/A | N/A |
 | `@vielzeug/ledger` | Serialized reversible command history with atomic framework-neutral state and cancellation ownership | N/A | N/A | N/A |
 | `@vielzeug/lingua` | Typed i18n with pluralization and lazy locale loading | N/A | N/A | `ripple` |
@@ -31,6 +33,7 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/necromancer` | Lifecycle-owned Web Animations API primitives with native access, per-handle groups, and additive FLIP | N/A | N/A | N/A |
 | `@vielzeug/orbit` | Floating UI positioning with lifecycle-owned geometry and middleware | `arsenal` | N/A | `ripple` |
 | `@vielzeug/ore` | Functional web-component authoring on top of ripple | N/A | `ripple` | `assay` |
+| `@vielzeug/palette` | Color parsing, conversion, mixing, and contrast for design tools | N/A | N/A | N/A |
 | `@vielzeug/patchwork` | RFC 6902 JSON Patch: structural diff, immutable apply, and guarded tryApply for sync protocols. | N/A | N/A | N/A |
 | `@vielzeug/postmaster` | Typed durable job outbox with leased processing, retries, and dead-letter recovery | `arsenal`, `vault` | N/A | N/A |
 | `@vielzeug/prism` | Responsive SVG charts with explicit updates: line, bar, area, scatter, pie, radar, heatmap, sparkline | `orbit` | N/A | N/A |
@@ -46,6 +49,7 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/sigil` | QR code generation and scanning: pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning | N/A | N/A | N/A |
 | `@vielzeug/sourcerer` | Reactive collection sources with local, page, cursor, and infinite pagination | `arsenal` | N/A | N/A |
 | `@vielzeug/spell` | Zero-dependency schema validation with Standard Schema interoperability | `arsenal` | N/A | N/A |
+| `@vielzeug/stage` | Retained-mode 2D canvas stage engine with DPR-aware layers, dirty repaints, and PNG export | N/A | N/A | N/A |
 | `@vielzeug/tabula` | Typed CSV and TSV: RFC 4180 parser with schema-validated rows, streaming reader, and safe serializer. | `spell` | N/A | N/A |
 | `@vielzeug/tandem` | Offline-first sync engine with rev baselines, tombstoned deletions, and idle-batched pushes | `arsenal` | N/A | N/A |
 | `@vielzeug/tavern` | Table sessions over mesh: host-owned state replication with guest command forwarding | `mesh` | N/A | N/A |
@@ -53,6 +57,7 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/vault` | Adapter-free typed storage core with focused browser and SQLite subpaths | N/A | N/A | N/A |
 | `@vielzeug/ward` | Ordered authorization rules with immutable policies and typed decisions | `arsenal` | N/A | N/A |
 | `@vielzeug/wayfinder` | Client-side router with middleware and guards | `ripple` | N/A | N/A |
+| `@vielzeug/wire` | Edge routing and graph ordering for node editors | N/A | N/A | N/A |
 
 <!-- GENERATED:packages-table:END -->
 

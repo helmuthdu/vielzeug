@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(gesture): add pinch and wheel gestures",
+      "packageName": "@vielzeug/gesture",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/gesture"
+}

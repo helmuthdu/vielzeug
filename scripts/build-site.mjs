@@ -2,7 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMain, run } from './lib/cli.mjs';
 
-export const SITE_DEMOS = ['voyage', 'eshop', 'crm'];
+export const SITE_DEMOS = ['voyage', 'eshop', 'crm', 'studio'];
 
 export function buildSite({ environment = process.env, root = path.resolve(fileURLToPath(new URL('..', import.meta.url))), runCommand = run } = {}) {
   runCommand('bun', ['run', 'docs:build'], { cwd: root, inherit: true });

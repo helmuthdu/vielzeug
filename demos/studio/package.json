@@ -1,0 +1,38 @@
+{
+  "name": "vielzeug-studio-demo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Vielzeug Studio: a 2D canvas playground proving atlas, ink, wire, palette, and stage compose into editor tools.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && vite build",
+    "build:local": "bun scripts/write-local-tsconfig.ts && tsc -p tsconfig.local-dev.json && VIELZEUG_LOCAL_DEV=1 vite build",
+    "dev": "vite",
+    "dev:local": "VIELZEUG_LOCAL_DEV=1 vite",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@vielzeug/atlas": "workspace:*",
+    "@vielzeug/clockwork": "workspace:*",
+    "@vielzeug/gesture": "workspace:*",
+    "@vielzeug/ink": "workspace:*",
+    "@vielzeug/keymap": "workspace:*",
+    "@vielzeug/ledger": "workspace:*",
+    "@vielzeug/orbit": "workspace:*",
+    "@vielzeug/palette": "workspace:*",
+    "@vielzeug/refine": "workspace:*",
+    "@vielzeug/ripple": "workspace:*",
+    "@vielzeug/stage": "workspace:*",
+    "@vielzeug/wire": "workspace:*"
+  },
+  "devDependencies": {
+    "@vielzeug/assay": "workspace:*",
+    "lucide": "^1.70.0",
+    "playwright": "^1.65.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.6",
+    "vitest": "5.1.0"
+  }
+}

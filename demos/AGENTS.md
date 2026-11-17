@@ -1,6 +1,6 @@
 # AGENTS.md: demos
 
-Integration demos (`crm`, `eshop`, `voyage`) prove the packages compose into real apps. They are first-party integration harnesses, not throwaway samples: a demo that exposes a library gap means the owning package is missing something.
+Integration demos (`crm`, `eshop`, `voyage`, `studio`) prove the packages compose into real apps. They are first-party integration harnesses, not throwaway samples: a demo that exposes a library gap means the owning package is missing something.
 
 ## Local contracts
 
@@ -13,5 +13,5 @@ Integration demos (`crm`, `eshop`, `voyage`) prove the packages compose into rea
 ## Verification
 
 - Build + unit tests for every demo: `bun run validate:demos`.
-- One demo: `bun run --filter <demo-package-name> build && bun run --filter <demo-package-name> test` (names differ from folder names: read `demos/<name>/package.json`). `crm` and `eshop` also carry `test:e2e` (Playwright).
+- One demo: `bun run --filter <demo-package-name> build && bun run --filter <demo-package-name> test` (names differ from folder names: read `demos/<name>/package.json`). `crm`, `eshop`, and `studio` also carry `test:e2e` (Playwright).
 - Shared or broad demo impact: `bun run validate:demos`. Library behavior change: also run the owning package's gates from root `AGENTS.md` → **Validation gates** (Demo or integration, Package source, Public API as applicable).
