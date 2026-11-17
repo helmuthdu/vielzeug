@@ -216,3 +216,52 @@ test('draws a freehand stroke with the pen tool that can be selected and undone'
   await page.keyboard.press(`${MOD}+z`);
   await expect(page.locator('path.studio-stroke')).toHaveCount(0);
 });
+
+test('selection shows a dashed frame and eight resize handles', async ({ page }) => {
+  const box = await viewportBox(page);
+  await drawRect(page, [box.x + 100, box.y + BELOW_BAR], [box.x + 220, box.y + BELOW_BAR + 80]);
+  await expect(page.locator('[data-testid="board-selection-frame"]')).toBeVisible();
+  await expect(page.locator('[data-testid="board-handles"] .studio-handle')).toHaveCount(8);
+
+  // Deselecting hides the chrome; switching tools hides it too. (The handles
+  // layer itself is zero-sized, so assert on the handle dots.)
+  await page.mouse.click(box.x + box.width - 40, box.y + box.height - 140);
+  await expect(page.locator('[data-testid="board-handles"] .studio-handle').first()).toBeHidden();
+
+  await page.mouse.click(box.x + 150, box.y + BELOW_BAR + 40);
+  await expect(page.locator('[data-testid="board-handles"] .studio-handle').first()).toBeVisible();
+  await page.keyboard.press('b');
+  await expect(page.locator('[data-testid="board-handles"] .studio-handle').first()).toBeHidden();
+});
+
+test('dragging the southeast handle resizes the shape, with undo', async ({ page }) => {
+  const box = await viewportBox(page);
+  await drawRect(page, [box.x + 100, box.y + BELOW_BAR], [box.x + 220, box.y + BELOW_BAR + 80]);
+  const shape = page.locator('.studio-shape').first();
+  const before = await shape.boundingBox();
+  if (!before) throw new Error('shape not visible');
+
+  const handle = page.locator('[data-handle="se"]');
+  await expect(handle).toBeVisible();
+  const handleBox = await handle.boundingBox();
+  if (!handleBox) throw new Error('handle not visible');
+  const hx = handleBox.x + handleBox.width / 2;
+  const hy = handleBox.y + handleBox.height / 2;
+
+  await page.mouse.move(hx, hy);
+  await page.mouse.down();
+  await page.mouse.move(hx + 60, hy + 40, { steps: 6 });
+  await page.mouse.up();
+
+  const after = await shape.boundingBox();
+  expect(after?.width ?? 0).toBeGreaterThan((before?.width ?? 0) + 50);
+  expect(after?.height ?? 0).toBeGreaterThan((before?.height ?? 0) + 30);
+  // The opposite (northwest) corner stays put.
+  expect(Math.abs((after?.x ?? 0) - (before?.x ?? 0))).toBeLessThan(2);
+  expect(Math.abs((after?.y ?? 0) - (before?.y ?? 0))).toBeLessThan(2);
+
+  await page.keyboard.press(`${MOD}+z`);
+  await expect
+    .poll(async () => (await shape.boundingBox())?.width ?? 0, { message: 'undo restores width' })
+    .toBeCloseTo(before?.width ?? 0, 0);
+});

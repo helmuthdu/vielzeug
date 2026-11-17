@@ -33,6 +33,7 @@ import {
   createBoardModel,
   moveShapesCommand,
   removeShapesCommand,
+  resizeShapesCommand,
   type ShapePosition,
   shapeBounds,
 } from '../core/board.ts';
@@ -44,6 +45,69 @@ const ZOOM_STEP = 1.0015;
 // Grid spacing matches the viewport's dot background (--size-8 = 32px at zoom 1).
 const GRID_SPACING = 32;
 const SNAP_THRESHOLD = 8;
+// A resized shape never shrinks below this world size.
+const MIN_SHAPE_SIZE = 4;
+
+/** Resize handle directions; the suffix names the edges each handle drags. */
+const HANDLE_DIRS = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const;
+type HandleDir = (typeof HANDLE_DIRS)[number];
+
+const HANDLE_X: Record<HandleDir, 'left' | 'center' | 'right'> = {
+  e: 'right',
+  n: 'center',
+  ne: 'right',
+  nw: 'left',
+  s: 'center',
+  se: 'right',
+  sw: 'left',
+  w: 'left',
+};
+const HANDLE_Y: Record<HandleDir, 'bottom' | 'center' | 'top'> = {
+  e: 'center',
+  n: 'top',
+  ne: 'top',
+  nw: 'top',
+  s: 'bottom',
+  se: 'bottom',
+  sw: 'bottom',
+  w: 'center',
+};
+
+/**
+ * Resizes `bounds` by dragging the edge(s) named by `dir` to the world point
+ * `to`. The opposite edge(s) stay fixed; the result never collapses below
+ * MIN_SHAPE_SIZE.
+ */
+function resizeBounds(bounds: Rect, dir: HandleDir, to: Point): Rect {
+  const right = bounds.x + bounds.width;
+  const bottom = bounds.y + bounds.height;
+  let { x, y } = bounds;
+  let width = bounds.width;
+  let height = bounds.height;
+  if (dir.includes('w')) x = Math.min(to.x, right - MIN_SHAPE_SIZE);
+  if (dir.includes('e')) width = Math.max(to.x - bounds.x, MIN_SHAPE_SIZE);
+  if (dir.includes('n')) y = Math.min(to.y, bottom - MIN_SHAPE_SIZE);
+  if (dir.includes('s')) height = Math.max(to.y - bounds.y, MIN_SHAPE_SIZE);
+  return { height, width, x, y };
+}
+
+/** Scales a shape's geometry from its top-left corner into `rect` (uniform scale). */
+function scaleShape(shape: BoardShape, rect: Rect): BoardShape {
+  if (shape.kind === 'rect') return { ...shape, ...rect };
+  const sx = shape.width === 0 ? 1 : rect.width / shape.width;
+  const sy = shape.height === 0 ? 1 : rect.height / shape.height;
+  const outline = shape.outline.map((pt) => ({ x: pt.x * sx, y: pt.y * sy }));
+  return {
+    ...shape,
+    height: rect.height,
+    outline,
+    path: strokeOutlineToSvgPath(outline),
+    points: shape.points.map((pt) => ({ pressure: pt.pressure, x: pt.x * sx, y: pt.y * sy })),
+    width: rect.width,
+    x: rect.x,
+    y: rect.y,
+  };
+}
 
 let nextShapeId = 1;
 
@@ -138,7 +202,25 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   guidesEl.dataset.testid = 'board-guides';
   guidesEl.hidden = true;
 
-  overlay.append(guidesEl, marqueeEl, toolbar);
+  // Konva-style selection chrome, drawn in screen space so the dashed frame and
+  // handles stay a constant size at every zoom level.
+  const frameEl = document.createElement('div');
+  frameEl.className = 'studio-selection-frame';
+  frameEl.hidden = true;
+  frameEl.dataset.testid = 'board-selection-frame';
+
+  const handlesEl = document.createElement('div');
+  handlesEl.className = 'studio-handles';
+  handlesEl.hidden = true;
+  handlesEl.dataset.testid = 'board-handles';
+  for (const dir of HANDLE_DIRS) {
+    const handle = document.createElement('div');
+    handle.className = 'studio-handle';
+    handle.dataset.handle = dir;
+    handlesEl.append(handle);
+  }
+
+  overlay.append(guidesEl, marqueeEl, frameEl, handlesEl, toolbar);
   viewport.append(world, overlay);
   container.append(viewport);
 
@@ -254,6 +336,33 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     const bounds = selectionBounds();
     toolbar.hidden = bounds === null;
     if (bounds) positioner.update();
+    syncSelectionChrome(bounds);
+  }
+
+  /** Places the screen-space dashed frame and the eight resize handles. */
+  function syncSelectionChrome(bounds: Rect | null): void {
+    // Handles only make sense for the select tool; other tools hide the chrome.
+    const show = bounds !== null && currentTool() === 'select';
+    frameEl.hidden = !show;
+    handlesEl.hidden = !show;
+    if (!bounds || !show) return;
+    const topLeft = camera.toScreen({ x: bounds.x, y: bounds.y });
+    const bottomRight = camera.toScreen({ x: bounds.x + bounds.width, y: bounds.y + bounds.height });
+    const x = Math.min(topLeft.x, bottomRight.x);
+    const y = Math.min(topLeft.y, bottomRight.y);
+    const width = Math.abs(bottomRight.x - topLeft.x);
+    const height = Math.abs(bottomRight.y - topLeft.y);
+    frameEl.style.transform = `translate(${String(x)}px, ${String(y)}px)`;
+    frameEl.style.width = `${String(width)}px`;
+    frameEl.style.height = `${String(height)}px`;
+    for (const handleEl of handlesEl.children) {
+      if (!(handleEl instanceof HTMLElement)) continue;
+      const dir = handleEl.dataset.handle as HandleDir | undefined;
+      if (!dir) continue;
+      const hx = HANDLE_X[dir] === 'left' ? x : HANDLE_X[dir] === 'right' ? x + width : x + width / 2;
+      const hy = HANDLE_Y[dir] === 'top' ? y : HANDLE_Y[dir] === 'bottom' ? y + height : y + height / 2;
+      handleEl.style.transform = `translate(${String(hx)}px, ${String(hy)}px)`;
+    }
   }
 
   function applyCamera(): void {
@@ -273,6 +382,13 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     | { kind: 'pen'; points: StrokePoint[] }
     | { kind: 'marquee'; origin: Point }
     | { kind: 'move'; bounds: Rect; from: Map<string, ShapePosition>; originWorld: Point }
+    | {
+        bounds: Rect;
+        dir: HandleDir;
+        from: Map<string, BoardShape>;
+        kind: 'resize';
+        moved: boolean;
+      }
     | { kind: 'pan'; lastX: number; lastY: number }
     | null;
 
@@ -516,11 +632,76 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     },
     shouldStart: (event) => {
       if (!(event.button === 0 || event.pointerType !== 'mouse')) return false;
-      // Pointerdown on floating UI (toolbars) must not start a canvas interaction.
+      // Pointerdown on floating UI (toolbars, resize handles) must not start a canvas interaction.
       const target = event.target;
-      return !(target instanceof Element && target.closest('.studio-toolbar, .studio-selection-toolbar'));
+      return !(
+        target instanceof Element && target.closest('.studio-toolbar, .studio-selection-toolbar, .studio-handles')
+      );
     },
   });
+
+  // ── Resize handles ────────────────────────────────────────────────────────
+  // Handles own their pointer stream: capture on the handle so the viewport's
+  // drag gesture (excluded via shouldStart) never competes for the same drag.
+  function beginResize(event: PointerEvent, handleEl: HTMLElement, dir: HandleDir): void {
+    const bounds = selectionBounds();
+    if (!bounds) return;
+    const from = new Map<string, BoardShape>();
+    for (const id of model.selection) {
+      const shape = model.get(id);
+      if (shape) from.set(id, shape);
+    }
+    if (from.size === 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressClick = true;
+    handleEl.setPointerCapture(event.pointerId);
+    interaction = { bounds, dir, from, kind: 'resize', moved: false };
+  }
+
+  function moveResize(event: PointerEvent): void {
+    if (!interaction || interaction.kind !== 'resize') return;
+    const worldPoint = camera.toWorld(screenPoint(viewport, event.clientX, event.clientY));
+    const rect = resizeBounds(interaction.bounds, interaction.dir, worldPoint);
+    // Scale every selected shape by the same factor, anchored at the bounds
+    // origin, so a multi-selection resizes as a group.
+    const sx = interaction.bounds.width === 0 ? 1 : rect.width / interaction.bounds.width;
+    const sy = interaction.bounds.height === 0 ? 1 : rect.height / interaction.bounds.height;
+    for (const shape of interaction.from.values()) {
+      const target: Rect = {
+        height: shape.height * sy,
+        width: shape.width * sx,
+        x: interaction.bounds.x + (shape.x - interaction.bounds.x) * sx,
+        y: interaction.bounds.y + (shape.y - interaction.bounds.y) * sy,
+      };
+      if (model.replace(scaleShape(shape, target))) interaction.moved = true;
+    }
+  }
+
+  function endResize(): void {
+    if (!interaction || interaction.kind !== 'resize') return;
+    if (interaction.moved) ledger.record(resizeShapesCommand(model, interaction.from));
+    interaction = null;
+  }
+
+  function cancelResize(): void {
+    if (!interaction || interaction.kind !== 'resize') return;
+    for (const shape of interaction.from.values()) model.replace(shape);
+    interaction = null;
+  }
+
+  for (const child of handlesEl.children) {
+    if (!(child instanceof HTMLElement)) continue;
+    const dir = child.dataset.handle as HandleDir | undefined;
+    if (!dir) continue;
+    child.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 && event.pointerType === 'mouse') return;
+      beginResize(event, child, dir);
+    });
+    child.addEventListener('pointermove', moveResize);
+    child.addEventListener('pointerup', endResize);
+    child.addEventListener('pointercancel', cancelResize);
+  }
 
   let pinchScale = 1;
   const pinch = createPinchGesture(viewport, {
@@ -638,6 +819,8 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     viewport.dataset.tool = tool;
     setToolButton(tool);
     viewport.style.cursor = tool === 'pan' ? 'grab' : tool === 'draw' || tool === 'pen' ? 'crosshair' : 'default';
+    // The selection frame and handles only show for the select tool.
+    syncSelectionChrome(selectionBounds());
   });
   setToolButton('select');
   viewport.dataset.tool = 'select';

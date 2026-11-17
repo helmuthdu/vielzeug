@@ -57,6 +57,8 @@ export interface BoardModel {
   moveTo(id: string, position: ShapePosition): boolean;
   /** Removes the shape and its selection entry. Returns false when unknown. */
   remove(id: string): boolean;
+  /** Replaces the stored geometry of an existing shape (same id), refreshing its index entry. */
+  replace(shape: BoardShape): boolean;
   select(ids: readonly string[]): void;
   /** Selection ids in z-order (insertion order). */
   readonly selection: readonly string[];
@@ -146,6 +148,16 @@ export function createBoardModel(): BoardModel {
       notify();
       return true;
     },
+    replace(shape) {
+      const stored = shapes.get(shape.id);
+      if (!stored) return false;
+      // Mutate in place so the spatial index's value reference stays fresh,
+      // matching how moveTo updates the stored object.
+      Object.assign(stored, shape);
+      index.update(shape.id, shapeBounds(stored));
+      notify();
+      return true;
+    },
     select(ids) {
       const known = new Set(ids.filter((id) => shapes.has(id)));
       selection = order.filter((id) => known.has(id));
@@ -193,6 +205,26 @@ export function moveShapesCommand(
     apply: () => applyPositions(snapshot),
     label: ids.length === 1 ? 'Move shape' : `Move ${String(ids.length)} shapes`,
     revert: () => applyPositions(from),
+  };
+}
+
+/**
+ * Records an already-applied resize of one or more shapes. `from` must hold the
+ * full shape snapshots taken before the resize was applied.
+ */
+export function resizeShapesCommand(model: BoardModel, from: ReadonlyMap<string, BoardShape>): ReversibleCommand {
+  const to = new Map<string, BoardShape>();
+  for (const id of from.keys()) {
+    const shape = model.get(id);
+    if (shape) to.set(id, shape);
+  }
+  const applyShapes = (shapes: ReadonlyMap<string, BoardShape>): void => {
+    for (const shape of shapes.values()) model.replace(shape);
+  };
+  return {
+    apply: () => applyShapes(to),
+    label: from.size === 1 ? 'Resize shape' : `Resize ${String(from.size)} shapes`,
+    revert: () => applyShapes(from),
   };
 }
 

@@ -164,3 +164,53 @@
   left: 0;
   background-color: var(--color-warning);
 }
+
+/* Konva-style selection chrome (screen space, constant size at any zoom). */
+.studio-selection-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  border: var(--border-2) dashed var(--color-primary);
+}
+
+.studio-handles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Handles sit above the frame and shapes. */
+  z-index: 1;
+  width: 0;
+  height: 0;
+}
+
+.studio-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* --size-3 dot, centred on its anchor point. */
+  width: var(--size-3);
+  height: var(--size-3);
+  margin: calc(var(--size-3) / -2);
+  cursor: nwse-resize;
+  background-color: var(--surface-raised);
+  border: var(--border-2) solid var(--color-primary);
+  border-radius: var(--rounded-full);
+  /* Offset by half the handle so the dot straddles the bounds corner. */
+  transform-origin: 0 0;
+}
+
+.studio-handle[data-handle='n'],
+.studio-handle[data-handle='s'] {
+  cursor: ns-resize;
+}
+
+.studio-handle[data-handle='e'],
+.studio-handle[data-handle='w'] {
+  cursor: ew-resize;
+}
+
+.studio-handle[data-handle='ne'],
+.studio-handle[data-handle='sw'] {
+  cursor: nesw-resize;
+}
