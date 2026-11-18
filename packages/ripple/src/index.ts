@@ -1,9 +1,11 @@
 export type { AsyncState, Resource, ResourceOptions } from './_async';
-export { createRipple, type Ripple } from './_default';
+export { resource } from './_async';
 export type { BridgedReadable, FromSubscribableOptions } from './_subscribable';
+export { fromSubscribable } from './_subscribable';
 export type { WatchOptions } from './_watch';
+export { watch } from './_watch';
 export { RippleCycleError, RippleDisposedError, RippleError } from './errors';
-export { isReactive } from './runtime';
+export { batch, computed, createScope, effect, isReactive, onCleanup, signal, untrack } from './runtime';
 export type {
   Cleanup,
   ComputedOptions,
@@ -13,23 +15,10 @@ export type {
   Equality,
   Readable,
   RippleErrorContext,
-  RippleOptions,
   Scope,
+  ScopeOptions,
   Signal,
   SignalOptions,
   Subscribable,
   Unsubscribe,
 } from './types';
-
-import { defaultRipple } from './_default';
-
-export const signal = defaultRipple.signal;
-export const computed = defaultRipple.computed;
-export const effect = defaultRipple.effect;
-export const onCleanup = defaultRipple.onCleanup;
-export const batch = defaultRipple.batch;
-export const createScope = defaultRipple.createScope;
-export const untrack = defaultRipple.untrack;
-export const watch = defaultRipple.watch;
-export const resource = defaultRipple.resource;
-export const fromSubscribable = defaultRipple.fromSubscribable;

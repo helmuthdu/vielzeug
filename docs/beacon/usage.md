@@ -274,7 +274,7 @@ onScopeDispose(unsubscribe);
 - **Refine**: `ore-tour` and `ore-spotlight` are the intended presentation layer; see [Driving a Refine Presentation](#driving-a-refine-presentation).
 - **Orbit**: `current.rect` matches orbit's `Rect` shape, so a custom card positions with `computePosition({ getBoundingClientRect: () => current.rect ?? ZERO_RECT }, floatingEl, middleware)`.
 - **Vault**: any vault store becomes a `BeaconStorage` with a six-line bridge (see the `BeaconStorage` docs in [API Reference](./api.md)).
-- **Ripple**: every handle exposes ripple `Readable`s; `createRipple().isBatchingObservable` semantics apply when you subscribe from effects.
+- **Ripple**: handles expose `Readable`s; read `.value`/`.peek()` or subscribe to changes. See Ripple's API reference for notification and batching semantics.
 
 ## Best Practices
 

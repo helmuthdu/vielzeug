@@ -1,19 +1,22 @@
 export const basicSignalExample = {
-  code: `import { createRipple } from '@vielzeug/ripple'
+  code: `import { computed, createScope, effect, signal } from '@vielzeug/ripple'
 
-// One graph owns state, derived values, effects, and disposal.
-const ripple = createRipple()
-const count = ripple.signal(0)
-const doubled = ripple.computed(() => count.value * 2)
+const scope = createScope()
+const { count } = scope.run(() => {
+  const count = signal(0)
+  const doubled = computed(() => count.value * 2)
 
-const stop = ripple.effect(() => {
-  console.log({ count: count.value, doubled: doubled.value })
+  effect(() => {
+    console.log({ count: count.value, doubled: doubled.value })
+  })
+
+  return { count }
 })
 
 count.value = 1
 count.value = 2
 
-stop.dispose()
-ripple.dispose()`,
+scope.dispose()
+`,
   name: 'Create Graph, Signal, Computed & Effect',
 };

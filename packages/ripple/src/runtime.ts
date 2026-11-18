@@ -1,4 +1,4 @@
-import { RippleCycleError, RippleDisposedError } from './errors';
+import { RippleCycleError, RippleDisposedError, RippleError } from './errors';
 import type {
   Cleanup,
   ComputedOptions,
@@ -6,8 +6,8 @@ import type {
   EffectOptions,
   Readable,
   RippleErrorContext,
-  RippleOptions,
   Scope,
+  ScopeOptions,
   Signal,
   SignalOptions,
   Unsubscribe,
@@ -74,7 +74,6 @@ abstract class ReactiveNode<T> {
   abstract refresh(): void;
 
   subscribe(listener: () => void): Unsubscribe {
-    this.runtime.assertActive();
     this.refresh();
 
     const sink = new ListenerSink(this.runtime, this, listener);
@@ -111,7 +110,7 @@ class SignalNode<T> extends ReactiveNode<T> implements Signal<T> {
   }
 
   set value(next: T) {
-    this.runtime.assertActive();
+    this.runtime.assertNotDeriving(this.name);
 
     if (this.equals(this.current, next)) return;
 
@@ -136,13 +135,6 @@ class ComputedNode<T> extends ReactiveNode<T> implements Collector, Owned {
   sources = new Set<Source>();
   disposed = false;
   private computing = false;
-  /**
-   * True when a source write reached this node mid-derive. The write lands on an
-   * already non-CLEAN node, so `mark()` alone cannot carry the invalidation past
-   * `recompute()`'s settle; without this flag the cached value would survive a
-   * source it already read moving underneath it.
-   */
-  private invalidatedMidDerive = false;
   /** The last derived value, or the error the last derive threw. */
   private current: T | typeof UNSET = UNSET;
   private failure: { error: unknown } | undefined;
@@ -174,11 +166,6 @@ class ComputedNode<T> extends ReactiveNode<T> implements Collector, Owned {
   mark(staleness: Staleness): void {
     if (this.disposed) return;
 
-    // A write during the derive marks a node that is already DIRTY/CHECK, so it
-    // must be remembered before the early return: `recompute()` keeps the node
-    // DIRTY instead of settling CLEAN, and the next read re-derives.
-    if (this.computing) this.invalidatedMidDerive = true;
-
     if (this.freshness >= staleness) return;
 
     const wasClean = this.freshness === CLEAN;
@@ -203,10 +190,7 @@ class ComputedNode<T> extends ReactiveNode<T> implements Collector, Owned {
     }
 
     if (stale) this.recompute();
-    else if (this.invalidatedMidDerive) {
-      this.invalidatedMidDerive = false;
-      this.freshness = DIRTY;
-    } else this.freshness = CLEAN;
+    else this.freshness = CLEAN;
   }
 
   setOwner(owner: ScopeNode | undefined): void {
@@ -240,7 +224,7 @@ class ComputedNode<T> extends ReactiveNode<T> implements Collector, Owned {
     this.computing = true;
 
     try {
-      const next = this.runtime.collect(this, this.derive);
+      const next = this.runtime.withDerivation(() => this.runtime.collect(this, this.derive));
 
       // A throwing `equals` is a derive failure too: `refresh()` must not throw.
       changed = previousFailure !== undefined || previous === UNSET || !this.equals(previous, next);
@@ -254,15 +238,7 @@ class ComputedNode<T> extends ReactiveNode<T> implements Collector, Owned {
       this.failure = { error };
     } finally {
       this.computing = false;
-      if (this.invalidatedMidDerive) {
-        this.invalidatedMidDerive = false;
-        this.freshness = DIRTY;
-        // The derived value mixed sources that moved during the derive:
-        // observers must re-evaluate, not trust this run's `equals`.
-        changed = true;
-      } else {
-        this.freshness = CLEAN;
-      }
+      this.freshness = CLEAN;
     }
 
     if (changed) for (const observer of this.observers) observer.confirm();
@@ -330,10 +306,12 @@ class ScopeNode implements Scope, Owned {
   private isDisposed = false;
   private owner: ScopeNode | undefined;
   private readonly runtime: ReactiveRuntime;
+  private readonly onError: ScopeOptions['onError'];
 
-  constructor(runtime: ReactiveRuntime, name?: string) {
+  constructor(runtime: ReactiveRuntime, options?: ScopeOptions) {
     this.runtime = runtime;
-    this.name = name;
+    this.name = options?.name;
+    this.onError = options?.onError;
   }
 
   get disposed(): boolean {
@@ -386,22 +364,44 @@ class ScopeNode implements Scope, Owned {
 
     this.isDisposed = true;
     this.owner?.release(this);
-    this.owner = undefined;
     for (const owned of [...this.owned].reverse()) owned.dispose();
     this.owned.clear();
     this.runCleanups();
     this.controller?.abort();
+    this.owner = undefined;
   }
 
   [Symbol.dispose](): void {
     this.dispose();
   }
 
+  report(error: unknown, context: RippleErrorContext): void {
+    let scope: ScopeNode | undefined = this;
+
+    while (scope) {
+      if (scope.onError) {
+        try {
+          scope.onError(error, context);
+
+          return;
+        } catch (handlerError) {
+          error = handlerError;
+        }
+      }
+
+      scope = scope.owner;
+    }
+
+    queueMicrotask(() => {
+      throw error;
+    });
+  }
+
   private invokeCleanup(fn: Cleanup): void {
     try {
       fn();
     } catch (error) {
-      this.runtime.report(error, { kind: 'cleanup', name: this.name });
+      this.runtime.report(error, { kind: 'cleanup', name: this.name }, this);
     }
   }
 
@@ -504,11 +504,15 @@ class EffectNode implements Collector, Owned, EffectHandle {
     try {
       const cleanup = this.runtime.withRunOwner(owner, this.scope, () => this.runtime.collect(this, this.callback));
 
-      if (typeof cleanup === 'function') (owner.scope ??= new ScopeNode(this.runtime, this.name)).addCleanup(cleanup);
+      if (typeof cleanup === 'function') {
+        const runScope = (owner.scope ??= new ScopeNode(this.runtime, { name: this.name }));
+        runScope.setOwner(this.scope);
+        runScope.addCleanup(cleanup);
+      }
       this.runScope = owner.scope;
     } catch (error) {
       owner.scope?.dispose();
-      this.runtime.report(error, { kind: 'effect', name: this.name });
+      this.runtime.report(error, { kind: 'effect', name: this.name }, this.scope);
     }
 
     if (this.isDisposed) {
@@ -539,52 +543,31 @@ class EffectNode implements Collector, Owned, EffectHandle {
 const label = (name: string | undefined): string => (name === undefined ? '' : ` "${name}"`);
 
 /**
- * A runtime owns reactive graph state and lifetime. Separate instances isolate
- * applications and SSR requests without process-wide mutable hooks.
+ * The module-level runtime owns the process-wide reactive graph.
  */
-export class ReactiveRuntime {
+class ReactiveRuntime {
   private activeCollector: Collector | undefined;
   private activeScope: ScopeNode;
+  private derivationDepth = 0;
   /** Set while an effect runs: nodes created during the run belong to it. */
   private runOwner: RunOwner | undefined;
-  private isDisposed = false;
   private batchDepth = 0;
   private flushing = false;
   private nextEffectId = 0;
   private readonly pending = new Set<EffectNode>();
   private readonly listeners = new Set<ListenerSink>();
-  private readonly rootScope: ScopeNode;
-  private readonly onError: (error: unknown, context: RippleErrorContext) => void;
+  readonly rootScope: ScopeNode;
 
-  constructor(options?: RippleOptions) {
-    this.onError =
-      options?.onError ??
-      ((error) => {
-        queueMicrotask(() => {
-          throw error;
-        });
-      });
-    this.rootScope = new ScopeNode(this, 'runtime');
+  constructor() {
+    this.rootScope = new ScopeNode(this);
     this.activeScope = this.rootScope;
   }
 
-  get disposed(): boolean {
-    return this.isDisposed;
-  }
-
-  get disposalSignal(): AbortSignal {
-    return this.rootScope.disposalSignal;
-  }
-
   readonly signal = <T>(initial: T, options?: SignalOptions<T>): Signal<T> => {
-    this.assertActive();
-
     return new SignalNode(this, initial, options);
   };
 
   readonly computed = <T>(derive: () => T, options?: ComputedOptions<T>): Readable<T> => {
-    this.assertActive();
-
     const node = new ComputedNode(this, derive, options);
 
     this.currentOwner().own(node);
@@ -593,8 +576,6 @@ export class ReactiveRuntime {
   };
 
   readonly effect = (callback: () => Cleanup | undefined, options?: EffectOptions): EffectHandle => {
-    this.assertActive();
-
     const node = new EffectNode(this, this.nextEffectId++, this.activeScope, callback, options);
 
     this.currentOwner().own(node);
@@ -610,14 +591,11 @@ export class ReactiveRuntime {
    * callback is reported and does not skip the rest.
    */
   readonly onCleanup = (fn: Cleanup): void => {
-    this.assertActive();
     this.currentOwner().addCleanup(fn);
   };
 
-  readonly createScope = (name?: string): Scope => {
-    this.assertActive();
-
-    const scope = new ScopeNode(this, name);
+  readonly createScope = (options?: ScopeOptions): Scope => {
+    const scope = new ScopeNode(this, options);
 
     // Scopes model explicit, caller-owned lifetimes. Unlike effects/computeds created during an
     // effect run, they deliberately attach to the enclosing scope rather than the per-run owner:
@@ -629,7 +607,6 @@ export class ReactiveRuntime {
   };
 
   readonly batch = <T>(fn: () => T): T => {
-    this.assertActive();
     this.batchDepth++;
 
     try {
@@ -641,8 +618,6 @@ export class ReactiveRuntime {
   };
 
   readonly untrack = <T>(fn: () => T): T => {
-    this.assertActive();
-
     const previous = this.activeCollector;
 
     this.activeCollector = undefined;
@@ -654,16 +629,20 @@ export class ReactiveRuntime {
     }
   };
 
-  dispose(): void {
-    if (this.isDisposed) return;
-
-    this.isDisposed = true;
-    this.rootScope.dispose();
+  assertNotDeriving(name: string | undefined): void {
+    if (this.derivationDepth > 0) {
+      throw new RippleError(`Cannot write signal${label(name)} during a computed derive`);
+    }
   }
 
-  /** Disposed runtimes allow inert reads but reject graph work and mutation. */
-  assertActive(): void {
-    if (this.isDisposed) throw new RippleDisposedError('Cannot use a disposed Ripple runtime.');
+  withDerivation<T>(fn: () => T): T {
+    this.derivationDepth++;
+
+    try {
+      return fn();
+    } finally {
+      this.derivationDepth--;
+    }
   }
 
   track(node: Source): void {
@@ -760,20 +739,20 @@ export class ReactiveRuntime {
     this.listeners.add(sink);
   }
 
-  report(error: unknown, context: RippleErrorContext): void {
-    try {
-      this.onError(error, context);
-    } catch {
-      // A failing error handler must not corrupt the graph or mask the
-      // original failure; the default handler rethrows asynchronously instead.
-    }
+  report(error: unknown, context: RippleErrorContext, scope = this.rootScope): void {
+    scope.report(error, context);
   }
 
   /** The owner a newly created node belongs to, materializing a lazy effect-run scope if needed. */
   private currentOwner(): ScopeNode {
     const owner = this.runOwner;
 
-    if (owner) return (owner.scope ??= new ScopeNode(this, owner.name));
+    if (owner) {
+      const scope = (owner.scope ??= new ScopeNode(this, { name: owner.name }));
+      scope.setOwner(this.activeScope);
+
+      return scope;
+    }
 
     return this.activeScope;
   }
@@ -848,6 +827,23 @@ export class ReactiveRuntime {
   }
 }
 
+export const runtime = new ReactiveRuntime();
+/** Creates a writable signal in Ripple's shared runtime. */
+export const signal = runtime.signal;
+/** Creates a lazily evaluated value from reactive reads. */
+export const computed = runtime.computed;
+/** Creates and immediately runs an effect owned by the active scope. */
+export const effect = runtime.effect;
+/** Registers cleanup on the active effect run or scope. */
+export const onCleanup = runtime.onCleanup;
+/** Groups writes so reactive work flushes after the callback completes. */
+export const batch = runtime.batch;
+/** Creates an explicit ownership and error-handling scope. */
+export const createScope = runtime.createScope;
+/** Runs a callback without tracking its reactive reads. */
+export const untrack = runtime.untrack;
+
+/** Tests for Ripple's marked readable contract, not trusted provenance. */
 export const isReactive = <T>(value: T | Readable<T>): value is Readable<T> => {
   if (typeof value !== 'object' || value === null || (value as { [REACTIVE]?: unknown })[REACTIVE] !== true)
     return false;

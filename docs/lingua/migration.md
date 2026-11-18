@@ -174,7 +174,7 @@ On the reactive path the same rule applies to the ripple bridge: wrap `reactive.
 
 ## Locale snapshots instead of translator snapshots
 
-`getSnapshot()` returns the current locale and is referentially stable until the locale changes; `subscribe()` listeners receive the new locale. Translate through the instance after each notification. The pair feeds `useSyncExternalStore`, `ripple.fromSubscribable`, and Svelte/Vue stores directly.
+`getSnapshot()` returns the current locale and is referentially stable until the locale changes; `subscribe()` listeners receive the new locale. Translate through the instance after each notification. The pair feeds `useSyncExternalStore`, Ripple's `fromSubscribable()` function, and Svelte/Vue stores directly.
 
 ## Hydration without `state`
 

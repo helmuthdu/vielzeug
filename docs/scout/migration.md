@@ -150,11 +150,16 @@ One subscription now observes an atomic `SearchSnapshot`; subscribers never see 
 ### Bridge to Ripple explicitly
 
 ```ts
-import { createRipple } from '@vielzeug/ripple';
+import { computed, createScope, fromSubscribable } from '@vielzeug/ripple';
 
-const ripple = createRipple();
-const state = ripple.fromSubscribable(search, { signal: search.disposalSignal });
-const names = ripple.computed(() => state.value.results.map((result) => result.item.name));
+const scope = createScope();
+const names = scope.run(() => {
+  const state = fromSubscribable(search, { signal: search.disposalSignal });
+  return computed(() => state.value.results.map((result) => result.item.name));
+});
+
+console.log(names.value);
+scope.dispose();
 ```
 
 Scout no longer installs Ripple. Add `@vielzeug/ripple` directly only when your application uses this bridge.

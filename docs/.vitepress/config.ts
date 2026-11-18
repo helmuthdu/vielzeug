@@ -1822,7 +1822,7 @@ export default defineConfig({
         {
           items: [
             { link: '/ripple/usage#basic-usage', text: 'Basic Usage' },
-            { link: '/ripple/usage#isolated-graphs', text: 'Isolated Graphs' },
+            { link: '/ripple/usage#scope-lifetimes', text: 'Scope Lifetimes' },
             { link: '/ripple/usage#derived-values-and-batches', text: 'Derived Values' },
             { link: '/ripple/usage#ownership-with-scopes', text: 'Scopes' },
             { link: '/ripple/usage#watch-selected-values', text: 'watch' },
@@ -1837,8 +1837,8 @@ export default defineConfig({
           items: [
             { link: '/ripple/api#api-overview', text: 'Overview' },
             { link: '/ripple/api#package-entry-point', text: 'Entry Point' },
-            { link: '/ripple/api#graph-creation', text: 'Graph Creation' },
-            { link: '/ripple/api#default-graph-functions', text: 'Default Graph Functions' },
+            { link: '/ripple/api#runtime-and-scope-errors', text: 'Runtime and Scope Errors' },
+            { link: '/ripple/api#core-functions', text: 'Core Functions' },
             { link: '/ripple/api#watch', text: 'Watch and Observability' },
             { link: '/ripple/api#types', text: 'Types' },
             { link: '/ripple/api#errors', text: 'Errors' },
@@ -1854,7 +1854,6 @@ export default defineConfig({
             { link: '/ripple/examples/scope-ownership', text: 'Scope Ownership' },
             { link: '/ripple/examples/watch-selected-value', text: 'Watch Selected Value' },
             { link: '/ripple/examples/immutable-store', text: 'Immutable State' },
-            { link: '/ripple/examples/isolated-runtime', text: 'Isolated Graph' },
           ],
           link: '/ripple/examples',
           text: 'Examples',

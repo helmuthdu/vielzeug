@@ -176,11 +176,16 @@ search.clear(); // Resets query, results, and isSearching atomically
 A complete `SearchState` implements Ripple's structural subscribable contract:
 
 ```ts
-import { createRipple } from '@vielzeug/ripple';
+import { computed, createScope, fromSubscribable } from '@vielzeug/ripple';
 
-const ripple = createRipple();
-const state = ripple.fromSubscribable(search, { signal: search.disposalSignal });
-const topResult = ripple.computed(() => state.value.results[0]?.item ?? null);
+const scope = createScope();
+const topResult = scope.run(() => {
+  const state = fromSubscribable(search, { signal: search.disposalSignal });
+  return computed(() => state.value.results[0]?.item ?? null);
+});
+
+console.log(topResult.value);
+scope.dispose();
 ```
 
 ## Incremental Updates

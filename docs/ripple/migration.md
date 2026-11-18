@@ -1,10 +1,71 @@
 ---
 title: 'Ripple: Migration Guide'
-description: Migrate removed runtime options, error classes, and entry points to current Ripple contracts.
+description: Migrate isolated runtimes and error handling to the shared runtime and scoped ownership.
 ---
 
 Breaking changes ship in CalVer trains. The sections below describe removed contracts and their
 current replacements; no stored or serialized formats change.
+
+## Replace isolated runtimes with scopes
+
+`createRipple()`, the `Ripple` interface, and `RippleOptions` are removed. Root functions now share
+one module-level runtime, so values can track across scopes. Use `createScope()` to own effects,
+computeds, cleanups, resources, or bridges that should be disposed together.
+
+```ts
+// Before
+const ripple = createRipple();
+const count = ripple.signal(0);
+const doubled = ripple.computed(() => count.value * 2);
+const stop = ripple.effect(() => console.log(doubled.value));
+stop.dispose();
+ripple.dispose();
+
+// After
+import { computed, createScope, effect, signal } from '@vielzeug/ripple';
+
+const scope = createScope();
+const count = signal(0);
+scope.run(() => {
+  const doubled = computed(() => count.value * 2);
+  effect(() => console.log(doubled.value));
+});
+scope.dispose();
+```
+
+Scopes control ownership, not dependency visibility: reactive reads track across scopes.
+`Ripple.createScope(name)` also changes to the root `createScope(options)` function; pass a
+`{ name }` options object instead of a string:
+
+```ts
+// Before
+const ripple = createRipple();
+const panel = ripple.createScope('panel');
+
+// After
+import { createScope } from '@vielzeug/ripple';
+
+const panel = createScope({ name: 'panel' });
+```
+
+## Move error handling to scopes
+
+`onError` is no longer a runtime option. Configure it on the scope that owns the callbacks. The
+nearest handler wins; if a handler throws, its error escalates to the parent scope. With no handler,
+errors rethrow asynchronously. Listener failures and flush overflow use the root error route.
+
+```ts
+// Before
+const ripple = createRipple({ onError: (error, context) => report(context.kind, error) });
+ripple.effect(() => render(state.value));
+
+// After
+import { createScope, effect } from '@vielzeug/ripple';
+
+const scope = createScope({ onError: (error, context) => report(context.kind, error) });
+scope.run(() => effect(() => render(state.value)));
+scope.dispose();
+```
 
 ## Computeds are lazy; the computed error kind is removed
 
@@ -38,10 +99,10 @@ An effect's returned cleanup now runs before the `onCleanup()` callbacks registe
 
 Subscribing to a disposed `fromSubscribable()` bridge throws `RippleDisposedError`, like a disposed resource, instead of a bare `RippleError`. `instanceof RippleError` checks keep working.
 
-## Replace tap() and errorPolicy with one onError option
+## Replace tap() and errorPolicy with scoped onError
 
 The `tap()` event stream (`RippleEvent`), `RippleErrorPolicy`, `observer`, and `errorPolicy` are
-removed. Use the single `onError` runtime option to handle callback failures.
+removed. Use `createScope({ onError })` to handle failures from effects and cleanups in a subtree.
 
 ```ts
 // Before
@@ -51,12 +112,13 @@ ripple.tap((event) => {
 });
 
 // After
-const ripple = createRipple({
+const scope = createScope({
   onError: (error, context) => console.error(context.kind, error),
 });
 ```
 
-Omitting `onError` keeps the old default: failures rethrow asynchronously. Pass a no-op to silence rethrow (the old `'swallow'`). `RippleErrorContext` gains the `'flush'` kind.
+Omitting `onError` keeps the default: unhandled errors rethrow asynchronously. A throwing handler
+escalates to a parent scope. `RippleErrorContext` includes the `'flush'` kind.
 
 ## Error classes collapsed
 
@@ -124,19 +186,20 @@ const stop = watch(count, (value) => {
 
 ## Use fromSubscribable for external sources
 
-`fromSubscribable()` bridges external `{ getSnapshot, subscribe }` sources into a disposable reactive readable without the source importing Ripple. Use the instance method for isolated graph ownership and dispose the bridge with its owner.
+`fromSubscribable()` bridges external `{ getSnapshot, subscribe }` sources into a disposable reactive readable without the source importing Ripple. Use the root function and dispose the bridge with its scope.
 
 ```ts
-import { createRipple } from '@vielzeug/ripple';
+import { createScope, fromSubscribable } from '@vielzeug/ripple';
 
-const ripple = createRipple();
-const routerState = ripple.fromSubscribable({
-  getSnapshot: () => router.getSnapshot(),
-  subscribe: (cb) => router.subscribe(cb),
-});
+const scope = createScope();
+const routerState = scope.run(() =>
+  fromSubscribable({
+    getSnapshot: () => router.getSnapshot(),
+    subscribe: (cb) => router.subscribe(cb),
+  }),
+);
 
-routerState.dispose();
-ripple.dispose();
+scope.dispose();
 ```
 
 ## Remove the effect scheduler option
@@ -150,8 +213,8 @@ flush individually.
 ripple.effect(() => console.log(count.value), { scheduler: 'microtask' });
 
 // After: batch coalesces the writes instead
-ripple.effect(() => console.log(count.value));
-ripple.batch(() => {
+effect(() => console.log(count.value));
+batch(() => {
   count.value = 1;
   count.value = 2;
 }); // one run, sees 2

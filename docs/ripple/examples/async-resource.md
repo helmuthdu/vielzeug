@@ -11,29 +11,32 @@ A value must reload when reactive input changes, abort stale work, retain the pr
 
 ### Solution
 
-Create a resource inside an isolated graph and forward its loader signal.
+Create a resource in a scope and forward its loader signal.
 
 ```ts
-import { createRipple } from '@vielzeug/ripple';
+import { createScope, effect, resource, signal } from '@vielzeug/ripple';
 
-const ripple = createRipple();
-const userId = ripple.signal('42');
-const user = ripple.resource(
-  () => userId.value,
-  async (id, { signal }) => {
-    const response = await fetch(`/users/${id}`, { signal });
-    if (!response.ok) throw new Error(`User request failed: ${response.status}`);
-    return response.json() as Promise<{ id: string; name: string }>;
-  },
-  { name: 'user' },
-);
+const scope = createScope({ name: 'user' });
+const { userId, user } = scope.run(() => {
+  const userId = signal('42');
+  const user = resource(
+    () => userId.value,
+    async (id, { signal }) => {
+      const response = await fetch(`/users/${id}`, { signal });
+      if (!response.ok) throw new Error(`User request failed: ${response.status}`);
+      return response.json() as Promise<{ id: string; name: string }>;
+    },
+    { name: 'user' },
+  );
 
-const stop = ripple.effect(() => {
-  const state = user.value;
+  effect(() => {
+    const state = user.value;
+    if (state.status === 'pending') console.log('Loading', state.previous);
+    if (state.status === 'success') console.log(state.value);
+    if (state.status === 'error') console.error(state.error, state.previous);
+  });
 
-  if (state.status === 'pending') console.log('Loading', state.previous);
-  if (state.status === 'success') console.log(state.value);
-  if (state.status === 'error') console.error(state.error, state.previous);
+  return { userId, user };
 });
 
 userId.value = '43';
@@ -48,8 +51,7 @@ await new Promise<void>((resolve) => {
     resolve();
   });
 });
-stop.dispose();
-ripple.dispose();
+scope.dispose();
 ```
 
 ### Pitfalls

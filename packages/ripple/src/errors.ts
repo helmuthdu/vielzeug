@@ -9,5 +9,5 @@ export class RippleError extends Error {
 /** User code that never settles: a computed cycle or a runaway flush loop. */
 export class RippleCycleError extends RippleError {}
 
-/** Any operation against a disposed runtime, scope, resource, or bridge. */
+/** Use of a disposed scope, resource, or bridge. */
 export class RippleDisposedError extends RippleError {}

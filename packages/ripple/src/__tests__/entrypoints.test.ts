@@ -1,16 +1,48 @@
 import { vi } from 'vitest';
-import { computed, createRipple, effect, fromSubscribable, isReactive, onCleanup, signal, watch } from '../index';
+import {
+  batch,
+  computed,
+  createScope,
+  effect,
+  fromSubscribable,
+  isReactive,
+  onCleanup,
+  resource,
+  signal,
+  untrack,
+  watch,
+} from '../index';
+
+import { itScoped } from './scope-test';
 
 describe('default graph exports', () => {
-  it('exports all primitives from root', () => {
-    const exports = { computed, createRipple, effect, fromSubscribable, onCleanup, signal, watch };
+  itScoped('exports all primitives from root', () => {
+    const exports = {
+      batch,
+      computed,
+      createScope,
+      effect,
+      fromSubscribable,
+      isReactive,
+      onCleanup,
+      resource,
+      signal,
+      untrack,
+      watch,
+    };
     for (const [name, fn] of Object.entries(exports)) {
       expect(typeof fn).toBe('function');
       expect(name).toBeTruthy();
     }
   });
 
-  it('shares default graph across root exports', () => {
+  itScoped('does not export isolated runtime factories', async () => {
+    const api = await import('../index');
+
+    expect(api).not.toHaveProperty('createRipple');
+  });
+
+  itScoped('shares default graph across root exports', () => {
     const count = signal(0);
     const values: number[] = [];
     const stop = watch(count, (value) => values.push(value));
@@ -21,7 +53,7 @@ describe('default graph exports', () => {
     stop.dispose();
   });
 
-  it('supports signal.update for immutable state', () => {
+  itScoped('supports signal.update for immutable state', () => {
     const cart = signal({ items: 0 });
     const items = computed(() => cart.value.items);
 
@@ -30,20 +62,33 @@ describe('default graph exports', () => {
     expect(items.value).toBe(3);
   });
 
-  it('recognizes Ripple readables from another loaded module graph', async () => {
+  itScoped('recognizes Ripple readables from another loaded module graph', async () => {
     const first = await import('../index');
-    const ripple = first.createRipple();
-    const value = ripple.signal(0);
+    const value = first.signal(0);
 
     vi.resetModules();
     const second = await import('../index');
 
     expect(second.isReactive(value)).toBe(true);
     expect(second.isReactive({ [Symbol.for('@vielzeug/ripple/reactive')]: true })).toBe(false);
-    ripple.dispose();
   });
 
-  it('isReactive rejects non-readable values', () => {
+  itScoped('does not track reads across loaded module graphs', async () => {
+    const first = await import('../index');
+    const value = first.signal(0);
+
+    vi.resetModules();
+    const second = await import('../index');
+    const seen: number[] = [];
+
+    const stop = second.effect(() => seen.push(value.value));
+    value.value = 1;
+
+    expect(seen).toEqual([0]);
+    stop.dispose();
+  });
+
+  itScoped('isReactive rejects non-readable values', () => {
     const cases: unknown[] = [
       null,
       undefined,

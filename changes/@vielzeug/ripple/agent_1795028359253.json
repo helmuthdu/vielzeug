@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Replace isolated runtimes with scopes",
+      "packageName": "@vielzeug/ripple",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

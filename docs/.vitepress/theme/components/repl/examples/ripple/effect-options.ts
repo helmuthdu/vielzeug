@@ -1,27 +1,26 @@
 export const effectOptionsExample = {
-  code: `import { createRipple } from '@vielzeug/ripple'
+  code: `import { batch, createScope, effect, signal } from '@vielzeug/ripple'
 
-// Runtime errors use one callback; named effects flush synchronously.
-const ripple = createRipple({
+// Scope errors use the nearest callback; named effects flush synchronously.
+const scope = createScope({
   onError: (error, context) => console.log(context.kind, context.name, error.message),
 })
-const count = ripple.signal(0)
-const stop = ripple.effect(
+const count = signal(0)
+scope.run(() => effect(
   () => {
     if (count.value < 0) throw new Error('count must be non-negative')
     console.log('count:', count.value)
   },
   { name: 'count logger' },
-)
+))
 
-ripple.batch(() => {
+batch(() => {
   count.value = 1
   count.value = 2
 })
 count.value = -1
 count.value = 3
 
-stop.dispose()
-ripple.dispose()`,
+scope.dispose()`,
   name: 'Named Effect and onError',
 };

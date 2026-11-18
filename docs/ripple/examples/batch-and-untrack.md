@@ -14,24 +14,22 @@ Changing a first and last name should produce one reactive update. A locale read
 Wrap related writes in `batch()` and read locale through `untrack()`.
 
 ```ts
-import { createRipple } from '@vielzeug/ripple';
+import { batch, effect, signal, untrack } from '@vielzeug/ripple';
 
-const ripple = createRipple();
-const first = ripple.signal('Ada');
-const last = ripple.signal('Lovelace');
-const locale = ripple.signal('en-US');
-const stop = ripple.effect(() => {
-  console.log({ locale: ripple.untrack(() => locale.value), name: `${first.value} ${last.value}` });
+const first = signal('Ada');
+const last = signal('Lovelace');
+const locale = signal('en-US');
+const stop = effect(() => {
+  console.log({ locale: untrack(() => locale.value), name: `${first.value} ${last.value}` });
 });
 
-ripple.batch(() => {
+batch(() => {
   first.value = 'Grace';
   last.value = 'Hopper';
 });
 
 locale.value = 'de-DE';
 stop.dispose();
-ripple.dispose();
 ```
 
 ### Pitfalls

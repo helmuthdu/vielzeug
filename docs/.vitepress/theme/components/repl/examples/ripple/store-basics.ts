@@ -1,17 +1,20 @@
 export const storeBasicsExample = {
-  code: `import { createRipple } from '@vielzeug/ripple'
+  code: `import { computed, createScope, effect, signal } from '@vielzeug/ripple'
 
 // signal.update keeps immutable object updates explicit.
-const ripple = createRipple()
-const user = ripple.signal({ name: 'Ada', visits: 0 })
-const greeting = ripple.computed(() => user.value.name + ': ' + user.value.visits)
+const scope = createScope()
+const { user } = scope.run(() => {
+  const user = signal({ name: 'Ada', visits: 0 })
+  const greeting = computed(() => user.value.name + ': ' + user.value.visits)
 
-const stop = ripple.effect(() => console.log(greeting.value))
+  effect(() => console.log(greeting.value))
+  return { user }
+})
 
 user.update((state) => ({ ...state, visits: state.visits + 1 }))
 user.value = { name: 'Grace', visits: 5 }
 
-stop.dispose()
-ripple.dispose()`,
+scope.dispose()
+`,
   name: 'Immutable State',
 };

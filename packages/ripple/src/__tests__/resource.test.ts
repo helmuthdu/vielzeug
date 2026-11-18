@@ -1,11 +1,12 @@
-import { createRipple } from '../index';
+import { resource, signal } from '../index';
+
+import { itScoped } from './scope-test';
 
 describe('resource', () => {
-  it('loads from a reactive source and preserves the previous value while pending', async () => {
-    const ripple = createRipple();
-    const id = ripple.signal('first');
+  itScoped('loads from a reactive source and preserves the previous value while pending', async () => {
+    const id = signal('first');
     const pending = new Map<string, (value: string) => void>();
-    const value = ripple.resource(
+    const value = resource(
       () => id.value,
       (key) => new Promise((resolve) => pending.set(key, resolve)),
     );
@@ -19,15 +20,12 @@ describe('resource', () => {
     pending.get('second')?.('two');
     await Promise.resolve();
     expect(value.value).toEqual({ status: 'success', value: 'two' });
-
-    ripple.dispose();
   });
 
-  it('ignores stale results and exposes loader errors as state', async () => {
-    const ripple = createRipple();
-    const id = ripple.signal('first');
+  itScoped('ignores stale results and exposes loader errors as state', async () => {
+    const id = signal('first');
     const pending = new Map<string, (value: string) => void>();
-    const value = ripple.resource(
+    const value = resource(
       () => id.value,
       (key) =>
         key === 'error' ? Promise.reject(new Error('offline')) : new Promise((resolve) => pending.set(key, resolve)),
@@ -46,15 +44,12 @@ describe('resource', () => {
       previous: 'fresh',
       status: 'error',
     });
-
-    ripple.dispose();
   });
 
-  it('preserves a successful undefined value while reloading', async () => {
-    const ripple = createRipple();
-    const key = ripple.signal(0);
+  itScoped('preserves a successful undefined value while reloading', async () => {
+    const key = signal(0);
     const pending: Array<(value: undefined) => void> = [];
-    const value = ripple.resource(
+    const value = resource(
       () => key.value,
       () => new Promise((resolve) => pending.push(resolve)),
     );
@@ -66,12 +61,10 @@ describe('resource', () => {
     expect(value.value).toEqual({ previous: undefined, status: 'pending' });
     expect('previous' in value.value).toBe(true);
     value.dispose();
-    ripple.dispose();
   });
 
-  it('rejects graph work after resource disposal', () => {
-    const ripple = createRipple();
-    const value = ripple.resource(
+  itScoped('rejects graph work after resource disposal', () => {
+    const value = resource(
       () => 'value',
       async () => 'loaded',
     );
@@ -79,14 +72,12 @@ describe('resource', () => {
 
     expect(() => value.reload()).toThrow('disposed resource');
     expect(() => value.subscribe(() => undefined)).toThrow('disposed resource');
-    ripple.dispose();
   });
 
-  it('does not reload when a signal read by the loader changes', () => {
-    const ripple = createRipple();
-    const token = ripple.signal('a');
+  itScoped('does not reload when a signal read by the loader changes', () => {
+    const token = signal('a');
     let calls = 0;
-    const value = ripple.resource(
+    const value = resource(
       () => 'key',
       async () => {
         calls++;
@@ -98,13 +89,11 @@ describe('resource', () => {
 
     expect(calls).toBe(1);
     value.dispose();
-    ripple.dispose();
   });
 
-  it('aborts active work on disposal', () => {
-    const ripple = createRipple();
+  itScoped('aborts active work on disposal', () => {
     let signal: AbortSignal | undefined;
-    const value = ripple.resource(
+    const value = resource(
       () => 'value',
       (_key, context) => {
         signal = context.signal;
@@ -116,6 +105,5 @@ describe('resource', () => {
 
     expect(signal?.aborted).toBe(true);
     expect(value.disposed).toBe(true);
-    ripple.dispose();
   });
 });

@@ -14,28 +14,29 @@ A counter display needs to update whenever its value changes without manual list
 Create a signal, derive a display value, and dispose the effect after use.
 
 ```ts
-import { createRipple } from '@vielzeug/ripple';
+import { computed, createScope, effect, signal } from '@vielzeug/ripple';
 
-const ripple = createRipple();
-const count = ripple.signal(0);
-const label = ripple.computed(() => `Count: ${count.value}`);
-const stop = ripple.effect(() => console.log(label.value));
+const scope = createScope({ name: 'counter' });
+const count = scope.run(() => {
+  const count = signal(0);
+  const label = computed(() => `Count: ${count.value}`);
+  effect(() => console.log(label.value));
+  return count;
+});
 
 count.value = 1;
 count.value = 2;
 
-stop.dispose();
-ripple.dispose();
+scope.dispose();
 ```
 
 ### Pitfalls
 
 - Keep computed callbacks pure.
-- Dispose effects created outside a scope or graph lifetime.
-- Do not mix signals from separate graphs.
+- Create work inside the scope that owns its lifetime.
 
 ### Related
 
 - [Batch and Untrack](./batch-and-untrack.md)
-- [Isolated Graph](./isolated-runtime.md)
+- [Scope Ownership](./scope-ownership.md)
 - [Ore](/ore/)
