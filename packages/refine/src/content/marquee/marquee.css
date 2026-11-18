@@ -53,11 +53,9 @@
     animation-direction: reverse;
   }
 
-  /* SC 2.2.2: a continuously moving ticker must offer a pause; hover and
-     keyboard focus are the defaults, and the attribute reflects so
-     pause-on-hover="false" opts out. */
-  :host([pause-on-hover]:hover) .track,
-  :host([pause-on-hover]:focus-within) .track {
+  :host([pause-on-hover]:hover:not([data-marquee-resumed])) .track,
+  :host([pause-on-hover]:focus-within:not([data-marquee-resumed])) .track,
+  :host([data-marquee-paused]) .track {
     animation-play-state: paused;
   }
 

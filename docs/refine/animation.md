@@ -7,7 +7,7 @@ description: Duration and easing tokens, named animations, utility classes, moti
 
 [[toc]]
 
-Every animation and transition in Refine routes through the tokens on this page. Nothing is hardcoded, so one token override retunes the whole library, and [Motion Mode](#motion-mode) can switch all of it off at once.
+Refine's shared duration and easing tokens define the timing scale for tokenized component motion. Components may also expose custom properties for specialized timing, such as repeating progress indicators. [Motion Mode](#motion-mode) reduces tokenized CSS motion across light and shadow DOM; see the component references for any component-specific timing controls.
 
 ## Duration & Easing
 
@@ -120,7 +120,11 @@ setMotionMode('system'); // back to following the OS preference
 
 The mode drives the token layer: every `--duration-*`/`--transition-*` token zeroes and the `--_motion-*` escape hatches switch to `none`, which reaches every CSS animation and transition in the library — including inside shadow DOMs, because custom properties inherit through the boundary. Programmatic motion built on necromancer honors the same preference through its own `motion` option.
 
-The components that move their content programmatically — DataGrid row sorting, command-palette and combobox result filtering, and the toast stack — read their timing from the same tokens at animation time, so a zeroed `--duration-200` skips the reflow entirely rather than playing it instantly. Override `--duration-200` on one component to retune (or `0` to silence) just its reflow.
+CSS responds immediately when the mode changes. JavaScript motion resolves its settings when it starts: a spring receives the current mode when it is created, and `animateReflow` reads its duration token on each `run()`. Changing the mode does not retune an animation already in flight; subsequent springs and reflows use the new mode.
+
+The components that move their content programmatically — DataGrid row sorting, command-palette and combobox result filtering, and the toast stack — read their timing from the same tokens at animation time, so a zeroed `--duration-200` skips a new reflow rather than playing it instantly. Override `--duration-200` on one component to retune (or `0` to silence) just its reflow.
+
+Try the [interactive motion playground](/repl): choose **Refine → Motion mode** to compare the accordion and carousel under System, Reduced, and Full.
 
 ## Inside Shadow DOM
 

@@ -29,6 +29,14 @@ test.describe('Layout', () => {
     const track = marquee.locator('div[part="track"]');
 
     await expect(marquee.locator('.controls')).toBeVisible();
+    const buttonRadii = await marquee.locator('ore-button').evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const surface = button.shadowRoot?.querySelector('[part="button"]');
+
+        return surface ? getComputedStyle(surface).borderRadius : null;
+      }),
+    );
+    expect(buttonRadii).toEqual(['50%', '50%', '50%']);
     await expect(track).toHaveCSS('animation-iteration-count', 'infinite');
     await expect
       .poll(() => track.evaluate((element) => element.style.getPropertyValue('--_marquee-translate')))
@@ -93,5 +101,24 @@ test.describe('Accessibility', () => {
     await page.locator('ore-marquee .next-btn').focus();
 
     await expect(track).toHaveCSS('animation-play-state', 'paused');
+  });
+
+  test('keeps a persistent pause and resumes while the toggle remains focused', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-marquee><div style="background:var(--color-contrast-100);width:200px">Item A</div>' +
+        '<div style="background:var(--color-contrast-200);width:200px">Item B</div></ore-marquee>',
+    );
+
+    const track = page.locator('ore-marquee div[part="track"]');
+    const pause = page.getByRole('button', { name: 'Pause marquee' });
+
+    await pause.focus();
+    await page.keyboard.press('Space');
+    await expect(page.getByRole('button', { name: 'Resume marquee' })).toBeVisible();
+    await expect(track).toHaveCSS('animation-play-state', 'paused');
+
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('button', { name: 'Pause marquee' })).toBeVisible();
+    await expect(track).toHaveCSS('animation-play-state', 'running');
   });
 });

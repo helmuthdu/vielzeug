@@ -80,14 +80,47 @@ describe('ore-marquee', () => {
     expect(fixture.queryAll('.nav-btn')).toHaveLength(2);
   });
 
-  it('hides navigation controls when show-controls is false', async () => {
+  it('uses full rounding for every navigation button', async () => {
+    fixture = await mount('ore-marquee', { html: '<span>One</span><span>Two</span>' });
+    await fixture.flush();
+
+    const buttons = fixture.queryAll<HTMLElement>('.nav-btn');
+
+    expect(buttons.map((button) => button.getAttribute('rounded'))).toEqual(['full', 'full']);
+    expect(fixture.query<HTMLElement>('[part="pause-toggle"]')?.getAttribute('rounded')).toBe('full');
+  });
+
+  it('hides navigation arrows while keeping the pause toggle when show-controls is false', async () => {
     fixture = await mount('ore-marquee', {
       attrs: { 'show-controls': 'false' },
       html: '<span>One</span><span>Two</span>',
     });
     await fixture.flush();
 
-    expect(fixture.query('.controls')).toBeNull();
+    expect(fixture.query('[part="prev-btn"]')).toBeNull();
+    expect(fixture.query('[part="next-btn"]')).toBeNull();
+    expect(fixture.query('[part="pause-toggle"]')).not.toBeNull();
+  });
+
+  it('keeps a persistent pause toggle when navigation arrows are hidden', async () => {
+    fixture = await mount('ore-marquee', {
+      attrs: { 'pause-on-hover': 'false', 'show-controls': 'false' },
+      html: '<span>One</span><span>Two</span>',
+    });
+    await fixture.flush();
+
+    const toggle = fixture.query<HTMLElement>('[part="pause-toggle"]');
+
+    expect(toggle?.getAttribute('label')).toBe('Pause marquee');
+    expect(toggle?.getAttribute('elevation')).toBe('0');
+    toggle?.click();
+    await fixture.flush();
+    expect(toggle?.getAttribute('label')).toBe('Resume marquee');
+    expect(fixture.element.hasAttribute('data-marquee-paused')).toBe(true);
+    toggle?.click();
+    await fixture.flush();
+    expect(toggle?.getAttribute('label')).toBe('Pause marquee');
+    expect(fixture.element.hasAttribute('data-marquee-paused')).toBe(false);
   });
 
   it('passes axe checks', async () => {

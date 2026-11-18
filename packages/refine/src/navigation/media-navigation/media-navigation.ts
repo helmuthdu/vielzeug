@@ -28,6 +28,7 @@ export type OreMediaNavigationProps = {
   'previous-label'?: string;
   /** Visual progress duration in milliseconds. Does not advance the active index. */
   'progress-duration'?: number;
+  'show-actions'?: boolean;
   'show-controls'?: boolean;
   'show-indicators'?: boolean;
 };
@@ -50,15 +51,17 @@ export type OreMediaNavigationProps = {
  * @attr {string} previous-label - Previous button name (default Previous item)
  * @attr {string} next-label - Next button name (default Next item)
  * @attr {number} progress-duration - Active indicator progress duration in milliseconds (default 0)
+ * @attr {boolean} show-actions - Show custom controls supplied to the actions slot (default false)
  * @attr {boolean} show-controls - Show arrows (default true)
  * @attr {boolean} show-indicators - Show indicators (default true)
  * @fires navigate - Requests a new index. detail: { index: number }
  * @part bar - Shared navigation surface
- * @part controls - Arrow button group
+ * @part controls - Arrow buttons and slotted actions
  * @part indicators - Indicator group
  * @part indicator - Individual indicator button
  * @part previous - Previous button
  * @part next - Next button
+ * @slot actions - Additional controls displayed in the navigation bar
  * @cssprop --media-navigation-bg - Navigation surface background
  * @cssprop --media-navigation-dot-bg - Inactive track color
  */
@@ -79,6 +82,7 @@ define<OreMediaNavigationProps>(MEDIA_NAVIGATION_TAG, {
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
     'previous-label': prop.string('Previous item'),
     'progress-duration': prop.number(0),
+    'show-actions': prop.bool(false),
     'show-controls': prop.bool(true),
     'show-indicators': prop.bool(true),
   },
@@ -206,7 +210,10 @@ define<OreMediaNavigationProps>(MEDIA_NAVIGATION_TAG, {
       attr: {
         'aria-label': props.label,
         hidden: () =>
-          count.value === 0 || (!props['show-controls'].value && !props['show-indicators'].value) ? '' : null,
+          count.value === 0 ||
+          (!props['show-actions'].value && !props['show-controls'].value && !props['show-indicators'].value)
+            ? ''
+            : null,
         role: 'group',
       },
       on: {
@@ -247,11 +254,14 @@ define<OreMediaNavigationProps>(MEDIA_NAVIGATION_TAG, {
             },
           )}
         </div>
-        <div class="controls" part="controls" ?hidden="${() => !props['show-controls'].value}">
-          <ore-button class="nav-btn" part="previous" variant="ghost" color="${props.color}" rounded="full" icon-only label="${props['previous-label']}"
-            ?disabled="${() => previousDisabled.value}" @click="${() => request(index.value - 1)}"><ore-icon name="${() => arrow(false)}" size="16" stroke-width="2" aria-hidden="true"></ore-icon></ore-button>
-          <ore-button class="nav-btn" part="next" variant="ghost" color="${props.color}" rounded="full" icon-only label="${props['next-label']}"
-            ?disabled="${() => nextDisabled.value}" @click="${() => request(index.value + 1)}"><ore-icon name="${() => arrow(true)}" size="16" stroke-width="2" aria-hidden="true"></ore-icon></ore-button>
+        <div class="controls" part="controls" ?hidden="${() => !props['show-controls'].value && !props['show-actions'].value}">
+          <div class="nav-buttons" ?hidden="${() => !props['show-controls'].value}">
+            <ore-button class="nav-btn" part="previous" variant="ghost" color="${props.color}" rounded="full" icon-only label="${props['previous-label']}"
+              ?disabled="${() => previousDisabled.value}" @click="${() => request(index.value - 1)}"><ore-icon name="${() => arrow(false)}" size="16" stroke-width="2" aria-hidden="true"></ore-icon></ore-button>
+            <ore-button class="nav-btn" part="next" variant="ghost" color="${props.color}" rounded="full" icon-only label="${props['next-label']}"
+              ?disabled="${() => nextDisabled.value}" @click="${() => request(index.value + 1)}"><ore-icon name="${() => arrow(true)}" size="16" stroke-width="2" aria-hidden="true"></ore-icon></ore-button>
+          </div>
+          <slot name="actions"></slot>
         </div>
       </div>
     `;

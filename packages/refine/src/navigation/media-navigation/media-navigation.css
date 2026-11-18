@@ -33,7 +33,16 @@
     margin-inline-start: auto;
     pointer-events: none;
   }
+  .nav-buttons {
+    display: flex;
+    gap: var(--size-0-5);
+    align-items: center;
+    pointer-events: none;
+  }
   .nav-btn {
+    pointer-events: auto;
+  }
+  .controls ::slotted(*) {
     pointer-events: auto;
   }
   .indicator-list {
@@ -163,6 +172,9 @@
     flex-direction: column;
     margin-block-start: auto;
     margin-inline-start: 0;
+  }
+  :host([orientation='vertical']) .nav-buttons {
+    flex-direction: column;
   }
   :host([orientation='vertical']) .indicator-active {
     width: var(--size-1-5);

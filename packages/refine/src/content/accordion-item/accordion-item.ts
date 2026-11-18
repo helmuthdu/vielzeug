@@ -60,8 +60,8 @@ export type OreAccordionItemProps = {
  * @cssprop --accordion-item-summary-padding - Content padding
  * @cssprop --accordion-item-row-duration - Expand/collapse row transition duration (default 200ms)
  * @cssprop --accordion-item-fade-duration - Content fade duration (default 200ms)
- * @cssprop --accordion-item-fade-delay - Content fade delay after the row starts (default 60ms)
- * @cssprop --accordion-item-collapse-delay - Delay before the row collapses after the close fade (default 120ms)
+ * @cssprop --accordion-item-fade-delay - Content fade delay after the row starts (default 75ms)
+ * @cssprop --accordion-item-collapse-delay - Delay before the row collapses after the close fade (default 100ms)
  *
  * @part item - Item root element.
  * @part summary - Summary trigger row.
@@ -107,50 +107,78 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
     const titleId = 'accordion-item-title';
     const detailsRef = ref<HTMLDetailsElement>();
     const summaryRef = ref<HTMLElement>();
-    let isAnimating = false;
+    let motionVersion = 0;
+    let openingFrame: number | undefined;
+    let activeTransitions: CSSTransition[] = [];
+
+    const cancelMotion = (): number => {
+      motionVersion += 1;
+      if (openingFrame !== undefined) {
+        cancelAnimationFrame(openingFrame);
+        openingFrame = undefined;
+      }
+      activeTransitions.forEach((transition) => {
+        transition.cancel();
+      });
+      activeTransitions = [];
+      detailsRef.value?.classList.remove('opening', 'closing');
+
+      return motionVersion;
+    };
+
+    const finishAfterTransitions = (inner: HTMLElement, version: number, done: () => void): void => {
+      const transitions = inner.getAnimations?.().filter((animation) => animation instanceof CSSTransition) ?? [];
+
+      if (transitions.length === 0) {
+        done();
+
+        return;
+      }
+
+      activeTransitions = transitions;
+      Promise.allSettled(transitions.map((transition) => transition.finished)).then(() => {
+        if (version !== motionVersion) return;
+        activeTransitions = [];
+        done();
+      });
+    };
 
     const openItem = () => {
       const details = detailsRef.value;
 
-      if (!details || details.open) return;
+      if (!details || (details.open && !details.classList.contains('closing'))) return;
 
+      const version = cancelMotion();
       details.classList.add('opening');
       details.open = true;
 
       el.toggleAttribute('expanded', true);
       emit('expand', { expanded: true, item: el });
 
-      requestAnimationFrame(() => {
+      openingFrame = requestAnimationFrame(() => {
+        openingFrame = undefined;
+        if (version !== motionVersion || !el.isConnected) return;
+
         const inner = details.querySelector<HTMLElement>('.content-inner');
 
         if (!inner) {
           details.classList.remove('opening');
-          isAnimating = false;
 
           return;
         }
 
-        const onDone = () => {
+        finishAfterTransitions(inner, version, () => {
           details.classList.remove('opening');
-          isAnimating = false;
-        };
-        const transitions = inner.getAnimations?.().filter((a) => a instanceof CSSTransition) ?? [];
-
-        if (transitions.length > 0) {
-          Promise.allSettled(transitions.map((a) => a.finished)).then(onDone);
-        } else {
-          onDone();
-        }
+        });
       });
     };
 
     const closeItem = () => {
       const details = detailsRef.value;
 
-      if (!details?.open || isAnimating) return;
+      if (!details?.open) return;
 
-      isAnimating = true;
-
+      const version = cancelMotion();
       details.classList.add('closing');
 
       const inner = details.querySelector<HTMLElement>('.content-inner');
@@ -159,17 +187,10 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
         details.open = false;
         el.toggleAttribute('expanded', false);
         emit('collapse', { expanded: false, item: el });
-        isAnimating = false;
       };
 
       if (inner) {
-        const transitions = inner.getAnimations?.().filter((a) => a instanceof CSSTransition) ?? [];
-
-        if (transitions.length > 0) {
-          Promise.allSettled(transitions.map((a) => a.finished)).then(onDone);
-        } else {
-          onDone();
-        }
+        finishAfterTransitions(inner, version, onDone);
       } else {
         onDone();
       }
@@ -185,7 +206,9 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
 
       if (!details) return;
 
-      if (details.open) {
+      if (details.classList.contains('closing')) {
+        openItem();
+      } else if (details.open) {
         closeItem();
       } else {
         openItem();
@@ -275,6 +298,7 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
       summary.addEventListener('click', handleSummaryClick);
 
       return () => {
+        cancelMotion();
         observer.disconnect();
         details.removeEventListener('toggle', handleToggle);
         summary.removeEventListener('touchstart', handleSummaryTouchStart);

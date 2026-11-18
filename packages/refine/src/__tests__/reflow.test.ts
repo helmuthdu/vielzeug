@@ -133,6 +133,44 @@ describe('animateReflow', () => {
     expect(asked).toContain('0ms');
   });
 
+  it('keeps in-flight timing while later runs read the current duration token', () => {
+    const host = hostWithItems(2, true);
+    const animations = installFakeAnimations();
+    let duration = '200ms';
+
+    try {
+      vi.spyOn(window, 'getComputedStyle').mockImplementation(() => computedReturning({ '--duration-200': duration }));
+      mockRects();
+      const motion = animateReflow(host, controller.signal, options(host));
+      const shift = (by: number) => () => {
+        for (const item of host.shadowRoot?.querySelectorAll<Moveable>('.item') ?? []) {
+          item.y += by;
+        }
+      };
+
+      motion.run(shift(40));
+      expect(animations.calls).toHaveLength(2);
+      for (const call of animations.calls) {
+        expect((call.options as KeyframeAnimationOptions).duration).toBe(200);
+      }
+
+      duration = '0ms';
+      motion.run(shift(10));
+      expect(animations.calls).toHaveLength(2);
+      expect(animations.calls[0]?.animation.cancelCallCount).toBe(0);
+
+      duration = '350ms';
+      motion.run(shift(10));
+      expect(animations.calls).toHaveLength(4);
+      expect(animations.calls[0]?.animation.cancelCallCount).toBe(1);
+      for (const call of animations.calls.slice(2)) {
+        expect((call.options as KeyframeAnimationOptions).duration).toBe(350);
+      }
+    } finally {
+      animations.restore();
+    }
+  });
+
   it('runs the mutation and survives when WAAPI is unavailable (jsdom)', () => {
     const host = hostWithItems(3, true);
 

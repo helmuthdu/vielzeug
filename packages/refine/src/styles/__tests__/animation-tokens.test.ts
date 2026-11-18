@@ -200,12 +200,35 @@ describe('component animation contract', () => {
     }
   });
 
+  it('routes positive component timing declarations through motion tokens', () => {
+    for (const file of componentCss) {
+      if (join(file) === join(stylesDir, 'theme.css')) continue;
+
+      const source = readFileSync(file, 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
+
+      for (const match of source.matchAll(
+        /(?:--[\w-]*(?:duration|delay)[\w-]*|(?:transition|animation)-(?:duration|delay)):\s*([^;]+);/g,
+      )) {
+        const value = match[1].replace(/\s+/g, ' ');
+        const stripped = value.replace(/var\([^()]*\)/g, 'V');
+        const positiveTiming = [...stripped.matchAll(/([0-9]+(?:\.[0-9]+)?)\s*(?:ms|s)\b/g)].some(
+          ([, amount]) => Number(amount) > 0,
+        );
+
+        expect(
+          positiveTiming,
+          `${file.slice(srcDir.length + 1)} hardcodes a positive duration or delay: "${value}"`,
+        ).toBe(false);
+      }
+    }
+  });
+
   // Component CSS must never write its own @media (prefers-reduced-motion)
   // block: such a block ignores the data-motion='full' opt-out, so a user who
   // explicitly asked for full motion still loses the effect. Reduced motion is
-  // owned by theme.css (the two root blocks + the --_motion-* hatches) and, for
-  // JS-spawned motion, by shared/motion-reduced.ts. theme.css is exempt — it is
-  // the mechanism, not a consumer.
+  // owned by theme.css (the two root blocks + the --_motion-* hatches); JS
+  // motion resolves its preference when each spring or reflow starts. theme.css
+  // is exempt — it is the mechanism, not a consumer.
   it('no component re-declares prefers-reduced-motion', () => {
     for (const file of componentCss) {
       // theme.css owns the two root reduced-motion blocks — the mechanism every
@@ -216,7 +239,7 @@ describe('component animation contract', () => {
 
       expect(
         /@media[^{]*\bprefers-reduced-motion\b/.test(source),
-        `${file.slice(srcDir.length + 1)} declares its own prefers-reduced-motion block; route through the motion tokens / motionReduced() instead`,
+        `${file.slice(srcDir.length + 1)} declares its own prefers-reduced-motion block; route through the shared motion tokens instead`,
       ).toBe(false);
     }
   });

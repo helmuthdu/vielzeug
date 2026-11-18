@@ -49,6 +49,18 @@ describe('ore-media-navigation', () => {
     expect(fixture.element.hasAttribute('hidden')).toBe(true);
   });
 
+  it('keeps slotted actions visible when arrows and indicators are disabled', async () => {
+    fixture = await mount('ore-media-navigation', {
+      attrs: { count: 3, 'show-actions': 'true', 'show-controls': 'false', 'show-indicators': 'false' },
+      html: '<button slot="actions">Pause</button>',
+    });
+
+    expect(fixture.element.hasAttribute('hidden')).toBe(false);
+    expect(fixture.element.shadowRoot?.querySelector('.controls')?.hasAttribute('hidden')).toBe(false);
+    expect(fixture.element.shadowRoot?.querySelector('slot[name="actions"]')?.assignedElements()).toHaveLength(1);
+    expect(fixture.element.shadowRoot?.querySelector('.nav-buttons')?.hasAttribute('hidden')).toBe(true);
+  });
+
   it('requests vertical navigation from indicator keyboard input', async () => {
     fixture = await mount('ore-media-navigation', { attrs: { count: 3, orientation: 'vertical' } });
     const navigate = vi.fn();

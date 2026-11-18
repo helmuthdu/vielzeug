@@ -9,8 +9,8 @@
     --accordion-item-expand-easing: var(--ease-spring);
     --accordion-item-row-duration: var(--duration-200);
     --accordion-item-fade-duration: var(--duration-200);
-    --accordion-item-fade-delay: 60ms;
-    --accordion-item-collapse-delay: 120ms;
+    --accordion-item-fade-delay: var(--duration-75);
+    --accordion-item-collapse-delay: var(--duration-100);
     display: block;
     color: var(--accordion-item-body-color, var(--text-color-body));
   }
