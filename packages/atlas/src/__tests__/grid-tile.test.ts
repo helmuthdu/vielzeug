@@ -1,14 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AtlasConfigError } from '../errors.js';
-import {
-  chunkKey,
-  iterateTileRange,
-  tileCenter,
-  tileKey,
-  tileToRect,
-  visibleTileRange,
-  worldToTile,
-} from '../grid/index.js';
+import { iterateTileRange, tileCenter, tileKey, tileToRect, visibleTileRange, worldToTile } from '../grid/index.js';
 
 const grid = { tileSize: 32 };
 
@@ -41,10 +33,7 @@ describe('visible ranges and keys', () => {
     expect(coords[0]).toEqual({ col: -1, row: 0 });
   });
 
-  it('formats tile and chunk keys', () => {
+  it('formats tile keys', () => {
     expect(tileKey({ col: 3, row: -1 })).toBe('3:-1');
-    expect(chunkKey({ col: 3, row: -1 }, 8)).toBe('c0,-1');
-    expect(chunkKey({ col: -9, row: 16 }, 8)).toBe('c-2,2');
-    expect(() => chunkKey({ col: 0, row: 0 }, 0)).toThrow(AtlasConfigError);
   });
 });

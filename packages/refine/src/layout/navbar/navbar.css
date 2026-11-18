@@ -7,7 +7,10 @@
     --_navbar-color: var(--navbar-color, var(--color-contrast-900));
     --_navbar-border-color: var(--navbar-border-color, var(--color-divider));
     --_navbar-shadow: var(--navbar-shadow, var(--shadow-md));
-    --_navbar-radius: var(--navbar-radius, var(--rounded-lg));
+    /* Named `--_radius` (not `--_navbar-radius`) so `roundedVariantMixin`'s
+       `:host([rounded='…'])` rules feed this same token; a differently-named
+       internal would leave the `rounded` attribute with nothing to set. */
+    --_radius: var(--navbar-radius, var(--rounded-lg));
 
     box-sizing: border-box;
     display: block;
@@ -92,7 +95,7 @@
     border-right: var(--border) solid var(--_navbar-border-color);
     border-bottom: var(--border) solid var(--_navbar-border-color);
     border-left: var(--border) solid var(--_navbar-border-color);
-    border-radius: var(--_navbar-radius);
+    border-radius: var(--_radius);
   }
 
   :host([data-mode='sticky']) .navbar,

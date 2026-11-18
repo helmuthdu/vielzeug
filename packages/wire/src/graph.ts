@@ -1,3 +1,4 @@
+import { MinHeap } from './_heap.js';
 import { WireGraphError } from './errors.js';
 import type { Edge } from './types.js';
 
@@ -41,46 +42,47 @@ export function topologicalOrder(nodeIds: readonly string[], edges: readonly Edg
   for (const edge of edges) {
     const from = index.get(edge.from) as number;
     const to = index.get(edge.to) as number;
-    outgoing[from]?.push(to);
+    outgoing[from]!.push(to);
     indegree[to] = (indegree[to] ?? 0) + 1;
   }
 
-  // Ready nodes are always consumed in input order, never an arbitrary FIFO.
-  const ready: number[] = [];
+  // Ready nodes are always consumed in input order, never an arbitrary FIFO; the heap
+  // keyed by input index keeps wide graphs at O(n log n).
+  const ready = new MinHeap();
   for (let i = 0; i < count; i += 1) {
-    if (indegree[i] === 0) ready.push(i);
+    if (indegree[i] === 0) ready.push(i, i);
   }
 
   const order: string[] = [];
-  while (ready.length > 0) {
-    let bestSlot = 0;
-    for (let slot = 1; slot < ready.length; slot += 1) {
-      if ((ready[slot] ?? 0) < (ready[bestSlot] ?? 0)) bestSlot = slot;
-    }
-    const node = ready.splice(bestSlot, 1)[0] as number;
+  while (ready.size > 0) {
+    const node = ready.pop();
     order.push(nodeIds[node] as string);
-    for (const next of outgoing[node] ?? []) {
+    for (const next of outgoing[node]!) {
       const remaining = (indegree[next] ?? 0) - 1;
       indegree[next] = remaining;
-      if (remaining === 0) ready.push(next);
+      if (remaining === 0) ready.push(next, next);
     }
   }
 
   if (order.length !== count) {
-    throw new WireGraphError('Graph contains a cycle; no topological order exists. Use findCycles() to locate it.');
+    throw new WireGraphError(
+      'Graph contains a cycle; no topological order exists. Use findCyclicGroups() to locate it.',
+    );
   }
   return order;
 }
 
 /**
- * Returns the cyclic parts of the graph as strongly connected components (Tarjan).
+ * Returns the groups of nodes that are mutually reachable (strongly connected
+ * components, Tarjan).
  *
- * Each returned cycle is an SCC with more than one node, or a single node carrying a
- * self-loop — never an exponential enumeration of elementary cycles. Cycles are ordered
- * by the input position of their first member, and members within a cycle are sorted by
- * input position, so results are deterministic.
+ * Each returned group is an SCC with more than one node, or a single node carrying a
+ * self-loop — never an exponential enumeration of elementary cycles. A group is a set
+ * of nodes, not a path through them: members are sorted by input position, which does
+ * not describe any particular cycle. Groups are ordered by the input position of their
+ * first member, so results are deterministic.
  */
-export function findCycles(nodeIds: readonly string[], edges: readonly Edge[]): string[][] {
+export function findCyclicGroups(nodeIds: readonly string[], edges: readonly Edge[]): string[][] {
   const index = buildNodeIndex(nodeIds);
   validateEdgeEndpoints(index, edges);
 
@@ -91,7 +93,7 @@ export function findCycles(nodeIds: readonly string[], edges: readonly Edge[]): 
     const from = index.get(edge.from) as number;
     const to = index.get(edge.to) as number;
     if (from === to) selfLoop[from] = true;
-    outgoing[from]?.push(to);
+    outgoing[from]!.push(to);
   }
 
   const lowLink = new Array<number>(count).fill(-1);
@@ -116,7 +118,7 @@ export function findCycles(nodeIds: readonly string[], edges: readonly Edge[]): 
 
     while (work.length > 0) {
       const frame = work[work.length - 1] as { node: number; child: number };
-      const children = outgoing[frame.node] ?? [];
+      const children = outgoing[frame.node]!;
       if (frame.child < children.length) {
         const child = children[frame.child] as number;
         frame.child += 1;

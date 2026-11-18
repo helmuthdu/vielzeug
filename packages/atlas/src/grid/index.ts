@@ -14,8 +14,6 @@ export {
   type FovOptions,
 } from './fov.js';
 export {
-  chunkKey,
-  chunkOf,
   type GridConfig,
   iterateTileRange,
   type TileCoord,

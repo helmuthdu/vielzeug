@@ -3,7 +3,7 @@ title: 'Stage: Retained-Mode 2D Canvas Engine'
 description: 'Retained-mode 2D canvas stage engine with DPR-aware layers, dirty repaints, and PNG export'
 package: stage
 category: utilities
-keywords: [canvas, rendering, layers, dpr, offscreencanvas, sprite-sheet, png-export, 2d]
+keywords: [canvas, rendering, layers, dpr, offscreencanvas, png-export, 2d]
 exports: [createStage, StageError, StageConfigError, StageDisposedError, StageUnsupportedError]
 related: [atlas, gesture, ink]
 environments: [browser, worker]
@@ -15,7 +15,7 @@ environments: [browser, worker]
 
 ## Why Stage?
 
-A `requestAnimationFrame` loop that redraws everything every frame falls over once a canvas has more than a handful of layers: backgrounds, tiles, tokens, and overlays all repaint even when one token moved. Stage gives you a retained-mode alternative as a headless engine: every layer owns a cached backing surface, only dirty layers repaint, and the composite is one `drawImage` per layer. It handles DPR scaling, world-space transforms (pair it with `@vielzeug/atlas` cameras), sprite-sheet slicing, and PNG export — with injectable surfaces and schedulers so the whole thing is unit-testable without a GPU.
+A `requestAnimationFrame` loop that redraws everything every frame falls over once a canvas has more than a handful of layers: backgrounds, tiles, tokens, and overlays all repaint even when one token moved. Stage gives you a retained-mode alternative as a headless engine: every layer owns a cached backing surface, only dirty layers repaint, and the composite is one `drawImage` per layer. It handles DPR scaling, world-space transforms (pair it with `@vielzeug/atlas` cameras), and PNG export — with injectable surfaces and schedulers so the whole thing is unit-testable without a GPU.
 
 ## Installation
 
@@ -62,10 +62,10 @@ stage.invalidate('tokens'); // only the tokens layer repaints
 - **`createStage()`**: layered retained-mode renderer with cached per-layer surfaces
 - **Dirty repaints**: invalidate one layer or all; frames coalesce via an injectable scheduler
 - **DPR-aware transforms**: paint in world units, the stage scales by `dpr × matrix`
-- **`drawSpriteFrame()`**: sprite-sheet cell slicing scaled into world rects
-- **`toBlob()`**: PNG export of the composited canvas with typed unsupported-capability errors
+- **`StageController`**: one control type shared by main-thread and worker stages
+- **`toBlob()`**: PNG export of the composited canvas, flushing pending frames, with typed unsupported-capability errors
 - **Injectable surfaces**: `createSurface` factory for tests and `OffscreenCanvas` workers
-- **`@vielzeug/stage/worker`**: worker-rendered stages via a transferred `OffscreenCanvas` and a versioned message protocol
+- **`@vielzeug/stage/worker`**: worker-rendered stages via a transferred `OffscreenCanvas` and a typed scene channel
 
 </div>
 

@@ -19,7 +19,7 @@ const brand = parseColor('#3366cc');
 const surface = parseColor('rgb(248 250 252)');
 
 const ink = readableOn(surface, [parseColor('#0f172a'), parseColor('#334155')]);
-const midpoint = mix(brand, surface, 0.5); // linear-light interpolation
+const midpoint = mix(brand, surface, 0.5); // OKLab interpolation, like color-mix(in oklab)
 const shades = ramp(brand, { steps: 9 }); // OKLCH lightness ramp
 
 console.log(toHex(ink ?? brand), toHex(midpoint), shades.map(toHex));

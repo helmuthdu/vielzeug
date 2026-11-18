@@ -259,14 +259,17 @@ description: Practical examples and recipes for ${pkg}.
 
 ## Examples
 
-- [Getting Started](./examples/getting-started.md)
+- [First Steps](./examples/first-steps.md)
 `,
-    'examples/getting-started.md': `---
-title: '${title} Examples: Getting Started'
+    // Name example files after what they demonstrate (see the other packages'
+    // examples/ folders), not generic labels like "getting-started". Rename this
+    // file and its links once the example's subject is known.
+    'examples/first-steps.md': `---
+title: '${title} Examples: First Steps'
 description: First steps with ${pkg}.
 ---
 
-## Getting Started
+## First Steps
 
 ### Problem
 

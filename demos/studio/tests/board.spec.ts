@@ -19,8 +19,29 @@ async function shapeCount(page: import('playwright/test').Page) {
   return page.locator('.studio-shape').count();
 }
 
+/**
+ * Converts world coordinates to page coordinates through the live world
+ * transform, so tests do not hardcode the camera's viewport-centred offset.
+ */
+async function worldTransform(page: import('playwright/test').Page) {
+  return page.locator('[data-testid="board-world"]').evaluate((el) => {
+    const match = /matrix\(([^)]+)\)/.exec(el.style.transform);
+    if (!match) throw new Error('world transform not applied');
+    return match[1].split(',').map(Number) as [number, number, number, number, number, number];
+  });
+}
+
+/**
+ * Converts world coordinates to page coordinates through the live world
+ * transform, so tests do not hardcode the camera's viewport-centred offset.
+ */
+async function worldToScreen(page: import('playwright/test').Page, box: { x: number; y: number }) {
+  const [a, b, c, d, e, f] = await worldTransform(page);
+  return (wx: number, wy: number): [number, number] => [box.x + a * wx + c * wy + e, box.y + b * wx + d * wy + f];
+}
+
 async function drawRect(page: import('playwright/test').Page, from: [number, number], to: [number, number]) {
-  await page.keyboard.press('b');
+  await page.keyboard.press('r');
   await page.mouse.move(from[0], from[1]);
   await page.mouse.down();
   await page.mouse.move(to[0], to[1], { steps: 5 });
@@ -33,15 +54,26 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator('[data-testid="board-viewport"]')).toBeVisible();
 });
 
-/** The canvas runs under the floating navbar; drawing starts below its tallest (mobile) extent. */
-const BELOW_BAR = 160;
+/**
+ * Page y-coordinate just below the floating navbar. The bar shrinks to its
+ * content and wraps on narrow screens, so its height varies with viewport;
+ * measuring it keeps every drawing test clear of the chrome.
+ */
+async function belowBar(page: import('playwright/test').Page): Promise<number> {
+  return page.evaluate(() => {
+    const bar = document.querySelector<HTMLElement>('[data-testid="shell"] ore-navbar');
+    if (!bar) throw new Error('shell navbar not found');
+    return bar.getBoundingClientRect().bottom + 24;
+  });
+}
 
 test('draws rectangles with the pen tool and selects them with a click', async ({ page }) => {
   const box = await viewportBox(page);
-  await drawRect(page, [box.x + 100, box.y + BELOW_BAR], [box.x + 220, box.y + BELOW_BAR + 80]);
+  const barY = await belowBar(page);
+  await drawRect(page, [box.x + 100, barY], [box.x + 220, barY + 80]);
   await expect.poll(() => shapeCount(page)).toBe(1);
 
-  await page.mouse.click(box.x + 150, box.y + BELOW_BAR + 40);
+  await page.mouse.click(box.x + 150, barY + 40);
   await expect(page.locator('.studio-selection-toolbar')).toBeVisible();
 
   // Clear of the tool dock floating at the bottom edge of the canvas.
@@ -51,14 +83,15 @@ test('draws rectangles with the pen tool and selects them with a click', async (
 
 test('moves a shape and restores it with undo/redo', async ({ page }) => {
   const box = await viewportBox(page);
-  await drawRect(page, [box.x + 100, box.y + BELOW_BAR], [box.x + 220, box.y + BELOW_BAR + 80]);
+  const barY = await belowBar(page);
+  await drawRect(page, [box.x + 100, barY], [box.x + 220, barY + 80]);
   const shape = page.locator('.studio-shape').first();
   const before = await shape.boundingBox();
 
-  await page.mouse.click(box.x + 150, box.y + BELOW_BAR + 40);
-  await page.mouse.move(box.x + 150, box.y + BELOW_BAR + 40);
+  await page.mouse.click(box.x + 150, barY + 40);
+  await page.mouse.move(box.x + 150, barY + 40);
   await page.mouse.down();
-  await page.mouse.move(box.x + 250, box.y + BELOW_BAR + 120, { steps: 5 });
+  await page.mouse.move(box.x + 250, barY + 120, { steps: 5 });
   await page.mouse.up();
   await expect
     .poll(async () => (await shape.boundingBox())?.x ?? 0, { message: 'shape moved' })
@@ -78,8 +111,9 @@ test('moves a shape and restores it with undo/redo', async ({ page }) => {
 
 test('marquee selects multiple shapes and Delete removes them with undo', async ({ page }) => {
   const box = await viewportBox(page);
-  await drawRect(page, [box.x + 60, box.y + BELOW_BAR], [box.x + 160, box.y + BELOW_BAR + 80]);
-  await drawRect(page, [box.x + 200, box.y + BELOW_BAR + 120], [box.x + 320, box.y + BELOW_BAR + 200]);
+  const barY = await belowBar(page);
+  await drawRect(page, [box.x + 60, barY], [box.x + 160, barY + 80]);
+  await drawRect(page, [box.x + 200, barY + 120], [box.x + 320, barY + 200]);
   await expect.poll(() => shapeCount(page)).toBe(2);
 
   // Start away from the toolbar pinned to the viewport's top-left corner.
@@ -158,8 +192,9 @@ test('pinch zooms the camera', async ({ page }) => {
 
 test('dragging a shape shows snap guides and align centers a selection', async ({ page }) => {
   const box = await viewportBox(page);
+  const barY = await belowBar(page);
   // Drawn low enough that the selection toolbar never overlaps the fixed board toolbar.
-  await drawRect(page, [box.x + 60, box.y + 160], [box.x + 160, box.y + 240]);
+  await drawRect(page, [box.x + 60, barY], [box.x + 160, barY + 80]);
   await drawRect(page, [box.x + 240, box.y + 300], [box.x + 340, box.y + 380]);
   await expect.poll(() => shapeCount(page)).toBe(2);
 
@@ -219,7 +254,8 @@ test('draws a freehand stroke with the pen tool that can be selected and undone'
 
 test('selection shows a dashed frame and eight resize handles', async ({ page }) => {
   const box = await viewportBox(page);
-  await drawRect(page, [box.x + 100, box.y + BELOW_BAR], [box.x + 220, box.y + BELOW_BAR + 80]);
+  const barY = await belowBar(page);
+  await drawRect(page, [box.x + 100, barY], [box.x + 220, barY + 80]);
   await expect(page.locator('[data-testid="board-selection-frame"]')).toBeVisible();
   await expect(page.locator('[data-testid="board-handles"] .studio-handle')).toHaveCount(8);
 
@@ -228,15 +264,16 @@ test('selection shows a dashed frame and eight resize handles', async ({ page })
   await page.mouse.click(box.x + box.width - 40, box.y + box.height - 140);
   await expect(page.locator('[data-testid="board-handles"] .studio-handle').first()).toBeHidden();
 
-  await page.mouse.click(box.x + 150, box.y + BELOW_BAR + 40);
+  await page.mouse.click(box.x + 150, barY + 40);
   await expect(page.locator('[data-testid="board-handles"] .studio-handle').first()).toBeVisible();
-  await page.keyboard.press('b');
+  await page.keyboard.press('r');
   await expect(page.locator('[data-testid="board-handles"] .studio-handle').first()).toBeHidden();
 });
 
 test('dragging the southeast handle resizes the shape, with undo', async ({ page }) => {
   const box = await viewportBox(page);
-  await drawRect(page, [box.x + 100, box.y + BELOW_BAR], [box.x + 220, box.y + BELOW_BAR + 80]);
+  const barY = await belowBar(page);
+  await drawRect(page, [box.x + 100, barY], [box.x + 220, barY + 80]);
   const shape = page.locator('.studio-shape').first();
   const before = await shape.boundingBox();
   if (!before) throw new Error('shape not visible');
@@ -268,22 +305,34 @@ test('dragging the southeast handle resizes the shape, with undo', async ({ page
 
 test('dragging between two shapes shows equal-spacing guides and snaps centered', async ({ page }) => {
   const box = await viewportBox(page);
-  // A at x 100..160, C at x 392..452; B (60 wide) centers at x 246 with equal 86px gaps.
-  // At the drop point (x 243) no anchor is within 8 of a grid line (32) or a neighbor
-  // edge, so only the spacing snap can engage on x.
-  await drawRect(page, [box.x + 100, box.y + 200], [box.x + 160, box.y + 260]);
-  await drawRect(page, [box.x + 392, box.y + 200], [box.x + 452, box.y + 260]);
-  await drawRect(page, [box.x + 300, box.y + 200], [box.x + 360, box.y + 260]);
+  const w2s = await worldToScreen(page, box);
+  // World x of the viewport centre and the nearest 32px grid line, so the layout
+  // fits any viewport size and sits at a known phase against the snap grid.
+  const [a, , , , e] = await worldTransform(page);
+  const cx = (box.width / 2 - e) / a;
+  const g = Math.round(cx / 32) * 32;
+  // Target T = g + 20: A spans T-100..T-40 and C spans T+100..T+160, so a 60-wide B
+  // at T leaves equal 40px gaps. Dropped with its left edge at g + 16, B's anchors
+  // (g+16, g+46, g+76) are 16/14/12px from grid lines and far from every neighbour
+  // anchor, so only the spacing snap (delta 4) can engage on x.
+  const T = g + 20;
+  const top = box.y + 260;
+  const bottom = box.y + 320;
+  const mid = box.y + 290;
+  const draw = (x0: number, x1: number) => drawRect(page, [w2s(x0, 0)[0], top], [w2s(x1, 0)[0], bottom]);
+  await draw(T - 100, T - 40); // A
+  await draw(T + 100, T + 160); // C
+  await draw(T + 40, T + 100); // B, dragged left afterwards
   await expect.poll(() => shapeCount(page)).toBe(3);
 
-  await page.mouse.click(box.x + 330, box.y + 230);
-  await page.mouse.move(box.x + 330, box.y + 230);
+  await page.mouse.click(w2s(T + 70, 0)[0], mid);
+  await page.mouse.move(w2s(T + 70, 0)[0], mid);
   await page.mouse.down();
-  await page.mouse.move(box.x + 273, box.y + 230, { steps: 6 });
-  await expect(page.locator('[data-testid="board-spacing"] .studio-spacing-line')).toBeVisible();
-  await expect(page.locator('[data-testid="board-spacing"] .studio-spacing-mark')).toHaveCount(2);
+  await page.mouse.move(w2s(T + 26, 0)[0], mid, { steps: 6 });
+  await expect(page.locator('[data-testid="board-guides"] .studio-guide.is-spacing')).toBeVisible();
+  await expect(page.locator('[data-testid="board-guides"] .studio-guide-cap.is-spacing')).toHaveCount(2);
   await page.mouse.up();
-  await expect(page.locator('[data-testid="board-spacing"]')).toBeHidden();
+  await expect(page.locator('[data-testid="board-guides"]')).toBeHidden();
 
   // Equal gaps: B.x - A.right === C.x - B.right in world coordinates.
   const gaps = await page.evaluate(() => {
@@ -291,8 +340,26 @@ test('dragging between two shapes shows equal-spacing guides and snaps centered'
       const match = /translate\((-?\d+(?:\.\d+)?)px/.exec(el.style.transform);
       return Number(match?.[0] ?? NaN);
     });
-    const [a, c, b] = xs;
-    return { left: (b ?? 0) - ((a ?? 0) + 60), right: (c ?? 0) - ((b ?? 0) + 60) };
+    const [A, C, B] = xs;
+    return { left: (B ?? 0) - ((A ?? 0) + 60), right: (C ?? 0) - ((B ?? 0) + 60) };
   });
   expect(gaps.left).toBe(gaps.right);
+});
+
+test('drawn shapes survive a reload and the reset button clears the saved copy', async ({ page }) => {
+  const box = await viewportBox(page);
+  const barY = await belowBar(page);
+  await drawRect(page, [box.x + 100, barY], [box.x + 220, barY + 80]);
+  await expect.poll(() => shapeCount(page)).toBe(1);
+
+  await page.reload();
+  await expect(page.locator('[data-testid="board-viewport"]')).toBeVisible();
+  await expect.poll(() => shapeCount(page)).toBe(1);
+
+  await page.locator('[data-testid="board-toolbar"] [data-action="reset"]').click();
+  await expect.poll(() => shapeCount(page)).toBe(0);
+
+  await page.reload();
+  await expect(page.locator('[data-testid="board-viewport"]')).toBeVisible();
+  await expect.poll(() => shapeCount(page)).toBe(0);
 });

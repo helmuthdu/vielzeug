@@ -144,6 +144,28 @@ describe('ore-dock', () => {
       expect(fixture.element.hasAttribute('attached')).toBe(true);
     });
 
+    it('defaults to a docked rather than floating bar', async () => {
+      fixture = await mount('ore-dock');
+
+      expect(fixture.element.hasAttribute('floating')).toBe(false);
+      expect(fixture.element.hasAttribute('data-preview-mode')).toBe(false);
+    });
+
+    it('reflects floating mode', async () => {
+      fixture = await mount('ore-dock', { attrs: { floating: true } });
+
+      expect(fixture.element.hasAttribute('floating')).toBe(true);
+    });
+
+    it('updates floating through its property', async () => {
+      fixture = await mount('ore-dock');
+      await fixture.act(() => {
+        fixture.element.floating = true;
+      });
+
+      expect(fixture.element.hasAttribute('floating')).toBe(true);
+    });
+
     it.each(['auto', 'full', 'compact'])('reflects the %s mobile layout', async (mobileLayout) => {
       fixture = await mount('ore-dock', { attrs: { 'mobile-layout': mobileLayout } });
 

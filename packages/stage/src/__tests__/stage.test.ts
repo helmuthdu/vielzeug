@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
-import { createStage, type FrameScheduler, type StageSurface } from '../index';
+import type { FrameScheduler } from '@vielzeug/atlas';
+import { describe, expect, it, vi } from 'vitest';
+import { createStage, type StageSurface } from '../index';
 
 /**
  * jsdom has no real canvas. A fake surface records the 2D calls the stage
@@ -62,11 +63,13 @@ function makeCanvas(): HTMLCanvasElement & { ctx: FakeContext } {
 
 function makeScheduler() {
   let handle = 0;
+  let clock = 0;
   const queued = new Map<number, (time: number) => void>();
   const scheduler: FrameScheduler = {
     cancelFrame: (id) => {
       queued.delete(id);
     },
+    now: () => clock,
     requestFrame: (cb) => {
       handle += 1;
       queued.set(handle, cb);
@@ -75,6 +78,7 @@ function makeScheduler() {
   };
   return {
     flush: (time = 16) => {
+      clock = time;
       const entries = [...queued.entries()];
       queued.clear();
       for (const [, cb] of entries) cb(time);
@@ -90,6 +94,7 @@ function setup(options: Partial<Parameters<typeof createStage>[1]> = {}) {
   const frames = makeScheduler();
   const stage = createStage(canvas, {
     height: 200,
+    layers: [],
     width: 400,
     ...options,
     createSurface: (w, h) => {
@@ -129,7 +134,6 @@ describe('createStage', () => {
     expect(order).toEqual(['bg', 'fg']);
     expect(info.repainted).toEqual(['bg', 'fg']);
     expect(info.time).toBe(32);
-    expect(stage.layerIds).toEqual(['bg', 'fg']);
   });
 
   it('applies dpr multiplied into the world matrix on layer contexts', () => {
@@ -259,55 +263,59 @@ describe('createStage', () => {
     expect(rect).toEqual({ height: 200, width: 400, x: 0, y: 0 });
   });
 
-  it('supports add/remove/move of layers', () => {
-    const paints: string[] = [];
-    const { stage } = setup({ layers: [{ id: 'a', paint: () => void paints.push('a') }] });
-    stage.addLayer({ id: 'b', paint: () => void paints.push('b') });
-    stage.render();
-    expect(paints).toEqual(['a', 'b']);
-    paints.length = 0;
-
-    stage.moveLayer('b', 0);
-    stage.invalidate();
-    stage.render();
-    expect(paints).toEqual(['b', 'a']);
-
-    stage.removeLayer('a');
-    paints.length = 0;
-    stage.invalidate();
-    stage.render();
-    expect(paints).toEqual(['b']);
-    expect(stage.layerIds).toEqual(['b']);
-  });
-
-  it('rejects duplicate and unknown layer ids', () => {
+  it('rejects duplicate layer ids at creation and unknown ids on invalidate', () => {
+    expect(() =>
+      setup({
+        layers: [
+          { id: 'a', paint: () => {} },
+          { id: 'a', paint: () => {} },
+        ],
+      }),
+    ).toThrow(/already registered/);
     const { stage } = setup({ layers: [{ id: 'a', paint: () => {} }] });
-    expect(() => stage.addLayer({ id: 'a', paint: () => {} })).toThrow(/already registered/);
-    expect(() => stage.removeLayer('nope')).toThrow(/Unknown stage layer/);
     expect(() => stage.invalidate('nope')).toThrow(/Unknown stage layer/);
   });
 
-  it('draws a sprite-sheet frame by slicing the source cell', () => {
-    const { stage } = setup();
-    const ctx = makeContext();
-    const sheet = { columns: 4, frameHeight: 16, frames: 8, frameWidth: 16 };
-    stage.drawSpriteFrame(ctx, {} as CanvasImageSource, sheet, 5, {
-      height: 32,
-      width: 32,
-      x: 10,
-      y: 20,
-    });
-    // frame 5 -> col 1, row 1
-    const draw = ctx.calls.find((c) => c.name === 'drawImage');
-    expect(draw?.args).toEqual([{}, 16, 16, 16, 16, 10, 20, 32, 32]);
-    expect(() =>
-      stage.drawSpriteFrame(ctx, {} as CanvasImageSource, sheet, 8, {
-        height: 1,
-        width: 1,
-        x: 0,
-        y: 0,
-      }),
-    ).toThrow(/Sprite frame index/);
+  it('flushes a pending frame before exporting a blob', async () => {
+    const paints: string[] = [];
+    const { canvas, frames, stage } = setup({ layers: [{ id: 'a', paint: () => void paints.push('a') }] });
+    stage.render();
+    paints.length = 0;
+    stage.invalidate();
+    expect(frames.pending()).toBe(1);
+    canvas.toBlob = (cb) => cb(new Blob(['png']));
+    await stage.toBlob();
+    // toBlob must repaint synchronously instead of exporting the previous frame.
+    expect(paints).toEqual(['a']);
+    expect(frames.pending()).toBe(0);
+  });
+
+  it('exports via convertToBlob on an OffscreenCanvas', async () => {
+    class FakeOffscreenCanvas {
+      height = 0;
+      width = 0;
+      getContext() {
+        return makeContext();
+      }
+      convertToBlob() {
+        return Promise.resolve(new Blob(['offscreen']));
+      }
+    }
+    vi.stubGlobal('OffscreenCanvas', FakeOffscreenCanvas);
+    try {
+      const canvas = new FakeOffscreenCanvas() as unknown as OffscreenCanvas;
+      const stage = createStage(canvas, { height: 10, layers: [], width: 10 });
+      const blob = await stage.toBlob();
+      expect(await blob.text()).toBe('offscreen');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('defaults render time to the scheduler clock', () => {
+    const { frames, stage } = setup({ layers: [{ id: 'a', paint: () => {} }] });
+    frames.flush(128);
+    expect(stage.render().time).toBe(128);
   });
 
   it('exports a PNG blob from the canvas', async () => {

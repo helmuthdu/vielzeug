@@ -1,6 +1,6 @@
 ---
 title: 'Atlas: Spatial Math for 2D Canvases'
-description: Camera transforms, matrix and rect math, OBB and polygon hit-testing, and a dynamic R-tree spatial index for infinite 2D canvases.
+description: Camera transforms, matrix and rect math, polygon hit-testing, and a dynamic R-tree spatial index for infinite 2D canvases.
 package: atlas
 category: utilities
 keywords:
@@ -12,7 +12,6 @@ keywords:
     matrix,
     rect,
     aabb,
-    obb,
     hit-testing,
     r-tree,
     spatial-index,
@@ -32,7 +31,7 @@ environments: [browser, node, ssr, deno]
 
 ## Why Atlas?
 
-Every infinite canvas re-implements the same three things badly: a camera that keeps the point under your cursor fixed while zooming, a hit-test that stops being O(n) once the scene grows, and selection math for rotated boxes. Atlas ships them as pure, headless primitives: a camera with anchor-preserving transforms and injectable animation scheduling, matrix/rect/OBB math, exact polygon narrow-phase, and a dynamic R-tree for O(log n) queries.
+Every infinite canvas re-implements the same three things badly: a camera that keeps the point under your cursor fixed while zooming, a hit-test that stops being O(n) once the scene grows, and selection and snapping math for moving rects. Atlas ships them as pure, headless primitives: a viewport-centred camera with anchor-preserving transforms and injectable animation scheduling, matrix/rect math, exact polygon narrow-phase, and a dynamic R-tree for O(log n) queries.
 
 ```ts
 // Before
@@ -45,9 +44,9 @@ import { createCamera, createSpatialIndex } from '@vielzeug/atlas';
 const camera = createCamera();
 camera.zoomAt({ x: 400, y: 300 }, 1.2); // world point under (400,300) stays put
 
-const index = createSpatialIndex<Shape>();
-index.insert('shape-1', { height: 40, width: 60, x: 12, y: 8 }, shape);
-const hits = index.queryRect(camera.visibleRect({ x: 800, y: 600 })); // viewport culling
+const index = createSpatialIndex();
+index.set('shape-1', { height: 40, width: 60, x: 12, y: 8 });
+const hits = index.queryRect(camera.visibleRect); // viewport culling, returns ids
 ```
 
 | Feature                               | Atlas                                        | Ad-hoc math | Full scene libraries |
@@ -56,7 +55,6 @@ const hits = index.queryRect(camera.visibleRect({ x: 800, y: 600 })); // viewpor
 | External dependencies                 | <ore-icon name="check" size="16"></ore-icon> | n/a         | Varies               |
 | Anchor-preserving zoom/rotate         | Built in                                     | Drifts      | Yes                  |
 | Dynamic R-tree hit-testing            | Built in                                     | O(n) scans  | Yes                  |
-| Rotated-box (OBB) intersection        | Built in                                     | Rare        | Varies               |
 | Headless: no DOM, canvas, or renderer | <ore-icon name="check" size="16"></ore-icon> | Varies      | Usually coupled      |
 
 <div class="decision-callout">
@@ -90,26 +88,28 @@ yarn add @vielzeug/atlas
 ```ts
 import { createCamera, createSpatialIndex } from '@vielzeug/atlas';
 
+// state.x/y is the world point at the viewport centre
 const camera = createCamera({ initial: { x: 0, y: 0, zoom: 1 } });
+camera.resize({ height: 600, width: 800 });
 camera.panBy(20, 0); // content follows the drag
-camera.fitBounds({ height: 400, width: 600, x: -50, y: -50 }, { size: { x: 800, y: 600 } });
+camera.fitBounds({ height: 400, width: 600, x: -50, y: -50 }, { padding: 40 });
 
 const index = createSpatialIndex();
-index.insert('a', { height: 10, width: 10, x: 0, y: 0 });
-index.queryPoint({ x: 5, y: 5 }); // [{ id: 'a', ... }]
+index.set('a', { height: 10, width: 10, x: 0, y: 0 });
+index.queryPoint({ x: 5, y: 5 }); // ['a']
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- `createCamera()`: pan, anchor-preserving zoom/rotate, `fitBounds()`, rotated `visibleRect()`, and `animateTo()` with an injectable frame scheduler
-- `createSpatialIndex()`: dynamic R-tree (Guttman quadratic split) with `insert`/`update`/`remove`/`queryRect`/`queryPoint`
-- Matrix helpers: `multiply`, `invert`, `apply`, `translate`, `scale`, `rotate`, `around`, `toCssMatrix` in Canvas2D element order
-- Rect math: union, intersection, containment, inflation, and bounds-from-points
-- OBB math: corners, bounds, point-in-box, and SAT box-box intersection for rotated shapes
+- `createCamera()`: viewport-centred state, pan, anchor-preserving zoom/rotate, `fitBounds()`, rotated `visibleRect`, and `animateTo()` with an injectable frame scheduler
+- `createSpatialIndex()`: dynamic R-tree (Guttman quadratic split) with `set`/`delete`/`get`/`queryRect`/`queryPoint` over ids
+- Matrix helpers: `multiply`, `invert`, `apply`, `translate`, `scale`, `rotate`, `around`, `scaleOf`, `toCssMatrix` in Canvas2D element order
+- Rect math: union, closed-interval intersection, containment, inflation, and bounds-from-points
+- Snapping: `snapRect()` alignment/grid/equal-gap guides with `kind`-tagged targets, plus pure `alignRects()`/`distributeRects()`
 - Narrow-phase geometry: `pointInPolygon`, `distanceToPolyline`, `pointNearPolygon` for exact stroke and polygon hit-testing
-- `AtlasError` / `AtlasConfigError`: typed errors; camera and index follow the Vielzeug disposal contract
+- `AtlasError` / `AtlasConfigError`: typed errors; the camera follows the Vielzeug disposal contract
 - Zero runtime dependencies, no DOM requirement: works in Node, Workers, and SSR
 
 </div>

@@ -440,7 +440,6 @@ export default defineConfig({
             { link: '/atlas/api#createspatialindex', text: 'createSpatialIndex()' },
             { link: '/atlas/api#matrix-functions', text: 'Matrix Functions' },
             { link: '/atlas/api#rect-functions', text: 'Rect Functions' },
-            { link: '/atlas/api#obb-functions', text: 'OBB Functions' },
             { link: '/atlas/api#geometry-functions', text: 'Geometry Functions' },
             { link: '/atlas/api#snapping-functions', text: 'Snapping Functions' },
             { link: '/atlas/api#grid-functions', text: 'Grid Functions' },
@@ -450,7 +449,7 @@ export default defineConfig({
           text: 'API Reference',
         },
         {
-          items: [{ link: '/atlas/examples/getting-started', text: 'Pan, Zoom and Culling' }],
+          items: [{ link: '/atlas/examples/pan-zoom-and-culling', text: 'Pan, Zoom and Culling' }],
           link: '/atlas/examples',
           text: 'Examples',
         },
@@ -533,7 +532,7 @@ export default defineConfig({
           text: 'API Reference',
         },
         {
-          items: [{ link: '/beacon/examples/getting-started', text: 'Getting Started' }],
+          items: [{ link: '/beacon/examples/guided-tour', text: 'Guided Tour' }],
           link: '/beacon/examples',
           text: 'Examples',
         },
@@ -1154,9 +1153,10 @@ export default defineConfig({
         {
           items: [
             { link: '/ink/usage#basic-usage', text: 'Basic Usage' },
-            { link: '/ink/usage#choose-a-smoothing-algorithm', text: 'Smoothing Algorithms' },
+            { link: '/ink/usage#stabilize-while-drawing', text: 'Stabilize While Drawing' },
+            { link: '/ink/usage#smooth-after-capture', text: 'Smooth After Capture' },
             { link: '/ink/usage#profile-widths-from-speed-and-pressure', text: 'Width Profiling' },
-            { link: '/ink/usage#build-the-variable-width-outline', text: 'Variable-Width Outline' },
+            { link: '/ink/usage#build-the-outline', text: 'Outline Polygon' },
             { link: '/ink/usage#simplify-before-serializing', text: 'Simplification' },
             { link: '/ink/usage#serialize-to-svg-paths', text: 'SVG Paths' },
             { link: '/ink/usage#framework-integration', text: 'Framework Integration' },
@@ -1178,7 +1178,7 @@ export default defineConfig({
           text: 'API Reference',
         },
         {
-          items: [{ link: '/ink/examples/getting-started', text: 'Jitter-Free Ink' }],
+          items: [{ link: '/ink/examples/jitter-free-ink', text: 'Jitter-Free Ink' }],
           link: '/ink/examples',
           text: 'Examples',
         },
@@ -1540,7 +1540,7 @@ export default defineConfig({
             { link: '/palette/usage#parse-css-colors', text: 'Parsing Colors' },
             { link: '/palette/usage#convert-between-color-spaces', text: 'Color Spaces' },
             { link: '/palette/usage#format-colors', text: 'Formatting' },
-            { link: '/palette/usage#mix-in-linear-light', text: 'Mixing' },
+            { link: '/palette/usage#mix-in-oklab', text: 'Mixing' },
             { link: '/palette/usage#check-contrast', text: 'Contrast' },
             { link: '/palette/usage#build-lightness-ramps', text: 'Ramps' },
             { link: '/palette/usage#errors', text: 'Errors' },
@@ -1566,7 +1566,7 @@ export default defineConfig({
           text: 'API Reference',
         },
         {
-          items: [{ link: '/palette/examples/getting-started', text: 'Parse, Mix and Contrast' }],
+          items: [{ link: '/palette/examples/parse-mix-and-contrast', text: 'Parse, Mix and Contrast' }],
           link: '/palette/examples',
           text: 'Examples',
         },
@@ -2302,7 +2302,6 @@ export default defineConfig({
             { link: '/stage/usage#driving-the-transform', text: 'Driving the Transform' },
             { link: '/stage/usage#dirty-repaints', text: 'Dirty Repaints' },
             { link: '/stage/usage#resize-and-dpr-changes', text: 'Resize and DPR Changes' },
-            { link: '/stage/usage#sprite-sheets', text: 'Sprite Sheets' },
             { link: '/stage/usage#exporting-a-png', text: 'Exporting a PNG' },
             { link: '/stage/usage#testing-with-injected-surfaces', text: 'Testing with Injected Surfaces' },
             { link: '/stage/usage#worker-rendering', text: 'Worker Rendering' },
@@ -2324,7 +2323,7 @@ export default defineConfig({
           text: 'API Reference',
         },
         {
-          items: [{ link: '/stage/examples/getting-started', text: 'Layered Repaints' }],
+          items: [{ link: '/stage/examples/layered-repaints', text: 'Layered Repaints' }],
           link: '/stage/examples',
           text: 'Examples',
         },
@@ -2699,7 +2698,7 @@ export default defineConfig({
           text: 'API Reference',
         },
         {
-          items: [{ link: '/wire/examples/getting-started', text: 'Edges Around Nodes' }],
+          items: [{ link: '/wire/examples/edges-around-nodes', text: 'Edges Around Nodes' }],
           link: '/wire/examples',
           text: 'Examples',
         },

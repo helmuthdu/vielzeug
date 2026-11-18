@@ -1,15 +1,15 @@
 import { AtlasConfigError } from './errors.js';
-import { boundsOf } from './geometry.js';
-import { apply, IDENTITY, invert, multiply, rotate, scale, translate } from './matrix.js';
-import type { Matrix, Point, Rect } from './shapes.js';
+import { apply, multiply, rotate, scale, translate } from './matrix.js';
+import { rectFromPoints } from './rect.js';
+import type { Matrix, Point, Rect, Size } from './shapes.js';
 
 export type CameraState = Readonly<{
-  /** World point that maps to the viewport origin (screen 0,0). */
+  /** World point at the viewport centre. */
   x: number;
   y: number;
   /** Screen pixels per world unit. */
   zoom: number;
-  /** Radians; positive is clockwise on screen. */
+  /** Radians in (-π, π]; positive is clockwise on screen. */
   rotation: number;
 }>;
 
@@ -17,6 +17,8 @@ export type CameraOptions = Readonly<{
   initial?: Partial<CameraState>;
   minZoom?: number;
   maxZoom?: number;
+  /** Viewport size in CSS px. Default 0×0, where the centre is the origin. */
+  viewport?: Size;
   scheduler?: FrameScheduler;
 }>;
 
@@ -30,25 +32,31 @@ export type AnimationOptions = Readonly<{
   duration?: number;
   easing?: (t: number) => number;
   signal?: AbortSignal;
-  onDone?: (completed: boolean) => void;
 }>;
 
 export type Camera = Readonly<{
   readonly state: CameraState;
+  /** Viewport size in CSS px; the world point at its centre is `state.x/y`. */
+  readonly viewport: Size;
   /** world → screen. */
   readonly matrix: Matrix;
-  /** screen → world. Null only for degenerate state (zoom 0 is prevented by clamps). */
-  readonly inverse: Matrix | null;
+  /** screen → world. Zoom is clamped above zero, so this always exists. */
+  readonly inverse: Matrix;
   toScreen(point: Point): Point;
   toWorld(point: Point): Point;
+  /** Jump to `target` immediately, cancelling any animation. */
+  set(target: Partial<CameraState>): void;
+  /** Change the viewport size, keeping the world point at its centre fixed. */
+  resize(size: Size): void;
   panBy(dx: number, dy: number): void;
   /** Zoom keeping the world point under `screenPoint` fixed. `factor` multiplies current zoom. */
   zoomAt(screenPoint: Point, factor: number): void;
   /** Rotate keeping the world point under `screenPoint` fixed. `delta` radians. */
   rotateAt(screenPoint: Point, delta: number): void;
-  /** Fit `bounds` into a viewport of `size` (CSS px) with inner `padding`. */
-  fitBounds(bounds: Rect, options: Readonly<{ size: Point; padding?: number }>): void;
-  visibleRect(size: Point): Rect;
+  /** Fit `bounds` into the current viewport with inner `padding`. */
+  fitBounds(bounds: Rect, options?: Readonly<{ padding?: number }>): void;
+  /** Axis-aligned world bounds of the visible viewport, honouring rotation. */
+  readonly visibleRect: Rect;
   /** Animate to `target`; concurrent calls replace the running animation. */
   animateTo(target: Partial<CameraState>, options?: AnimationOptions): void;
   stop(): void;
@@ -73,16 +81,41 @@ function easeInOut(t: number): number {
   return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
 }
 
-/** Wrap an angle difference to (-π, π] for shortest-path rotation animation. */
-function shortestAngle(delta: number): number {
-  const wrapped = (delta + Math.PI) % (2 * Math.PI);
-  return ((wrapped + 2 * Math.PI) % (2 * Math.PI)) - Math.PI;
-}
-
 /** Normalize an angle to (-π, π]. */
 function normalizeAngle(angle: number): number {
   const wrapped = (angle + Math.PI) % (2 * Math.PI);
   return ((wrapped + 2 * Math.PI) % (2 * Math.PI)) - Math.PI;
+}
+
+/** Shortest signed path from `from` to `to`, in (-π, π]. */
+function shortestAngle(from: number, to: number): number {
+  return normalizeAngle(to - from);
+}
+
+/** World-space offset that a screen-space offset corresponds to at `zoom`/`rotation`. */
+function screenDeltaToWorld(delta: Point, zoom: number, rotation: number): Point {
+  return apply(multiply(rotate(-rotation), scale(1 / zoom)), delta);
+}
+
+/**
+ * world → screen: translate(viewport centre) · scale(zoom) · rotate(rotation) · translate(-state).
+ * With the state point at the viewport centre, saved states no longer depend
+ * on the screen size.
+ */
+function matrixOf(s: CameraState, viewport: Size): Matrix {
+  const rotated = multiply(scale(s.zoom), rotate(s.rotation));
+  const m = multiply(rotated, translate(-s.x, -s.y));
+  return multiply(translate(viewport.width / 2, viewport.height / 2), m);
+}
+
+/**
+ * screen → world in closed form: translate(state) · rotate(-r) · scale(1/z) · translate(-centre).
+ * Zoom is clamped above zero, so the camera matrix is always invertible.
+ */
+function inverseOf(s: CameraState, viewport: Size): Matrix {
+  const m = multiply(rotate(-s.rotation), scale(1 / s.zoom));
+  const t = screenDeltaToWorld({ x: viewport.width / 2, y: viewport.height / 2 }, s.zoom, s.rotation);
+  return multiply(translate(s.x - t.x, s.y - t.y), m);
 }
 
 export function createCamera(options: CameraOptions = {}): Camera {
@@ -93,8 +126,9 @@ export function createCamera(options: CameraOptions = {}): Camera {
   }
   const scheduler = options.scheduler ?? DEFAULT_SCHEDULER;
   const initial = options.initial ?? {};
+  let viewport: Size = options.viewport ?? { height: 0, width: 0 };
   let state: CameraState = {
-    rotation: initial.rotation ?? 0,
+    rotation: normalizeAngle(initial.rotation ?? 0),
     x: initial.x ?? 0,
     y: initial.y ?? 0,
     zoom: Math.min(maxZoom, Math.max(minZoom, initial.zoom ?? 1)),
@@ -112,17 +146,41 @@ export function createCamera(options: CameraOptions = {}): Camera {
   let animation: { cleanup: () => void; frame: number } | null = null;
   const listeners = new Set<(state: CameraState) => void>();
 
+  // Derived transforms are recomputed at most once per state or viewport change.
+  let cachedMatrix: Matrix | null = null;
+  let cachedInverse: Matrix | null = null;
+
+  const matrix = (): Matrix => {
+    cachedMatrix ??= matrixOf(state, viewport);
+    return cachedMatrix;
+  };
+  const inverse = (): Matrix => {
+    cachedInverse ??= inverseOf(state, viewport);
+    return cachedInverse;
+  };
+
+  const invalidate = (): void => {
+    cachedMatrix = null;
+    cachedInverse = null;
+  };
+
+  /** Screen point measured from the viewport centre, where the state point sits. */
+  const relativeToCentre = (screenPoint: Point): Point => ({
+    x: screenPoint.x - viewport.width / 2,
+    y: screenPoint.y - viewport.height / 2,
+  });
+
   const emit = (): void => {
     for (const listener of [...listeners]) listener(state);
   };
 
   const set = (next: Partial<CameraState>): void => {
-    const zoom = Math.min(maxZoom, Math.max(minZoom, next.zoom ?? state.zoom));
+    if (disposed) return;
     const candidate: CameraState = {
-      rotation: next.rotation ?? state.rotation,
+      rotation: normalizeAngle(next.rotation ?? state.rotation),
       x: next.x ?? state.x,
       y: next.y ?? state.y,
-      zoom,
+      zoom: Math.min(maxZoom, Math.max(minZoom, next.zoom ?? state.zoom)),
     };
     if (
       candidate.x === state.x &&
@@ -133,14 +191,11 @@ export function createCamera(options: CameraOptions = {}): Camera {
       return;
     }
     state = candidate;
+    invalidate();
     emit();
   };
 
-  const matrixOf = (s: CameraState): Matrix =>
-    multiply(multiply(scale(s.zoom), rotate(s.rotation)), translate(-s.x, -s.y));
-
-  const matrix = (): Matrix => matrixOf(state);
-
+  /** Cancel any running animation; direct manipulation always wins. */
   const stop = (): void => {
     if (!animation) return;
     scheduler.cancelFrame(animation.frame);
@@ -161,35 +216,28 @@ export function createCamera(options: CameraOptions = {}): Camera {
     if (disposed) return;
     const duration = animateOptions.duration ?? 250;
     const easing = animateOptions.easing ?? easeInOut;
-    const onDone = animateOptions.onDone;
     const signal = animateOptions.signal;
-    if (signal?.aborted) {
-      onDone?.(false);
-      return;
-    }
+    if (signal?.aborted) return;
     if (duration <= 0) {
       set(target);
-      onDone?.(true);
       return;
     }
     const from = state;
-    const toZoom = Math.min(maxZoom, Math.max(minZoom, target.zoom ?? state.zoom));
     const to: CameraState = {
-      rotation: from.rotation + shortestAngle((target.rotation ?? state.rotation) - from.rotation),
+      rotation: from.rotation + shortestAngle(from.rotation, target.rotation ?? state.rotation),
       x: target.x ?? state.x,
       y: target.y ?? state.y,
-      zoom: toZoom,
+      zoom: Math.min(maxZoom, Math.max(minZoom, target.zoom ?? state.zoom)),
     };
     const start = scheduler.now();
     // Log-space zoom interpolation keeps multiplicative zoom visually linear.
     const logFrom = Math.log(from.zoom);
-    const logTo = Math.log(toZoom);
+    const logTo = Math.log(to.zoom);
     const frame = { cleanup: () => {}, frame: 0 };
     animation = frame;
     const abort = (): void => {
       if (animation !== frame) return;
       stop();
-      onDone?.(false);
     };
     if (signal) {
       signal.addEventListener('abort', abort, { once: true });
@@ -200,7 +248,7 @@ export function createCamera(options: CameraOptions = {}): Camera {
       const t = Math.min(1, (time - start) / duration);
       const e = easing(t);
       set({
-        rotation: t >= 1 ? normalizeAngle(to.rotation) : from.rotation + (to.rotation - from.rotation) * e,
+        rotation: from.rotation + (to.rotation - from.rotation) * e,
         x: from.x + (to.x - from.x) * e,
         y: from.y + (to.y - from.y) * e,
         zoom: Math.exp(logFrom + (logTo - logFrom) * e),
@@ -208,7 +256,6 @@ export function createCamera(options: CameraOptions = {}): Camera {
       if (t >= 1) {
         animation = null;
         frame.cleanup();
-        onDone?.(true);
         return;
       }
       frame.frame = scheduler.requestFrame(step);
@@ -225,10 +272,12 @@ export function createCamera(options: CameraOptions = {}): Camera {
     get disposed() {
       return disposed;
     },
-    fitBounds(bounds, fitOptions) {
+    fitBounds(bounds, fitOptions = {}) {
+      if (disposed) return;
+      stop();
       const padding = fitOptions.padding ?? 0;
-      const availableWidth = Math.max(1, fitOptions.size.x - padding * 2);
-      const availableHeight = Math.max(1, fitOptions.size.y - padding * 2);
+      const availableWidth = Math.max(1, viewport.width - padding * 2);
+      const availableHeight = Math.max(1, viewport.height - padding * 2);
       const zoom = Math.min(
         maxZoom,
         Math.max(
@@ -239,39 +288,44 @@ export function createCamera(options: CameraOptions = {}): Camera {
           ),
         ),
       );
-      const center: Point = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
-      // Want center → viewport center. c = center - R⁻¹·viewportCenter / zoom.
-      const cos = Math.cos(state.rotation);
-      const sin = Math.sin(state.rotation);
-      const vx = fitOptions.size.x / 2;
-      const vy = fitOptions.size.y / 2;
-      const ux = (vx * cos + vy * sin) / zoom;
-      const uy = (-vx * sin + vy * cos) / zoom;
-      set({ x: center.x - ux, y: center.y - uy, zoom });
+      // The state point is the world point at the viewport centre, so fitting
+      // the bounds centre on screen means moving the state to it directly.
+      set({ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2, zoom });
     },
     get inverse() {
-      return invert(matrix());
+      return inverse();
     },
     get matrix() {
       return matrix();
     },
     panBy(dx, dy) {
-      // Screen-space pan: move the world anchor opposite to the drag.
-      const cos = Math.cos(state.rotation);
-      const sin = Math.sin(state.rotation);
-      const wx = (dx * cos + dy * sin) / state.zoom;
-      const wy = (-dx * sin + dy * cos) / state.zoom;
-      set({ x: state.x - wx, y: state.y - wy });
+      if (disposed) return;
+      stop();
+      // Screen-space pan: move the world centre opposite to the drag.
+      const offset = screenDeltaToWorld({ x: dx, y: dy }, state.zoom, state.rotation);
+      set({ x: state.x - offset.x, y: state.y - offset.y });
+    },
+    resize(size) {
+      if (disposed) return;
+      if (size.width === viewport.width && size.height === viewport.height) return;
+      viewport = { height: size.height, width: size.width };
+      // The state point is the world centre, so it stays fixed by definition;
+      // only the derived transforms change.
+      invalidate();
+      emit();
     },
     rotateAt(screenPoint, delta) {
+      if (disposed) return;
+      stop();
+      const world = apply(inverse(), screenPoint);
+      // Anchor math must use the new rotation, so compute before set() normalizes it.
       const rotation = state.rotation + delta;
-      const world = apply(invert(matrix()) ?? IDENTITY, screenPoint);
-      // Keep `world` under `screenPoint`: c' = world - R(θ')⁻¹·screenPoint / zoom.
-      const cos = Math.cos(rotation);
-      const sin = Math.sin(rotation);
-      const ux = (screenPoint.x * cos + screenPoint.y * sin) / state.zoom;
-      const uy = (-screenPoint.x * sin + screenPoint.y * cos) / state.zoom;
-      set({ rotation, x: world.x - ux, y: world.y - uy });
+      const offset = screenDeltaToWorld(relativeToCentre(screenPoint), state.zoom, rotation);
+      set({ rotation, x: world.x - offset.x, y: world.y - offset.y });
+    },
+    set(target) {
+      stop();
+      set(target);
     },
     [Symbol.dispose]: dispose,
     get state() {
@@ -279,6 +333,7 @@ export function createCamera(options: CameraOptions = {}): Camera {
     },
     stop,
     subscribe(listener, subscribeOptions) {
+      if (disposed || subscribeOptions?.signal?.aborted) return () => {};
       listeners.add(listener);
       subscribeOptions?.signal?.addEventListener('abort', () => listeners.delete(listener), { once: true });
       return () => listeners.delete(listener);
@@ -287,30 +342,33 @@ export function createCamera(options: CameraOptions = {}): Camera {
       return apply(matrix(), point);
     },
     toWorld(point) {
-      return apply(invert(matrix()) ?? IDENTITY, point);
+      return apply(inverse(), point);
     },
-    visibleRect(size) {
+    get viewport() {
+      return viewport;
+    },
+    get visibleRect() {
+      const to = inverse();
       const corners = [
-        apply(invert(matrix()) ?? IDENTITY, { x: 0, y: 0 }),
-        apply(invert(matrix()) ?? IDENTITY, { x: size.x, y: 0 }),
-        apply(invert(matrix()) ?? IDENTITY, { x: 0, y: size.y }),
-        apply(invert(matrix()) ?? IDENTITY, { x: size.x, y: size.y }),
-      ];
-      const bounds = boundsOf(corners);
-      if (!bounds) throw new AtlasConfigError('Viewport size must produce a visible rect');
-      return bounds;
+        apply(to, { x: 0, y: 0 }),
+        apply(to, { x: viewport.width, y: 0 }),
+        apply(to, { x: 0, y: viewport.height }),
+        apply(to, { x: viewport.width, y: viewport.height }),
+      ] as const;
+      // A finite viewport always produces a rect.
+      return rectFromPoints(corners);
     },
     zoomAt(screenPoint, factor) {
       if (!Number.isFinite(factor) || factor <= 0) {
         throw new AtlasConfigError(`zoomAt factor must be a positive finite number, received ${factor}`);
       }
+      if (disposed) return;
+      stop();
+      const world = apply(inverse(), screenPoint);
       const zoom = Math.min(maxZoom, Math.max(minZoom, state.zoom * factor));
-      const world = apply(invert(matrix()) ?? IDENTITY, screenPoint);
-      const cos = Math.cos(state.rotation);
-      const sin = Math.sin(state.rotation);
-      const ux = (screenPoint.x * cos + screenPoint.y * sin) / zoom;
-      const uy = (-screenPoint.x * sin + screenPoint.y * cos) / zoom;
-      set({ x: world.x - ux, y: world.y - uy, zoom });
+      // Anchor math must use the new zoom, so compute before set().
+      const offset = screenDeltaToWorld(relativeToCentre(screenPoint), zoom, state.rotation);
+      set({ x: world.x - offset.x, y: world.y - offset.y, zoom });
     },
   };
 }

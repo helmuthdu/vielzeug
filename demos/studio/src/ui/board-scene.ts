@@ -8,25 +8,27 @@ import {
   type Rect,
   rectFromPoints,
   type SnapGuide,
-  type SpacingGuide,
   snapRect,
-  snapSpacing,
   unionRect,
 } from '@vielzeug/atlas';
-import { createDragGesture, createPinchGesture, createWheelGesture } from '@vielzeug/gesture';
+import { createDragGesture } from '@vielzeug/gesture';
 import {
+  polylineToSvgPath,
   type StrokePoint,
   simplifyStroke,
-  smoothStroke,
+  stabilizeStroke,
   strokeOutline,
-  strokeOutlineToSvgPath,
   strokeWidths,
 } from '@vielzeug/ink';
-import { createKeymap } from '@vielzeug/keymap';
+import { createKeymap, formatShortcut } from '@vielzeug/keymap';
 import { createLedger } from '@vielzeug/ledger';
 import { createPositioner } from '@vielzeug/orbit';
+import { trackDockHeight } from './dock-badge.ts';
+import '@vielzeug/refine/badge';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/button-group';
+import '@vielzeug/refine/dock';
+import '@vielzeug/refine/separator';
 import '@vielzeug/refine/tooltip';
 import {
   addShapeCommand,
@@ -39,11 +41,12 @@ import {
   type ShapePosition,
   shapeBounds,
 } from '../core/board.ts';
+import { advanceIdCounter, createBoardPersistence, studioStore } from '../core/persist.ts';
 import { createToolActor, type ToolEvent } from '../core/tools.ts';
+import { createCameraGestures } from './camera-gestures.ts';
 import type { SceneHandle } from './shell.ts';
 import './board.css';
 
-const ZOOM_STEP = 1.0015;
 // Grid spacing matches the viewport's dot background (--size-8 = 32px at zoom 1).
 const GRID_SPACING = 32;
 const SNAP_THRESHOLD = 8;
@@ -103,7 +106,7 @@ function scaleShape(shape: BoardShape, rect: Rect): BoardShape {
     ...shape,
     height: rect.height,
     outline,
-    path: strokeOutlineToSvgPath(outline),
+    path: polylineToSvgPath(outline, { close: true }),
     points: shape.points.map((pt) => ({ pressure: pt.pressure, x: pt.x * sx, y: pt.y * sy })),
     width: rect.width,
     x: rect.x,
@@ -118,9 +121,8 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
-/** Two-point bounds are never empty; unwrap the iterable-input null case once. */
 function rectBetween(a: Point, b: Point): Rect {
-  return rectFromPoints([a, b]) ?? { height: 0, width: 0, x: a.x, y: a.y };
+  return rectFromPoints([a, b]);
 }
 
 function screenPoint(viewport: HTMLElement, clientX: number, clientY: number): Point {
@@ -137,12 +139,21 @@ function strokePressure(event: PointerEvent): number | undefined {
   return event.pressure > 0 ? event.pressure : undefined;
 }
 
+/** Base ink width in world units. */
+const STROKE_WIDTH = 4;
+
+/** Tooltip label with a platform-correct shortcut, e.g. "Undo (Ctrl+Z)". */
+function toolTip(label: string, shortcut: string): string {
+  return `${label} (${formatShortcut(shortcut)})`;
+}
+
 /**
  * Mounts the board scene: an infinite pan/zoom canvas with rect creation,
  * selection, movement, marquee selection, and ledger-backed undo/redo.
  */
 export function mountBoardScene(container: HTMLElement): SceneHandle {
   const model: BoardModel = createBoardModel();
+  const persistence = createBoardPersistence(studioStore());
   const camera: Camera = createCamera({ initial: { x: -160, y: -120, zoom: 1 } });
   const ledger = createLedger();
   const tools = createToolActor();
@@ -185,6 +196,14 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   previewPath.style.display = 'none';
   strokesSvg.append(previewPath);
 
+  // Live preview runs the same causal pipeline as commitStroke, so the stroke
+  // does not jump from a thin polyline to the filled outline on pen-up.
+  function updateStrokePreview(points: readonly StrokePoint[]): void {
+    const stabilized = stabilizeStroke(points);
+    const widths = strokeWidths(stabilized, { width: STROKE_WIDTH });
+    previewPath.setAttribute('d', polylineToSvgPath(strokeOutline(stabilized, widths), { close: true }));
+  }
+
   const toolbar = document.createElement('div');
   toolbar.className = 'studio-selection-toolbar';
   toolbar.dataset.testid = 'selection-toolbar';
@@ -204,11 +223,6 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   guidesEl.dataset.testid = 'board-guides';
   guidesEl.hidden = true;
 
-  const spacingEl = document.createElement('div');
-  spacingEl.className = 'studio-guides studio-spacing';
-  spacingEl.dataset.testid = 'board-spacing';
-  spacingEl.hidden = true;
-
   // Konva-style selection chrome, drawn in screen space so the dashed frame and
   // handles stay a constant size at every zoom level.
   const frameEl = document.createElement('div');
@@ -227,7 +241,7 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     handlesEl.append(handle);
   }
 
-  overlay.append(guidesEl, spacingEl, marqueeEl, frameEl, handlesEl, toolbar);
+  overlay.append(guidesEl, marqueeEl, frameEl, handlesEl, toolbar);
   viewport.append(world, overlay);
   container.append(viewport);
 
@@ -280,8 +294,9 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   const guideEls: HTMLElement[] = [];
 
   /**
-   * Draws world-space snap guides as screen-space lines: grid snaps render as
-   * dashed lines, object snaps as solid lines with an × cap at each aligned edge.
+   * Draws world-space snap guides as screen-space lines: grid and spacing
+   * snaps render dashed, object snaps solid, and object/spacing guides get an
+   * × marker at each aligned edge or gap center.
    */
   function renderGuides(guides: readonly SnapGuide[]): void {
     while (guideEls.length < guides.length * 3) {
@@ -303,62 +318,27 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
       const from = along(guide.from);
       const to = along(guide.to);
       line.classList.toggle('is-grid', guide.kind === 'grid');
+      line.classList.toggle('is-spacing', guide.kind === 'spacing');
       line.classList.toggle('is-vertical', guide.axis === 'x');
       line.style.transform = `translate(${String(Math.min(from.x, to.x))}px, ${String(Math.min(from.y, to.y))}px)`;
       line.style.width = `${String(Math.max(1, Math.abs(to.x - from.x)))}px`;
       line.style.height = `${String(Math.max(1, Math.abs(to.y - from.y)))}px`;
       line.hidden = false;
+      // Object guides mark the aligned span ends; spacing guides mark the gap centers.
+      const ends: readonly [number, number] = guide.marks ?? [guide.from, guide.to];
       for (const [el, end] of [
-        [capA, guide.from],
-        [capB, guide.to],
+        [capA, ends[0]],
+        [capB, ends[1]],
       ] as const) {
         const at = along(end);
         el.style.transform = `translate(${String(at.x)}px, ${String(at.y)}px)`;
-        el.hidden = guide.kind !== 'object';
+        el.classList.toggle('is-spacing', guide.kind === 'spacing');
+        el.hidden = guide.kind === 'grid';
       }
     });
     for (let i = guides.length * 3; i < guideEls.length; i++) guideEls[i]?.remove();
     guideEls.length = guides.length * 3;
     guidesEl.hidden = guides.length === 0;
-  }
-
-  const spacingEls: HTMLElement[] = [];
-
-  /** Draws equal-spacing guides: a dashed line with an × marker in each gap. */
-  function renderSpacing(guides: readonly SpacingGuide[]): void {
-    while (spacingEls.length < guides.length * 3) {
-      for (let i = 0; i < 3; i++) {
-        const el = document.createElement('div');
-        el.className = i === 0 ? 'studio-spacing-line' : 'studio-spacing-mark';
-        el.textContent = i === 0 ? '' : '×';
-        spacingEl.append(el);
-        spacingEls.push(el);
-      }
-    }
-    guides.forEach((guide, i) => {
-      const line = spacingEls[i * 3];
-      const markA = spacingEls[i * 3 + 1];
-      const markB = spacingEls[i * 3 + 2];
-      if (!line || !markA || !markB) return;
-      const along = (value: number) =>
-        camera.toScreen(guide.gapAxis === 'x' ? { x: value, y: guide.position } : { x: guide.position, y: value });
-      const from = along(guide.from);
-      const to = along(guide.to);
-      line.style.transform = `translate(${String(Math.min(from.x, to.x))}px, ${String(Math.min(from.y, to.y))}px)`;
-      line.style.width = `${String(Math.max(1, Math.abs(to.x - from.x)))}px`;
-      line.style.height = `${String(Math.max(1, Math.abs(to.y - from.y)))}px`;
-      line.classList.toggle('is-vertical', guide.gapAxis === 'y');
-      for (const [el, mark] of [
-        [markA, guide.marks[0]],
-        [markB, guide.marks[1]],
-      ] as const) {
-        const at = along(mark);
-        el.style.transform = `translate(${String(at.x)}px, ${String(at.y)}px)`;
-      }
-    });
-    for (let i = guides.length * 3; i < spacingEls.length; i++) spacingEls[i]?.remove();
-    spacingEls.length = guides.length * 3;
-    spacingEl.hidden = guides.length === 0;
   }
 
   function selectionBounds(): Rect | null {
@@ -372,7 +352,20 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   }
 
   // ── Camera → DOM ──────────────────────────────────────────────────────────
+  // The floating navbar overlaps the canvas top (and wraps taller on mobile),
+  // so the toolbar never lands under it: clamp its top below the bar.
+  function chromeInset(): number {
+    const navbar = document.querySelector<HTMLElement>('.shell-navbar');
+    if (!navbar) return 0;
+    return navbar.getBoundingClientRect().bottom - viewport.getBoundingClientRect().top + 8;
+  }
+
   const positioner = createPositioner({ getBoundingClientRect: () => virtualRect() }, toolbar, {
+    apply(result) {
+      toolbar.style.position = 'absolute';
+      toolbar.style.left = `${result.x}px`;
+      toolbar.style.top = `${String(Math.max(result.y, chromeInset()))}px`;
+    },
     placement: 'top',
     strategy: 'absolute',
   });
@@ -397,6 +390,13 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     toolbar.hidden = bounds === null;
     if (bounds) positioner.update();
     syncSelectionChrome(bounds);
+    // Align needs 2+ shapes, Distribute needs 3+; offer only what works.
+    const count = model.selection.length;
+    for (const button of toolbar.querySelectorAll<HTMLElement>('[data-action]')) {
+      const action = button.getAttribute('data-action');
+      const min = action?.startsWith('align') ? 2 : action?.startsWith('distribute') ? 3 : 1;
+      button.toggleAttribute('disabled', count < min);
+    }
   }
 
   /** Places the screen-space dashed frame and the eight resize handles. */
@@ -435,6 +435,13 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   const unsubscribeModel = model.subscribe(syncShapes);
   applyCamera();
   syncShapes();
+
+  // The camera state is the world point at the viewport centre; the observer's
+  // initial callback gives the camera its size as soon as the scene is mounted.
+  const resizeObserver = new ResizeObserver(() => {
+    camera.resize({ height: viewport.clientHeight, width: viewport.clientWidth });
+  });
+  resizeObserver.observe(viewport);
 
   // ── Pointer interaction ───────────────────────────────────────────────────
   type Interaction =
@@ -482,30 +489,23 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
 
   function commitStroke(points: readonly StrokePoint[]): void {
     if (points.length < 2) return;
-    const smoothed = simplifyStroke(smoothStroke(points, { algorithm: 'streamline' }), 0.6);
+    const smoothed = simplifyStroke(stabilizeStroke(points), 0.6);
     if (smoothed.length < 2) return;
-    const widths = strokeWidths(smoothed, { baseWidth: 4 });
+    // Widths come from timestamps, so computing them after simplification is correct.
+    const widths = strokeWidths(smoothed, { width: STROKE_WIDTH });
     const outline = strokeOutline(smoothed, widths);
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    for (const pt of outline) {
-      minX = Math.min(minX, pt.x);
-      minY = Math.min(minY, pt.y);
-      maxX = Math.max(maxX, pt.x);
-      maxY = Math.max(maxY, pt.y);
-    }
+    const bounds = rectFromPoints(outline) ?? { height: 0, width: 0, x: 0, y: 0 };
+    const local = outline.map((pt) => ({ x: pt.x - bounds.x, y: pt.y - bounds.y }));
     const shape: BoardShape = {
-      height: maxY - minY,
+      height: bounds.height,
       id: `stroke-${String(nextShapeId++)}`,
       kind: 'stroke',
-      outline: outline.map((pt) => ({ x: pt.x - minX, y: pt.y - minY })),
-      path: strokeOutlineToSvgPath(outline.map((pt) => ({ x: pt.x - minX, y: pt.y - minY }))),
-      points: smoothed.map((pt) => ({ pressure: pt.pressure, x: pt.x - minX, y: pt.y - minY })),
-      width: maxX - minX,
-      x: minX,
-      y: minY,
+      outline: local,
+      path: polylineToSvgPath(local, { close: true }),
+      points: smoothed.map((pt) => ({ pressure: pt.pressure, x: pt.x - bounds.x, y: pt.y - bounds.y })),
+      width: bounds.width,
+      x: bounds.x,
+      y: bounds.y,
     };
     model.add(shape);
     ledger.record(addShapeCommand(model, shape));
@@ -572,7 +572,6 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
         marqueeEl.hidden = true;
       } else if (interaction.kind === 'move') {
         renderGuides([]);
-        renderSpacing([]);
         const ids = [...interaction.from.keys()];
         if (cancelled) {
           for (const [id, from] of interaction.from) model.moveTo(id, from);
@@ -597,11 +596,13 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
         const last = interaction.points[interaction.points.length - 1];
         // Skip near-duplicate samples; smoothing handles the rest.
         if (!last || Math.hypot(worldPoint.x - last.x, worldPoint.y - last.y) >= 1.5) {
-          interaction.points.push({ pressure: strokePressure(detail.event), x: worldPoint.x, y: worldPoint.y });
-          previewPath.setAttribute(
-            'd',
-            `M ${interaction.points.map((pt) => `${String(pt.x)} ${String(pt.y)}`).join(' L ')}`,
-          );
+          interaction.points.push({
+            pressure: strokePressure(detail.event),
+            time: detail.event.timeStamp,
+            x: worldPoint.x,
+            y: worldPoint.y,
+          });
+          updateStrokePreview(interaction.points);
         }
         return;
       }
@@ -644,19 +645,13 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
         const snap = snapRect(movedBounds, {
           candidates,
           grid: { x: GRID_SPACING, y: GRID_SPACING },
+          spacing: true,
           threshold: SNAP_THRESHOLD,
         });
-        // Equal-spacing snap fills the axes where no alignment snap engaged.
-        const spacing = snapSpacing(movedBounds, { candidates, threshold: SNAP_THRESHOLD });
-        const total = {
-          x: snap.delta.x !== 0 ? snap.delta.x : spacing.delta.x,
-          y: snap.delta.y !== 0 ? snap.delta.y : spacing.delta.y,
-        };
         for (const [id, from] of move.from) {
-          model.moveTo(id, { x: from.x + dx + total.x, y: from.y + dy + total.y });
+          model.moveTo(id, { x: from.x + dx + snap.delta.x, y: from.y + dy + snap.delta.y });
         }
         renderGuides(snap.guides);
-        renderSpacing(spacing.guides.filter((guide) => (guide.gapAxis === 'x' ? snap.delta.x : snap.delta.y) === 0));
       }
     },
     onStart: (detail) => {
@@ -676,7 +671,14 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
       if (tool === 'pen') {
         interaction = {
           kind: 'pen',
-          points: [{ pressure: strokePressure(detail.event), x: worldPoint.x, y: worldPoint.y }],
+          points: [
+            {
+              pressure: strokePressure(detail.event),
+              time: detail.event.timeStamp,
+              x: worldPoint.x,
+              y: worldPoint.y,
+            },
+          ],
         };
         previewPath.style.display = '';
         previewPath.setAttribute('d', `M ${String(worldPoint.x)} ${String(worldPoint.y)}`);
@@ -702,9 +704,7 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
       if (!(event.button === 0 || event.pointerType !== 'mouse')) return false;
       // Pointerdown on floating UI (toolbars, resize handles) must not start a canvas interaction.
       const target = event.target;
-      return !(
-        target instanceof Element && target.closest('.studio-toolbar, .studio-selection-toolbar, .studio-handles')
-      );
+      return !(target instanceof Element && target.closest('ore-dock, .studio-selection-toolbar, .studio-handles'));
     },
   });
 
@@ -771,84 +771,87 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     child.addEventListener('pointercancel', cancelResize);
   }
 
-  let pinchScale = 1;
-  const pinch = createPinchGesture(viewport, {
-    onMove: (detail) => {
-      const box = viewport.getBoundingClientRect();
-      const centroid = { x: detail.centroid.x - box.left, y: detail.centroid.y - box.top };
-      // `scale` is cumulative since gesture start; zoom needs a per-frame ratio.
-      const ratio = pinchScale === 0 ? 1 : detail.scale / pinchScale;
-      pinchScale = detail.scale;
-      if (ratio !== 1) camera.zoomAt(centroid, ratio);
-      if (detail.deltaRotation !== 0) camera.rotateAt(centroid, detail.deltaRotation);
-      // Content follows the fingers, same convention as drag-pan.
-      if (detail.deltaCentroid.x !== 0 || detail.deltaCentroid.y !== 0) {
-        camera.panBy(detail.deltaCentroid.x, detail.deltaCentroid.y);
-      }
-    },
-    onStart: (detail) => {
-      // Single-finger drag and pinch must not fight over the surface.
-      drag.cancel();
-      pinchScale = detail.scale;
-    },
-  });
-
-  const wheel = createWheelGesture(viewport, {
-    // Per the Studio brief: wheel deltas drive cursor-anchored zoom (plain wheel
-    // and trackpad pinch alike); panning is drag/space-drag/two-finger.
-    onWheel: (detail) => {
-      const box = viewport.getBoundingClientRect();
-      const point = { x: detail.event.clientX - box.left, y: detail.event.clientY - box.top };
-      camera.zoomAt(point, ZOOM_STEP ** -detail.deltaY);
-    },
-    preventDefault: true,
-  });
+  const cameraGestures = createCameraGestures(viewport, camera, () => drag.cancel());
 
   // ── Keyboard ──────────────────────────────────────────────────────────────
-  function setToolButton(tool: string): void {
-    for (const button of toolbarParent.querySelectorAll('[data-tool]')) {
-      button.classList.toggle('is-active', button.getAttribute('data-tool') === tool);
-    }
-  }
-
-  // Floating bottom tool dock (mockup-style): icon tools with tooltips.
-  // Tooltips wrap each button, which breaks `attached` fusion (::slotted only
-  // matches the ore-button itself), so the dock styles one capsule around both
-  // groups instead.
-  const toolbarParent = document.createElement('div');
-  toolbarParent.className = 'studio-toolbar board-dock';
+  // Floating bottom tool dock: `ore-dock floating` gives the detached, content-hugging
+  // capsule, so the scene only supplies the tools. The tools are a segmented control
+  // (`value` on the group), so the active tool is announced as a checked radio instead of
+  // only shown by colour. Tooltips wrap each button, which breaks the dock's `attached`
+  // fusion (::slotted only matches the ore-button itself), so the groups keep their own
+  // capsule shape instead.
+  const toolbarParent = document.createElement('ore-dock');
+  toolbarParent.setAttribute('floating', '');
+  toolbarParent.setAttribute('label', 'Board actions');
+  toolbarParent.className = 'studio-dock';
   toolbarParent.dataset.testid = 'board-toolbar';
   toolbarParent.innerHTML = `
-    <ore-button-group label="Board tools" size="sm" class="dock-group">
-      <ore-tooltip content="Select (V)" placement="top"><ore-button data-tool="select" variant="ghost" icon-only label="Select"><ore-icon name="mouse-pointer-2"></ore-icon></ore-button></ore-tooltip>
-      <ore-tooltip content="Draw rectangle (B)" placement="top"><ore-button data-tool="draw" variant="ghost" icon-only label="Draw rectangle"><ore-icon name="square"></ore-icon></ore-button></ore-tooltip>
-      <ore-tooltip content="Pen (P)" placement="top"><ore-button data-tool="pen" variant="ghost" icon-only label="Pen"><ore-icon name="pen-line"></ore-icon></ore-button></ore-tooltip>
-      <ore-tooltip content="Pan (H)" placement="top"><ore-button data-tool="pan" variant="ghost" icon-only label="Pan"><ore-icon name="hand"></ore-icon></ore-button></ore-tooltip>
+    <ore-button-group label="Board tools" size="sm" value="select" data-testid="board-tools">
+      <ore-tooltip content="${toolTip('Select', 'v')}" placement="top"><ore-button data-tool="select" value="select" variant="ghost" icon-only label="Select"><ore-icon name="mouse-pointer-2"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="${toolTip('Rectangle', 'r')}" placement="top"><ore-button data-tool="draw" value="draw" variant="ghost" icon-only label="Rectangle"><ore-icon name="square"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="${toolTip('Pen', 'p')}" placement="top"><ore-button data-tool="pen" value="pen" variant="ghost" icon-only label="Pen"><ore-icon name="pen-line"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="${toolTip('Pan', 'h')}" placement="top"><ore-button data-tool="pan" value="pan" variant="ghost" icon-only label="Pan"><ore-icon name="hand"></ore-icon></ore-button></ore-tooltip>
     </ore-button-group>
-    <span class="dock-sep" aria-hidden="true"></span>
-    <ore-button-group label="History" size="sm" class="dock-group">
-      <ore-tooltip content="Undo (⌘Z)" placement="top"><ore-button data-history="undo" variant="ghost" icon-only label="Undo"><ore-icon name="undo-2"></ore-icon></ore-button></ore-tooltip>
-      <ore-tooltip content="Redo (⇧⌘Z)" placement="top"><ore-button data-history="redo" variant="ghost" icon-only label="Redo"><ore-icon name="redo-2"></ore-icon></ore-button></ore-tooltip>
-    </ore-button-group>`;
+    <ore-separator orientation="vertical"></ore-separator>
+    <ore-button-group label="History" size="sm">
+      <ore-tooltip content="${toolTip('Undo', 'mod+z')}" placement="top"><ore-button data-history="undo" variant="ghost" icon-only label="Undo"><ore-icon name="undo-2"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="${toolTip('Redo', 'mod+shift+z')}" placement="top"><ore-button data-history="redo" variant="ghost" icon-only label="Redo"><ore-icon name="redo-2"></ore-icon></ore-button></ore-tooltip>
+    </ore-button-group>
+    <ore-separator orientation="vertical"></ore-separator>
+    <ore-tooltip content="Clear the board and its saved copy" placement="top"><ore-button data-action="reset" variant="ghost" icon-only label="Reset board"><ore-icon name="eraser"></ore-icon></ore-button></ore-tooltip>
+    <ore-separator orientation="vertical"></ore-separator>`;
   container.append(toolbarParent);
 
+  // One-line guidance while the board is empty; hides once there is content.
+  const hintEl = document.createElement('ore-badge');
+  hintEl.setAttribute('variant', 'frost');
+  hintEl.setAttribute('rounded', 'full');
+  hintEl.className = 'studio-badge';
+  hintEl.dataset.testid = 'board-hint';
+  hintEl.textContent = `Pick a tool: Rectangle (${formatShortcut('r')}), Pen (${formatShortcut('p')}). Hold Space to pan.`;
+  container.append(hintEl);
+  // The hint sits above the dock; track the capsule's real height so it never
+  // overlaps when the dock wraps on narrow viewports.
+  const stopDockTrack = trackDockHeight(toolbarParent, container);
+
+  const toolGroup = toolbarParent.querySelector<HTMLElement>('[data-testid="board-tools"]');
+  const undoButton = toolbarParent.querySelector<HTMLElement>('[data-history="undo"]');
+  const redoButton = toolbarParent.querySelector<HTMLElement>('[data-history="redo"]');
+
+  // The segmented group emits change on click and arrow-key selection alike,
+  // so it is the single path from the tool strip into the tool actor.
+  toolGroup?.addEventListener('change', (event) => {
+    const value = (event as CustomEvent<{ values?: string[] }>).detail?.values?.[0];
+    if (value) toolEvent(`${value.toUpperCase()}_TOOL` as ToolEvent['type']);
+  });
+
   toolbarParent.addEventListener('click', (event) => {
-    const target = event.target instanceof Element ? event.target.closest('[data-tool],[data-history]') : null;
+    const target = event.target instanceof Element ? event.target.closest('[data-history],[data-action]') : null;
     if (!target) return;
-    const tool = target.getAttribute('data-tool');
-    if (tool) toolEvent(`${tool.toUpperCase()}_TOOL` as ToolEvent['type']);
     const history = target.getAttribute('data-history');
     if (history === 'undo') void ledger.undo();
     if (history === 'redo') void ledger.redo();
+    if (target.getAttribute('data-action') === 'reset') resetBoard();
   });
+
+  /** Empties the board, its undo history, and the saved copy together. */
+  function resetBoard(): void {
+    for (const shape of model.shapes) model.remove(shape.id);
+    model.select([]);
+    void ledger.clear();
+    // Wipe after the removals so it cancels their scheduled save, not the other way round.
+    void persistence.wipe();
+  }
 
   const keymap = createKeymap(
     [
       { handler: () => void ledger.undo(), id: 'undo', shortcut: 'mod+z' },
       { handler: () => void ledger.redo(), id: 'redo', shortcut: 'mod+shift+z' },
+      // Mac keyboards label Backspace "delete"; both keys must clear a selection.
       { handler: deleteSelection, id: 'delete', shortcut: 'delete' },
+      { handler: deleteSelection, id: 'backspace', shortcut: 'backspace' },
       { handler: () => toolEvent('SELECT_TOOL'), id: 'tool-select', shortcut: 'v' },
-      { handler: () => toolEvent('DRAW_TOOL'), id: 'tool-draw', shortcut: 'b' },
+      { handler: () => toolEvent('DRAW_TOOL'), id: 'tool-draw', shortcut: 'r' },
       { handler: () => toolEvent('PEN_TOOL'), id: 'tool-pen', shortcut: 'p' },
       { handler: () => toolEvent('PAN_TOOL'), id: 'tool-pan', shortcut: 'h' },
       {
@@ -868,7 +871,7 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     if (suppressClick) return;
     if (currentTool() !== 'select') return;
     const target = event.target;
-    if (target instanceof Element && target.closest('.studio-toolbar, .studio-selection-toolbar')) return;
+    if (target instanceof Element && target.closest('ore-dock, .studio-selection-toolbar')) return;
     const worldPoint = camera.toWorld(screenPoint(viewport, event.clientX, event.clientY));
     const hit = model.hitTest(worldPoint);
     if (hit) {
@@ -885,13 +888,60 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   const unsubscribeTools = tools.subscribe((snapshot) => {
     const tool = snapshot.state;
     viewport.dataset.tool = tool;
-    setToolButton(tool);
+    // The segmented group owns the active-tool announcement (checked radio).
+    if (toolGroup && toolGroup.getAttribute('value') !== tool) toolGroup.setAttribute('value', tool);
     viewport.style.cursor = tool === 'pan' ? 'grab' : tool === 'draw' || tool === 'pen' ? 'crosshair' : 'default';
     // The selection frame and handles only show for the select tool.
     syncSelectionChrome(selectionBounds());
   });
-  setToolButton('select');
   viewport.dataset.tool = 'select';
+
+  // Undo/redo read as available only when their stack has something; the empty
+  // hint steps aside once the board has content.
+  const unsubscribeLedger = ledger.state.subscribe(() => {
+    const state = ledger.state.getSnapshot();
+    undoButton?.toggleAttribute('disabled', state.undo.length === 0);
+    redoButton?.toggleAttribute('disabled', state.redo.length === 0);
+  });
+  const syncHint = (): void => {
+    hintEl.hidden = model.shapes.length > 0;
+  };
+  const unsubscribeModelHint = model.subscribe(syncHint);
+  syncHint();
+
+  // Persist on every model change, coalesced to one write per frame; the
+  // adapter writes synchronously, so a reload right after an edit is safe.
+  const unsubscribeModelSave = model.subscribe(() => persistence.schedule(() => model.shapes));
+
+  // Restore the last session. The scene mounts synchronously, so shapes land
+  // once storage resolves; the id counter moves past the restored ids so new
+  // shapes cannot collide with them.
+  void persistence.load().then((shapes) => {
+    if (shapes.length === 0) return;
+    for (const prefix of ['shape-', 'stroke-']) {
+      nextShapeId = Math.max(
+        nextShapeId,
+        advanceIdCounter(
+          shapes.map((shape) => shape.id),
+          prefix,
+        ),
+      );
+    }
+    for (const shape of shapes) model.add(shape);
+    fitToContent();
+  });
+
+  // Frame the drawn content; with an empty board there is nothing to frame,
+  // so fit just restores the initial view.
+  function fitToContent(): void {
+    const bounds = modelBounds();
+    if (!bounds) {
+      camera.animateTo({ x: -160, y: -120, zoom: 1 }, { duration: 180 });
+      return;
+    }
+    camera.resize({ height: viewport.clientHeight, width: viewport.clientWidth });
+    camera.fitBounds(bounds, { padding: 80 });
+  }
 
   function modelBounds(): Rect | null {
     let bounds: Rect | null = null;
@@ -902,16 +952,21 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     return bounds;
   }
 
-  return {
+  const handle: SceneHandle = {
     camera,
     dispose() {
+      persistence.stop();
+      resizeObserver.disconnect();
+      stopDockTrack();
       unmountKeymap();
       keymap.dispose();
-      wheel.dispose();
-      pinch.dispose();
+      cameraGestures.dispose();
       drag.dispose();
       unsubscribeTools();
       unsubscribeModel();
+      unsubscribeModelHint();
+      unsubscribeModelSave();
+      unsubscribeLedger();
       unsubscribeCamera();
       positioner.dispose();
       ledger.dispose();
@@ -920,18 +975,8 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
       model.dispose();
       container.innerHTML = '';
     },
-    // Frame the drawn content; with an empty board there is nothing to frame,
-    // so fit just restores the initial view.
-    fit() {
-      const bounds = modelBounds();
-      if (!bounds) {
-        camera.animateTo({ x: -160, y: -120, zoom: 1 }, { duration: 180 });
-        return;
-      }
-      camera.fitBounds(bounds, {
-        padding: 80,
-        size: { x: viewport.clientWidth, y: viewport.clientHeight },
-      });
-    },
+    dock: toolbarParent,
+    fit: fitToContent,
   };
+  return handle;
 }

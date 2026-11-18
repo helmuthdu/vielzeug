@@ -1,6 +1,3 @@
-import '@vielzeug/refine/avatar';
-import '@vielzeug/refine/avatar-group';
-import '@vielzeug/refine/breadcrumb';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/button-group';
 import '@vielzeug/refine/icon';
@@ -9,16 +6,33 @@ import '@vielzeug/refine/navbar';
 import '@vielzeug/refine/tooltip';
 
 import type { Camera } from '@vielzeug/atlas';
+import { formatShortcut } from '@vielzeug/keymap';
+import { createThemeController, type ThemePreference } from '@vielzeug/refine/theme';
+import { watch } from '@vielzeug/ripple';
+
+import { studioStore } from '../core/persist.ts';
 
 /**
- * The persistent app chrome, floating over the scene canvas like the mockup's
- * white bar: brand, scene tabs, breadcrumb, collaborators, share, and a zoom
- * cluster wired to whichever scene's camera is currently attached.
+ * The persistent app chrome, floating over the scene canvas: brand, scene
+ * tabs, and the theme toggle (in the navbar's `persistent` slot so it survives
+ * the mobile collapse, where the `end` slot hides). The theme cycles light →
+ * dark → system and persists the choice in the studio store, next to the
+ * scenes it decorates.
+ *
+ * The zoom cluster is built here but lives in each scene's bottom dock:
+ * `createZoomCluster()` hands the scene a wired element and the shell keeps
+ * driving it (label, enablement, clicks) against whichever camera is
+ * attached.
  */
 
 /** What a scene hands back: cleanup, plus the camera the shell's zoom cluster drives. */
 export type SceneHandle = {
   camera?: Camera | null;
+  /**
+   * The scene's bottom dock. When present, main.ts appends the shell's zoom
+   * cluster to it (scenes stay independent of the shell itself).
+   */
+  dock?: HTMLElement | undefined;
   /** Restore the scene's framing; omitted when there is nothing to frame. */
   fit?: (() => void) | undefined;
   dispose(): void;
@@ -40,6 +54,11 @@ export type Shell = {
    * the cluster disables itself).
    */
   attachCamera(camera: Camera | null, fit?: (() => void) | null): void;
+  /**
+   * Build the zoom cluster for a scene dock. The shell keeps driving the most
+   * recently created cluster until the next one replaces it.
+   */
+  createZoomCluster(): HTMLElement;
   dispose(): void;
 };
 
@@ -63,46 +82,42 @@ export function createShell(): Shell {
       `<ore-navbar-item href="${scene.href}" data-scene="${scene.href.slice(2)}">${scene.label}</ore-navbar-item>`,
   ).join('');
 
+  const zoomTips = {
+    fit: 'Fit to view',
+    in: `Zoom in (${formatShortcut('mod+=')})`,
+    out: `Zoom out (${formatShortcut('mod+-')})`,
+    reset: `Reset zoom (${formatShortcut('mod+0')})`,
+  };
+
   root.innerHTML = `
-    <ore-navbar floating variant="frost" rounded="lg" elevation="lg" label="Studio" class="shell-navbar">
+    <ore-navbar floating variant="flat" rounded="full" label="Studio" class="shell-navbar">
       <div slot="logo" class="shell-brand">
         <ore-icon name="frame" size="18" label="Vielzeug Studio"></ore-icon>
         <span class="shell-brand-name">Vielzeug Studio</span>
       </div>
       <div slot="start" class="shell-tabs" data-testid="shell-tabs">${tabs}</div>
-      <ore-breadcrumb class="shell-crumb" label="Breadcrumb">
-        <ore-breadcrumb-item href="#/board">Workspace</ore-breadcrumb-item>
-        <ore-breadcrumb-item active data-testid="shell-scene">Board</ore-breadcrumb-item>
-      </ore-breadcrumb>
-      <div slot="end" class="shell-actions">
-        <div class="shell-zoom" data-testid="shell-zoom">
-          <ore-button-group attached rounded="full" size="sm" label="Zoom" class="zoom-group">
-            <ore-button icon-only label="Zoom out" data-zoom="out"><ore-icon name="minus"></ore-icon></ore-button>
-            <ore-button data-zoom="reset" data-testid="shell-zoom-label">100%</ore-button>
-            <ore-button icon-only label="Zoom in" data-zoom="in"><ore-icon name="plus"></ore-icon></ore-button>
-            <ore-button icon-only label="Fit to view" data-zoom="fit"><ore-icon name="maximize"></ore-icon></ore-button>
-          </ore-button-group>
-        </div>
-        <span class="shell-divider" aria-hidden="true"></span>
-        <ore-avatar-group max="3" label="Collaborators">
-          <ore-avatar initials="SK" color="primary"></ore-avatar>
-          <ore-avatar initials="HD"></ore-avatar>
-          <ore-avatar initials="AI" color="success"></ore-avatar>
-          <ore-avatar initials="JL" color="warning"></ore-avatar>
-        </ore-avatar-group>
-        <ore-button color="primary" data-testid="shell-share">
-          <ore-icon name="share-2" slot="start"></ore-icon>
-          Share
-        </ore-button>
+      <div slot="persistent" class="shell-theme">
+        <ore-tooltip content="Theme" placement="bottom">
+          <ore-button icon-only label="Theme" data-action="theme" data-testid="shell-theme"><ore-icon name="monitor"></ore-icon></ore-button>
+        </ore-tooltip>
       </div>
     </ore-navbar>
   `;
 
   const navbar = root.querySelector('ore-navbar');
-  const crumbScene = root.querySelector<HTMLElement>('[data-testid="shell-scene"]');
-  const zoomGroup = root.querySelector<HTMLElement>('[data-testid="shell-zoom"]');
-  const zoomLabel = root.querySelector<HTMLElement>('[data-testid="shell-zoom-label"]');
-  const shareButton = root.querySelector<HTMLElement>('[data-testid="shell-share"]');
+  const themeButton = root.querySelector<HTMLElement>('[data-testid="shell-theme"]');
+
+  // The cluster lives in the scene's dock (tooltips open upward there); the
+  // shell drives whichever cluster was created most recently.
+  const zoomClusterMarkup = `
+    <ore-button-group attached rounded="full" size="sm" label="Zoom" class="zoom-group" data-testid="shell-zoom">
+      <ore-tooltip content="${zoomTips.out}" placement="top"><ore-button icon-only label="Zoom out" data-zoom="out"><ore-icon name="minus"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="${zoomTips.reset}" placement="top"><ore-button data-zoom="reset" data-testid="shell-zoom-label">100%</ore-button></ore-tooltip>
+      <ore-tooltip content="${zoomTips.in}" placement="top"><ore-button icon-only label="Zoom in" data-zoom="in"><ore-icon name="plus"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="${zoomTips.fit}" placement="top"><ore-button icon-only label="Fit to view" data-zoom="fit"><ore-icon name="maximize"></ore-icon></ore-button></ore-tooltip>
+    </ore-button-group>`;
+  let zoomGroup: HTMLElement | null = null;
+  let zoomLabel: HTMLElement | null = null;
 
   let camera: Camera | null = null;
   let sceneFit: (() => void) | null = null;
@@ -131,9 +146,9 @@ export function createShell(): Shell {
   }
 
   function resetZoom(): void {
-    if (!camera) return;
-    const state = camera.state;
-    camera.animateTo({ ...state, zoom: 1 }, { duration: 180 });
+    // The camera state is the world centre, so a zoom-only animation keeps
+    // the view centred where the user is looking.
+    camera?.animateTo({ zoom: 1 }, { duration: 180 });
   }
 
   function fitScene(): void {
@@ -151,25 +166,10 @@ export function createShell(): Shell {
     else resetZoom();
   }
 
-  function onShareClick(): void {
-    // The demo has no backend: sharing means putting the link on the clipboard.
-    void navigator.clipboard
-      ?.writeText(window.location.href)
-      .then(() => {
-        if (!shareButton) return;
-        shareButton.textContent = 'Copied';
-        window.setTimeout(() => {
-          if (shareButton.isConnected) shareButton.innerHTML = SHARE_LABEL;
-        }, 1500);
-      })
-      .catch(() => {
-        /* clipboard unavailable (permissions) — the button simply no-ops */
-      });
-  }
-
-  const SHARE_LABEL = shareButton?.innerHTML ?? '';
-
   function onKeyDown(event: KeyboardEvent): void {
+    // Without a camera attached (the palette page), the browser's own zoom
+    // shortcuts must keep working — do not preventDefault them.
+    if (!camera) return;
     if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
     if (event.key === '=' || event.key === '+') {
       event.preventDefault();
@@ -183,8 +183,39 @@ export function createShell(): Shell {
     }
   }
 
-  zoomGroup?.addEventListener('click', onZoomClick);
-  shareButton?.addEventListener('click', onShareClick);
+  const theme = createThemeController();
+  const themeStore = studioStore();
+  // Restore the saved preference; a corrupt row is dropped rather than fatal.
+  void themeStore
+    .get('preferences', 'theme')
+    .then((row) => {
+      if (row) theme.setPreference(row.theme);
+    })
+    .catch(() => void themeStore.clear('preferences'));
+
+  const THEME_ORDER: Record<ThemePreference, ThemePreference> = { dark: 'system', light: 'dark', system: 'light' };
+  const THEME_ICON: Record<ThemePreference, string> = { dark: 'moon', light: 'sun', system: 'monitor' };
+  const THEME_LABEL: Record<ThemePreference, string> = {
+    dark: 'Theme: dark (switch to system)',
+    light: 'Theme: light (switch to dark)',
+    system: 'Theme: system (switch to light)',
+  };
+
+  function onThemeClick(): void {
+    theme.setPreference(THEME_ORDER[theme.preference.value]);
+  }
+
+  const stopThemeUi = watch(theme.preference, (preference) => {
+    if (!themeButton) return;
+    themeButton.querySelector('ore-icon')?.setAttribute('name', THEME_ICON[preference]);
+    themeButton.setAttribute('aria-label', THEME_LABEL[preference]);
+    themeButton.setAttribute('title', THEME_LABEL[preference]);
+  });
+  const stopThemeSave = watch(theme.preference, (preference) => {
+    void themeStore.put('preferences', { id: 'theme', theme: preference });
+  });
+
+  themeButton?.addEventListener('click', onThemeClick);
   window.addEventListener('keydown', onKeyDown);
 
   updateZoomEnabled();
@@ -199,17 +230,34 @@ export function createShell(): Shell {
       updateZoomEnabled();
       updateZoomLabel();
     },
+    createZoomCluster() {
+      const template = document.createElement('template');
+      template.innerHTML = zoomClusterMarkup.trim();
+      const cluster = template.content.firstElementChild as HTMLElement;
+      zoomGroup?.removeEventListener('click', onZoomClick);
+      zoomGroup = cluster;
+      zoomLabel = cluster.querySelector<HTMLElement>('[data-testid="shell-zoom-label"]');
+      cluster.addEventListener('click', onZoomClick);
+      updateZoomEnabled();
+      updateZoomLabel();
+      return cluster;
+    },
     dispose() {
       unsubscribeCamera?.();
+      stopThemeUi.dispose();
+      stopThemeSave.dispose();
+      themeButton?.removeEventListener('click', onThemeClick);
+      theme.dispose();
       zoomGroup?.removeEventListener('click', onZoomClick);
-      shareButton?.removeEventListener('click', onShareClick);
+      zoomGroup = null;
+      zoomLabel = null;
       window.removeEventListener('keydown', onKeyDown);
       root.remove();
     },
     root,
     setScene(scene) {
       navbar?.setAttribute('active-url', scene.href);
-      if (crumbScene) crumbScene.textContent = scene.label;
+      document.title = `${scene.label} · Vielzeug Studio`;
     },
   };
 }

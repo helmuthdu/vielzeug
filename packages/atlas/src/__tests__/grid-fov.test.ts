@@ -57,38 +57,39 @@ describe('computeFov', () => {
 describe('createFog', () => {
   it('tracks unseen → visible → seen transitions', () => {
     const fog = createFog();
-    const a = { col: 1, row: 2 };
+    const a = tileKey({ col: 1, row: 2 });
     expect(fog.state(a)).toBe('unseen');
-    fog.reveal([a]);
+    fog.update([a]);
     expect(fog.state(a)).toBe('visible');
-    fog.demote();
+    fog.update([]);
     expect(fog.state(a)).toBe('seen');
-    fog.reveal([a]);
+    fog.update([a]);
     expect(fog.state(a)).toBe('visible');
-    fog.hide([a]);
-    expect(fog.state(a)).toBe('unseen');
   });
 
-  it('reveals by key as well as by coord', () => {
+  it('applies a computeFov result directly', () => {
     const fog = createFog();
-    fog.revealKeys(computeFov({ col: 1, row: 1 }, 0));
-    expect(fog.state({ col: 1, row: 1 })).toBe('visible');
+    fog.update(computeFov({ col: 1, row: 1 }, 0));
+    expect(fog.state(tileKey({ col: 1, row: 1 }))).toBe('visible');
+  });
+
+  it('exposes visible keys as a readonly set with a size', () => {
+    const fog = createFog();
+    fog.update(['0:0', '1:0']);
+    expect(fog.visible.size).toBe(2);
+    expect(fog.visible.has('0:0')).toBe(true);
   });
 
   it('round-trips through export/import', () => {
     const fog = createFog();
-    fog.reveal([
-      { col: 0, row: 0 },
-      { col: 1, row: 0 },
-    ]);
-    fog.demote();
-    fog.reveal([{ col: 2, row: 2 }]);
+    fog.update(['0:0', '1:0']);
+    fog.update(['2:2']);
     const snapshot = fog.exportState();
     const restored = createFog();
     restored.importState(snapshot);
-    expect(restored.state({ col: 1, row: 0 })).toBe('seen');
-    expect(restored.state({ col: 2, row: 2 })).toBe('visible');
-    expect(restored.state({ col: 9, row: 9 })).toBe('unseen');
-    expect([...restored.visibleKeys]).toEqual(['2:2']);
+    expect(restored.state('1:0')).toBe('seen');
+    expect(restored.state('2:2')).toBe('visible');
+    expect(restored.state('9:9')).toBe('unseen');
+    expect([...restored.visible]).toEqual(['2:2']);
   });
 });

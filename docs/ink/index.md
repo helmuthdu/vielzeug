@@ -1,6 +1,6 @@
 ---
 title: 'Ink: Freehand Stroke Geometry'
-description: Deterministic freehand stroke smoothing, velocity and pressure width profiling, outline polygons, RDP simplification, and SVG path output.
+description: Deterministic causal stroke stabilization, Catmull-Rom smoothing, speed and pressure width profiling, outline polygons, RDP simplification, and SVG path output.
 package: ink
 category: data
 keywords:
@@ -19,7 +19,7 @@ keywords:
     drawing,
     canvas,
   ]
-exports: [smoothStroke, strokeWidths, strokeOutline, simplifyStroke, strokeToSvgPath]
+exports: [stabilizeStroke, smoothStroke, strokeWidths, strokeOutline, simplifyStroke, polylineToSvgPath]
 related: [gesture, prism]
 environments: [browser, node, ssr, deno]
 ---
@@ -30,18 +30,20 @@ environments: [browser, node, ssr, deno]
 
 ## Why Ink?
 
-Raw pointer samples are jagged, and a good ink line needs smoothing, speed- and pressure-derived widths, a closed outline polygon, and a compact SVG path on top of them. Ink computes all four as pure, deterministic functions: identical samples always produce identical geometry, so strokes are replayable, testable, and server-renderable.
+Raw pointer samples are jagged, and a good ink line needs stabilization, speed- and pressure-derived widths, a closed outline polygon, and a compact SVG path on top of them. Ink computes all four as pure, deterministic functions: identical samples always produce identical geometry, so strokes are replayable, testable, and server-renderable.
 
 ```ts
 // Before
-// Hand-rolled spline math, per-point width heuristics, and manual path assembly
+// Hand-rolled filter math, per-point width heuristics, and manual path assembly
 // in every drawing surface, each with its own jitter and nondeterminism.
 
 // After
-import { smoothStroke, strokeOutline, strokeOutlineToSvgPath } from '@vielzeug/ink';
+import { polylineToSvgPath, stabilizeStroke, strokeOutline, strokeWidths } from '@vielzeug/ink';
 
-const smoothed = smoothStroke(samples);
-const d = strokeOutlineToSvgPath(strokeOutline(smoothed));
+const stabilized = stabilizeStroke(samples);
+const d = polylineToSvgPath(strokeOutline(stabilized, strokeWidths(stabilized, { width: 4 })), {
+  close: true,
+});
 ```
 
 | Feature                        | Ink                                          | Ad-hoc smoothing | Sketch libraries     |
@@ -54,7 +56,7 @@ const d = strokeOutlineToSvgPath(strokeOutline(smoothed));
 
 <div class="decision-callout">
 
-**Use Ink when** a drawing or annotation surface needs reusable stroke geometry: smoothing, width profiling, outlines, decimation, or SVG serialization without owning the math.
+**Use Ink when** a drawing or annotation surface needs reusable stroke geometry: stabilization, smoothing, width profiling, outlines, decimation, or SVG serialization without owning the math.
 
 **Consider direct polyline rendering when** the input is already clean (vector tools with their own smoothing) and a plain segment path is visually sufficient.
 
@@ -81,30 +83,33 @@ yarn add @vielzeug/ink
 ## Quick Start
 
 ```ts
-import { smoothStroke, strokeOutline, strokeOutlineToSvgPath, strokeWidths } from '@vielzeug/ink';
+import { polylineToSvgPath, stabilizeStroke, strokeOutline, strokeWidths } from '@vielzeug/ink';
 
-// Raw samples from a pointer stream (see @vielzeug/gesture for capture).
+// Raw samples from a pointer stream (see @vielzeug/gesture for capture),
+// timestamped with PointerEvent.timeStamp.
 const samples = [
-  { x: 0, y: 0 },
-  { x: 12, y: 3 },
-  { x: 25, y: -2 },
-  { x: 40, y: 1 },
+  { time: 0, x: 0, y: 0 },
+  { time: 16, x: 12, y: 3 },
+  { time: 32, x: 25, y: -2 },
+  { time: 48, x: 40, y: 1 },
 ];
 
-const smoothed = smoothStroke(samples); // deterministic resampled spline
-const widths = strokeWidths(smoothed, { baseWidth: 6 }); // speed-derived widths
-const d = strokeOutlineToSvgPath(strokeOutline(smoothed, widths)); // SVG `d` string
+const stabilized = stabilizeStroke(samples); // causal jitter removal
+const widths = strokeWidths(stabilized, { width: 6 }); // speed-derived widths
+const ring = strokeOutline(stabilized, widths); // closed variable-width polygon
+const d = polylineToSvgPath(ring, { close: true }); // SVG `d` string
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- `smoothStroke()`: Catmull-Rom resampling or Streamline-style causal averaging
-- `strokeWidths()`: velocity-derived widths with pressure modulation and clamped scaling
-- `strokeOutline()`: closed variable-width polygon offset along local normals with capped ends
+- `stabilizeStroke()`: causal Streamline-style averaging for live drawing; the stroke ends exactly where the pen lifted
+- `smoothStroke()`: deterministic Catmull-Rom resampling after capture
+- `strokeWidths()`: real-speed-derived widths (`distance / Δtime`) with pressure modulation and clamped scaling
+- `strokeOutline()`: closed variable-width polygon offset along local normals with capped ends; constant width with a single number
 - `simplifyStroke()`: iterative Ramer-Douglas-Peucker decimation preserving endpoints
-- `strokeToSvgPath()` / `strokeOutlineToSvgPath()`: SVG `d` strings with configurable precision
+- `polylineToSvgPath()`: SVG `d` strings for open strokes and closed outline rings, with configurable precision
 - `InkError` / `InkConfigError`: typed configuration errors thrown at call time
 - Determinism: identical input always yields identical output; no randomness, no clocks
 - Zero runtime dependencies and no DOM requirement: works in Node, Workers, and SSR

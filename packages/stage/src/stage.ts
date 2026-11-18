@@ -1,6 +1,15 @@
+import {
+  apply,
+  type FrameScheduler,
+  invert,
+  type Matrix,
+  type Point,
+  type Rect,
+  rectFromPoints,
+  type Size,
+} from '@vielzeug/atlas';
+import { requireDpr, requireFiniteMatrix, requireSize } from './_validate.js';
 import { StageConfigError, StageDisposedError, StageUnsupportedError } from './errors.js';
-import type { Matrix, Rect } from './shapes.js';
-import { invertMatrix } from './shapes.js';
 
 /** A backing surface a layer paints into. `OffscreenCanvas` on workers. */
 export type StageSurface = {
@@ -30,16 +39,13 @@ export type StageLayerOptions = Readonly<{
 
 export type StageOptions = Readonly<{
   dpr?: number;
-  layers?: readonly StageLayerOptions[];
+  /** Layers are fixed at creation, bottom-first; hide one by returning early from its paint. */
+  layers: readonly StageLayerOptions[];
+  /** Reuses the atlas camera scheduler contract; defaults to `requestAnimationFrame`. */
   scheduler?: FrameScheduler;
   createSurface?: CreateSurface;
   /** Background color cleared under the layers; defaults to transparent. */
   background?: string | null;
-}>;
-
-export type FrameScheduler = Readonly<{
-  requestFrame: (callback: (time: number) => void) => number;
-  cancelFrame: (handle: number) => void;
 }>;
 
 export type StageFrameInfo = Readonly<{
@@ -48,49 +54,36 @@ export type StageFrameInfo = Readonly<{
   time: number;
 }>;
 
-export type StageSpriteSheet = Readonly<{
-  /** Frame cell size in source-image pixels. */
-  frameWidth: number;
-  frameHeight: number;
-  /** Frames per row in the sheet. */
-  columns: number;
-  frames: number;
-}>;
-
-export type Stage = {
-  readonly canvas: HTMLCanvasElement;
-  readonly width: number;
-  readonly height: number;
-  readonly dpr: number;
-  /** Current world→screen matrix (CSS pixels, without DPR). */
-  readonly matrix: Matrix;
-  readonly visibleRect: Rect;
-  readonly disposed: boolean;
-  readonly disposalSignal: AbortSignal;
-  readonly layerIds: readonly string[];
+/**
+ * The control surface both stage modes share: a main-thread `Stage` and a
+ * `WorkerStage` client are interchangeable wherever only control is needed.
+ */
+export type StageController = Readonly<{
   /** Resize the CSS size and DPR; reallocates backing surfaces and invalidates all. */
-  resize: (size: { width: number; height: number }, dpr?: number) => void;
+  resize: (size: Size, dpr?: number) => void;
   /** Set the world→screen matrix; invalidates all layers. */
   setTransform: (matrix: Matrix) => void;
-  addLayer: (options: StageLayerOptions) => void;
-  removeLayer: (id: string) => void;
-  moveLayer: (id: string, index: number) => void;
   /** Mark one layer dirty (omit to mark all); schedules a frame. */
   invalidate: (layerId?: string) => void;
-  /** Run any pending repaint/composite synchronously. */
-  render: (time?: number) => StageFrameInfo;
-  /** Sprite-sheet helper: draws one frame of `sheet` scaled to fit `rect`. */
-  drawSpriteFrame: (
-    ctx: CanvasRenderingContext2D,
-    image: CanvasImageSource,
-    sheet: StageSpriteSheet,
-    frame: number,
-    rect: Rect,
-  ) => void;
   toBlob: (options?: { type?: string; quality?: number }) => Promise<Blob>;
-  [Symbol.dispose]: () => void;
   dispose: () => void;
-};
+  readonly disposed: boolean;
+  readonly disposalSignal: AbortSignal;
+  [Symbol.dispose]: () => void;
+}>;
+
+export type Stage = StageController &
+  Readonly<{
+    readonly canvas: HTMLCanvasElement | OffscreenCanvas;
+    readonly width: number;
+    readonly height: number;
+    readonly dpr: number;
+    /** Current world→screen matrix (CSS pixels, without DPR). */
+    readonly matrix: Matrix;
+    readonly visibleRect: Rect;
+    /** Run any pending repaint/composite synchronously; defaults `time` to the scheduler clock. */
+    render: (time?: number) => StageFrameInfo;
+  }>;
 
 const DEFAULT_SCHEDULER: FrameScheduler = {
   // Workers may lack requestAnimationFrame; fall back to a timer there.
@@ -98,10 +91,11 @@ const DEFAULT_SCHEDULER: FrameScheduler = {
     if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(handle);
     else clearTimeout(handle);
   },
+  now: () => performance.now(),
   requestFrame: (callback) =>
     typeof requestAnimationFrame === 'function'
       ? requestAnimationFrame(callback)
-      : (setTimeout(() => callback(Date.now()), 16) as unknown as number),
+      : (setTimeout(() => callback(performance.now()), 16) as unknown as number),
 };
 
 function defaultCreateSurface(width: number, height: number): StageSurface {
@@ -117,14 +111,6 @@ function defaultCreateSurface(width: number, height: number): StageSurface {
   throw new StageUnsupportedError('No canvas surface factory is available in this environment.');
 }
 
-function assertFiniteMatrix(matrix: Matrix): void {
-  for (const value of matrix) {
-    if (!Number.isFinite(value)) {
-      throw new StageConfigError(`Stage matrix must contain only finite numbers, got ${value}.`);
-    }
-  }
-}
-
 type LayerRecord = {
   id: string;
   paint: (ctx: CanvasRenderingContext2D, frame: PaintContext) => void;
@@ -137,20 +123,16 @@ type LayerRecord = {
  * Creates a retained-mode 2D stage: ordered layers, each with a cached
  * backing surface, repainted only when dirty and composited to the canvas
  * every scheduled frame. Paint callbacks draw in world units; the stage
- * applies the world→screen matrix and DPR to the context transform.
+ * applies the world→screen matrix and DPR to the context transform. The
+ * caller owns the canvas CSS size; the stage only sizes the backing store.
  */
 export function createStage(
-  canvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement | OffscreenCanvas,
   options: StageOptions & Readonly<{ width: number; height: number }>,
 ): Stage {
   const { width: initialWidth, height: initialHeight } = options;
-  if (!Number.isFinite(initialWidth) || initialWidth <= 0 || !Number.isFinite(initialHeight) || initialHeight <= 0) {
-    throw new StageConfigError(`Stage size must be positive finite numbers, got ${initialWidth}x${initialHeight}.`);
-  }
-  const dpr0 = options.dpr ?? 1;
-  if (!Number.isFinite(dpr0) || dpr0 <= 0) {
-    throw new StageConfigError(`Stage dpr must be a positive finite number, got ${dpr0}.`);
-  }
+  requireSize({ height: initialHeight, width: initialWidth }, 'Stage');
+  requireDpr(options.dpr ?? 1, 'Stage');
   const scheduler = options.scheduler ?? DEFAULT_SCHEDULER;
   const createSurface = options.createSurface ?? defaultCreateSurface;
   const background = options.background ?? null;
@@ -159,19 +141,18 @@ export function createStage(
   let disposed = false;
   let width = initialWidth;
   let height = initialHeight;
-  let dpr = dpr0;
+  let dpr = options.dpr ?? 1;
   let matrix: Matrix = [1, 0, 0, 1, 0, 0];
   let frameHandle: number | null = null;
   let pending = false;
 
   const layers: LayerRecord[] = [];
-
-  const createRecord = (opts: StageLayerOptions): LayerRecord => {
+  for (const opts of options.layers) {
     if (layers.some((layer) => layer.id === opts.id)) {
       throw new StageConfigError(`Stage layer id "${opts.id}" is already registered.`);
     }
-    return { ctx: null, dirty: true, id: opts.id, paint: opts.paint, surface: null };
-  };
+    layers.push({ ctx: null, dirty: true, id: opts.id, paint: opts.paint, surface: null });
+  }
 
   const disposeSurface = (layer: LayerRecord): void => {
     if (layer.surface) {
@@ -200,28 +181,15 @@ export function createStage(
   };
 
   const visibleRect = (): Rect => {
-    const inv = invertMatrix(matrix);
+    const inv = invert(matrix);
     if (!inv) return { height, width, x: 0, y: 0 };
-    const corners = [
-      { x: 0, y: 0 },
-      { x: width, y: 0 },
-      { x: 0, y: height },
-      { x: width, y: height },
-    ].map(({ x, y }) => ({
-      x: inv[0] * x + inv[2] * y + inv[4],
-      y: inv[1] * x + inv[3] * y + inv[5],
-    }));
-    let minX = Number.POSITIVE_INFINITY;
-    let minY = Number.POSITIVE_INFINITY;
-    let maxX = Number.NEGATIVE_INFINITY;
-    let maxY = Number.NEGATIVE_INFINITY;
-    for (const p of corners) {
-      if (p.x < minX) minX = p.x;
-      if (p.y < minY) minY = p.y;
-      if (p.x > maxX) maxX = p.x;
-      if (p.y > maxY) maxY = p.y;
-    }
-    return { height: maxY - minY, width: maxX - minX, x: minX, y: minY };
+    const corners: [Point, Point, Point, Point] = [
+      apply(inv, { x: 0, y: 0 }),
+      apply(inv, { x: width, y: 0 }),
+      apply(inv, { x: 0, y: height }),
+      apply(inv, { x: width, y: height }),
+    ];
+    return rectFromPoints(corners);
   };
 
   const applyWorldTransform = (ctx: CanvasRenderingContext2D): void => {
@@ -304,16 +272,7 @@ export function createStage(
   canvas.width = Math.max(1, Math.round(width * dpr));
   canvas.height = Math.max(1, Math.round(height * dpr));
 
-  for (const layerOptions of options.layers ?? []) {
-    layers.push(createRecord(layerOptions));
-  }
-
   const stage: Stage = {
-    addLayer(layerOptions) {
-      if (disposed) return;
-      layers.push(createRecord(layerOptions));
-      schedule();
-    },
     get canvas() {
       return canvas;
     },
@@ -327,24 +286,6 @@ export function createStage(
     dispose,
     get dpr() {
       return dpr;
-    },
-    drawSpriteFrame(ctx, image, sheet, frame, rect) {
-      if (!Number.isInteger(frame) || frame < 0 || frame >= sheet.frames) {
-        throw new StageConfigError(`Sprite frame index must be an integer in [0, ${sheet.frames}), got ${frame}.`);
-      }
-      const col = frame % sheet.columns;
-      const row = Math.floor(frame / sheet.columns);
-      ctx.drawImage(
-        image,
-        col * sheet.frameWidth,
-        row * sheet.frameHeight,
-        sheet.frameWidth,
-        sheet.frameHeight,
-        rect.x,
-        rect.y,
-        rect.width,
-        rect.height,
-      );
     },
     get height() {
       return height;
@@ -360,45 +301,19 @@ export function createStage(
       }
       schedule();
     },
-    get layerIds() {
-      return layers.map((l) => l.id);
-    },
     get matrix() {
       return matrix;
     },
-    moveLayer(id, index) {
-      if (disposed) return;
-      const from = layers.findIndex((l) => l.id === id);
-      if (from === -1) throw new StageConfigError(`Unknown stage layer "${id}".`);
-      if (!Number.isInteger(index) || index < 0 || index >= layers.length) {
-        throw new StageConfigError(`Layer index must be an integer in [0, ${layers.length}), got ${index}.`);
-      }
-      const [layer] = layers.splice(from, 1);
-      layers.splice(index, 0, layer as LayerRecord);
-      schedule();
-    },
-    removeLayer(id) {
-      if (disposed) return;
-      const index = layers.findIndex((l) => l.id === id);
-      if (index === -1) throw new StageConfigError(`Unknown stage layer "${id}".`);
-      const [layer] = layers.splice(index, 1);
-      if (layer) disposeSurface(layer);
-      schedule();
-    },
     render(time) {
-      if (disposed) return { repainted: [], time: time ?? 0 };
+      if (disposed) return { repainted: [], time: time ?? scheduler.now() };
       cancelFrame();
-      return renderFrame(time ?? 0);
+      return renderFrame(time ?? scheduler.now());
     },
     resize(size, nextDpr) {
       if (disposed) return;
-      if (!Number.isFinite(size.width) || size.width <= 0 || !Number.isFinite(size.height) || size.height <= 0) {
-        throw new StageConfigError(`Stage size must be positive finite numbers, got ${size.width}x${size.height}.`);
-      }
+      requireSize(size, 'Stage');
       const resolvedDpr = nextDpr ?? dpr;
-      if (!Number.isFinite(resolvedDpr) || resolvedDpr <= 0) {
-        throw new StageConfigError(`Stage dpr must be a positive finite number, got ${resolvedDpr}.`);
-      }
+      requireDpr(resolvedDpr, 'Stage');
       width = size.width;
       height = size.height;
       dpr = resolvedDpr;
@@ -410,26 +325,28 @@ export function createStage(
     },
     setTransform(next) {
       if (disposed) return;
-      assertFiniteMatrix(next);
+      requireFiniteMatrix(next);
       matrix = next;
       invalidateAll();
       schedule();
     },
-    async toBlob(options) {
+    async toBlob(blobOptions) {
       if (disposed) throw new StageDisposedError('Cannot export a disposed stage.');
-      const type = options?.type ?? 'image/png';
-      const convertToBlob = (canvas as Partial<OffscreenCanvas>).convertToBlob;
-      if (typeof convertToBlob === 'function') {
+      // Export must capture the current frame, not the last painted one.
+      if (pending) stage.render();
+      const type = blobOptions?.type ?? 'image/png';
+      if (typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas) {
         // OffscreenCanvas (worker-rendered stages): promise-based export.
-        const blob = await convertToBlob.call(canvas, { quality: options?.quality, type });
+        const blob = await canvas.convertToBlob({ quality: blobOptions?.quality, type });
         if (!blob) throw new StageUnsupportedError('Canvas blob export returned no data.');
         return blob;
       }
-      if (typeof canvas.toBlob !== 'function') {
+      const htmlCanvas = canvas as HTMLCanvasElement;
+      if (typeof htmlCanvas.toBlob !== 'function') {
         throw new StageUnsupportedError('This canvas does not support blob export.');
       }
       const blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(resolve, type, options?.quality);
+        htmlCanvas.toBlob(resolve, type, blobOptions?.quality);
       });
       if (!blob) {
         throw new StageUnsupportedError('Canvas blob export returned no data.');

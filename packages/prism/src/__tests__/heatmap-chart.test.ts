@@ -21,7 +21,7 @@ describe('valueColorFor', () => {
     // The ramp's mid ember: light text measured 2.37:1, dark text 7.21:1.
     const mid = luminance(246, 134, 91);
 
-    // Both syntaxes: the ramp's own toCssColor output is space-separated.
+    // Both syntaxes: the ramp's own toRgbString output is space-separated.
     expect(valueColorFor('rgb(246, 134, 91)', 'fallback')).toBe('#000');
     expect(valueColorFor('rgb(246 134 91)', 'fallback')).toBe('#000');
     expect(contrast(mid, DARK)).toBeGreaterThan(contrast(mid, LIGHT));

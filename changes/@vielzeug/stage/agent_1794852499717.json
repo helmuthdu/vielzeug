@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "feat(stage): initial release",
+      "comment": "feat(stage): retained-mode layered canvas engine (cached per-layer surfaces, dirty repaints, DPR-aware world transforms, flushing toBlob) plus a worker subpath (createWorkerStage/serveStage over a transferred OffscreenCanvas with a typed scene channel and a shared StageController type)",
       "packageName": "@vielzeug/stage",
       "type": "minor"
     }

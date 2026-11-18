@@ -17,7 +17,7 @@ previews on their documentation pages instead.
 :::
 
 ::: info End-to-end showcase
-Looking for full, multi-package example apps? Explore the [Showcase](/showcases) and launch the Voyage, E-commerce, or CRM demos.
+Looking for full, multi-package example apps? Explore the [Showcase](/showcases) and launch the Voyage, E-commerce, CRM, or Studio demos.
 :::
 
 ## What are you building?

@@ -243,6 +243,54 @@ describe('ore-button-group segmented selection', () => {
       });
     });
 
+    it('finds buttons wrapped in a direct ore-tooltip child', async () => {
+      fixture = await mount('ore-button-group', {
+        attrs: { value: 'list' },
+        html:
+          '<ore-tooltip content="List view"><ore-button value="list">List</ore-button></ore-tooltip>' +
+          '<ore-tooltip content="Grid view"><ore-button value="grid">Grid</ore-button></ore-tooltip>',
+      });
+      await fixture.flush();
+
+      const [list, grid] = [...fixture.element.querySelectorAll<HTMLElement>('ore-button')];
+      const changes: Event[] = [];
+
+      fixture.element.addEventListener('change', (event) => changes.push(event));
+      fireClick(grid);
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('grid');
+      expect(grid.getAttribute('aria-checked')).toBe('true');
+      expect(list.getAttribute('aria-checked')).toBe('false');
+      expect(changes).toHaveLength(1);
+      expect((changes[0] as CustomEvent).detail).toEqual({
+        labels: ['Grid'],
+        originalEvent: expect.any(Object),
+        values: ['grid'],
+      });
+    });
+
+    it('ignores a button nested deeper than a direct tooltip wrapper', async () => {
+      fixture = await mount('ore-button-group', {
+        attrs: { value: 'list' },
+        html:
+          '<ore-button value="list">List</ore-button>' +
+          '<div><ore-tooltip content="Hidden"><ore-button value="grid">Grid</ore-button></ore-tooltip></div>',
+      });
+      await fixture.flush();
+
+      const grid = fixture.element.querySelector('[data-testid], ore-button[value="grid"]') as HTMLElement;
+      const changes: Event[] = [];
+
+      fixture.element.addEventListener('change', (event) => changes.push(event));
+      fireClick(grid);
+      await fixture.flush();
+
+      // Deeper nesting is outside the group's discovery set: clicking it never moves the selection.
+      expect(fixture.element.getAttribute('value')).toBe('list');
+      expect(changes).toHaveLength(0);
+    });
+
     it('ignores a click on an option that is already selected', async () => {
       fixture = await mount('ore-button-group', { attrs: { value: 'list' }, html: segmentedHtml });
       await fixture.flush();

@@ -1,10 +1,21 @@
-import { type Camera, createCamera, type Point } from '@vielzeug/atlas';
-import { createDragGesture, createPinchGesture, createWheelGesture } from '@vielzeug/gesture';
-import { createKeymap } from '@vielzeug/keymap';
+import { type Camera, createCamera, type Point, type Rect, toCssMatrix, unionRect } from '@vielzeug/atlas';
+import { createDragGesture } from '@vielzeug/gesture';
+import { createKeymap, formatShortcut } from '@vielzeug/keymap';
 import { createLedger } from '@vielzeug/ledger';
-import { bezierRoute, findCycles, orthogonalRoute, polylineToSvgPath, topologicalOrder } from '@vielzeug/wire';
+import {
+  bezierRoute,
+  bezierToSvgPath,
+  findCyclicGroups,
+  orthogonalRoute,
+  polylineToSvgPath,
+  topologicalOrder,
+} from '@vielzeug/wire';
+import { trackDockHeight } from './dock-badge.ts';
+import '@vielzeug/refine/badge';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/button-group';
+import '@vielzeug/refine/dock';
+import '@vielzeug/refine/separator';
 import '@vielzeug/refine/tooltip';
 import {
   addEdgeCommand,
@@ -16,15 +27,21 @@ import {
   flowEdges,
   moveNodeCommand,
   nodeRect,
+  removeEdgeCommand,
   removeNodeCommand,
 } from '../core/flow.ts';
+import { advanceIdCounter, createFlowPersistence, studioStore } from '../core/persist.ts';
+import { createCameraGestures } from './camera-gestures.ts';
 import type { SceneHandle } from './shell.ts';
 import './flow.css';
 
-const ZOOM_STEP = 1.0015;
-
 let nextNodeId = 1;
 let nextEdgeId = 1;
+
+/** Tooltip label with a platform-correct shortcut, e.g. "Undo (Ctrl+Z)". */
+function toolTip(label: string, shortcut: string): string {
+  return `${label} (${formatShortcut(shortcut)})`;
+}
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -58,10 +75,17 @@ function makeNode(x: number, y: number, label: string): FlowNode {
  */
 export function mountFlowScene(container: HTMLElement): SceneHandle {
   const model: FlowModel = createFlowModel();
+  const persistence = createFlowPersistence(studioStore());
   const camera: Camera = createCamera({ initial: { x: -80, y: -60, zoom: 1 } });
   const ledger = createLedger();
   let orthogonal = false;
   let selectedNodeId: string | null = null;
+  let selectedEdgeId: string | null = null;
+  // Dock buttons live in the toolbar created later; the early syncEdges() run
+  // tolerates them being null.
+  let deleteButton: HTMLElement | null = null;
+  let undoButton: HTMLElement | null = null;
+  let redoButton: HTMLElement | null = null;
 
   container.innerHTML = '';
 
@@ -92,22 +116,28 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
   viewport.append(world);
   container.append(viewport);
 
-  const statusEl = document.createElement('div');
-  statusEl.className = 'flow-status';
+  // Shared info pill (see .studio-badge in app.css); the cycle alert swaps the
+  // badge's own color rather than recoloring a hand-rolled pill.
+  const statusEl = document.createElement('ore-badge');
+  statusEl.setAttribute('variant', 'frost');
+  statusEl.setAttribute('rounded', 'full');
+  statusEl.className = 'studio-badge';
   statusEl.dataset.testid = 'flow-status';
   container.append(statusEl);
 
   // ── Seeded graph ──────────────────────────────────────────────────────────
-  const seedA = makeNode(0, 0, 'Input');
-  const seedB = makeNode(280, -80, 'Validate');
-  const seedC = makeNode(280, 80, 'Transform');
-  const seedD = makeNode(560, 0, 'Output');
-  for (const node of [seedA, seedB, seedC, seedD]) model.addNode(node);
-  model.addEdge({ from: { node: seedA.id, port: 'out' }, id: 'edge-1', to: { node: seedB.id, port: 'in' } });
-  model.addEdge({ from: { node: seedA.id, port: 'out' }, id: 'edge-2', to: { node: seedC.id, port: 'in' } });
-  model.addEdge({ from: { node: seedB.id, port: 'out' }, id: 'edge-3', to: { node: seedD.id, port: 'in' } });
-  model.addEdge({ from: { node: seedC.id, port: 'out' }, id: 'edge-4', to: { node: seedD.id, port: 'in' } });
-  nextEdgeId = 5;
+  function seedFlow(): void {
+    const seedA = makeNode(0, 0, 'Input');
+    const seedB = makeNode(280, -80, 'Validate');
+    const seedC = makeNode(280, 80, 'Transform');
+    const seedD = makeNode(560, 0, 'Output');
+    for (const node of [seedA, seedB, seedC, seedD]) model.addNode(node);
+    model.addEdge({ from: { node: seedA.id, port: 'out' }, id: 'edge-1', to: { node: seedB.id, port: 'in' } });
+    model.addEdge({ from: { node: seedA.id, port: 'out' }, id: 'edge-2', to: { node: seedC.id, port: 'in' } });
+    model.addEdge({ from: { node: seedB.id, port: 'out' }, id: 'edge-3', to: { node: seedD.id, port: 'in' } });
+    model.addEdge({ from: { node: seedC.id, port: 'out' }, id: 'edge-4', to: { node: seedD.id, port: 'in' } });
+    nextEdgeId = 5;
+  }
 
   // ── DOM sync ──────────────────────────────────────────────────────────────
   const nodeEls = new Map<string, HTMLElement>();
@@ -153,21 +183,21 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
     const to = model.portAnchor(edge.to.node, edge.to.port);
     if (!from || !to) return { d: '', fallback: false };
     if (orthogonal) {
-      const obstacles = model.nodes
-        .filter((node) => node.id !== edge.from.node && node.id !== edge.to.node)
-        .map(nodeRect);
-      const points = orthogonalRoute(from, to, { obstacles });
+      // Every node rect is an obstacle; the router exempts each port's own node
+      // for that port's straight exit segment.
+      const points = orthogonalRoute(from, to, { obstacles: model.nodes.map(nodeRect) });
       if (points) return { d: polylineToSvgPath(points), fallback: false };
       // Unreachable during layout: dashed bezier fallback so the wire stays visible.
-      return { d: bezierRoute(from, to), fallback: true };
+      return { d: bezierToSvgPath(bezierRoute(from, to)), fallback: true };
     }
-    return { d: bezierRoute(from, to), fallback: false };
+    return { d: bezierToSvgPath(bezierRoute(from, to)), fallback: false };
   }
 
   const edgeEls = new Map<string, SVGPathElement>();
+  const edgeHitEls = new Map<string, SVGPathElement>();
 
   function syncEdges(): void {
-    const cycles = findCycles(
+    const cycles = findCyclicGroups(
       model.nodes.map((node) => node.id),
       flowEdges(model.edges),
     );
@@ -179,6 +209,12 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
         edgeEls.delete(id);
       }
     }
+    for (const [id, el] of edgeHitEls) {
+      if (!live.has(id)) {
+        el.remove();
+        edgeHitEls.delete(id);
+      }
+    }
     for (const edge of model.edges) {
       let el = edgeEls.get(edge.id);
       if (!el) {
@@ -188,57 +224,108 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
         edgesSvg.append(el);
         edgeEls.set(edge.id, el);
       }
+      // Wide transparent twin under the visible wire: makes the edge clickable
+      // (and touch-selectable) without widening the drawn stroke.
+      let hit = edgeHitEls.get(edge.id);
+      if (!hit) {
+        hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        hit.classList.add('flow-edge-hit');
+        hit.dataset.edgeId = edge.id;
+        edgesSvg.append(hit);
+        edgeHitEls.set(edge.id, hit);
+      }
       const { d, fallback } = edgePath(edge);
       el.setAttribute('d', d);
+      hit.setAttribute('d', d);
       el.classList.toggle('flow-edge-fallback', fallback);
       el.classList.toggle('flow-edge-cyclic', cyclicNodes.has(edge.from.node) && cyclicNodes.has(edge.to.node));
+      el.classList.toggle('flow-edge-selected', edge.id === selectedEdgeId);
+      hit.classList.toggle('flow-edge-selected', edge.id === selectedEdgeId);
     }
     for (const node of model.nodes) {
       const el = nodeEls.get(node.id);
       if (el) el.classList.toggle('flow-node-cyclic', cyclicNodes.has(node.id));
     }
     syncStatus(cycles);
+    syncDockState();
   }
 
-  function syncStatus(cycles: string[][]): void {
-    if (cycles.length > 0) {
-      statusEl.textContent = `Cycle: ${cycles.map((cycle) => cycle.join(' → ')).join(' · ')}`;
+  function syncStatus(cyclicGroups: string[][]): void {
+    if (cyclicGroups.length > 0) {
+      // A group is a set of mutually reachable nodes, not a path through them.
+      // Labels keep the message readable; ids mean nothing to a viewer.
+      const label = (id: string) => model.getNode(id)?.label ?? id;
+      statusEl.textContent = `Cycle: ${cyclicGroups.map((group) => group.map(label).join(', ')).join(' · ')}`;
       statusEl.dataset.state = 'cycle';
+      // The badge's own error theme, not a recolored pill.
+      statusEl.setAttribute('color', 'error');
       return;
     }
-    try {
-      const order = topologicalOrder(
-        model.nodes.map((node) => node.id),
-        flowEdges(model.edges),
-      );
-      const labels = order.map((id) => model.getNode(id)?.label ?? id);
-      statusEl.textContent = `Topological order: ${labels.join(' → ')}`;
-      statusEl.dataset.state = 'ok';
-    } catch {
-      statusEl.textContent = 'Cycle detected';
-      statusEl.dataset.state = 'cycle';
-    }
+    const order = topologicalOrder(
+      model.nodes.map((node) => node.id),
+      flowEdges(model.edges),
+    );
+    const labels = order.map((id) => model.getNode(id)?.label ?? id);
+    statusEl.textContent = `Topological order: ${labels.join(' → ')}`;
+    statusEl.title = statusEl.textContent;
+    statusEl.dataset.state = 'ok';
+    statusEl.removeAttribute('color');
   }
 
   function applyCamera(): void {
-    const [a, b, c, d, e, f] = camera.matrix;
-    world.style.transform = `matrix(${String(a)}, ${String(b)}, ${String(c)}, ${String(d)}, ${String(e)}, ${String(f)})`;
+    world.style.transform = toCssMatrix(camera.matrix);
   }
 
   const unsubscribeCamera = camera.subscribe(applyCamera);
   const unsubscribeModel = model.subscribe(() => {
     syncNodes();
     syncEdges();
+    // Persist on every model change, coalesced to one write per frame; the
+    // adapter writes synchronously, so a reload right after an edit is safe.
+    persistence.nodes.schedule(() => model.nodes);
+    persistence.edges.schedule(() => model.edges);
   });
   applyCamera();
   syncNodes();
   syncEdges();
 
-  // Frame the seeded graph whatever the viewport size (mobile included).
-  camera.fitBounds(
-    { height: 224, width: 800, x: -80, y: -160 },
-    { padding: 40, size: { x: viewport.clientWidth, y: viewport.clientHeight } },
-  );
+  // Frame whatever the graph currently holds, whatever the viewport size.
+  function fitToContent(): void {
+    camera.resize({ height: viewport.clientHeight, width: viewport.clientWidth });
+    let bounds: Rect | null = null;
+    for (const node of model.nodes) {
+      const nodeBounds = nodeRect(node);
+      bounds = bounds ? unionRect(bounds, nodeBounds) : nodeBounds;
+    }
+    if (bounds) camera.fitBounds(bounds, { padding: 40 });
+  }
+  // Restore the saved graph, or seed a fresh one when storage is empty. The
+  // scene mounts synchronously, so content lands once storage resolves; ids
+  // already in storage must not be reused, so the counters move past the
+  // highest restored number before anything new is minted.
+  void Promise.all([persistence.nodes.load(), persistence.edges.load()]).then(([nodes, edges]) => {
+    if (nodes.length === 0) {
+      seedFlow();
+    } else {
+      nextNodeId = Math.max(
+        nextNodeId,
+        advanceIdCounter(
+          nodes.map((node) => node.id),
+          'node-',
+        ),
+      );
+      nextEdgeId = Math.max(
+        nextEdgeId,
+        advanceIdCounter(
+          edges.map((edge) => edge.id),
+          'edge-',
+        ),
+      );
+      for (const node of nodes) model.addNode(node);
+      for (const edge of edges) model.addEdge(edge);
+    }
+    fitToContent();
+  });
 
   // ── Pointer interaction ───────────────────────────────────────────────────
   type Interaction =
@@ -249,6 +336,10 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
 
   let interaction: Interaction = null;
   let spacePan = false;
+  // A real drag (activation distance crossed) must not re-select on the click
+  // that follows it.
+  let dragActivated = false;
+  let suppressClick = false;
   // The drag gesture's onStart fires after the activation distance is crossed,
   // by which point the event is a pointermove. Record the port under the
   // pointer at pointerdown so a wire drag can start from it.
@@ -288,7 +379,10 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
   }
 
   const drag = createDragGesture(viewport, {
+    activationDistance: 3,
     onEnd: (detail) => {
+      suppressClick = dragActivated;
+      dragActivated = false;
       const active = interaction;
       interaction = null;
       pointerNodeId = null;
@@ -343,11 +437,12 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
         const from = model.portAnchor(active.fromNode, active.fromPort);
         if (from) {
           tempPath.style.display = '';
-          tempPath.setAttribute('d', bezierRoute(from, { ...worldPoint, side: 'left' }));
+          tempPath.setAttribute('d', bezierToSvgPath(bezierRoute(from, { ...worldPoint, side: 'left' })));
         }
       }
     },
     onStart: (detail) => {
+      dragActivated = true;
       const point = screenPoint(viewport, detail.start.x, detail.start.y);
       const worldPoint = camera.toWorld(point);
       if (pointerPort && !spacePan) {
@@ -363,6 +458,9 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
       const id = pointerNodeId;
       if (id) {
         selectedNodeId = id;
+        selectedEdgeId = null;
+        syncNodes();
+        syncEdges();
         const node = model.getNode(id);
         if (node) {
           interaction = {
@@ -374,40 +472,47 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
         return;
       }
       selectedNodeId = null;
+      selectedEdgeId = null;
+      syncNodes();
+      syncEdges();
       interaction = { kind: 'pan', lastX: detail.start.x, lastY: detail.start.y };
     },
     shouldStart: (event) => event.button === 0 || event.pointerType !== 'mouse',
   });
 
-  let pinchScale = 1;
-  const pinch = createPinchGesture(viewport, {
-    onMove: (detail) => {
-      const box = viewport.getBoundingClientRect();
-      const centroid = { x: detail.centroid.x - box.left, y: detail.centroid.y - box.top };
-      const ratio = pinchScale === 0 ? 1 : detail.scale / pinchScale;
-      pinchScale = detail.scale;
-      if (ratio !== 1) camera.zoomAt(centroid, ratio);
-      if (detail.deltaCentroid.x !== 0 || detail.deltaCentroid.y !== 0) {
-        camera.panBy(detail.deltaCentroid.x, detail.deltaCentroid.y);
-      }
-    },
-    onStart: (detail) => {
-      drag.cancel();
-      pinchScale = detail.scale;
-    },
+  // Plain click/tap (no drag) selects: an edge hit path first, then a node,
+  // then clears. Drags select in the gesture's onStart and suppress this path.
+  viewport.addEventListener('click', (event) => {
+    if (suppressClick) return;
+    const atPoint = viewport.ownerDocument.elementFromPoint(event.clientX, event.clientY) ?? event.target;
+    const edgeEl = atPoint instanceof Element ? atPoint.closest<SVGPathElement>('.flow-edge-hit') : null;
+    if (edgeEl) {
+      selectedEdgeId = edgeEl.dataset.edgeId ?? null;
+      selectedNodeId = null;
+      syncEdges();
+      return;
+    }
+    const nodeEl = nodeFromEvent(event);
+    selectedEdgeId = null;
+    selectedNodeId = nodeEl ? (nodeEl.dataset.nodeId as string) : null;
+    syncNodes();
+    syncEdges();
   });
 
-  const wheel = createWheelGesture(viewport, {
-    onWheel: (detail) => {
-      const box = viewport.getBoundingClientRect();
-      const point = { x: detail.event.clientX - box.left, y: detail.event.clientY - box.top };
-      camera.zoomAt(point, ZOOM_STEP ** -detail.deltaY);
-    },
-    preventDefault: true,
-  });
+  const cameraGestures = createCameraGestures(viewport, camera, () => drag.cancel());
 
   // ── Toolbar and keyboard ──────────────────────────────────────────────────
   function deleteSelection(): void {
+    if (selectedEdgeId) {
+      const edge = model.getEdge(selectedEdgeId);
+      if (edge) {
+        selectedEdgeId = null;
+        model.removeEdge(edge.id);
+        ledger.record(removeEdgeCommand(model, edge));
+        syncEdges();
+      }
+      return;
+    }
     if (!selectedNodeId) return;
     const node = model.getNode(selectedNodeId);
     if (!node) return;
@@ -423,55 +528,107 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
     const node = makeNode(center.x - 80, center.y - 32, `Step ${String(nextNodeId)}`);
     // Select before mutating: the model subscription re-renders synchronously.
     selectedNodeId = node.id;
+    selectedEdgeId = null;
     model.addNode(node);
     ledger.record(addNodeCommand(model, node));
   }
 
-  function toggleRouting(): void {
-    orthogonal = !orthogonal;
-    const routeButton = toolbarParent.querySelector<HTMLElement>('[data-action="route"]');
-    if (routeButton) {
-      routeButton.classList.toggle('is-active', orthogonal);
-      routeButton.setAttribute('aria-pressed', String(orthogonal));
-      const tip = routeButton.closest('ore-tooltip');
-      tip?.setAttribute('content', orthogonal ? 'Orthogonal routing' : 'Bezier routing');
-    }
+  function setRouting(value: string): void {
+    const next = value === 'orthogonal';
+    if (next === orthogonal) return;
+    orthogonal = next;
+    // Keyboard toggles must move the segmented control too, so its checked
+    // radio always matches how wires are drawn.
+    routingGroup?.setAttribute('value', next ? 'orthogonal' : 'curved');
     syncEdges();
   }
 
-  const toolbarParent = document.createElement('div');
-  toolbarParent.className = 'studio-toolbar';
+  const toolbarParent = document.createElement('ore-dock');
+  toolbarParent.setAttribute('floating', '');
+  toolbarParent.setAttribute('label', 'Flow actions');
+  toolbarParent.className = 'studio-dock';
   toolbarParent.dataset.testid = 'flow-toolbar';
   toolbarParent.innerHTML = `
-    <ore-button-group label="Flow tools" size="sm" class="dock-group">
-      <ore-tooltip content="Add node (N)" placement="top"><ore-button data-action="add-node" variant="ghost" icon-only label="Add node"><ore-icon name="plus"></ore-icon></ore-button></ore-tooltip>
-      <ore-tooltip content="Bezier routing" placement="top"><ore-button data-action="route" variant="ghost" icon-only label="Toggle routing" aria-pressed="false"><ore-icon name="waypoints"></ore-icon></ore-button></ore-tooltip>
+    <ore-button-group label="Flow tools" size="sm">
+      <ore-tooltip content="${toolTip('Add node', 'n')}" placement="top"><ore-button data-action="add-node" variant="ghost" icon-only label="Add node"><ore-icon name="plus"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="${toolTip('Delete selection', 'delete')}" placement="top"><ore-button data-action="delete" variant="ghost" icon-only label="Delete selection" emphasis="destructive" disabled><ore-icon name="trash-2"></ore-icon></ore-button></ore-tooltip>
     </ore-button-group>
-    <span class="dock-sep" aria-hidden="true"></span>
-    <ore-button-group label="History" size="sm" class="dock-group">
-      <ore-tooltip content="Undo (⌘Z)" placement="top"><ore-button data-history="undo" variant="ghost" icon-only label="Undo"><ore-icon name="undo-2"></ore-icon></ore-button></ore-tooltip>
-      <ore-tooltip content="Redo (⇧⌘Z)" placement="top"><ore-button data-history="redo" variant="ghost" icon-only label="Redo"><ore-icon name="redo-2"></ore-icon></ore-button></ore-tooltip>
-    </ore-button-group>`;
+    <ore-separator orientation="vertical"></ore-separator>
+    <ore-button-group label="Edge routing" size="sm" value="curved" data-testid="flow-routing">
+      <ore-tooltip content="Smooth bezier wires" placement="top"><ore-button value="curved" variant="ghost" icon-only label="Curved routing"><ore-icon name="spline"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="Right-angle wires that avoid nodes" placement="top"><ore-button value="orthogonal" variant="ghost" icon-only label="Orthogonal routing"><ore-icon name="corner-down-right"></ore-icon></ore-button></ore-tooltip>
+    </ore-button-group>
+    <ore-separator orientation="vertical"></ore-separator>
+    <ore-button-group label="History" size="sm">
+      <ore-tooltip content="${toolTip('Undo', 'mod+z')}" placement="top"><ore-button data-history="undo" variant="ghost" icon-only label="Undo"><ore-icon name="undo-2"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="${toolTip('Redo', 'mod+shift+z')}" placement="top"><ore-button data-history="redo" variant="ghost" icon-only label="Redo"><ore-icon name="redo-2"></ore-icon></ore-button></ore-tooltip>
+    </ore-button-group>
+    <ore-separator orientation="vertical"></ore-separator>
+    <ore-tooltip content="Reset to the seeded graph and clear the saved copy" placement="top"><ore-button data-action="reset" variant="ghost" icon-only label="Reset flow"><ore-icon name="eraser"></ore-icon></ore-button></ore-tooltip>
+    <ore-separator orientation="vertical"></ore-separator>`;
   container.append(toolbarParent);
+  // The status pill sits above the dock; track the capsule's real height.
+  const stopDockTrack = trackDockHeight(toolbarParent, container);
+
+  const routingGroup = toolbarParent.querySelector<HTMLElement>('[data-testid="flow-routing"]');
+  deleteButton = toolbarParent.querySelector<HTMLElement>('[data-action="delete"]');
+  undoButton = toolbarParent.querySelector<HTMLElement>('[data-history="undo"]');
+  redoButton = toolbarParent.querySelector<HTMLElement>('[data-history="redo"]');
+
+  /** Dock enablement mirrors what the user can actually do right now. */
+  function syncDockState(): void {
+    deleteButton?.toggleAttribute('disabled', selectedNodeId === null && selectedEdgeId === null);
+    if (!undoButton || !redoButton) return;
+    const state = ledger.state.getSnapshot();
+    undoButton.toggleAttribute('disabled', state.undo.length === 0);
+    redoButton.toggleAttribute('disabled', state.redo.length === 0);
+  }
 
   toolbarParent.addEventListener('click', (event) => {
     const target = event.target instanceof Element ? event.target.closest('[data-action],[data-history]') : null;
     if (!target) return;
     const action = target.getAttribute('data-action');
     if (action === 'add-node') addNode();
-    if (action === 'route') toggleRouting();
+    if (action === 'delete') deleteSelection();
+    if (action === 'reset') resetFlow();
     const history = target.getAttribute('data-history');
     if (history === 'undo') void ledger.undo();
     if (history === 'redo') void ledger.redo();
   });
 
+  /** Restores the seeded graph and drops the saved copy with it. */
+  function resetFlow(): void {
+    for (const node of model.nodes) model.removeNode(node.id);
+    selectedNodeId = null;
+    selectedEdgeId = null;
+    void ledger.clear();
+    seedFlow();
+    fitToContent();
+    // Persist the reseed (and supersede any in-flight write) so the stored
+    // scene always matches what is on screen.
+    persistence.nodes.flush(model.nodes);
+    persistence.edges.flush(model.edges);
+  }
+
+  routingGroup?.addEventListener('change', (event) => {
+    const value = (event as CustomEvent<{ values?: string[] }>).detail?.values?.[0];
+    if (value) setRouting(value);
+  });
+
+  // History depth changes without touching the model, so it needs its own
+  // subscription to keep the undo/redo buttons honest.
+  const unsubscribeLedger = ledger.state.subscribe(syncDockState);
+  syncDockState();
+
   const keymap = createKeymap(
     [
       { handler: () => void ledger.undo(), id: 'undo', shortcut: 'mod+z' },
       { handler: () => void ledger.redo(), id: 'redo', shortcut: 'mod+shift+z' },
+      // Mac keyboards label Backspace "delete"; both keys must delete.
       { handler: deleteSelection, id: 'delete', shortcut: 'delete' },
+      { handler: deleteSelection, id: 'backspace', shortcut: 'backspace' },
       { handler: addNode, id: 'add-node', shortcut: 'n' },
-      { handler: toggleRouting, id: 'toggle-route', shortcut: 'o' },
+      { handler: () => setRouting(orthogonal ? 'curved' : 'orthogonal'), id: 'toggle-route', shortcut: 'o' },
       {
         handler: () => {
           spacePan = true;
@@ -497,24 +654,23 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
   return {
     camera,
     dispose() {
+      stopDockTrack();
+      persistence.nodes.stop();
+      persistence.edges.stop();
       unmountKeymap();
       keymap.dispose();
-      wheel.dispose();
-      pinch.dispose();
+      cameraGestures.dispose();
       drag.dispose();
       unsubscribeModel();
+      unsubscribeLedger();
       unsubscribeCamera();
       ledger.dispose();
       camera.dispose();
       model.dispose();
       container.innerHTML = '';
     },
-    // Same framing as the initial mount: frame the seeded graph for the viewport.
-    fit() {
-      camera.fitBounds(
-        { height: 224, width: 800, x: -80, y: -160 },
-        { padding: 40, size: { x: viewport.clientWidth, y: viewport.clientHeight } },
-      );
-    },
+    dock: toolbarParent,
+    // Same framing as the initial mount: frame the current graph for the viewport.
+    fit: fitToContent,
   };
 }

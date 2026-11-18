@@ -328,6 +328,15 @@ Give the group a `value` and each child button a `value`, and the group becomes 
 
 A `value` that names no usable button falls back to the first selectable option, so the control always has a selection. A button without `value` inside a segmented group stays a plain action (e.g. a "Reset" button) and is skipped by the selection. Without a `value` on the group, it stays a plain container with no selection semantics.
 
+A segment may be wrapped in an [`ore-tooltip`](/refine/components/tooltip) — the group finds a button that is a direct child of the group or of a direct `ore-tooltip` child:
+
+```html
+<ore-button-group value="copy" label="Copy format">
+  <ore-tooltip content="Copy as text" placement="top"><ore-button value="text">Text</ore-button></ore-tooltip>
+  <ore-tooltip content="Copy as HTML" placement="top"><ore-button value="html">HTML</ore-button></ore-tooltip>
+</ore-button-group>
+```
+
 Listen for the selection:
 
 ```html

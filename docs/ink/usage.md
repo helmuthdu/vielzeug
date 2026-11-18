@@ -1,98 +1,105 @@
 ---
 title: 'Ink: Usage Guide'
-description: Smooth captured pointer samples, profile variable widths, build outline polygons, and serialize strokes as SVG paths.
+description: 'How to smooth freehand strokes with @vielzeug/ink: stabilization, smoothing, speed-based widths, outline polygons, and SVG paths.'
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Capture samples from any pointer source, then run them through the pipeline: smooth, width, outline, serialize. Every function is pure, so you can call them in any order and re-run them freely.
+Capture samples from any pointer source — with a timestamp — then run them through the pipeline: stabilize while drawing, simplify, width, outline, serialize. Every function is pure, so you can call them in any order and re-run them freely.
 
 ```ts
-import { smoothStroke, strokeOutline, strokeOutlineToSvgPath, strokeWidths, type StrokePoint } from '@vielzeug/ink';
+import {
+  polylineToSvgPath,
+  simplifyStroke,
+  stabilizeStroke,
+  strokeOutline,
+  strokeWidths,
+  type StrokePoint,
+} from '@vielzeug/ink';
 
-const samples: StrokePoint[] = [
-  { x: 0, y: 0 },
-  { x: 12, y: 3 },
-  { x: 25, y: -2 },
-  { x: 40, y: 1 },
-  { x: 58, y: 4 },
-];
+// Capture: PointerEvent.timeStamp is the timestamp ink wants.
+const samples: StrokePoint[] = [];
+element.addEventListener('pointermove', (event) => {
+  samples.push({ pressure: event.pressure, time: event.timeStamp, x: event.offsetX, y: event.offsetY });
+});
 
-const smoothed = smoothStroke(samples);
-const widths = strokeWidths(smoothed, { baseWidth: 6 });
-const d = strokeOutlineToSvgPath(strokeOutline(smoothed, widths));
+const stabilized = stabilizeStroke(samples);
+const widths = strokeWidths(stabilized, { width: 6 });
+const d = polylineToSvgPath(strokeOutline(stabilized, widths), { close: true });
 
 // Render with any SVG-capable surface.
 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 path.setAttribute('d', d);
 ```
 
-## Choose a Smoothing Algorithm
+## Stabilize While Drawing
 
-`smoothStroke()` offers two algorithms with different output shapes. Catmull-Rom resamples the stroke through a spline: each input segment becomes `steps` samples, and the first and last input points are preserved exactly.
+`stabilizeStroke()` removes hand jitter causally — it never looks ahead — so you can run it on every pointer move while the stroke is being drawn. It emits exactly one point per input sample, keeping per-sample metadata aligned, and its last point is always the last input point: the stroke ends exactly where the pen lifted.
+
+```ts
+import { stabilizeStroke } from '@vielzeug/ink';
+
+const live = stabilizeStroke(samples, { strength: 0.5 }); // 0 = raw, 1 = maximum smoothing
+```
+
+## Smooth After Capture
+
+`smoothStroke()` resamples the stroke through a uniform Catmull-Rom spline: each input segment becomes `steps` samples, and the first and last input points are preserved exactly. Use it after capture when you want extra curvature between sparse samples. `pressure` and `time` are interpolated linearly, so widths computed from the output match widths computed from the input.
 
 ```ts
 import { smoothStroke } from '@vielzeug/ink';
 
-const resampled = smoothStroke(samples, { algorithm: 'catmull-rom', tension: 1, steps: 8 });
-```
-
-Streamline averaging is causal: it emits exactly one smoothed point per input sample, which keeps per-sample metadata (like `pressure`) aligned with the source and suits live drawing where samples arrive one at a time.
-
-```ts
-const live = smoothStroke(samples, { algorithm: 'streamline', tension: 0.7 });
+const resampled = smoothStroke(samples, { tension: 1, steps: 8 });
 ```
 
 ## Profile Widths From Speed and Pressure
 
-`StrokePoint` carries no timestamps, so `strokeWidths()` uses the distance to the previous sample as the speed proxy: slow segments (small spacing) widen, fast segments narrow. `velocityExponent` controls how strongly; `minScale`/`maxScale` clamp the factor.
+`strokeWidths()` derives real pen speed from the `time` field: `distance / Δtime` between consecutive points. That stays correct after any stabilization, smoothing, or simplification — pipeline order no longer matters. Slow widens, fast narrows, clamped to a fixed `[0.25, 2]` scale.
 
 ```ts
 import { strokeWidths } from '@vielzeug/ink';
 
-const widths = strokeWidths(smoothed, {
-  baseWidth: 6,
-  velocityExponent: 0.5, // 0 disables velocity, 1 is fully inverse-proportional
-  minScale: 0.4,
-  maxScale: 1.8,
-  referenceSpeed: 4, // spacing per sample treated as neutral speed
+const widths = strokeWidths(stabilized, {
+  width: 6,
+  thinning: 0.5, // 0 disables velocity, 1 is fully inverse-proportional
+  referenceSpeed: 0.5, // neutral pen speed in pixels per millisecond
 });
 ```
 
-When a point carries `pressure` (normalized `[0, 1]`), it multiplies the velocity-derived width, so hard presses widen and light strokes thin.
+When points carry `pressure` (normalized `[0, 1]`), it multiplies the result: `0.5` is neutral and maps to exactly `1`, so a mouse (which reports `0.5`) draws as wide as a device without pressure data. When any point lacks `time`, velocity modulation is disabled for the whole stroke — width becomes `width × pressure` — instead of guessing speed from sample spacing.
 
-## Build the Variable-Width Outline
+## Build the Outline
 
 `strokeOutline()` offsets each sample by half its width along the local normal and closes the ring with half-circle caps at both ends. The result is a plain `Point[]` you can fill with any renderer.
 
 ```ts
 import { strokeOutline } from '@vielzeug/ink';
 
-const ring = strokeOutline(smoothed, widths); // closed polygon, no repeated vertex
+const ring = strokeOutline(stabilized, widths); // variable width, closed polygon
+const uniform = strokeOutline(stabilized, 6); // constant width, no array needed
 ```
-
-Omit `widths` for a constant-ish default profile (`baseWidth: 4` with velocity modulation).
 
 ## Simplify Before Serializing
 
-Long strokes accumulate samples. `simplifyStroke()` runs Ramer-Douglas-Peucker and returns a subsequence of the input, so object identity and `pressure` survive. Apply it to the outline before emitting SVG to shrink path data.
+Long strokes accumulate samples. `simplifyStroke()` runs Ramer-Douglas-Peucker and returns a subsequence of the input, so object identity, `pressure`, and `time` survive. Apply it to the outline before emitting SVG to shrink path data.
 
 ```ts
-import { simplifyStroke, strokeOutlineToSvgPath } from '@vielzeug/ink';
+import { simplifyStroke, polylineToSvgPath } from '@vielzeug/ink';
 
-const compact = strokeOutlineToSvgPath(simplifyStroke(ring, 0.25));
+const compact = polylineToSvgPath(simplifyStroke(ring, 0.25), { close: true });
 ```
 
 ## Serialize to SVG Paths
 
-`strokeToSvgPath()` writes a centerline path (`M` plus one `L` per sample); `strokeOutlineToSvgPath()` writes the closed outline. Both round coordinates to `precision` decimal places.
+`polylineToSvgPath()` writes `M` plus one `L` per point, rounding coordinates to `precision` decimal places. Pass `close: true` to append `Z` for the closed outline ring; leave it off for a centerline path.
 
 ```ts
-import { strokeToSvgPath } from '@vielzeug/ink';
+import { polylineToSvgPath } from '@vielzeug/ink';
 
-const centerline = strokeToSvgPath(simplifyStroke(smoothed, 0.5), { precision: 1 });
+const centerline = polylineToSvgPath(simplifyStroke(stabilized, 0.5), { precision: 1 });
+const outline = polylineToSvgPath(ring, { close: true });
 ```
 
 ## Framework Integration
@@ -103,12 +110,12 @@ Ink functions are pure, so they memoize cleanly. Recompute geometry only when th
 
 ```tsx [React]
 import { useMemo } from 'react';
-import { smoothStroke, strokeOutline, strokeOutlineToSvgPath, strokeWidths, type StrokePoint } from '@vielzeug/ink';
+import { polylineToSvgPath, stabilizeStroke, strokeOutline, strokeWidths, type StrokePoint } from '@vielzeug/ink';
 
 function InkPath({ samples }: { samples: StrokePoint[] }) {
   const d = useMemo(() => {
-    const smoothed = smoothStroke(samples);
-    return strokeOutlineToSvgPath(strokeOutline(smoothed, strokeWidths(smoothed, { baseWidth: 6 })));
+    const stabilized = stabilizeStroke(samples);
+    return polylineToSvgPath(strokeOutline(stabilized, strokeWidths(stabilized, { width: 6 })), { close: true });
   }, [samples]);
 
   return <path d={d} />;
@@ -118,12 +125,18 @@ function InkPath({ samples }: { samples: StrokePoint[] }) {
 ```vue [Vue 3]
 <script setup lang="ts">
 import { computed } from 'vue';
-import { smoothStroke, strokeOutline, strokeOutlineToSvgPath, strokeWidths, type StrokePoint } from '@vielzeug/ink';
+import {
+  polylineToSvgPath,
+  stabilizeStroke,
+  strokeOutline,
+  strokeWidths,
+  type StrokePoint,
+} from '@vielzeug/ink';
 
 const props = defineProps<{ samples: StrokePoint[] }>();
 const d = computed(() => {
-  const smoothed = smoothStroke(props.samples);
-  return strokeOutlineToSvgPath(strokeOutline(smoothed, strokeWidths(smoothed, { baseWidth: 6 })));
+  const stabilized = stabilizeStroke(props.samples);
+  return polylineToSvgPath(strokeOutline(stabilized, strokeWidths(stabilized, { width: 6 })), { close: true });
 });
 </script>
 
@@ -134,12 +147,18 @@ const d = computed(() => {
 
 ```svelte [Svelte]
 <script lang="ts">
-  import { smoothStroke, strokeOutline, strokeOutlineToSvgPath, strokeWidths, type StrokePoint } from '@vielzeug/ink';
+  import {
+    polylineToSvgPath,
+    stabilizeStroke,
+    strokeOutline,
+    strokeWidths,
+    type StrokePoint,
+  } from '@vielzeug/ink';
 
   export let samples: StrokePoint[];
   $: d = (() => {
-    const smoothed = smoothStroke(samples);
-    return strokeOutlineToSvgPath(strokeOutline(smoothed, strokeWidths(smoothed, { baseWidth: 6 })));
+    const stabilized = stabilizeStroke(samples);
+    return polylineToSvgPath(strokeOutline(stabilized, strokeWidths(stabilized, { width: 6 })), { close: true });
   })();
 </script>
 
@@ -150,26 +169,26 @@ const d = computed(() => {
 
 ## Working with Other Vielzeug Libraries
 
-Gesture produces the raw samples: bind a pan or drag handle, append each `current` point to an array, and pass the array to Ink when the stroke ends. Prism (or any SVG renderer) consumes the `d` strings Ink returns.
+Gesture produces the raw samples: bind a pan or drag handle, append each `current` point (with `event.timeStamp`) to an array, and pass the array to Ink when the stroke ends. Prism (or any SVG renderer) consumes the `d` strings Ink returns.
 
 ```ts
 import { createDragGesture } from '@vielzeug/gesture';
-import { smoothStroke, strokeToSvgPath, type StrokePoint } from '@vielzeug/ink';
+import { polylineToSvgPath, stabilizeStroke, type StrokePoint } from '@vielzeug/ink';
 
 const samples: StrokePoint[] = [];
 const drag = createDragGesture(surface, {
-  onMove: ({ current }) => samples.push({ x: current.x, y: current.y }),
+  onMove: ({ currentX, currentY, event }) => samples.push({ time: event.timeStamp, x: currentX, y: currentY }),
   onEnd: () => {
-    path.setAttribute('d', strokeToSvgPath(smoothStroke(samples), { precision: 1 }));
+    path.setAttribute('d', polylineToSvgPath(stabilizeStroke(samples), { precision: 1 }));
   },
 });
 ```
 
 ## Best Practices
 
-- Smooth once, reuse everywhere: compute `smoothStroke()` per stroke and derive widths, outlines, and paths from the same result.
+- Pass `time` on every sample (`PointerEvent.timeStamp` or `performance.now()`): without it, widths are pressure-only and speed information is thrown away.
+- Stabilize live, smooth once: run `stabilizeStroke()` per pointer move for a calm preview, and add `smoothStroke()` or `simplifyStroke()` at commit time.
 - Simplify outlines with a tolerance around `0.2`–`0.5` device pixels; larger tolerances visibly flatten caps.
 - Keep `precision` at `1`–`2` for display paths; raise it only when another tool re-processes the output.
-- Match `referenceSpeed` to your sampler rate: it is spacing per sample, so faster sampling means a smaller value.
 - Treat invalid options errors (`InkConfigError`) as programming bugs: they throw at call time with the offending option named.
 - Memoize per stroke in UI frameworks; the functions are pure and cheap to cache.

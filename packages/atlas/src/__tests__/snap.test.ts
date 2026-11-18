@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AtlasConfigError } from '../errors.js';
 import type { Rect } from '../index.js';
-import { alignRects, distributeRects, snapRect, snapSpacing } from '../index.js';
+import { alignRects, distributeRects, snapRect } from '../index.js';
 
 const rect = (x: number, y: number, width = 10, height = 10): Rect => ({ height, width, x, y });
 
@@ -124,73 +124,85 @@ describe('distributeRects', () => {
   });
 });
 
-describe('snapSpacing', () => {
+describe('snapRect spacing', () => {
+  // Tall neighbors keep vertical overlap for the spacing snap while their y
+  // anchors stay outside the threshold, so alignment cannot engage on x.
+  const left = rect(0, 0, 40, 100);
+  const right = rect(100, 0, 40, 100);
+  const spacing = (moving: Rect, candidates: readonly Rect[], threshold: number) =>
+    snapRect(moving, { candidates, spacing: true, threshold });
+
   it('centers the moving rect between two neighbors on x', () => {
     // neighbors end at 40 and start at 100; a 20-wide rect centers at x 60.
-    const result = snapSpacing(rect(63, 5, 20, 10), {
-      candidates: [rect(0, 0, 40, 20), rect(100, 0, 40, 20)],
-      threshold: 8,
-    });
+    const result = spacing(rect(63, 25, 20, 10), [left, right], 8);
     expect(result.delta).toEqual({ x: -3, y: 0 });
-    expect(result.guides).toEqual([{ from: 40, gapAxis: 'x', marks: [50, 90], position: 10, to: 100 }]);
+    expect(result.guides).toEqual([{ axis: 'y', from: 40, kind: 'spacing', marks: [50, 90], position: 30, to: 100 }]);
   });
 
   it('centers on y when neighbors sit above and below', () => {
-    const result = snapSpacing(rect(5, 63, 10, 20), {
-      candidates: [rect(0, 0, 20, 40), rect(0, 100, 20, 40)],
-      threshold: 8,
-    });
+    const top = rect(0, 0, 100, 40);
+    const bottom = rect(0, 100, 100, 40);
+    const result = spacing(rect(25, 63, 10, 20), [top, bottom], 8);
     expect(result.delta).toEqual({ x: 0, y: -3 });
-    expect(result.guides).toEqual([{ from: 40, gapAxis: 'y', marks: [50, 90], position: 10, to: 100 }]);
+    expect(result.guides).toEqual([{ axis: 'x', from: 40, kind: 'spacing', marks: [50, 90], position: 30, to: 100 }]);
+  });
+
+  it('draws the spacing guide at the moved position when the other axis snapped', () => {
+    // y aligns to the neighbors' center (49 → 50) while x centers between
+    // them; the spacing guide must sit at the moved center, not the original.
+    const result = spacing(rect(63, 44, 20, 10), [left, right], 8);
+    expect(result.delta).toEqual({ x: -3, y: 1 });
+    const spacingGuide = result.guides.find((guide) => guide.kind === 'spacing');
+    expect(spacingGuide?.position).toBeCloseTo(50, 9);
   });
 
   it('snaps both axes independently', () => {
-    const result = snapSpacing(rect(55, 55, 20, 20), {
-      candidates: [rect(0, 0, 40, 100), rect(100, 0, 40, 100), rect(0, 0, 100, 40), rect(0, 100, 100, 40)],
-      threshold: 8,
-    });
-    expect(result.delta).toEqual({ x: 5, y: 5 });
-    expect(result.guides.map((guide) => guide.gapAxis)).toEqual(['x', 'y']);
+    const result = spacing(rect(59, 59, 20, 20), [left, right, rect(0, 0, 100, 40), rect(0, 100, 100, 40)], 8);
+    expect(result.delta).toEqual({ x: 1, y: 1 });
+    expect(result.guides.map((guide) => guide.kind)).toEqual(['spacing', 'spacing']);
   });
 
   it('ignores candidates that do not overlap the perpendicular axis', () => {
-    const result = snapSpacing(rect(63, 5, 20, 10), {
-      candidates: [rect(0, 0, 40, 20), rect(100, 200, 40, 20)],
-      threshold: 8,
-    });
+    const result = spacing(rect(63, 25, 20, 10), [left, rect(100, 200, 40, 20)], 8);
     expect(result.delta).toEqual({ x: 0, y: 0 });
     expect(result.guides).toEqual([]);
   });
 
   it('needs a neighbor on both sides', () => {
-    const result = snapSpacing(rect(63, 5, 20, 10), {
-      candidates: [rect(0, 0, 40, 20)],
-      threshold: 8,
-    });
+    const result = spacing(rect(63, 25, 20, 10), [left], 8);
     expect(result.guides).toEqual([]);
   });
 
   it('stays put beyond the threshold and snaps exactly at it', () => {
-    const candidates = [rect(0, 0, 40, 20), rect(100, 0, 40, 20)];
-    const beyond = snapSpacing(rect(67, 5, 20, 10), { candidates, threshold: 3 });
-    expect(beyond.delta.x).toBe(0);
-    const exact = snapSpacing(rect(63, 5, 20, 10), { candidates, threshold: 3 });
-    expect(exact.delta.x).toBe(-3);
+    expect(spacing(rect(67, 25, 20, 10), [left, right], 3).delta.x).toBe(0);
+    expect(spacing(rect(63, 25, 20, 10), [left, right], 3).delta.x).toBe(-3);
   });
 
   it('marks the centers of the two equal gaps', () => {
-    const result = snapSpacing(rect(63, 5, 20, 10), {
-      candidates: [rect(0, 0, 40, 20), rect(100, 0, 40, 20)],
-      threshold: 8,
-    });
-    const guide = result.guides[0];
+    const guide = spacing(rect(63, 25, 20, 10), [left, right], 8).guides[0];
     expect(guide?.from).toBe(40);
     expect(guide?.to).toBe(100);
     expect(guide?.marks).toEqual([50, 90]);
   });
 
+  it('does not engage without the spacing option', () => {
+    const result = snapRect(rect(63, 25, 20, 10), { candidates: [left, right], threshold: 8 });
+    expect(result.delta).toEqual({ x: 0, y: 0 });
+    expect(result.guides).toEqual([]);
+  });
+
+  it('lets alignment win over spacing on the same axis', () => {
+    // Right edge 123 aligns to candidate edge 125 (delta +2); spacing would
+    // have centered at 102.5 (delta -0.5). Alignment wins on x.
+    const result = spacing(rect(103, 5, 20, 10), [rect(60, 0, 40, 20), rect(125, 0, 40, 20)], 8);
+    expect(result.delta.x).toBe(2);
+    const xGuide = result.guides.find((guide) => guide.axis === 'x');
+    expect(xGuide?.kind).toBe('object');
+    expect(result.guides.some((guide) => guide.kind === 'spacing')).toBe(false);
+  });
+
   it('rejects a negative threshold', () => {
-    expect(() => snapSpacing(rect(0, 0), { candidates: [], threshold: -1 })).toThrow(AtlasConfigError);
+    expect(() => spacing(rect(0, 0), [], -1)).toThrow(AtlasConfigError);
   });
 });
 

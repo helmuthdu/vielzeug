@@ -1,3 +1,4 @@
+import { tileKey } from '@vielzeug/atlas/grid';
 import { describe, expect, it } from 'vitest';
 import { createMapModel, FOV_RADIUS } from '../map.ts';
 
@@ -10,17 +11,17 @@ describe('map model', () => {
 
   it('reveals the hero neighborhood and hides far tiles', () => {
     using model = createMapModel();
-    expect(model.fog.state({ col: 0, row: 3 })).toBe('visible');
-    expect(model.fog.state({ col: 0, row: 3 + FOV_RADIUS })).toBe('visible');
-    expect(model.fog.state({ col: 40, row: 40 })).toBe('unseen');
+    expect(model.fog.state(tileKey({ col: 0, row: 3 }))).toBe('visible');
+    expect(model.fog.state(tileKey({ col: 0, row: 3 + FOV_RADIUS }))).toBe('visible');
+    expect(model.fog.state(tileKey({ col: 40, row: 40 }))).toBe('unseen');
   });
 
   it('walls block light behind them', () => {
     using model = createMapModel();
     // Wall column at col 4 spans rows 0..3 and 5..7; row 4 is a gap.
     expect(model.isWall({ col: 4, row: 0 })).toBe(true);
-    expect(model.fog.state({ col: 6, row: 0 })).toBe('unseen');
-    expect(model.fog.state({ col: 6, row: 4 })).toBe('visible');
+    expect(model.fog.state(tileKey({ col: 6, row: 0 }))).toBe('unseen');
+    expect(model.fog.state(tileKey({ col: 6, row: 4 }))).toBe('visible');
   });
 
   it('hit-tests tokens by world point', () => {
@@ -39,12 +40,12 @@ describe('map model', () => {
 
   it('demotes previously visible tiles to seen after the hero moves', () => {
     using model = createMapModel();
-    const before = model.fog.state({ col: -3, row: 3 });
+    const before = model.fog.state(tileKey({ col: -3, row: 3 }));
     expect(before).toBe('visible');
     model.moveToken('hero', { col: 20, row: 3 });
     model.refreshFov();
-    expect(model.fog.state({ col: -3, row: 3 })).toBe('seen');
-    expect(model.fog.state({ col: 20, row: 3 })).toBe('visible');
+    expect(model.fog.state(tileKey({ col: -3, row: 3 }))).toBe('seen');
+    expect(model.fog.state(tileKey({ col: 20, row: 3 }))).toBe('visible');
   });
 
   it('terrain colors are deterministic', () => {

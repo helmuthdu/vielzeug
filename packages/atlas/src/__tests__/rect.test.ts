@@ -34,8 +34,19 @@ describe('rect', () => {
     expect(intersectRect(rect(0, 0, 10, 10), rect(5, 5, 10, 10))).toEqual(rect(5, 5, 5, 5));
   });
 
-  it('treats touching edges as non-intersecting', () => {
-    expect(intersectRect(rect(0, 0, 10, 10), rect(10, 0, 10, 10))).toBeNull();
+  it('treats touching edges as intersecting (closed intervals)', () => {
+    expect(intersectRect(rect(0, 0, 10, 10), rect(10, 0, 10, 10))).toEqual(rect(10, 0, 0, 10));
+    expect(rectsIntersect(rect(0, 0, 10, 10), rect(10, 0, 10, 10))).toBe(true);
+  });
+
+  it('intersects zero-area rects lying on another rect', () => {
+    // A horizontal line along the bottom edge of a rect.
+    expect(intersectRect(rect(0, 0, 10, 10), rect(2, 10, 5, 0))).toEqual(rect(2, 10, 5, 0));
+    expect(rectsIntersect(rect(0, 0, 10, 10), rect(2, 10, 5, 0))).toBe(true);
+  });
+
+  it('returns null for disjoint rects', () => {
+    expect(intersectRect(rect(0, 0, 10, 10), rect(11, 0, 10, 10))).toBeNull();
   });
 
   it('contains rects and points inclusively', () => {

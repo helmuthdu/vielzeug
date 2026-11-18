@@ -8,6 +8,7 @@
     --_dock-offset: var(--dock-offset, var(--size-2));
     --_dock-padding: var(--dock-padding, var(--size-2));
     --_dock-radius: var(--dock-radius, var(--rounded-full));
+    --_dock-shadow: var(--dock-shadow, var(--shadow-md));
     --_dock-tool-gap: var(--dock-tool-gap, var(--size-2));
     --_dock-z-index: var(--dock-z-index, var(--z-sticky));
 
@@ -29,6 +30,56 @@
 
   :host([side='top'][sticky]) {
     top: 0;
+  }
+
+  /* Floating: the bar leaves its edge and becomes a capsule inset from it, on every width. The
+     rule sits after the sticky ones and carries the same specificity, so it wins the cascade
+     whether or not `sticky` is also set (it defaults to true). The host keeps spanning the
+     container and the bar hugs its own content, which is what centers the capsule without the
+     consumer measuring anything. */
+  :host([floating]) {
+    position: fixed;
+    inset-inline: var(--_dock-offset);
+    z-index: var(--_dock-z-index);
+    /* `width: auto` lets both insets hold: with the inherited `width: 100%` the box would be
+       over-constrained and the trailing inset dropped, pushing the capsule off-centre. */
+    width: auto;
+    /* The host spans the container, but only the capsule is visible: without this the empty
+       strip either side of it would swallow pointers meant for the content behind. */
+    pointer-events: none;
+  }
+
+  :host([floating][side='bottom']) {
+    top: auto;
+    bottom: max(var(--_dock-offset), env(safe-area-inset-bottom));
+  }
+
+  :host([floating][side='top']) {
+    top: max(var(--_dock-offset), env(safe-area-inset-top));
+    bottom: auto;
+  }
+
+  /* Preview mode: a docs preview is narrower than the window, so a viewport-anchored bar would
+     escape its frame. Same trade the navbar makes: anchor to the containing block instead. */
+  :host([data-preview-mode][floating]) {
+    position: absolute;
+  }
+
+  :host([floating]) .dock {
+    width: fit-content;
+    max-width: 100%;
+    padding-block: var(--_dock-padding);
+    padding-inline: var(--_dock-padding);
+    margin-inline: auto;
+    /* The capsule is the interactive part; it takes back what the host passes through. */
+    pointer-events: auto;
+    border: var(--border) solid var(--_dock-border-color);
+    border-radius: var(--_dock-radius);
+    box-shadow: var(--_dock-shadow);
+
+    @media (forced-colors: active) {
+      border-color: CanvasText;
+    }
   }
 
   .dock {

@@ -8,8 +8,8 @@
 // CSS: jsdom doesn't parse `@layer` and stubs `getComputedStyle`, so it can't
 // resolve `light-dark()`/`oklch(from ...)` the way a real browser would (see
 // refine/AGENTS.md "Accessibility testing"). Testing the source-of-truth
-// numbers directly, in plain Node with `culori`, sidesteps that limitation
-// entirely and needs no browser.
+// numbers directly, in plain Node with `@vielzeug/palette`, sidesteps that
+// limitation entirely and needs no browser.
 //
 // `secondary` is skipped: its `base` is a `color-mix()` blend with
 // `--color-primary` (not a plain oklch triple), which can't be resolved to
@@ -26,7 +26,7 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { displayable, parse, wcagContrast } from 'culori';
+import { contrastRatio, isDisplayable, type Oklch, oklchToSrgb, parseColor } from '@vielzeug/palette';
 import { describe, expect, it } from 'vitest';
 
 import { COLOR_FAMILIES, CONTRAST_SCALE } from '../../../scripts/theme-tokens.mjs';
@@ -43,17 +43,21 @@ const themeCss = readFileSync(join(import.meta.dirname, '../theme.css'), 'utf-8'
  * before this test existed: see theme-tokens.mjs's module comment).
  */
 function expectInGamut(spec: string, label: string) {
-  const color = parse(`oklch(${spec})`);
-
-  expect(color, `${label}: could not parse oklch(${spec})`).toBeDefined();
-  expect(displayable(color!), `${label}: oklch(${spec}) is outside the sRGB gamut`).toBe(true);
+  // `parseColor` is lossless (extended-range sRGB), so the parsed Rgba still
+  // carries the authored out-of-gamut channels and `isDisplayable` sees them.
+  expect(isDisplayable(parseColor(`oklch(${spec})`)), `${label}: oklch(${spec}) is outside the sRGB gamut`).toBe(true);
 }
 
-function expectResolvedInGamut(color: culoriOklch, label: string) {
+function expectResolvedInGamut(color: Oklch, label: string) {
   expect(
-    displayable(color),
+    isDisplayable(color),
     `${label}: oklch(${color.l * 100}% ${color.c} ${color.h}deg) is outside the sRGB gamut`,
   ).toBe(true);
+}
+
+/** WCAG contrast between two OKLCH colors, computed on their sRGB representations. */
+function wcagContrast(a: Oklch, b: Oklch): number {
+  return contrastRatio(oklchToSrgb(a), oklchToSrgb(b));
 }
 
 const AA_LARGE_TEXT = 3;
@@ -69,19 +73,24 @@ function expectedRatio(note: string): number {
   return AA_NORMAL_TEXT;
 }
 
-/** Parses a theme-tokens.mjs "L C H" string (e.g. "56% 0.22 293deg") into an oklch color culori can use. */
-function parseOklch(spec: string): culoriOklch {
-  const parsed = parse(`oklch(${spec})`);
+/**
+ * Parses a theme-tokens.mjs "L C H" string (e.g. "56% 0.22 293deg") into an
+ * Oklch. The triple is kept raw because callers compose Oklch values directly
+ * (ink derived from a base's hue/chroma); `parseColor` still runs to validate
+ * the syntax and throws on anything malformed.
+ */
+function parseOklch(spec: string): Oklch {
+  parseColor(`oklch(${spec})`);
 
-  if (!parsed) throw new Error(`Could not parse oklch(${spec})`);
+  const [l, c, h] = spec.trim().split(/\s+/);
 
-  return parsed as culoriOklch;
+  if (!l || !c || !h) throw new Error(`Could not parse oklch(${spec})`);
+
+  return { a: 1, c: Number.parseFloat(c), h: Number.parseFloat(h), l: Number.parseFloat(l) / 100 };
 }
 
-type culoriOklch = { c: number; h?: number; l: number; mode: 'oklch' };
-
 /** Resolves a family's authored `base` to concrete oklch values, substituting its hue knob if it has one. */
-function resolveBase(family: (typeof COLOR_FAMILIES)[number]): { dark: culoriOklch; light: culoriOklch } | null {
+function resolveBase(family: (typeof COLOR_FAMILIES)[number]): { dark: Oklch; light: Oklch } | null {
   if (!family.base) return null; // secondary: base is a color-mix() blend, not resolvable here
 
   const substitute = (spec: string) =>
@@ -91,8 +100,8 @@ function resolveBase(family: (typeof COLOR_FAMILIES)[number]): { dark: culoriOkl
 }
 
 /** Resolves a `content`/`contrast` ink entry (relative to its family's resolved base) to a concrete oklch color. */
-function resolveInk(base: culoriOklch, ink: { c?: number; cAbs?: number; l: string }): culoriOklch {
-  return { c: ink.cAbs ?? ink.c! * base.c, h: base.h, l: Number.parseFloat(ink.l) / 100, mode: 'oklch' };
+function resolveInk(base: Oklch, ink: { c?: number; cAbs?: number; l: string }): Oklch {
+  return { a: 1, c: ink.cAbs ?? ink.c! * base.c, h: base.h, l: Number.parseFloat(ink.l) / 100 };
 }
 
 describe('contrast scale (--color-contrast-*)', () => {

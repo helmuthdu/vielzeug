@@ -13,8 +13,11 @@ import {
   toRgbString,
 } from '@vielzeug/palette';
 import '@vielzeug/refine/badge';
+import '@vielzeug/refine/button';
 import '@vielzeug/refine/color-picker';
 import '@vielzeug/refine/input';
+import '@vielzeug/refine/tooltip';
+import { toast } from '@vielzeug/refine/toast';
 import './palette.css';
 
 const PRESETS = ['#7c3aed', '#0891b2', '#059669', '#e11d48', '#f59e0b', '#19202b', '#f2efe9'];
@@ -68,25 +71,42 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
   root.append(picker);
 
   // ── Sections ──────────────────────────────────────────────────────────────
+  // Each strip gets a heading so the page reads as four labelled sections
+  // instead of four unlabeled blocks.
+  function section(title: string, className: string): HTMLElement {
+    const block = document.createElement('section');
+    block.className = `palette-section ${className}`;
+    const heading = document.createElement('h2');
+    heading.className = 'palette-heading';
+    heading.textContent = title;
+    block.append(heading);
+    root.append(block);
+    return block;
+  }
+
+  const formatsSection = section('Formats', 'palette-section-formats');
   const formatsEl = document.createElement('dl');
   formatsEl.className = 'palette-formats';
   formatsEl.dataset.testid = 'palette-formats';
-  root.append(formatsEl);
+  formatsSection.append(formatsEl);
 
+  const contrastSection = section('Contrast', 'palette-section-contrast');
   const contrastEl = document.createElement('div');
   contrastEl.className = 'palette-contrast';
   contrastEl.dataset.testid = 'palette-contrast';
-  root.append(contrastEl);
+  contrastSection.append(contrastEl);
 
+  const rampSection = section('Lightness ramp', 'palette-section-ramp');
   const rampEl = document.createElement('div');
   rampEl.className = 'palette-ramp';
   rampEl.dataset.testid = 'palette-ramp';
-  root.append(rampEl);
+  rampSection.append(rampEl);
 
+  const mixSection = section('Mix', 'palette-section-mix');
   const mixEl = document.createElement('div');
   mixEl.className = 'palette-mix';
   mixEl.dataset.testid = 'palette-mix';
-  root.append(mixEl);
+  mixSection.append(mixEl);
 
   const colorField = controls.querySelector<ColorField>('[data-field="color"]');
   const mixInput = controls.querySelector<ColorField>('[data-field="mix"]');
@@ -99,11 +119,14 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
     else field.error = null;
   }
 
-  function swatch(color: Rgba, extraClass: string): HTMLElement {
+  function swatch(color: Rgba, extraClass: string, interactive: boolean): HTMLElement {
     const hex = toHex(color);
     const text = readableOn(color, [BLACK, WHITE]);
-    const el = document.createElement('button');
-    el.type = 'button';
+    // Ramp swatches re-base the scene; mix swatches only show a result, so
+    // they stay out of the tab order and are announced as images.
+    const el = document.createElement(interactive ? 'button' : 'div');
+    if (interactive) (el as HTMLButtonElement).type = 'button';
+    else el.setAttribute('role', 'img');
     el.className = `palette-swatch ${extraClass}`;
     el.style.backgroundColor = hex;
     el.style.color = text ? toHex(text) : 'inherit';
@@ -111,20 +134,22 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
     el.dataset.contrast = contrastRatio(color, text ?? BLACK).toFixed(2);
     el.textContent = 'Aa';
     el.title = `${hex} · contrast ${el.dataset.contrast}`;
+    el.setAttribute('aria-label', interactive ? `Use ${hex}` : `${hex} · contrast ${el.dataset.contrast}`);
     return el;
   }
 
-  function render(): void {
+  /** Renders the scene and returns the parsed base color, or null when the field is invalid. */
+  function render(): Rgba | null {
     let base: Rgba;
     try {
       base = parseColor(baseField.value);
       setInputError(baseField, null);
     } catch (error) {
       setInputError(baseField, isParseError(error) ? error.message : 'Unreadable color');
-      return;
+      return null;
     }
 
-    // Formats
+    // Formats: each conversion can be copied to the clipboard.
     formatsEl.innerHTML = '';
     for (const [name, value] of [
       ['hex', toHex(base, { alpha: true })],
@@ -132,7 +157,22 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
       ['hsl', toHslString(base)],
       ['oklch', toOklchString(base)],
     ] as const) {
-      formatsEl.insertAdjacentHTML('beforeend', `<div class="palette-format"><dt>${name}</dt><dd>${value}</dd></div>`);
+      const item = document.createElement('div');
+      item.className = 'palette-format';
+      item.innerHTML = `<dt>${name}</dt><dd>${value}</dd>`;
+      const copy = document.createElement('ore-button');
+      copy.setAttribute('variant', 'ghost');
+      copy.setAttribute('size', 'sm');
+      copy.dataset.copy = name;
+      copy.textContent = 'Copy';
+      copy.addEventListener('click', () => {
+        void navigator.clipboard
+          .writeText(value)
+          .then(() => toast.success(`${name.toUpperCase()} copied`))
+          .catch(() => toast.error('Clipboard unavailable'));
+      });
+      item.append(copy);
+      formatsEl.append(item);
     }
 
     // Contrast against white and black
@@ -157,7 +197,7 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
     // Lightness ramp: clicking a swatch re-bases the scene
     rampEl.innerHTML = '';
     for (const swatchColor of ramp(base, RAMP)) {
-      const el = swatch(swatchColor, 'palette-ramp-swatch');
+      const el = swatch(swatchColor, 'palette-ramp-swatch', true);
       el.addEventListener('click', () => {
         baseField.value = toHex(swatchColor);
         render();
@@ -176,9 +216,10 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
     }
     if (second) {
       for (let i = 0; i < RAMP.steps; i += 1) {
-        mixEl.append(swatch(mix(base, second, i / (RAMP.steps - 1)), 'palette-mix-swatch'));
+        mixEl.append(swatch(mix(base, second, i / (RAMP.steps - 1)), 'palette-mix-swatch', false));
       }
     }
+    return base;
   }
 
   function syncPicker(hex: string): void {
@@ -186,12 +227,8 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
   }
 
   const onColorInput = () => {
-    render();
-    try {
-      syncPicker(toHex(parseColor(baseField.value)));
-    } catch {
-      /* invalid input already shown on the field */
-    }
+    const base = render();
+    if (base) syncPicker(toHex(base));
   };
   baseField.addEventListener('input', onColorInput);
   baseField.addEventListener('change', onColorInput);

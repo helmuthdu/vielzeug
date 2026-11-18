@@ -128,15 +128,13 @@ test('orthogonal routing toggles and keeps every edge visible', async ({ page })
   const bezierD = await edges.first().getAttribute('d');
 
   await page.keyboard.press('o');
-  await expect(page.locator('[data-testid="flow-toolbar"] [data-action="route"]')).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  await expect(page.locator('[data-testid="flow-routing"]')).toHaveAttribute('value', 'orthogonal');
   const orthoD = await edges.first().getAttribute('d');
   expect(orthoD).toMatch(/^M [\d.-]+ [\d.-]+ L/);
   expect(orthoD).not.toBe(bezierD);
 
   await page.keyboard.press('o');
+  await expect(page.locator('[data-testid="flow-routing"]')).toHaveAttribute('value', 'curved');
   await expect(edges.first()).toHaveAttribute('d', bezierD);
 });
 
@@ -152,4 +150,52 @@ test('add node and delete selection round-trip through undo', async ({ page }) =
 
   await page.keyboard.press(`${MOD}+z`);
   await expect(nodes).toHaveCount(5);
+});
+
+test('clicking a wire selects it and Backspace deletes it', async ({ page }) => {
+  const edges = page.locator('[data-testid="flow-edges"] .flow-edge:not(.flow-edge-temp)');
+  const before = await edges.count();
+
+  // Click the midpoint of the first wire's wide invisible hit path.
+  const hit = page.locator('[data-testid="flow-edges"] .flow-edge-hit').first();
+  const point = await hit.evaluate((el) => {
+    const path = el as unknown as SVGPathElement;
+    const p = path.getPointAtLength(path.getTotalLength() / 2);
+    const ctm = path.getScreenCTM();
+    if (!ctm) throw new Error('no screen CTM');
+    return { x: ctm.a * p.x + ctm.c * p.y + ctm.e, y: ctm.b * p.x + ctm.d * p.y + ctm.f };
+  });
+  await page.mouse.click(point.x, point.y);
+
+  await expect(page.locator('[data-testid="flow-toolbar"] [data-action="delete"]')).toBeEnabled();
+  await page.keyboard.press('Backspace');
+  await expect(edges).toHaveCount(before - 1);
+
+  await page.keyboard.press(`${MOD}+z`);
+  await expect(edges).toHaveCount(before);
+});
+
+test('graph edits survive a reload and the reset button restores the seed', async ({ page }) => {
+  const nodes = page.locator('[data-testid="flow-world"] [data-node-id]');
+  await expect(nodes).toHaveCount(4);
+
+  // Delete a node, then reload: the smaller graph must come back.
+  const from = await centerOf(nodes.nth(1));
+  await page.mouse.click(from.x, from.y);
+  await page.keyboard.press('Delete');
+  await expect(nodes).toHaveCount(3);
+  await expect(page.locator('[data-testid="flow-edges"] .flow-edge:not(.flow-edge-temp)')).toHaveCount(2);
+
+  await page.reload();
+  await expect(page.locator('[data-testid="flow-viewport"]')).toBeVisible();
+  await expect(nodes).toHaveCount(3);
+  await expect(page.locator('[data-testid="flow-edges"] .flow-edge:not(.flow-edge-temp)')).toHaveCount(2);
+
+  // Reset restores the seeded graph and persists that too.
+  await page.locator('[data-testid="flow-toolbar"] [data-action="reset"]').click();
+  await expect(nodes).toHaveCount(4);
+
+  await page.reload();
+  await expect(page.locator('[data-testid="flow-viewport"]')).toBeVisible();
+  await expect(nodes).toHaveCount(4);
 });

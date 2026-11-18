@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WireGraphError } from '../errors.js';
-import { findCycles, topologicalOrder } from '../graph.js';
+import { findCyclicGroups, topologicalOrder } from '../graph.js';
 
 describe('topologicalOrder', () => {
   it('orders a chain', () => {
@@ -68,12 +68,18 @@ describe('topologicalOrder', () => {
     expect(order[0]).toBe('n0');
     expect(order[49_999]).toBe('n49999');
   });
+
+  it('keeps a wide graph in input order', () => {
+    const ids: string[] = [];
+    for (let i = 0; i < 50_000; i++) ids.push(`n${i}`);
+    expect(topologicalOrder(ids, [])).toEqual(ids);
+  });
 });
 
-describe('findCycles', () => {
+describe('findCyclicGroups', () => {
   it('returns empty for acyclic graphs', () => {
     expect(
-      findCycles(
+      findCyclicGroups(
         ['a', 'b', 'c'],
         [
           { from: 'a', to: 'b' },
@@ -85,7 +91,7 @@ describe('findCycles', () => {
 
   it('finds a two-node cycle ordered by input position', () => {
     expect(
-      findCycles(
+      findCyclicGroups(
         ['x', 'a', 'b'],
         [
           { from: 'b', to: 'a' },
@@ -97,7 +103,7 @@ describe('findCycles', () => {
 
   it('finds self-loops but not single edges', () => {
     expect(
-      findCycles(
+      findCyclicGroups(
         ['a', 'b'],
         [
           { from: 'a', to: 'a' },
@@ -108,7 +114,7 @@ describe('findCycles', () => {
   });
 
   it('reports each disjoint cycle once, sorted deterministically', () => {
-    const cycles = findCycles(
+    const cycles = findCyclicGroups(
       ['d', 'c', 'b', 'a', 'x', 'y'],
       [
         { from: 'a', to: 'b' },
@@ -128,6 +134,6 @@ describe('findCycles', () => {
   });
 
   it('throws on unknown endpoints', () => {
-    expect(() => findCycles(['a'], [{ from: 'ghost', to: 'a' }])).toThrow(WireGraphError);
+    expect(() => findCyclicGroups(['a'], [{ from: 'ghost', to: 'a' }])).toThrow(WireGraphError);
   });
 });

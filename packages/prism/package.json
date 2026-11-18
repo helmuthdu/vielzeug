@@ -59,7 +59,8 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@vielzeug/orbit": "workspace:*"
+    "@vielzeug/orbit": "workspace:*",
+    "@vielzeug/palette": "workspace:*"
   },
   "devDependencies": {
     "axe-core": "^4.14.1",

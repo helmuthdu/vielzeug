@@ -5,4 +5,4 @@ description: Practical examples and recipes for @vielzeug/stage.
 
 ## Examples
 
-- [Getting Started](./examples/getting-started.md)
+- [Layered Repaints](./examples/layered-repaints.md)

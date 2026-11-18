@@ -22,18 +22,28 @@
   cursor: grab;
 }
 
-/* Sits in the shared floating bottom dock (see .studio-toolbar in board.css);
-   only the status chip needs local layout here. */
-.map-toolbar {
-  gap: var(--size-2);
+/* The dock and the status pill are the shared `ore-dock floating` /
+   .studio-badge pair (see app.css). */
+
+.map-canvas.is-grabbing {
+  cursor: grabbing;
 }
 
-.map-status {
-  padding: var(--size-1) var(--size-3);
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--text-color-body);
-  background: var(--color-neutral-backdrop);
-  border: 1px solid var(--border);
+/* Screen-space preview that trails the pointer while a token is dragged. */
+.map-token-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--size-8);
+  height: var(--size-8);
+  margin: calc(var(--size-8) / -2);
+  pointer-events: none;
+  background-color: var(--color-primary);
+  border: var(--border) solid var(--color-primary-border);
   border-radius: var(--rounded-full);
+  opacity: 0.75;
+}
+
+.map-token-ghost[hidden] {
+  display: none;
 }

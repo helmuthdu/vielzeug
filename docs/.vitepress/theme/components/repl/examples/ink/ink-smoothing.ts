@@ -1,15 +1,16 @@
 export const inkSmoothingExample = {
-  code: `import { smoothStroke, strokeOutline, strokeOutlineToSvgPath, strokeWidths } from '@vielzeug/ink'
+  code: `import { polylineToSvgPath, stabilizeStroke, strokeOutline, strokeWidths } from '@vielzeug/ink'
 
-// Deterministic zig-zag samples: the jitter smoothing must remove.
+// Deterministic zig-zag samples with timestamps: the jitter stabilization must remove.
 const samples = Array.from({ length: 24 }, (_, i) => ({
+  time: i * 16,
   x: 20 + i * 12,
   y: 80 + (i % 2 === 0 ? 14 : -14),
 }))
 
-const smoothed = smoothStroke(samples)
-const widths = strokeWidths(smoothed, { baseWidth: 8, referenceSpeed: 6 })
-const outline = strokeOutline(smoothed, widths)
+const stabilized = stabilizeStroke(samples)
+const widths = strokeWidths(stabilized, { width: 8 })
+const outline = strokeOutline(stabilized, widths)
 
 const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
 svg.setAttribute('viewBox', '0 0 320 160')
@@ -22,12 +23,12 @@ raw.setAttribute('stroke', '#cbd5e1')
 raw.setAttribute('stroke-dasharray', '4 4')
 
 const ink = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-ink.setAttribute('d', strokeOutlineToSvgPath(outline))
+ink.setAttribute('d', polylineToSvgPath(outline, { close: true }))
 ink.setAttribute('fill', '#0f172a')
 
 svg.append(raw, ink)
 document.body.appendChild(svg)
 
-console.log('samples:', samples.length, 'smoothed:', smoothed.length, 'outline points:', outline.length)`,
-  name: 'smoothStroke - Jitter-free ink',
+console.log('samples:', samples.length, 'stabilized:', stabilized.length, 'outline points:', outline.length)`,
+  name: 'stabilizeStroke - Jitter-free ink',
 };

@@ -1,5 +1,7 @@
 import type { Point, Rect } from './shapes.js';
 
+export function rectFromPoints(points: readonly [Point, ...Point[]]): Rect;
+export function rectFromPoints(points: Iterable<Point>): Rect | null;
 export function rectFromPoints(points: Iterable<Point>): Rect | null {
   let minX = Infinity;
   let minY = Infinity;
@@ -40,13 +42,17 @@ export function unionRect(a: Rect, b: Rect): Rect {
   };
 }
 
-/** Returns null when the rects do not overlap. Touching edges do not intersect. */
+/**
+ * Overlap of two rects using closed intervals: touching rects (or a zero-area
+ * rect on another's edge) intersect and may yield a zero-area result.
+ * Returns null only when the rects are disjoint.
+ */
 export function intersectRect(a: Rect, b: Rect): Rect | null {
   const x = Math.max(a.x, b.x);
   const y = Math.max(a.y, b.y);
   const right = Math.min(rectRight(a), rectRight(b));
   const bottom = Math.min(rectBottom(a), rectBottom(b));
-  if (right <= x || bottom <= y) return null;
+  if (right < x || bottom < y) return null;
   return { height: bottom - y, width: right - x, x, y };
 }
 
@@ -68,6 +74,7 @@ export function inflateRect(rect: Rect, amount: number): Rect {
   return { height: rect.height + amount * 2, width: rect.width + amount * 2, x: rect.x - amount, y: rect.y - amount };
 }
 
+/** Whether two rects overlap or merely touch (closed intervals). */
 export function rectsIntersect(a: Rect, b: Rect): boolean {
   return intersectRect(a, b) !== null;
 }

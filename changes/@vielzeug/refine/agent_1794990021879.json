@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "ore-dock gains a floating mode: a detached, content-hugging capsule anchored above the bottom edge, with --dock-shadow theming and preview-mode containment.",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

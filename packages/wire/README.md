@@ -13,20 +13,26 @@ yarn add @vielzeug/wire
 ## Quick Start
 
 ```ts
-import { bezierRoute, findCycles, orthogonalRoute, topologicalOrder } from '@vielzeug/wire';
+import { bezierRoute, bezierToSvgPath, findCyclicGroups, orthogonalRoute, topologicalOrder } from '@vielzeug/wire';
 
-const d = bezierRoute({ side: 'right', x: 100, y: 40 }, { side: 'left', x: 320, y: 120 });
-const points = orthogonalRoute({ x: 100, y: 40 }, { x: 320, y: 120 }, { obstacles: nodeBounds });
+const curve = bezierRoute({ side: 'right', x: 100, y: 40 }, { side: 'left', x: 320, y: 120 });
+const d = bezierToSvgPath(curve);
+const points = orthogonalRoute(
+  { side: 'right', x: 100, y: 40 },
+  { side: 'left', x: 320, y: 120 },
+  { obstacles: nodeBounds },
+);
 const order = topologicalOrder(['b', 'a'], [{ from: 'a', to: 'b' }]);
 ```
 
 ## Features
 
-- `bezierRoute()`: cubic bezier SVG paths anchored to port sides
-- `orthogonalRoute()`: deterministic A\* Manhattan routing over a padded-obstacle visibility graph with a per-bend penalty; `null` when unreachable
-- `polylineToSvgPath()`: SVG `d` serialization with stable precision
+- `bezierRoute()`: cubic bezier geometry anchored to port sides
+- `orthogonalRoute()`: deterministic A\* Manhattan routing over a padded-obstacle visibility graph with a per-bend penalty and owner-obstacle exemption; `null` when unreachable
+- `portAnchor()`: world position of a port on a node rect, by side and 0..1 offset
+- `bezierToSvgPath()` / `polylineToSvgPath()`: SVG `d` serialization with stable precision
 - `topologicalOrder()`: Kahn ordering with stable input-order tie breaks
-- `findCycles()`: iterative Tarjan SCC cycle detection (no recursion limits, no exponential enumeration)
+- `findCyclicGroups()`: iterative Tarjan SCC cycle detection (no recursion limits, no exponential enumeration)
 - Typed errors (`WireError`, `WireGraphError`, `WireConfigError`)
 - Zero runtime dependencies, no DOM requirement
 
