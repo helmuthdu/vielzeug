@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/wire",
-  "version": "26.11.23",
+  "version": "26.11.24",
   "description": "Edge routing and graph ordering for node editors",
   "repository": {
     "type": "git",

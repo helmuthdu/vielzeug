@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "add frameMatrix, boundsOfFrame, and resizeRect for positioned frames and editor resizing",
+            "commit": "8bfdb6c7fb4a4adc362853a966903d98f23af7a2"
+          }
+        ]
+      },
+      "date": "Wed, 18 Nov 2026 14:27:22 GMT",
+      "tag": "@vielzeug/atlas_v26.11.24",
+      "version": "26.11.24"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Add @vielzeug/atlas: viewport-centred camera with cached transforms and anchor-preserving zoom, Map-like dynamic R-tree spatial index, matrix/rect math with closed-interval queries, narrow-phase hit-testing, alignment/grid/equal-gap snapping with kind-tagged guides, and the @vielzeug/atlas/grid subpath with tile math, shadowcasting FOV, and fog-of-war.",
             "commit": "e4e73252fb374b22ccb77948d8296dbf29964045"
           }
