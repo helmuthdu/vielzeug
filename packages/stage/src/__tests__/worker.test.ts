@@ -88,6 +88,24 @@ describe('createWorkerStage', () => {
     stage.dispose();
   });
 
+  test('protocol version is 2 for region/scale blob options', () => {
+    expect(STAGE_WORKER_PROTOCOL).toBe(2);
+  });
+
+  test('toBlob forwards region and scale options unchanged', async () => {
+    const pair = createFakePair();
+    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, width: 10 });
+    pair.posted.length = 0;
+    const region = { height: 50, width: 80, x: 5, y: 7 };
+    // Never respond; dispose afterwards to release the pending promise.
+    const pending = stage.toBlob({ quality: 0.8, region, scale: 2, type: 'image/jpeg' });
+    pending.catch(() => {});
+    const msg = pair.posted[0] as Extract<StageWorkerCommand, { type: 'blob' }>;
+    expect(msg.type).toBe('blob');
+    expect(msg.options).toEqual({ quality: 0.8, region, scale: 2, type: 'image/jpeg' });
+    stage.dispose();
+  });
+
   test('toBlob resolves with the correlated blob', async () => {
     const pair = createFakePair();
     const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, width: 10 });

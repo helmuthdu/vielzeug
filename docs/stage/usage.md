@@ -74,6 +74,18 @@ await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
 
 `toBlob()` flushes any pending repaint before rasterizing, so it always captures the current frame — no manual `render()` first. It throws `StageUnsupportedError` when the canvas cannot produce a blob — the stage never silently degrades.
 
+For a crop or a higher resolution, pass `region` (world units) and `scale` (export pixels per world unit):
+
+```ts
+// Export the visible area at 2× the on-screen density.
+const blob = await stage.toBlob({
+  region: stage.visibleRect,
+  scale: stage.dpr * cameraZoom * 2,
+});
+```
+
+The stage re-paints every layer into scratch surfaces against the region transform, so the cost is a full repaint rather than a blit of the cached composite; the live viewport and its caches are untouched. `scale` defaults to the current device pixels per world unit, and omitting `region` exports the visible rect. A non-positive or non-finite `region`/`scale` throws `StageConfigError`.
+
 ## Testing with Injected Surfaces
 
 Inject a fake surface factory and scheduler to unit-test paint behaviour without a GPU:
@@ -139,7 +151,7 @@ Notes:
 
 - The worker owns its painters. `serveStage`'s `setup` returns the `layers` (and optional `onScene`/`onDispose` hooks); the main thread never names layers.
 - The canvas transfer is **one-shot**: `createWorkerStage` calls `transferControlToOffscreen()` on construction. To go back to main-thread rendering, mount a fresh `<canvas>` element.
-- `toBlob()` sends a `blob` command and resolves with the worker's response; requests are correlated by id and reject with `StageDisposedError` if the client is disposed while one is in flight.
+- `toBlob()` sends a `blob` command and resolves with the worker's response; requests are correlated by id and reject with `StageDisposedError` if the client is disposed while one is in flight. `region` and `scale` are forwarded verbatim and applied worker-side.
 - `sendScene(scene)` forwards your typed payload to the worker's `onScene(scene, stage)` hook — useful for mirroring model state (e.g. token moves) without shipping painters to the main thread. The handler decides which layers to invalidate; nothing repaints automatically.
 - Invalid size, DPR, or matrix input throws `StageConfigError` on the main thread, exactly like `createStage`.
 - Worker-side exceptions are reported through `reportError`, the same path an uncaught main-thread paint error takes. The protocol version is checked once at the init/ready handshake; a stale cached worker rejects `ready` with a `StageError` and disposes the stage.

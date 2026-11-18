@@ -32,6 +32,7 @@ index.queryRect(camera.visibleRect); // viewport culling, returns ids
 - Matrix helpers in Canvas2D element order, including `invert()` and `toCssMatrix()`
 - Rect/AABB math: union, closed-interval intersection, containment, inflation, bounds-from-points
 - Narrow-phase geometry: `pointInPolygon`, `distanceToPolyline`, `pointNearPolygon`
+- Frames: `frameMatrix()` placement, `boundsOfFrame()` world AABBs, and `resizeRect()` edge/corner resizing with min and aspect locks
 - Snapping: `snapRect()` with candidate, grid, and equal-gap (`spacing`) targets and kind-tagged guide descriptors, plus pure `alignRects()`/`distributeRects()`
 - `@vielzeug/atlas/grid` subpath: square-tile coordinate math, viewport tile ranges, 8-octant shadowcasting `computeFov()`, and three-state `createFog()`
 - Typed errors; the camera follows the Vielzeug disposal contract

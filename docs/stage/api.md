@@ -52,6 +52,14 @@ type StageSurface = {
 };
 type CreateSurface = (width: number, height: number) => StageSurface;
 
+/** Options for `toBlob()`: blob encoding plus an optional world-space crop and density. */
+type StageBlobOptions = Readonly<{
+  type?: string;
+  quality?: number;
+  region?: Rect;
+  scale?: number;
+}>;
+
 /**
  * The control surface both stage modes share. A main-thread `Stage` and a
  * `WorkerStage` are interchangeable wherever only control is needed.
@@ -60,7 +68,7 @@ type StageController = Readonly<{
   resize: (size: Size, dpr?: number) => void;
   setTransform: (matrix: Matrix) => void;
   invalidate: (layerId?: string) => void;
-  toBlob: (options?: { type?: string; quality?: number }) => Promise<Blob>;
+  toBlob: (options?: StageBlobOptions) => Promise<Blob>;
   dispose: () => void;
   readonly disposed: boolean;
   readonly disposalSignal: AbortSignal;
@@ -121,6 +129,21 @@ stage.invalidate('scene');
 
 `toBlob()` flushes a pending frame before rasterizing, so it always exports the current frame. Paint callbacks receive a context whose transform is `dpr × matrix`, so they draw in world units. Clear and reset with `ctx.setTransform(1, 0, 0, 1, 0, 0)` only if you must paint in device pixels.
 
+### `toBlob(options?)`
+
+```ts
+type StageBlobOptions = Readonly<{
+  type?: string; // blob MIME type; defaults to 'image/png'
+  quality?: number; // encoder quality for lossy types
+  region?: Rect; // world-space crop; defaults to the visible rect
+  scale?: number; // export pixels per world unit
+}>;
+```
+
+Without `region`/`scale`, the stage exports its current canvas at the current device scale. With them, the stage re-paints every layer into scratch surfaces against `translate(-region) × scale` and composites the result into an offscreen surface sized `region.width × scale` by `region.height × scale` (rounded, at least 1 pixel per side) — layer caches are keyed to the live viewport transform, so a crop cannot reuse the cached composite. The cost is a full repaint; the live viewport, caches, and dirty flags are untouched. `scale` defaults to the current device pixels per world unit (`dpr × matrix scale`), which matches the on-screen density; paint callbacks see `frame.dpr = 1` and `frame.visibleRect = region` during an export.
+
+Invalid `region` (non-finite coordinates or non-positive size) or `scale` (non-positive or non-finite) throws `StageConfigError`; on a worker stage the failure arrives as `StageError`.
+
 ---
 
 ## Worker Subpath (`@vielzeug/stage/worker`)
@@ -135,13 +158,13 @@ The worker owns its layer painters: `serveStage`'s `setup` supplies them, and th
 
 `Scene` is the application payload type shared by `sendScene` and `onScene`, so neither side casts. Invalid size, DPR, or matrix input throws `StageConfigError` on the main thread, exactly like `createStage`. Worker-side exceptions are surfaced through `reportError`. The message protocol is internal: its version is checked once at the init/ready handshake, and a mismatch rejects `ready` with a `StageError` and disposes the stage.
 
-`createWorkerStage` throws `StageUnsupportedError` when the canvas cannot transfer control (`transferControlToOffscreen` missing). `dispose()` posts a final `dispose` command, rejects in-flight `toBlob()` promises with `StageDisposedError`, aborts `disposalSignal` (terminate the worker from there — the creator owns it), and makes later calls inert.
+`createWorkerStage` throws `StageUnsupportedError` when the canvas cannot transfer control (`transferControlToOffscreen` missing). `dispose()` posts a final `dispose` command, rejects in-flight `toBlob()` promises with `StageDisposedError`, aborts `disposalSignal` (terminate the worker from there — the creator owns it), and makes later calls inert. `toBlob(options?)` forwards `StageBlobOptions` — including `region` and `scale` — verbatim; the worker performs the same region re-paint export on its `OffscreenCanvas` pipeline.
 
 ## Errors
 
-| Class                   | Thrown when                                                       |
-| ----------------------- | ----------------------------------------------------------------- |
-| `StageError`            | Base class; catch all stage failures with `instanceof`            |
-| `StageConfigError`      | Non-positive sizes, non-finite matrices, duplicate/unknown ids    |
-| `StageDisposedError`    | `toBlob()` after `dispose()`, or worker blob rejected on disposal |
-| `StageUnsupportedError` | No 2D context on a surface, or `canvas.toBlob` missing/failing    |
+| Class                   | Thrown when                                                                               |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| `StageError`            | Base class; catch all stage failures with `instanceof`                                    |
+| `StageConfigError`      | Non-positive sizes, non-finite matrices, duplicate/unknown ids, bad `toBlob` region/scale |
+| `StageDisposedError`    | `toBlob()` after `dispose()`, or worker blob rejected on disposal                         |
+| `StageUnsupportedError` | No 2D context on a surface, or `canvas.toBlob` missing/failing                            |

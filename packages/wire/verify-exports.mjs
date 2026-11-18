@@ -5,10 +5,16 @@ const modules = [await import('./dist/index.js'), require('./dist/index.cjs')];
 
 for (const wire of modules) {
   for (const name of [
+    'arrowhead',
     'bezierRoute',
     'bezierToSvgPath',
     'findCyclicGroups',
+    'floatingSide',
+    'hitBezier',
+    'hitPolyline',
     'orthogonalRoute',
+    'pointOnBezier',
+    'pointOnPolyline',
     'polylineToSvgPath',
     'portAnchor',
     'topologicalOrder',

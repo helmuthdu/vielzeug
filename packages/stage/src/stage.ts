@@ -3,12 +3,16 @@ import {
   type FrameScheduler,
   invert,
   type Matrix,
+  multiply,
   type Point,
   type Rect,
   rectFromPoints,
   type Size,
+  scale as scaleMatrix,
+  scaleOf,
+  translate,
 } from '@vielzeug/atlas';
-import { requireDpr, requireFiniteMatrix, requireSize } from './_validate.js';
+import { requireDpr, requireFiniteMatrix, requireRect, requireScale, requireSize } from './_validate.js';
 import { StageConfigError, StageDisposedError, StageUnsupportedError } from './errors.js';
 
 /** A backing surface a layer paints into. `OffscreenCanvas` on workers. */
@@ -48,6 +52,25 @@ export type StageOptions = Readonly<{
   background?: string | null;
 }>;
 
+/** Options for `toBlob()`: blob encoding plus an optional world-space crop and pixel density. */
+export type StageBlobOptions = Readonly<{
+  /** Blob MIME type; defaults to `image/png`. */
+  type?: string;
+  /** Encoder quality for lossy types. */
+  quality?: number;
+  /**
+   * World-space rect to export; defaults to the current visible rect. The
+   * export re-paints every layer against the region transform, so cost is a
+   * full repaint, not a blit of the cached composite.
+   */
+  region?: Rect;
+  /**
+   * Export pixels per world unit. Defaults to the current device pixels per
+   * world unit (`dpr × matrix scale`), which matches the on-screen density.
+   */
+  scale?: number;
+}>;
+
 export type StageFrameInfo = Readonly<{
   /** Layer ids that were repainted for this frame. */
   repainted: readonly string[];
@@ -65,7 +88,12 @@ export type StageController = Readonly<{
   setTransform: (matrix: Matrix) => void;
   /** Mark one layer dirty (omit to mark all); schedules a frame. */
   invalidate: (layerId?: string) => void;
-  toBlob: (options?: { type?: string; quality?: number }) => Promise<Blob>;
+  /**
+   * Export the current frame as a blob. With `region`/`scale`, layers are
+   * re-painted into scratch surfaces at the requested crop and density;
+   * the live viewport is untouched.
+   */
+  toBlob: (options?: StageBlobOptions) => Promise<Blob>;
   dispose: () => void;
   readonly disposed: boolean;
   readonly disposalSignal: AbortSignal;
@@ -195,6 +223,82 @@ export function createStage(
   const applyWorldTransform = (ctx: CanvasRenderingContext2D): void => {
     const [a, b, c, d, e, f] = matrix;
     ctx.setTransform(dpr * a, dpr * b, dpr * c, dpr * d, dpr * e, dpr * f);
+  };
+
+  /** Rasterize a surface (live canvas or scratch) into a blob; shared by both export paths. */
+  const surfaceToBlob = async (surface: StageSurface, type: string, quality?: number): Promise<Blob> => {
+    if (typeof OffscreenCanvas !== 'undefined' && surface instanceof OffscreenCanvas) {
+      // OffscreenCanvas (worker-rendered stages): promise-based export.
+      const blob = await surface.convertToBlob({ quality, type });
+      if (!blob) throw new StageUnsupportedError('Canvas blob export returned no data.');
+      return blob;
+    }
+    const htmlCanvas = surface as unknown as HTMLCanvasElement;
+    if (typeof htmlCanvas.toBlob !== 'function') {
+      throw new StageUnsupportedError('This canvas does not support blob export.');
+    }
+    const blob = await new Promise<Blob | null>((resolve) => {
+      htmlCanvas.toBlob(resolve, type, quality);
+    });
+    if (!blob) {
+      throw new StageUnsupportedError('Canvas blob export returned no data.');
+    }
+    return blob;
+  };
+
+  /**
+   * Region/scale export: layer caches are keyed to the live viewport
+   * transform, so the requested crop cannot blit the cached composite. Every
+   * layer is re-painted into scratch surfaces against the export transform
+   * `translate(-region) × scale` (dpr 1; `scale` maps world units to export
+   * pixels) and composited into a scratch output surface. The live frame,
+   * caches, and dirty flags are untouched; the cost is a full repaint.
+   */
+  const exportRegion = async (options: StageBlobOptions, type: string): Promise<Blob> => {
+    const region = options.region ?? visibleRect();
+    requireRect(region, 'Export');
+    // Default density matches the on-screen one: device pixels per world unit.
+    const exportScale = options.scale ?? dpr * scaleOf(matrix);
+    requireScale(exportScale, 'Export');
+    const pw = Math.max(1, Math.round(region.width * exportScale));
+    const ph = Math.max(1, Math.round(region.height * exportScale));
+    const exportMatrix = multiply(scaleMatrix(exportScale), translate(-region.x, -region.y));
+    const frame: PaintContext = { dpr: 1, matrix: exportMatrix, time: scheduler.now(), visibleRect: region };
+    const scratch: StageSurface[] = [];
+    try {
+      const output = createSurface(pw, ph);
+      scratch.push(output);
+      const outCtx = output.getContext('2d', { alpha: true }) as CanvasRenderingContext2D | null;
+      if (outCtx == null) {
+        throw new StageUnsupportedError('Export surface has no 2D context.');
+      }
+      outCtx.setTransform(1, 0, 0, 1, 0, 0);
+      outCtx.clearRect(0, 0, pw, ph);
+      if (background != null) {
+        outCtx.fillStyle = background;
+        outCtx.fillRect(0, 0, pw, ph);
+      }
+      for (const layer of layers) {
+        const surface = createSurface(pw, ph);
+        scratch.push(surface);
+        const ctx = surface.getContext('2d', { alpha: true }) as CanvasRenderingContext2D | null;
+        if (ctx == null) {
+          throw new StageUnsupportedError(`Layer surface for "${layer.id}" has no 2D context.`);
+        }
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, pw, ph);
+        const [a, b, c, d, e, f] = exportMatrix;
+        ctx.setTransform(a, b, c, d, e, f);
+        layer.paint(ctx, frame);
+        outCtx.drawImage(surface as unknown as CanvasImageSource, 0, 0, pw, ph);
+      }
+      return await surfaceToBlob(output, type, options.quality);
+    } finally {
+      for (const surface of scratch) {
+        surface.width = 0;
+        surface.height = 0;
+      }
+    }
   };
 
   const renderFrame = (time: number): StageFrameInfo => {
@@ -335,23 +439,10 @@ export function createStage(
       // Export must capture the current frame, not the last painted one.
       if (pending) stage.render();
       const type = blobOptions?.type ?? 'image/png';
-      if (typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas) {
-        // OffscreenCanvas (worker-rendered stages): promise-based export.
-        const blob = await canvas.convertToBlob({ quality: blobOptions?.quality, type });
-        if (!blob) throw new StageUnsupportedError('Canvas blob export returned no data.');
-        return blob;
+      if (blobOptions?.region != null || blobOptions?.scale != null) {
+        return await exportRegion(blobOptions, type);
       }
-      const htmlCanvas = canvas as HTMLCanvasElement;
-      if (typeof htmlCanvas.toBlob !== 'function') {
-        throw new StageUnsupportedError('This canvas does not support blob export.');
-      }
-      const blob = await new Promise<Blob | null>((resolve) => {
-        htmlCanvas.toBlob(resolve, type, blobOptions?.quality);
-      });
-      if (!blob) {
-        throw new StageUnsupportedError('Canvas blob export returned no data.');
-      }
-      return blob;
+      return await surfaceToBlob(canvas, type, blobOptions?.quality);
     },
     get visibleRect() {
       return visibleRect();

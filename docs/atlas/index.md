@@ -109,6 +109,7 @@ index.queryPoint({ x: 5, y: 5 }); // ['a']
 - Rect math: union, closed-interval intersection, containment, inflation, and bounds-from-points
 - Snapping: `snapRect()` alignment/grid/equal-gap guides with `kind`-tagged targets, plus pure `alignRects()`/`distributeRects()`
 - Narrow-phase geometry: `pointInPolygon`, `distanceToPolyline`, `pointNearPolygon` for exact stroke and polygon hit-testing
+- Frames: `frameMatrix()` local→world placement, `boundsOfFrame()` world AABBs, and `resizeRect()` editor resize math with min and aspect locks
 - `AtlasError` / `AtlasConfigError`: typed errors; the camera follows the Vielzeug disposal contract
 - Zero runtime dependencies, no DOM requirement: works in Node, Workers, and SSR
 

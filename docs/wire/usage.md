@@ -47,7 +47,7 @@ const top = portAnchor(nodeBounds, 'top', 0.25);
 bezierRoute({ side: 'bottom', x: 60, y: 100 }, { side: 'top', x: 60, y: 220 });
 ```
 
-A free endpoint that is not on a node — the cursor while dragging a wire, say — picks a side explicitly: `{ ...cursor, side: 'left' }`.
+A free endpoint that is not on a node — the cursor while dragging a wire, say — picks a side explicitly: `{ ...cursor, side: 'left' }`, or computes the facing side with `floatingSide(nodeBounds, cursor)`.
 
 ## Routing Around Obstacles
 
@@ -71,6 +71,50 @@ Four contracts matter for editors:
 - **Output is deterministic.** The same inputs always produce the same polyline, so edges don't shimmer between frames. The returned polyline carries waypoints only at bends.
 
 Routes may hug the padded boundary exactly; raise `padding` if you want more clearance.
+
+## Rounded Corners
+
+`polylineToSvgPath()` accepts a `cornerRadius` that replaces each interior bend with a quadratic arc — orthogonal wires stop looking like pipe fittings with one option:
+
+```ts
+const points = orthogonalRoute(outPort, inPort, { obstacles: nodeBounds });
+if (points) pathElement.setAttribute('d', polylineToSvgPath(points, { cornerRadius: 8 }));
+```
+
+The radius is clamped per corner to half of its shortest adjacent run, so a bend between two short runs simply rounds as much as fits instead of self-overlapping. The router itself never rounds: `orthogonalRoute()` keeps returning raw waypoints, and rounding stays a rendering decision you can toggle per zoom level or theme.
+
+## Editing Geometry
+
+Editors need to answer "what did the user click?" without invisible DOM hit targets. The edit helpers work on the geometry the routers already produce:
+
+```ts
+import { hitBezier, hitPolyline } from '@vielzeug/wire';
+
+// World-space click, threshold scaled so the pick area is zoom-independent.
+const threshold = 8 / camera.zoom;
+const hit =
+  edge.geometry.kind === 'bezier'
+    ? hitBezier(edge.geometry.curve, worldPoint, { threshold })
+    : hitPolyline(edge.geometry.points, worldPoint, { threshold });
+if (hit) selectEdge(edge.id, hit.t); // t is normalized by arc length
+```
+
+`hit.t` and the matching `pointOnBezier()` / `pointOnPolyline()` are parameterized by arc length, so `t = 0.5` is always the midpoint of the drawn wire — useful for labels and drag handles regardless of how lopsided the underlying bezier handles are.
+
+For arrowheads, `arrowhead()` returns the three triangle points capping a line at its tip; pass the arrival direction (any non-zero vector — it is normalized):
+
+```ts
+import { arrowhead, pointOnBezier } from '@vielzeug/wire';
+
+const tip = curve.to;
+const arriving = { x: tip.x - curve.c2.x, y: tip.y - curve.c2.y };
+const [apex, left, right] = arrowhead(tip, arriving, { length: 8, width: 5 });
+```
+
+Two more routing-polish pieces round out editors:
+
+- **`floatingSide(rect, toward)`** returns the rect side facing a point — the dominant axis from the rect center — so an edge can track the cursor across node sides without storing a fixed port side.
+- **`selfLoop: true` on `bezierRoute()`** widens both handles to `1.5 ×` the port spacing when the endpoints share a side, so an edge from a node's `out` port back to its own `in` port bulges into a visible loop instead of collapsing onto the node edge.
 
 ## Ordering the Graph
 

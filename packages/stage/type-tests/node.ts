@@ -3,6 +3,7 @@ import {
   createStage,
   type PaintContext,
   type Stage,
+  type StageBlobOptions,
   StageConfigError,
   type StageController,
   StageError,
@@ -49,6 +50,14 @@ const rect: Rect = stage.visibleRect;
 void rect;
 const blob: Promise<Blob> = stage.toBlob();
 void blob;
+const regionBlob: Promise<Blob> = stage.toBlob({
+  region: { height: 100, width: 200, x: 0, y: 0 },
+  scale: 2,
+  type: 'image/png',
+});
+void regionBlob;
+const blobOptions: StageBlobOptions = { scale: 3 };
+void blobOptions;
 
 // Both modes are interchangeable wherever only control is needed.
 const mainController: StageController = stage;

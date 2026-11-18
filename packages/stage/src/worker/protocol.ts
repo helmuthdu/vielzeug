@@ -6,8 +6,10 @@
 
 import type { Matrix } from '@vielzeug/atlas';
 
+import type { StageBlobOptions } from '../stage.js';
+
 /** Version of the stage worker protocol. Bumped whenever the message shapes change. */
-export const STAGE_WORKER_PROTOCOL = 1;
+export const STAGE_WORKER_PROTOCOL = 2;
 
 /** Init message posted to the worker with the transferred canvas. */
 export interface StageWorkerInit {
@@ -25,7 +27,7 @@ export type StageWorkerCommand =
   | { type: 'resize'; width: number; height: number; dpr: number }
   | { type: 'matrix'; matrix: Matrix }
   | { type: 'invalidate'; layerId?: string }
-  | { type: 'blob'; id: number; options?: { type?: string; quality?: number } }
+  | { type: 'blob'; id: number; options?: StageBlobOptions }
   /** Application payload forwarded verbatim to the worker-side `onScene` handler. */
   | { type: 'scene'; scene: unknown }
   | { type: 'dispose' };

@@ -70,6 +70,16 @@ const widths = strokeWidths(stabilized, {
 
 When points carry `pressure` (normalized `[0, 1]`), it multiplies the result: `0.5` is neutral and maps to exactly `1`, so a mouse (which reports `0.5`) draws as wide as a device without pressure data. When any point lacks `time`, velocity modulation is disabled for the whole stroke — width becomes `width × pressure` — instead of guessing speed from sample spacing.
 
+`taper` fades the ends: within the first `taper.start` and last `taper.end` units of arc length, the width is multiplied by a smoothstep ramp that bottoms out at `0.15` of full width at the tips. `simulatePressure` gives mouse strokes the same in/out feel by synthesizing pressure for points that have none (ramping to `0.5×` width at each tip over the last 15% of arc length); points with real `pressure` always keep it.
+
+```ts
+const tapered = strokeWidths(stabilized, {
+  width: 6,
+  taper: { start: 40, end: 40 }, // 40 px of arc length faded at each end
+  simulatePressure: true, // thin the ends of pressure-less mouse strokes
+});
+```
+
 ## Build the Outline
 
 `strokeOutline()` offsets each sample by half its width along the local normal and closes the ring with half-circle caps at both ends. The result is a plain `Point[]` you can fill with any renderer.
@@ -79,6 +89,12 @@ import { strokeOutline } from '@vielzeug/ink';
 
 const ring = strokeOutline(stabilized, widths); // variable width, closed polygon
 const uniform = strokeOutline(stabilized, 6); // constant width, no array needed
+```
+
+`cap` changes the ends: `'butt'` stops at the last offsets, `'square'` extends each end by half the width along the tangent. `join` fixes the crossing spike naive offsetting produces at turns sharper than 90°: `'bevel'` cuts the corner with the two adjacent offset points, and `'miter'` extends to the exact intersection while its length stays within `miterLimit` × half width, falling back to bevel beyond that.
+
+```ts
+const marker = strokeOutline(stabilized, 6, { cap: 'square', join: 'miter', miterLimit: 6 });
 ```
 
 ## Simplify Before Serializing

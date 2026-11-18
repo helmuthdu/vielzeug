@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add editing geometry helpers (arrowhead, arc-length point/hit testing), polyline cornerRadius, floatingSide, and bezierRoute selfLoop.",
+      "packageName": "@vielzeug/wire",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/wire"
+}

@@ -63,7 +63,7 @@ stage.invalidate('tokens'); // only the tokens layer repaints
 - **Dirty repaints**: invalidate one layer or all; frames coalesce via an injectable scheduler
 - **DPR-aware transforms**: paint in world units, the stage scales by `dpr × matrix`
 - **`StageController`**: one control type shared by main-thread and worker stages
-- **`toBlob()`**: PNG export of the composited canvas, flushing pending frames, with typed unsupported-capability errors
+- **`toBlob()`**: PNG export of the composited canvas, flushing pending frames, with optional world-space `region`/`scale` re-render and typed unsupported-capability errors
 - **Injectable surfaces**: `createSurface` factory for tests and `OffscreenCanvas` workers
 - **`@vielzeug/stage/worker`**: worker-rendered stages via a transferred `OffscreenCanvas` and a typed scene channel
 
