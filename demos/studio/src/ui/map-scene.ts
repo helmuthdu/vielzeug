@@ -1,4 +1,4 @@
-import { createCamera } from '@vielzeug/atlas';
+import { createCamera, scaleOf } from '@vielzeug/atlas';
 import { createDragGesture } from '@vielzeug/gesture';
 import { createStage, type StageController } from '@vielzeug/stage';
 import { createWorkerStage } from '@vielzeug/stage/worker';
@@ -232,8 +232,14 @@ export function mountMapScene(container: HTMLElement): SceneHandle {
   exportButton?.addEventListener('click', () => {
     if (!renderer) return;
     // toBlob flushes pending repaints on both modes before rasterizing.
+    // Hi-res export: current viewport region at 2× the on-screen density.
+    // A region/scale export re-paints world-space content axis-aligned, so a
+    // rotated camera exports the composited canvas instead to keep the
+    // "export what you see" intent (at screen density).
+    const exportScale = scaleOf(camera.matrix) * (window.devicePixelRatio || 1) * 2;
+    const rotated = camera.state.rotation !== 0;
     void renderer
-      .toBlob({ type: 'image/png' })
+      .toBlob(rotated ? { type: 'image/png' } : { region: camera.visibleRect, scale: exportScale, type: 'image/png' })
       .then((blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');

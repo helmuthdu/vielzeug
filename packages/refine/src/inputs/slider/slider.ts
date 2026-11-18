@@ -111,6 +111,7 @@ export type OreSliderProps = {
  * @cssprop --slider-track-bg  - Track background color
  * @cssprop --slider-fill      - Active fill color
  * @cssprop --slider-thumb-bg  - Thumb background color
+ * @cssprop --slider-touch-target - Minimum height of the pointer interaction surface (default 2.75rem)
  *
  * @example
  * ```html

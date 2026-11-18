@@ -18,7 +18,7 @@
     --_thumb: var(--slider-thumb-bg, var(--color-contrast-50));
     --_thumb-size: var(--_size);
     --_thumb-inset: var(--slider-thumb-inset, var(--size-2-5));
-    --_touch-target: var(--size-11);
+    --_touch-target: var(--slider-touch-target, var(--size-11));
     --_font-size: var(--text-sm);
     --_shadow: var(--color-neutral-focus-shadow);
 
@@ -42,6 +42,12 @@
   :host([fullwidth]) {
     width: 100%;
     min-width: 0;
+  }
+
+  /* The host's own `display` outranks the UA sheet's `[hidden]`, so hiding needs the reset here
+     (same contract as ore-icon/ore-text): without it `hidden` is a silent no-op. */
+  :host([hidden]) {
+    display: none;
   }
 }
 

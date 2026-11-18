@@ -252,6 +252,45 @@ test('draws a freehand stroke with the pen tool that can be selected and undone'
   await expect(page.locator('path.studio-stroke')).toHaveCount(0);
 });
 
+test('pen tool reveals the ink-width slider and it changes stroke thickness', async ({ page }) => {
+  const box = await viewportBox(page);
+  const slider = page.getByTestId('pen-width');
+
+  // Pen-only chrome: hidden for select, shown when the pen is active.
+  await expect(slider).toBeHidden();
+  await page.keyboard.press('p');
+  await expect(slider).toBeVisible();
+
+  const drawStroke = async (y: number) => {
+    await page.mouse.move(box.x + 140, box.y + y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 260, box.y + y, { steps: 8 });
+    await page.mouse.up();
+  };
+
+  await slider.evaluate((el) => {
+    (el as { value: string }).value = '1';
+    el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  });
+  await drawStroke(200);
+  const thin = await page.locator('path.studio-stroke').first().boundingBox();
+
+  await page.keyboard.press(`${MOD}+z`);
+  await slider.evaluate((el) => {
+    (el as { value: string }).value = '24';
+    el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  });
+  await drawStroke(200);
+  const thick = await page.locator('path.studio-stroke').first().boundingBox();
+
+  // A 24-unit stroke is visibly fatter than a 1-unit one.
+  expect(thick?.height ?? 0).toBeGreaterThan((thin?.height ?? 0) + 8);
+
+  // Switching away from the pen collapses the dock back down.
+  await page.keyboard.press('v');
+  await expect(slider).toBeHidden();
+});
+
 test('selection shows a dashed frame and eight resize handles', async ({ page }) => {
   const box = await viewportBox(page);
   const barY = await belowBar(page);

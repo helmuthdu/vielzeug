@@ -7,7 +7,9 @@ import {
   type Point,
   type Rect,
   rectFromPoints,
+  resizeRect,
   type SnapGuide,
+  scaleOf,
   snapRect,
   unionRect,
 } from '@vielzeug/atlas';
@@ -23,12 +25,14 @@ import {
 import { createKeymap, formatShortcut } from '@vielzeug/keymap';
 import { createLedger } from '@vielzeug/ledger';
 import { createPositioner } from '@vielzeug/orbit';
+import { eventFieldValue } from '@vielzeug/refine';
 import { trackDockHeight } from './dock-badge.ts';
 import '@vielzeug/refine/badge';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/button-group';
 import '@vielzeug/refine/dock';
 import '@vielzeug/refine/separator';
+import '@vielzeug/refine/slider';
 import '@vielzeug/refine/tooltip';
 import {
   addShapeCommand,
@@ -78,24 +82,6 @@ const HANDLE_Y: Record<HandleDir, 'bottom' | 'center' | 'top'> = {
   w: 'center',
 };
 
-/**
- * Resizes `bounds` by dragging the edge(s) named by `dir` to the world point
- * `to`. The opposite edge(s) stay fixed; the result never collapses below
- * MIN_SHAPE_SIZE.
- */
-function resizeBounds(bounds: Rect, dir: HandleDir, to: Point): Rect {
-  const right = bounds.x + bounds.width;
-  const bottom = bounds.y + bounds.height;
-  let { x, y } = bounds;
-  let width = bounds.width;
-  let height = bounds.height;
-  if (dir.includes('w')) x = Math.min(to.x, right - MIN_SHAPE_SIZE);
-  if (dir.includes('e')) width = Math.max(to.x - bounds.x, MIN_SHAPE_SIZE);
-  if (dir.includes('n')) y = Math.min(to.y, bottom - MIN_SHAPE_SIZE);
-  if (dir.includes('s')) height = Math.max(to.y - bounds.y, MIN_SHAPE_SIZE);
-  return { height, width, x, y };
-}
-
 /** Scales a shape's geometry from its top-left corner into `rect` (uniform scale). */
 function scaleShape(shape: BoardShape, rect: Rect): BoardShape {
   if (shape.kind === 'rect') return { ...shape, ...rect };
@@ -139,8 +125,10 @@ function strokePressure(event: PointerEvent): number | undefined {
   return event.pressure > 0 ? event.pressure : undefined;
 }
 
-/** Base ink width in world units. */
-const STROKE_WIDTH = 4;
+/** Default base ink width in world units; the dock slider lets the user change it. */
+const DEFAULT_STROKE_WIDTH = 4;
+const MIN_STROKE_WIDTH = 1;
+const MAX_STROKE_WIDTH = 24;
 
 /** Tooltip label with a platform-correct shortcut, e.g. "Undo (Ctrl+Z)". */
 function toolTip(label: string, shortcut: string): string {
@@ -157,6 +145,8 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   const camera: Camera = createCamera({ initial: { x: -160, y: -120, zoom: 1 } });
   const ledger = createLedger();
   const tools = createToolActor();
+  // Base ink width for new pen strokes; the dock slider writes it, the pen reads it.
+  let penWidth = DEFAULT_STROKE_WIDTH;
 
   container.innerHTML = '';
 
@@ -200,7 +190,7 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   // does not jump from a thin polyline to the filled outline on pen-up.
   function updateStrokePreview(points: readonly StrokePoint[]): void {
     const stabilized = stabilizeStroke(points);
-    const widths = strokeWidths(stabilized, { width: STROKE_WIDTH });
+    const widths = strokeWidths(stabilized, { width: penWidth });
     previewPath.setAttribute('d', polylineToSvgPath(strokeOutline(stabilized, widths), { close: true }));
   }
 
@@ -285,6 +275,9 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
       if (shape.kind === 'rect') {
         el.style.width = `${String(shape.width)}px`;
         el.style.height = `${String(shape.height)}px`;
+      } else {
+        // Resize rewrites a stroke's path; the element must follow every model replace.
+        el.setAttribute('d', shape.path);
       }
       el.classList.toggle('is-selected', model.selection.includes(shape.id));
     }
@@ -492,7 +485,7 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     const smoothed = simplifyStroke(stabilizeStroke(points), 0.6);
     if (smoothed.length < 2) return;
     // Widths come from timestamps, so computing them after simplification is correct.
-    const widths = strokeWidths(smoothed, { width: STROKE_WIDTH });
+    const widths = strokeWidths(smoothed, { width: penWidth });
     const outline = strokeOutline(smoothed, widths);
     const bounds = rectFromPoints(outline) ?? { height: 0, width: 0, x: 0, y: 0 };
     const local = outline.map((pt) => ({ x: pt.x - bounds.x, y: pt.y - bounds.y }));
@@ -561,7 +554,10 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
         if (!cancelled) {
           const worldPoint = camera.toWorld(screenPoint(viewport, detail.current.x, detail.current.y));
           const rect = rectBetween(interaction.origin, worldPoint);
-          if (rect.width >= 4 && rect.height >= 4) {
+          // Minimum is 4 SCREEN px converted to world units, so a quick drag
+          // still creates a shape when the camera is zoomed in.
+          const min = MIN_SHAPE_SIZE / scaleOf(camera.matrix);
+          if (rect.width >= min && rect.height >= min) {
             const shape: BoardShape = { id: `shape-${String(nextShapeId++)}`, kind: 'rect', ...rect };
             model.add(shape);
             ledger.record(addShapeCommand(model, shape));
@@ -730,17 +726,37 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   function moveResize(event: PointerEvent): void {
     if (!interaction || interaction.kind !== 'resize') return;
     const worldPoint = camera.toWorld(screenPoint(viewport, event.clientX, event.clientY));
-    const rect = resizeBounds(interaction.bounds, interaction.dir, worldPoint);
+    // Shift locks the selection's current aspect ratio while dragging.
+    const aspect =
+      event.shiftKey && interaction.bounds.width > 0 && interaction.bounds.height > 0
+        ? interaction.bounds.width / interaction.bounds.height
+        : undefined;
+    const rect = resizeRect(interaction.bounds, interaction.dir, worldPoint, { aspect, min: MIN_SHAPE_SIZE });
     // Scale every selected shape by the same factor, anchored at the bounds
-    // origin, so a multi-selection resizes as a group.
-    const sx = interaction.bounds.width === 0 ? 1 : rect.width / interaction.bounds.width;
-    const sy = interaction.bounds.height === 0 ? 1 : rect.height / interaction.bounds.height;
+    // edges the drag does NOT move, so dragging the west handle keeps the
+    // east edge (and likewise for the other sides) fixed.
+    const bounds = interaction.bounds;
+    const dir = interaction.dir;
+    const sx = bounds.width === 0 ? 1 : rect.width / bounds.width;
+    const sy = bounds.height === 0 ? 1 : rect.height / bounds.height;
+    // Which point stays put on each axis: the edge opposite the dragged one;
+    // the centre when the drag moves both edges (aspect-locked edge handles).
+    const anchorX = dir.includes('w')
+      ? bounds.x + bounds.width
+      : dir.includes('e')
+        ? bounds.x
+        : bounds.x + bounds.width / 2;
+    const anchorY = dir.includes('n')
+      ? bounds.y + bounds.height
+      : dir.includes('s')
+        ? bounds.y
+        : bounds.y + bounds.height / 2;
     for (const shape of interaction.from.values()) {
       const target: Rect = {
         height: shape.height * sy,
         width: shape.width * sx,
-        x: interaction.bounds.x + (shape.x - interaction.bounds.x) * sx,
-        y: interaction.bounds.y + (shape.y - interaction.bounds.y) * sy,
+        x: anchorX + (shape.x - anchorX) * sx,
+        y: anchorY + (shape.y - anchorY) * sy,
       };
       if (model.replace(scaleShape(shape, target))) interaction.moved = true;
     }
@@ -789,9 +805,16 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     <ore-button-group label="Board tools" size="sm" value="select" data-testid="board-tools">
       <ore-tooltip content="${toolTip('Select', 'v')}" placement="top"><ore-button data-tool="select" value="select" variant="ghost" icon-only label="Select"><ore-icon name="mouse-pointer-2"></ore-icon></ore-button></ore-tooltip>
       <ore-tooltip content="${toolTip('Rectangle', 'r')}" placement="top"><ore-button data-tool="draw" value="draw" variant="ghost" icon-only label="Rectangle"><ore-icon name="square"></ore-icon></ore-button></ore-tooltip>
-      <ore-tooltip content="${toolTip('Pen', 'p')}" placement="top"><ore-button data-tool="pen" value="pen" variant="ghost" icon-only label="Pen"><ore-icon name="pen-line"></ore-icon></ore-button></ore-tooltip>
       <ore-tooltip content="${toolTip('Pan', 'h')}" placement="top"><ore-button data-tool="pan" value="pan" variant="ghost" icon-only label="Pan"><ore-icon name="hand"></ore-icon></ore-button></ore-tooltip>
+      <ore-tooltip content="${toolTip('Pen', 'p')}" placement="top"><ore-button data-tool="pen" value="pen" variant="ghost" icon-only label="Pen"><ore-icon name="pen-line"></ore-icon></ore-button></ore-tooltip>
     </ore-button-group>
+    <!-- Ink-width control fused to the pen button: while the pen is active
+         this capsule butts flush against the (now last) pen segment and shares
+         its active backdrop, so button + slider read as one expanding control.
+         It sits outside the group because the group is a radiogroup. -->
+    <span class="studio-pen-pill" data-testid="pen-pill" hidden>
+      <ore-tooltip content="Ink width" placement="top"><ore-slider class="studio-pen-width" data-testid="pen-width" min="${String(MIN_STROKE_WIDTH)}" max="${String(MAX_STROKE_WIDTH)}" step="1" value="${String(DEFAULT_STROKE_WIDTH)}" size="sm" color="secondary">Ink width</ore-slider></ore-tooltip>
+    </span>
     <ore-separator orientation="vertical"></ore-separator>
     <ore-button-group label="History" size="sm">
       <ore-tooltip content="${toolTip('Undo', 'mod+z')}" placement="top"><ore-button data-history="undo" variant="ghost" icon-only label="Undo"><ore-icon name="undo-2"></ore-icon></ore-button></ore-tooltip>
@@ -815,6 +838,13 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   const stopDockTrack = trackDockHeight(toolbarParent, container);
 
   const toolGroup = toolbarParent.querySelector<HTMLElement>('[data-testid="board-tools"]');
+  const penWidthSlider = toolbarParent.querySelector<HTMLElement>('[data-testid="pen-width"]');
+  const penPill = toolbarParent.querySelector<HTMLElement>('[data-testid="pen-pill"]');
+  // The slider is a native-style field: `value` arrives as a string on input/change.
+  penWidthSlider?.addEventListener('input', (event) => {
+    const value = Number(eventFieldValue(event));
+    if (Number.isFinite(value)) penWidth = Math.min(MAX_STROKE_WIDTH, Math.max(MIN_STROKE_WIDTH, value));
+  });
   const undoButton = toolbarParent.querySelector<HTMLElement>('[data-history="undo"]');
   const redoButton = toolbarParent.querySelector<HTMLElement>('[data-history="redo"]');
 
@@ -890,6 +920,8 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
     viewport.dataset.tool = tool;
     // The segmented group owns the active-tool announcement (checked radio).
     if (toolGroup && toolGroup.getAttribute('value') !== tool) toolGroup.setAttribute('value', tool);
+    // The ink pill is pen-only chrome: fused to the tool strip, shown only while the pen is active.
+    penPill?.toggleAttribute('hidden', tool !== 'pen');
     viewport.style.cursor = tool === 'pan' ? 'grab' : tool === 'draw' || tool === 'pen' ? 'crosshair' : 'default';
     // The selection frame and handles only show for the select tool.
     syncSelectionChrome(selectionBounds());

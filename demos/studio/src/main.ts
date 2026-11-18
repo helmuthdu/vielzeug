@@ -1,5 +1,8 @@
 import '@vielzeug/refine/fouc.css';
 import '@vielzeug/refine/tokens.css';
+// Preflight sets border-box sizing globally; board shapes size their model
+// bounds with a border, so content-box would draw the border outside them.
+import '@vielzeug/refine/styles/preflight.css';
 import type {} from '@vielzeug/refine/frameworks/elements';
 import './styles/app.css';
 import { mountBoardScene } from './ui/board-scene.ts';
