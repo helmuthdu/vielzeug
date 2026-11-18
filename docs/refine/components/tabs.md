@@ -234,7 +234,7 @@ Use `density="compact"` for dense toolbars, filters, table controls, and seconda
 
 ## Rounded
 
-`rounded` sets the corner radius of the tablist container and every tab item from the theme scale. Use `rounded="full"` (or a bare `rounded`) for a pill shape. Density deliberately does not touch radius, so a compact tab bar can still be square-cornered or fully round.
+`rounded` sets the corner radius of the tablist container and every tab item from the theme scale. On inset variants (`solid`, `flat`, `bordered`, and `frost`), the sliding active indicator subtracts the tablist inset from that radius so the corners nest cleanly. `ghost` has no container inset, so its indicator keeps the full radius. Use `rounded="full"` (or a bare `rounded`) for a pill shape. Density deliberately does not touch radius.
 
 <ComponentPreview vertical>
 
@@ -465,7 +465,7 @@ Disabled tabs are skipped during keyboard navigation.
 
 | Property                      | Default                    | Description                                                         |
 | ----------------------------- | -------------------------- | ------------------------------------------------------------------- |
-| `--tabs-radius`               | `var(--rounded-lg)`        | Border radius of the tablist container and panels                   |
+| `--tabs-radius`               | `var(--rounded-lg)`        | Border radius of the tablist container and panels; the active indicator subtracts the inset |
 | `--tabs-transition`           | `var(--transition-normal)` | Transition duration/easing for the sliding active pill              |
 | `--tabs-indicator-color`      | Variant-dependent          | Background of the sliding active pill                               |
 | `--tabs-bg`                   | Theme-dependent            | Background of the host element (flat variant)                       |

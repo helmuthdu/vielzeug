@@ -65,6 +65,110 @@ test.describe('Layout', () => {
     expect(measurements[0]?.summaryHeight).toBeLessThan(measurements[2]?.summaryHeight ?? 0);
     expect(measurements[1]?.summaryHeight).toBeLessThan(measurements[2]?.summaryHeight ?? 0);
   });
+
+  test('derives contained corner radii from the outer radius and inset', async ({ page, refinePage }) => {
+    await page.evaluate(() => {
+      document.querySelector('style')?.remove();
+      const frame = document.querySelector<HTMLElement>('.frame');
+
+      if (!frame) throw new Error('Expected the component frame.');
+
+      Object.entries({
+        '--border': '1px',
+        '--rounded-lg': '8px',
+        '--rounded-xl': '12px',
+        '--size-2': '8px',
+      }).forEach(([name, value]) => {
+        frame.style.setProperty(name, value);
+      });
+    });
+
+    await refinePage.mountComponent(`
+      <ore-accordion variant="solid">
+        <ore-accordion-item expanded><span slot="title">Solid</span>Content</ore-accordion-item>
+      </ore-accordion>
+      <ore-accordion variant="flat">
+        <ore-accordion-item expanded><span slot="title">Flat</span>Content</ore-accordion-item>
+      </ore-accordion>
+      <ore-accordion variant="frost">
+        <ore-accordion-item expanded><span slot="title">Frost</span>Content</ore-accordion-item>
+      </ore-accordion>
+    `);
+
+    const measurements = await page.locator('ore-accordion').evaluateAll((accordions) =>
+      accordions.map((accordion) => {
+        const item = accordion.querySelector('ore-accordion-item');
+        const summary = item?.shadowRoot?.querySelector('summary');
+        const content = item?.shadowRoot?.querySelector('.content-wrapper');
+
+        if (!item || !summary || !content) throw new Error('Expected an expanded accordion item.');
+
+        const outerStyle = getComputedStyle(accordion);
+
+        return {
+          contentRadius: getComputedStyle(content).borderRadius,
+          groupInset: outerStyle.paddingTop,
+          groupRadius: outerStyle.borderRadius,
+          itemRadius: getComputedStyle(item).borderRadius,
+          summaryRadius: getComputedStyle(summary).borderRadius,
+        };
+      }),
+    );
+
+    for (const measurement of measurements) {
+      expect(measurement.groupRadius).toBe('12px');
+      expect(measurement.groupInset).toBe('8px');
+      expect(measurement.itemRadius).toBe('4px');
+      expect(measurement.summaryRadius).toBe('4px 4px 0px 0px');
+      expect(measurement.contentRadius).toBe('0px 0px 4px 4px');
+    }
+  });
+
+  test('rounds every frost item in a contained group', async ({ page, refinePage }) => {
+    await page.evaluate(() => {
+      document.querySelector('style')?.remove();
+      const frame = document.querySelector<HTMLElement>('.frame');
+
+      if (!frame) throw new Error('Expected the component frame.');
+
+      Object.entries({
+        '--rounded-lg': '8px',
+        '--rounded-xl': '12px',
+        '--size-2': '8px',
+      }).forEach(([name, value]) => {
+        frame.style.setProperty(name, value);
+      });
+    });
+
+    await refinePage.mountComponent(`
+      <ore-accordion variant="frost">
+        <ore-accordion-item><span slot="title">First</span>Content</ore-accordion-item>
+        <ore-accordion-item expanded><span slot="title">Middle</span>Content</ore-accordion-item>
+        <ore-accordion-item><span slot="title">Last</span>Content</ore-accordion-item>
+      </ore-accordion>
+    `);
+
+    const measurements = await page.locator('ore-accordion-item').evaluateAll((items) =>
+      items.map((item) => {
+        const summary = item.shadowRoot?.querySelector('summary');
+        const content = item.shadowRoot?.querySelector('.content-wrapper');
+
+        if (!summary || !content) throw new Error('Expected the accordion item internals.');
+
+        return {
+          contentRadius: getComputedStyle(content).borderRadius,
+          itemRadius: getComputedStyle(item).borderRadius,
+          summaryRadius: getComputedStyle(summary).borderRadius,
+        };
+      }),
+    );
+
+    expect(measurements.map(({ itemRadius }) => itemRadius)).toEqual(['4px', '4px', '4px']);
+    expect(measurements[0]?.summaryRadius).toBe('4px');
+    expect(measurements[1]?.summaryRadius).toBe('4px 4px 0px 0px');
+    expect(measurements[1]?.contentRadius).toBe('0px 0px 4px 4px');
+    expect(measurements[2]?.summaryRadius).toBe('4px');
+  });
 });
 
 test.describe('Interaction', () => {

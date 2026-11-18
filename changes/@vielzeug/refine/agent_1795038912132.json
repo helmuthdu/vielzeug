@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Apply nested radius rule to accordion and tabs",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

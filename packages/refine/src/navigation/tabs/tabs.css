@@ -40,7 +40,7 @@
     top: 0;
     left: 0;
     pointer-events: none;
-    border-radius: var(--tabs-radius);
+    border-radius: max(0px, calc(var(--tabs-radius) - var(--size-1)));
     transition:
       transform var(--tabs-transition),
       width var(--tabs-transition),
@@ -179,6 +179,7 @@
 
   :host([variant='ghost']) .indicator {
     background: var(--tabs-indicator-color, var(--_theme-base));
+    border-radius: var(--tabs-radius);
   }
 
   /* ─── frost ─── */

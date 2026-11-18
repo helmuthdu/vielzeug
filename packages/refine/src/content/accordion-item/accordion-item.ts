@@ -51,7 +51,7 @@ export type OreAccordionItemProps = {
  * @cssprop --accordion-item-title-color - Title text color
  * @cssprop --accordion-item-subtitle-color - Subtitle text color
  * @cssprop --accordion-item-body-color - Body text color
- * @cssprop --accordion-item-radius - Border radius
+ * @cssprop --accordion-item-radius - Item border radius; contained parent variants derive it from the group radius and inset
  * @cssprop --accordion-item-transition - Transition duration
  * @cssprop --accordion-item-title - Title font size
  * @cssprop --accordion-item-subtitle-size - Subtitle font size

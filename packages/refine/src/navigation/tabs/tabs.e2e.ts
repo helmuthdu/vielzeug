@@ -287,6 +287,12 @@ test.describe('Layout', () => {
         '</ore-tabs>' +
         '<ore-tabs id="pill" value="one" variant="solid" rounded="full">' +
         '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>' +
+        '<ore-tabs id="custom" value="one" variant="solid" style="--tabs-radius: 12px">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>' +
+        '<ore-tabs id="ghost" value="one" variant="ghost">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
         '</ore-tabs>',
     );
 
@@ -294,18 +300,29 @@ test.describe('Layout', () => {
       const read = (id: string) => {
         const tabs = document.getElementById(id)!;
         const tablist = getComputedStyle(tabs.shadowRoot!.querySelector('[role="tablist"]')!);
+        const indicator = getComputedStyle(tabs.shadowRoot!.querySelector('.indicator')!);
         const item = getComputedStyle(tabs.querySelector('ore-tab-item')!.shadowRoot!.querySelector('button')!);
 
-        return { item: item.borderRadius, tablist: tablist.borderRadius };
+        return { indicator: indicator.borderRadius, item: item.borderRadius, tablist: tablist.borderRadius };
       };
 
-      return { dense: read('dense'), pill: read('pill'), plain: read('plain') };
+      return {
+        custom: read('custom'),
+        dense: read('dense'),
+        ghost: read('ghost'),
+        pill: read('pill'),
+        plain: read('plain'),
+      };
     });
 
     // Compact leaves the radius alone now that `rounded` owns it.
     expect(radii.dense).toEqual(radii.plain);
+    expect(radii.plain.indicator).toBe('4px');
+    expect(radii.custom.indicator).toBe('8px');
+    expect(radii.ghost.indicator).toBe('8px');
     expect(radii.pill.item).not.toBe(radii.plain.item);
     expect(radii.pill.tablist).toBe('9999px');
+    expect(radii.pill.indicator).toBe('9995px');
   });
 
   test('navigation-only tabs do not reserve panel space', async ({ page, refinePage }) => {
