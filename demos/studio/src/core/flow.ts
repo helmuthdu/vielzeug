@@ -1,6 +1,6 @@
 import type { Point, Rect } from '@vielzeug/atlas';
 import type { ReversibleCommand } from '@vielzeug/ledger';
-import type { Edge, PortSide } from '@vielzeug/wire';
+import { type Edge, type PortAnchor, type PortSide, portAnchor } from '@vielzeug/wire';
 
 /** A connection point on a node edge. `offset` is the 0..1 fraction along the side. */
 export type FlowPort = Readonly<{ id: string; offset: number; side: PortSide }>;
@@ -22,9 +22,6 @@ export type FlowEdge = Readonly<{
   id: string;
   to: { node: string; port: string };
 }>;
-
-/** Where a port sits in world space, with the side its wire leaves along. */
-export type PortAnchor = Point & Readonly<{ side: PortSide }>;
 
 export interface FlowModel {
   addEdge(edge: FlowEdge): boolean;
@@ -96,7 +93,7 @@ export function createFlowModel(): FlowModel {
       const node = nodes.get(nodeId);
       const port = node?.ports.find((entry) => entry.id === portId);
       if (!node || !port) return undefined;
-      return { side: port.side, ...portPoint(node, port) };
+      return portAnchor(nodeRect(node), port.side, port.offset);
     },
     removeEdge(id) {
       const removed = edges.delete(id);
@@ -136,22 +133,6 @@ export function createFlowModel(): FlowModel {
   return model;
 }
 
-/** World-space point of a port on its node's side. */
-export function portPoint(node: FlowNode, port: FlowPort): Point {
-  switch (port.side) {
-    case 'bottom':
-      return { x: node.x + node.width * port.offset, y: node.y + node.height };
-    case 'left':
-      return { x: node.x, y: node.y + node.height * port.offset };
-    case 'right':
-      return { x: node.x + node.width, y: node.y + node.height * port.offset };
-    case 'top':
-      return { x: node.x + node.width * port.offset, y: node.y };
-    default:
-      return { x: node.x, y: node.y };
-  }
-}
-
 /** Node bounding box for obstacle routing. */
 export function nodeRect(node: FlowNode): Rect {
   return { height: node.height, width: node.width, x: node.x, y: node.y };
@@ -182,6 +163,18 @@ export function addEdgeCommand(model: FlowModel, edge: FlowEdge): ReversibleComm
     label: 'Connect ports',
     revert: () => {
       model.removeEdge(edge.id);
+    },
+  };
+}
+
+export function removeEdgeCommand(model: FlowModel, edge: FlowEdge): ReversibleCommand {
+  return {
+    apply: () => {
+      model.removeEdge(edge.id);
+    },
+    label: 'Delete connection',
+    revert: () => {
+      model.addEdge(edge);
     },
   };
 }

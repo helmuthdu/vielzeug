@@ -1,4 +1,9 @@
-/** Internal validation helpers. Shared by every public entry point; never exported. */
+/** Internal validation helpers. Shared by every public entry point; never exported.
+ *
+ * Stroke points arrive typed and are produced by capture loops, not by untrusted
+ * input, so they are not validated per point (matching atlas and wire). Only
+ * option ranges and algorithm preconditions are checked.
+ */
 import { InkConfigError } from './errors.js';
 import type { StrokePoint } from './types.js';
 
@@ -21,33 +26,19 @@ export function requirePositive(value: unknown, name: string): number {
 }
 
 export function requireInteger(value: unknown, name: string, min: number, max: number): number {
-  requireFiniteNumber(value, name);
-  if (!Number.isInteger(value)) {
+  const resolved = requireFiniteNumber(value, name);
+  if (!Number.isInteger(resolved)) {
     throw new InkConfigError(`Expected ${name} to be an integer, received ${String(value)}.`);
   }
-  return requireRange(value as number, name, min, max);
+  return requireRange(resolved, name, min, max);
 }
 
-/** Validates a stroke point array and returns it typed. Allows empty arrays unless `minPoints` says otherwise. */
-export function requireStrokePoints(value: unknown, minPoints = 0): readonly StrokePoint[] {
-  if (!Array.isArray(value)) {
-    throw new InkConfigError(`Expected an array of stroke points, received ${typeof value}.`);
-  }
+/** Checks the array shape and minimum length of a stroke; the points themselves are trusted as typed. */
+export function requireStrokePoints(value: readonly StrokePoint[], minPoints = 0): readonly StrokePoint[] {
   if (value.length < minPoints) {
     throw new InkConfigError(`Expected at least ${minPoints} stroke point(s), received ${value.length}.`);
   }
-  for (const [index, point] of (value as unknown[]).entries()) {
-    if (point === null || typeof point !== 'object') {
-      throw new InkConfigError(`Expected stroke point at index ${index} to be an object, received ${String(point)}.`);
-    }
-    const candidate = point as { x?: unknown; y?: unknown; pressure?: unknown };
-    requireFiniteNumber(candidate.x, `points[${index}].x`);
-    requireFiniteNumber(candidate.y, `points[${index}].y`);
-    if (candidate.pressure !== undefined) {
-      requireFiniteNumber(candidate.pressure, `points[${index}].pressure`);
-    }
-  }
-  return value as readonly StrokePoint[];
+  return value;
 }
 
 export function clamp(value: number, min: number, max: number): number {

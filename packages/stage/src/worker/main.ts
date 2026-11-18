@@ -1,8 +1,10 @@
+import type { Matrix, Size } from '@vielzeug/atlas';
 import { warn } from '../_dev.js';
+import { requireDpr, requireFiniteMatrix, requireSize } from '../_validate.js';
 import { StageDisposedError, StageError, StageUnsupportedError } from '../errors.js';
-import type { Matrix } from '../shapes.js';
+import type { StageController } from '../stage.js';
 import type { StageWorkerCommand, StageWorkerEvent } from './protocol.js';
-import { checkProtocol, STAGE_WORKER_PROTOCOL } from './protocol.js';
+import { STAGE_WORKER_PROTOCOL } from './protocol.js';
 
 /**
  * The message scope a worker stage talks to (a `Worker` in production).
@@ -17,48 +19,55 @@ export type WorkerScope = Readonly<{
 
 export type WorkerStageOptions = Readonly<{
   dpr?: number;
-  /** Layer ids rendered worker-side; painters are registered via `serveStage`. */
-  layers: readonly { id: string }[];
   /** Background color cleared under the layers; defaults to transparent. */
   background?: string | null;
 }>;
 
-export type WorkerStage = {
-  /** Resolves when the worker acknowledges init with `ready`. */
-  readonly ready: Promise<void>;
-  readonly disposed: boolean;
-  readonly disposalSignal: AbortSignal;
-  /** Resize the CSS size and DPR; forwarded to the worker. */
-  resize: (size: { width: number; height: number }, dpr?: number) => void;
-  /** Set the world→screen matrix; forwarded to the worker. */
-  setTransform: (matrix: Matrix) => void;
-  /** Mark one layer dirty on the worker (omit to mark all). */
-  invalidate: (layerId?: string) => void;
-  /** Forward an application payload to the worker-side `onScene` handler. */
-  sendScene: (scene: unknown) => void;
-  /** Ask the worker to rasterize the composited canvas. */
-  toBlob: (options?: { type?: string; quality?: number }) => Promise<Blob>;
-  dispose: () => void;
-  [Symbol.dispose]: () => void;
-};
+/**
+ * Main-thread half of a worker-rendered stage. `Scene` is the application
+ * payload type accepted by `sendScene` and delivered to the worker-side
+ * `onScene` handler. The creator owns the worker: terminate it through
+ * `disposalSignal` when the stage is disposed.
+ */
+export type WorkerStage<Scene = unknown> = StageController &
+  Readonly<{
+    /** Resolves when the worker acknowledges init with a matching `ready`; rejects on a protocol mismatch. */
+    readonly ready: Promise<void>;
+    /** Forward an application payload to the worker-side `onScene` handler; the handler decides what to invalidate. */
+    sendScene: (scene: Scene) => void;
+  }>;
+
+/** Surface a worker error like an uncaught error, matching main-thread painter behaviour. */
+function reportWorkerError(message: string): void {
+  const error = new StageError(`Worker stage error: ${message}`);
+  const globalReportError = (globalThis as { reportError?: (err: Error) => void }).reportError;
+  if (typeof globalReportError === 'function') globalReportError(error);
+  else
+    queueMicrotask(() => {
+      throw error;
+    });
+}
 
 /**
  * Creates the main-thread half of a worker-rendered stage: transfers the
  * canvas to `worker` exactly once via `transferControlToOffscreen` and
- * forwards resize/transform/invalidate/scene commands over the versioned
- * protocol. Blob requests are correlated by id; disposal rejects pending
- * requests with `StageDisposedError`.
+ * forwards resize/transform/invalidate/scene commands. Blob requests are
+ * correlated by id; disposal rejects pending requests with
+ * `StageDisposedError`. Invalid size/DPR/matrix input throws `StageConfigError`
+ * here, the same as `createStage`.
  */
-export function createWorkerStage(
+export function createWorkerStage<Scene = unknown>(
   canvas: HTMLCanvasElement,
   worker: WorkerScope,
   options: WorkerStageOptions & Readonly<{ width: number; height: number }>,
-): WorkerStage {
+): WorkerStage<Scene> {
   const { width, height } = options;
+  requireSize({ height, width }, 'Worker stage');
+  const dpr = options.dpr ?? 1;
+  requireDpr(dpr, 'Worker stage');
   if (typeof canvas.transferControlToOffscreen !== 'function') {
     throw new StageUnsupportedError('This canvas cannot be transferred to a worker (transferControlToOffscreen).');
   }
-  const dpr = options.dpr ?? 1;
   const controller = new AbortController();
   const pending = new Map<number, { reject: (err: Error) => void; resolve: (blob: Blob) => void }>();
   let nextBlobId = 1;
@@ -85,8 +94,16 @@ export function createWorkerStage(
       warn(`Ignoring unrecognized message from worker.`);
       return;
     }
-    if (!checkProtocol(message, 'worker→main')) return;
     if (message.type === 'ready') {
+      if (message.protocol !== STAGE_WORKER_PROTOCOL) {
+        // A stale cached worker: fail loudly and tear the stage down.
+        const error = new StageError(
+          `Worker stage protocol ${String(message.protocol)} does not match ${STAGE_WORKER_PROTOCOL}.`,
+        );
+        rejectReady(error);
+        dispose();
+        return;
+      }
       resolveReady();
       return;
     }
@@ -106,7 +123,7 @@ export function createWorkerStage(
       return;
     }
     if (message.type === 'error') {
-      warn(`Worker reported an error: ${message.error}`);
+      reportWorkerError(message.error);
       return;
     }
     warn(`Ignoring unknown message type "${String((message as { type?: unknown }).type)}" from worker.`);
@@ -119,7 +136,6 @@ export function createWorkerStage(
       canvas: offscreen,
       dpr,
       height,
-      layers: options.layers,
       protocol: STAGE_WORKER_PROTOCOL,
       type: 'init',
       width,
@@ -130,7 +146,7 @@ export function createWorkerStage(
   const dispose = (): void => {
     if (disposed) return;
     disposed = true;
-    worker.postMessage({ protocol: STAGE_WORKER_PROTOCOL, type: 'dispose' });
+    worker.postMessage({ type: 'dispose' });
     worker.removeEventListener('message', onMessage);
     for (const entry of pending.values()) entry.reject(new StageDisposedError('Stage disposed before blob export.'));
     pending.clear();
@@ -145,25 +161,29 @@ export function createWorkerStage(
       return disposed;
     },
     invalidate(layerId) {
-      command({ layerId, protocol: STAGE_WORKER_PROTOCOL, type: 'invalidate' });
+      command({ layerId, type: 'invalidate' });
     },
     ready,
-    resize(size, nextDpr) {
-      command({ dpr: nextDpr ?? dpr, protocol: STAGE_WORKER_PROTOCOL, type: 'resize', ...size });
+    resize(size: Size, nextDpr?: number) {
+      requireSize(size, 'Worker stage');
+      const resolvedDpr = nextDpr ?? dpr;
+      requireDpr(resolvedDpr, 'Worker stage');
+      command({ dpr: resolvedDpr, type: 'resize', ...size });
     },
     [Symbol.dispose]: dispose,
-    sendScene(scene) {
-      command({ protocol: STAGE_WORKER_PROTOCOL, scene, type: 'scene' });
+    sendScene(scene: Scene) {
+      command({ scene, type: 'scene' });
     },
-    setTransform(matrix) {
-      command({ matrix, protocol: STAGE_WORKER_PROTOCOL, type: 'matrix' });
+    setTransform(matrix: Matrix) {
+      requireFiniteMatrix(matrix);
+      command({ matrix, type: 'matrix' });
     },
     async toBlob(blobOptions) {
       if (disposed) throw new StageDisposedError('Cannot export a disposed stage.');
       const id = nextBlobId++;
       const blob = await new Promise<Blob>((resolve, reject) => {
         pending.set(id, { reject, resolve });
-        command({ id, options: blobOptions, protocol: STAGE_WORKER_PROTOCOL, type: 'blob' });
+        command({ id, options: blobOptions, type: 'blob' });
       });
       return blob;
     },

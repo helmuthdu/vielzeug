@@ -63,17 +63,3 @@ export function* iterateTileRange(range: TileRange): Generator<TileCoord> {
 export function tileKey(coord: TileCoord): string {
   return `${String(coord.col)}:${String(coord.row)}`;
 }
-
-/** The chunk (grouped tiles) a coordinate belongs to. */
-export function chunkOf(coord: TileCoord, chunkSize: number): Readonly<{ cx: number; cy: number }> {
-  if (!Number.isInteger(chunkSize) || chunkSize < 1) {
-    throw new AtlasConfigError(`chunkSize must be a positive integer, got ${chunkSize}`);
-  }
-  return { cx: Math.floor(coord.col / chunkSize), cy: Math.floor(coord.row / chunkSize) };
-}
-
-/** A stable string key for a tile's chunk, e.g. `"c1,0"`. */
-export function chunkKey(coord: TileCoord, chunkSize: number): string {
-  const { cx, cy } = chunkOf(coord, chunkSize);
-  return `c${String(cx)},${String(cy)}`;
-}

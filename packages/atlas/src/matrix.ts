@@ -35,6 +35,23 @@ export function rotate(radians: number): Matrix {
   return [cos, sin, -sin, cos, 0, 0];
 }
 
+/** Transform applied around an anchor point: translate(anchor) · matrix · translate(-anchor). */
+export function around(anchor: Point, matrix: Matrix): Matrix {
+  return multiply(multiply(translate(anchor.x, anchor.y), matrix), translate(-anchor.x, -anchor.y));
+}
+
+/** Average axis scale of a matrix; 0 for degenerate matrices. */
+export function scaleOf(matrix: Matrix): number {
+  const sx = Math.hypot(matrix[0], matrix[1]);
+  const sy = Math.hypot(matrix[2], matrix[3]);
+  return (sx + sy) / 2;
+}
+
+/** Serializes to a CSS `matrix()` value usable in a DOM element's `transform`. */
+export function toCssMatrix(matrix: Matrix): string {
+  return `matrix(${matrix.join(',')})`;
+}
+
 /** Returns null for non-invertible matrices (zero determinant). */
 export function invert(matrix: Matrix): Matrix | null {
   const det = matrix[0] * matrix[3] - matrix[2] * matrix[1];
@@ -48,21 +65,4 @@ export function invert(matrix: Matrix): Matrix | null {
     (matrix[2] * matrix[5] - matrix[3] * matrix[4]) * inv,
     (matrix[1] * matrix[4] - matrix[0] * matrix[5]) * inv,
   ];
-}
-
-/** Transform applied around an anchor point: translate(anchor) · matrix · translate(-anchor). */
-export function around(anchor: Point, matrix: Matrix): Matrix {
-  return multiply(multiply(translate(anchor.x, anchor.y), matrix), translate(-anchor.x, -anchor.y));
-}
-
-/** Decomposes scale from a matrix; returns 0 for degenerate matrices. */
-export function scaleOf(matrix: Matrix): number {
-  const sx = Math.hypot(matrix[0], matrix[1]);
-  const sy = Math.hypot(matrix[2], matrix[3]);
-  return (sx + sy) / 2;
-}
-
-/** Serializes to a CSS `matrix()` value usable in `transform`. */
-export function toCssMatrix(matrix: Matrix): string {
-  return `matrix(${matrix.join(',')})`;
 }

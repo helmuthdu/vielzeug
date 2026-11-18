@@ -59,6 +59,27 @@ A bottom dock is pulled up from its natural position at the end of its container
 
 Set `side="top"` to pin the leading edge instead, or clear `sticky` for a bar that simply sits where the document puts it.
 
+## Floating
+
+With `floating` the bar detaches from its edge and becomes a capsule inset from it on every width: content-hugging, centered, with its own border, radius, and shadow. It replaces the sticky strip rather than layering on it, so the pinning hairline no longer applies.
+
+<ComponentPreview>
+
+```html
+<div
+  style="position: relative; height: 220px; width: 100%; overflow: hidden; border: 1px solid var(--color-contrast-200); border-radius: var(--rounded-lg);">
+  <ore-dock floating label="Example actions">
+    <ore-button icon-only label="Undo"><ore-icon name="undo-2"></ore-icon></ore-button>
+    <ore-button icon-only label="Redo"><ore-icon name="redo-2"></ore-icon></ore-button>
+    <ore-button slot="commit" color="primary">Save</ore-button>
+  </ore-dock>
+</div>
+```
+
+</ComponentPreview>
+
+Inside a docs preview (or any container narrower than the window) the bar anchors to its containing block instead of the viewport, so it stays inside the frame. The host spans the container but only the capsule is interactive, so pointers in the empty strip beside it reach the content underneath.
+
 ## Attached
 
 `attached` fuses the tool row into one segmented capsule: the tools share an edge, take an equal share of the bar's width, and keep rounded ends with a square seam. The flanks stay outside the capsule, so a `slot="start"` back button keeps its own shape. Corner geometry reaches the buttons through `--button-radius`, the same channel `ore-button-group[attached]` uses, so an app-wide button radius must exclude a dock's tools the way it excludes an attached button group:
@@ -175,13 +196,14 @@ Set the properties on a parent for contextual theming, or on the dock itself:
 
 ### Attributes
 
-| Attribute       | Type                            | Default          | Description                                      |
-| --------------- | ------------------------------- | ---------------- | ------------------------------------------------ |
-| `side`          | `'top' \| 'bottom'`             | `'bottom'`       | Viewport edge the bar pins to                    |
-| `sticky`        | `boolean`                       | `true`           | Pin to the edge while the container scrolls      |
-| `attached`      | `boolean`                       | `false`          | Fuse the tool row into one segmented capsule     |
-| `mobile-layout` | `'auto' \| 'full' \| 'compact'` | `'auto'`         | Phone row sizing: adapt, fill, or hug and center |
-| `label`         | `string`                        | `'Page actions'` | Accessible name for the toolbar landmark         |
+| Attribute       | Type                            | Default          | Description                                                    |
+| --------------- | ------------------------------- | ---------------- | -------------------------------------------------------------- |
+| `side`          | `'top' \| 'bottom'`             | `'bottom'`       | Viewport edge the bar pins to                                  |
+| `sticky`        | `boolean`                       | `true`           | Pin to the edge while the container scrolls                    |
+| `floating`      | `boolean`                       | `false`          | Detach the bar from its edge as a capsule inset from that edge |
+| `attached`      | `boolean`                       | `false`          | Fuse the tool row into one segmented capsule                   |
+| `mobile-layout` | `'auto' \| 'full' \| 'compact'` | `'auto'`         | Phone row sizing: adapt, fill, or hug and center               |
+| `label`         | `string`                        | `'Page actions'` | Accessible name for the toolbar landmark                       |
 
 ### Slots
 
@@ -206,13 +228,14 @@ Set the properties on a parent for contextual theming, or on the dock itself:
 
 The host reflects the state its CSS reads. These exist because no selector can derive them: `:has()` cannot see slotted content and a `<slot>` always matches `:empty`.
 
-| Attribute             | Set when                                   |
-| --------------------- | ------------------------------------------ |
-| `data-start-claimed`  | Something is assigned to the `start` slot  |
-| `data-center-claimed` | Something is assigned to the `center` slot |
-| `data-tools-claimed`  | Something is assigned to the default slot  |
-| `data-commit-claimed` | Something is assigned to the `commit` slot |
-| `data-pinned`         | The bar is holding its edge mid-scroll     |
+| Attribute             | Set when                                                    |
+| --------------------- | ----------------------------------------------------------- |
+| `data-start-claimed`  | Something is assigned to the `start` slot                   |
+| `data-center-claimed` | Something is assigned to the `center` slot                  |
+| `data-tools-claimed`  | Something is assigned to the default slot                   |
+| `data-commit-claimed` | Something is assigned to the `commit` slot                  |
+| `data-pinned`         | The bar is holding its edge mid-scroll                      |
+| `data-preview-mode`   | A floating bar sits in a container narrower than the window |
 
 ### CSS Custom Properties
 
@@ -223,6 +246,7 @@ The host reflects the state its CSS reads. These exist because no selector can d
 | `--dock-border-color` | `var(--color-divider)`      | Pinned hairline and the phone pill's border |
 | `--dock-blur`         | `var(--blur-sm)`            | Blur radius behind the bar. `0` drops it    |
 | `--dock-radius`       | `var(--rounded-full)`       | Corner radius of the pinned phone pill      |
+| `--dock-shadow`       | `var(--shadow-md)`          | Shadow under a `floating` bar               |
 | `--dock-offset`       | `var(--size-2)`             | Inset from the viewport's edges             |
 | `--dock-gap`          | `var(--size-3)`             | Gap between the bar's places                |
 | `--dock-tool-gap`     | `var(--size-2)`             | Gap between the tools in the row            |

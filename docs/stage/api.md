@@ -7,30 +7,31 @@ description: API reference for the Stage retained-mode 2D canvas engine.
 
 ## API Overview
 
-| Symbol                      | Purpose                                              | Execution | Common gotcha                                                     |
-| --------------------------- | ---------------------------------------------------- | --------- | ----------------------------------------------------------------- |
-| `createStage()`             | Retained-mode layered canvas renderer                | Sync      | Paint callbacks draw in world units; the stage applies the matrix |
-| `StageError`                | Base class for all stage errors                      | Sync      | Narrow with `instanceof StageError`                               |
-| `StageConfigError`          | Invalid sizes, unknown layer ids                     | Sync      | Thrown at call time                                               |
-| `StageDisposedError`        | Blob export or worker request after disposal         | Sync      | Worker blob failures carry a `kind` mapped to this class          |
-| `StageUnsupportedError`     | Missing browser capability (2D context, blob export) | Sync      | No silent degradation to a lesser path                            |
-| `Point` / `Rect` / `Matrix` | Structural shapes shared across the canvas toolkit   | Sync      | All readonly; treat as values                                     |
+| Symbol                  | Purpose                                                 | Execution | Common gotcha                                                     |
+| ----------------------- | ------------------------------------------------------- | --------- | ----------------------------------------------------------------- |
+| `createStage()`         | Retained-mode layered canvas renderer                   | Sync      | Paint callbacks draw in world units; the stage applies the matrix |
+| `StageController`       | Control surface shared by main-thread and worker stages | Type      | Both modes are assignable to it; mode extras are not              |
+| `StageError`            | Base class for all stage errors                         | Sync      | Narrow with `instanceof StageError`                               |
+| `StageConfigError`      | Invalid sizes, duplicate/unknown layer ids              | Sync      | Thrown at call time, in both modes                                |
+| `StageDisposedError`    | Blob export or worker request after disposal            | Sync      | Worker blob failures carry a `kind` mapped to this class          |
+| `StageUnsupportedError` | Missing browser capability (2D context, blob export)    | Sync      | No silent degradation to a lesser path                            |
 
 ## Package Entry Point
 
-| Import            | Purpose                                 |
-| ----------------- | --------------------------------------- |
-| `@vielzeug/stage` | Stage factory, types, and error classes |
+| Import                   | Purpose                                           |
+| ------------------------ | ------------------------------------------------- |
+| `@vielzeug/stage`        | Stage factory, controller type, and error classes |
+| `@vielzeug/stage/worker` | Worker-rendered stages over `OffscreenCanvas`     |
+
+Geometry is not re-declared here: `Point`, `Rect`, `Matrix`, and `FrameScheduler` come from
+[`@vielzeug/atlas`](/atlas/api/), which `@vielzeug/stage` depends on.
 
 ---
 
 ## Core Types
 
 ```ts
-type Point = Readonly<{ x: number; y: number }>;
-type Rect = Readonly<{ x: number; y: number; width: number; height: number }>;
-/** Canvas2D/DOMMatrix element order: [a, b, c, d, e, f]. */
-type Matrix = readonly [number, number, number, number, number, number];
+import type { FrameScheduler, Matrix, Rect, Size } from '@vielzeug/atlas';
 
 type PaintContext = Readonly<{
   /** World→screen matrix (DPR already applied to the context transform). */
@@ -43,11 +44,6 @@ type PaintContext = Readonly<{
   time: number;
 }>;
 
-type FrameScheduler = Readonly<{
-  requestFrame: (callback: (time: number) => void) => number;
-  cancelFrame: (handle: number) => void;
-}>;
-
 /** A backing surface a layer paints into. `OffscreenCanvas` on workers. */
 type StageSurface = {
   width: number;
@@ -56,14 +52,23 @@ type StageSurface = {
 };
 type CreateSurface = (width: number, height: number) => StageSurface;
 
-type StageSpriteSheet = Readonly<{
-  frameWidth: number;
-  frameHeight: number;
-  /** Frames per row in the sheet. */
-  columns: number;
-  frames: number;
+/**
+ * The control surface both stage modes share. A main-thread `Stage` and a
+ * `WorkerStage` are interchangeable wherever only control is needed.
+ */
+type StageController = Readonly<{
+  resize: (size: Size, dpr?: number) => void;
+  setTransform: (matrix: Matrix) => void;
+  invalidate: (layerId?: string) => void;
+  toBlob: (options?: { type?: string; quality?: number }) => Promise<Blob>;
+  dispose: () => void;
+  readonly disposed: boolean;
+  readonly disposalSignal: AbortSignal;
+  [Symbol.dispose]: () => void;
 }>;
 ```
+
+`Size` comes from [`@vielzeug/atlas`](/atlas/api/) as well.
 
 ---
 
@@ -71,23 +76,23 @@ type StageSpriteSheet = Readonly<{
 
 ```ts
 function createStage(
-  canvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement | OffscreenCanvas,
   options: StageOptions & Readonly<{ width: number; height: number }>,
 ): Stage;
 ```
 
 Creates a retained-mode stage: every layer owns a cached backing surface, is repainted only when dirty, and all layers are composited onto `canvas` in order each scheduled frame. The canvas backing store is sized `width × dpr` by `height × dpr`.
 
-| Parameter               | Type                            | Description                                                            |
-| ----------------------- | ------------------------------- | ---------------------------------------------------------------------- |
-| `canvas`                | `HTMLCanvasElement`             | Visible canvas the stage composites into                               |
-| `options.width`         | `number`                        | CSS width in pixels; must be positive and finite                       |
-| `options.height`        | `number`                        | CSS height in pixels; must be positive and finite                      |
-| `options.dpr`           | `number?`                       | Device pixel ratio; defaults to `1`                                    |
-| `options.layers`        | `readonly StageLayerOptions[]?` | Initial layers in paint order                                          |
-| `options.scheduler`     | `FrameScheduler?`               | Injectable rAF scheduler for deterministic tests                       |
-| `options.createSurface` | `CreateSurface?`                | Backing-surface factory; defaults to `OffscreenCanvas`/document canvas |
-| `options.background`    | `string \| null?`               | Color cleared under the layers; defaults to transparent                |
+| Parameter               | Type                                   | Description                                                            |
+| ----------------------- | -------------------------------------- | ---------------------------------------------------------------------- |
+| `canvas`                | `HTMLCanvasElement \| OffscreenCanvas` | Canvas the stage composites into (visible or transferred)              |
+| `options.width`         | `number`                               | CSS width in pixels; must be positive and finite                       |
+| `options.height`        | `number`                               | CSS height in pixels; must be positive and finite                      |
+| `options.dpr`           | `number?`                              | Device pixel ratio; defaults to `1`                                    |
+| `options.layers`        | `readonly StageLayerOptions[]`         | Layers in paint order, fixed at creation; duplicate ids throw          |
+| `options.scheduler`     | `FrameScheduler?`                      | Injectable rAF scheduler for deterministic tests                       |
+| `options.createSurface` | `CreateSurface?`                       | Backing-surface factory; defaults to `OffscreenCanvas`/document canvas |
+| `options.background`    | `string \| null?`                      | Color cleared under the layers; defaults to transparent                |
 
 **Returns:** `Stage` handle.
 
@@ -106,37 +111,31 @@ stage.invalidate('scene');
 
 ### `Stage` members
 
-| Member                                                        | Description                                                                       |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `resize(size, dpr?)`                                          | Changes CSS size/DPR; resizes the canvas and invalidates all layers               |
-| `setTransform(matrix)`                                        | Sets the world→screen matrix (CSS pixels, without DPR); invalidates all layers    |
-| `addLayer(options)`                                           | Appends a layer; duplicate ids throw `StageConfigError`                           |
-| `removeLayer(id)`                                             | Removes a layer and releases its surface                                          |
-| `moveLayer(id, index)`                                        | Reorders a layer within `[0, layerCount)`                                         |
-| `invalidate(layerId?)`                                        | Marks one (or all) layers dirty and schedules a frame                             |
-| `render(time?)`                                               | Runs the pending repaint/composite synchronously; returns which layers repainted  |
-| `drawSpriteFrame(ctx, image, sheet, frame, rect)`             | Draws one sprite-sheet cell scaled into `rect` (world units)                      |
-| `toBlob(options?)`                                            | Exports the composited canvas as a blob; `StageUnsupportedError` when unavailable |
-| `visibleRect`                                                 | Visible world-space rect derived from the inverse transform                       |
-| `matrix`, `width`, `height`, `dpr`, `layerIds`, `canvas`      | Current configuration                                                             |
-| `disposed`, `disposalSignal`, `dispose()`, `[Symbol.dispose]` | Disposal contract; post-dispose calls are inert                                   |
+`Stage` extends `StageController` (`resize`, `setTransform`, `invalidate`, `toBlob`, `dispose`, `disposed`, `disposalSignal`, `[Symbol.dispose]`) and adds:
 
-Paint callbacks receive a context whose transform is `dpr × matrix`, so they draw in world units. Clear and reset with `ctx.setTransform(1, 0, 0, 1, 0, 0)` only if you must paint in device pixels.
+| Member                                       | Description                                                                            |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `render(time?)`                              | Runs the pending repaint/composite synchronously; `time` defaults to `scheduler.now()` |
+| `visibleRect`                                | Visible world-space rect derived from the inverse transform                            |
+| `matrix`, `width`, `height`, `dpr`, `canvas` | Current configuration                                                                  |
 
----
+`toBlob()` flushes a pending frame before rasterizing, so it always exports the current frame. Paint callbacks receive a context whose transform is `dpr × matrix`, so they draw in world units. Clear and reset with `ctx.setTransform(1, 0, 0, 1, 0, 0)` only if you must paint in device pixels.
 
 ---
 
 ## Worker Subpath (`@vielzeug/stage/worker`)
 
-| Export                                                                                                                   | Description                                                                                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `createWorkerStage(canvas, worker, options)`                                                                             | Main-thread client: transfers `canvas` to `worker` once, then drives it over the protocol; returns `ready`, `resize`, `setTransform`, `invalidate`, `sendScene`, `toBlob`, `dispose` |
-| `serveStage(scope, setup)`                                                                                               | Worker half: waits for `init`, creates a `createStage` on the transferred `OffscreenCanvas`, and services commands; `setup` returns `{ layers, onScene?, onStart?, onDispose? }`     |
-| `STAGE_WORKER_PROTOCOL`, `checkProtocol()`                                                                               | Protocol version constant and dev-gated mismatch check                                                                                                                               |
-| `WorkerScope`, `WorkerSelfScope`, `WorkerStage`, `WorkerStageOptions`, `StageServer`, `StageSceneMessage`, message types | Supporting types for both halves                                                                                                                                                     |
+| Export                                                                                                  | Description                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createWorkerStage<Scene>(canvas, worker, options)`                                                     | Main-thread client: transfers `canvas` to `worker` once, then drives it; a `StageController` plus `ready` and `sendScene(scene: Scene)`                                |
+| `serveStage<Scene>(scope, setup)`                                                                       | Worker half: waits for `init`, creates a `createStage` on the transferred `OffscreenCanvas`, and services commands; `setup` returns `{ layers, onScene?, onDispose? }` |
+| `WorkerScope`, `WorkerSelfScope`, `WorkerStage`, `WorkerStageOptions`, `ServeStageSetup`, `StageServer` | Supporting types for both halves                                                                                                                                       |
 
-`createWorkerStage` throws `StageUnsupportedError` when the canvas cannot transfer control (`transferControlToOffscreen` missing). `dispose()` posts a final `dispose` command, rejects in-flight `toBlob()` promises with `StageDisposedError`, and makes later calls inert.
+The worker owns its layer painters: `serveStage`'s `setup` supplies them, and the main thread never names layers. `onScene(scene, stage)` runs for each forwarded `scene` command and owns repaints — call `stage.invalidate(layerId)` for the layers the payload changed. `server.stage` exposes the created stage whenever you need it.
+
+`Scene` is the application payload type shared by `sendScene` and `onScene`, so neither side casts. Invalid size, DPR, or matrix input throws `StageConfigError` on the main thread, exactly like `createStage`. Worker-side exceptions are surfaced through `reportError`. The message protocol is internal: its version is checked once at the init/ready handshake, and a mismatch rejects `ready` with a `StageError` and disposes the stage.
+
+`createWorkerStage` throws `StageUnsupportedError` when the canvas cannot transfer control (`transferControlToOffscreen` missing). `dispose()` posts a final `dispose` command, rejects in-flight `toBlob()` promises with `StageDisposedError`, aborts `disposalSignal` (terminate the worker from there — the creator owns it), and makes later calls inert.
 
 ## Errors
 

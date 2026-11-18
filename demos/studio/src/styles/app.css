@@ -27,6 +27,12 @@ body {
 /* Height of the floating bar plus its top/bottom offsets: content that must
    stay visible (like the palette page) steps below it by this much. */
 .studio-shell-root {
+  /* One offset drives both the bar's floating inset and the content inset that
+     inherits it, so the two can never drift apart. */
+  --navbar-offset: var(--size-4);
+  /* One offset for the floating bottom dock and the badge that clears it, so the
+     two can never drift apart. */
+  --dock-offset: var(--size-5);
   --shell-inset: calc(var(--navbar-height, var(--size-14)) + var(--navbar-offset, var(--size-3)) * 2);
 }
 
@@ -52,6 +58,12 @@ body {
   --navbar-item-active-bg: var(--color-primary-backdrop);
   --navbar-item-active-color: var(--color-primary-dark);
 
+  /* A floating bar should read as a detached capsule, not a full-width strip:
+     the bar's `max-width` shrinks it to its content and `margin-inline: auto`
+     centres it. On narrow screens the content is wider than the bar, so the
+     width falls back to the container and the collapse wraps as usual. */
+  --navbar-width: fit-content;
+
   /* The floating host spans the full window width; only the visible bar should
      own the pointer. Empty margins around it fall through to the canvas, so a
      pan or stroke that starts beside the bar still reaches the viewport. */
@@ -60,6 +72,21 @@ body {
 
 .shell-navbar::part(bar) {
   pointer-events: auto;
+}
+
+/* Desktop keeps a floor under the capsule so the nav reads as a stable bar
+   even with few tabs; below the navbar's own 768px collapse breakpoint the
+   capsule must stay content-sized, so this is desktop-only. */
+@media (width > 768px) {
+  .shell-navbar::part(bar) {
+    min-width: var(--size-96);
+  }
+}
+
+/* The mobile overflow panel is a stacked list, not a capsule: it keeps the
+   full bar width even though the bar itself shrinks to its content. */
+.shell-navbar::part(mobile-menu) {
+  max-width: 100%;
 }
 
 .shell-brand {
@@ -81,33 +108,95 @@ body {
   align-items: center;
 }
 
-.shell-actions {
-  display: flex;
-  gap: var(--size-3);
-  align-items: center;
-}
-
-/* Mockup's zoom cluster: light primary tint with primary ink. */
+/* Zoom cluster docked in the scene's bottom dock: light primary tint with
+   primary ink. The buttons sit inside ore-tooltip wrappers, so `attached`
+   fusion (::slotted(ore-button)) cannot reach them; the capsule is drawn on
+   the group instead. No padding of its own - the dock already pads its
+   tool slot, so the capsule hugs the buttons. */
 .zoom-group {
-  --button-bg: var(--color-primary-backdrop);
+  --button-bg: transparent;
   --button-color: var(--color-primary);
   --button-border-color: transparent;
-  --button-selected-bg: var(--color-primary-light);
-}
+  --button-radius: var(--rounded-full);
+  --group-gap: 0;
 
-.shell-divider {
-  width: var(--border-2);
-  height: var(--size-5);
-  background-color: var(--color-divider);
+  background-color: var(--color-primary-backdrop);
   border-radius: var(--rounded-full);
 }
 
-/* Secondary chrome steps aside on narrow screens; tabs and actions win. */
-@media (max-width: 639px) {
-  .shell-crumb,
-  .shell-brand-name,
-  .shell-divider,
-  .shell-actions ore-avatar-group {
-    display: none;
-  }
+/* Theme toggle in the navbar's persistent slot; tinted capsule so it reads
+   with the same control family as the docked zoom cluster. */
+.shell-theme {
+  --button-bg: transparent;
+  --button-color: var(--color-primary);
+  --button-border-color: transparent;
+  --button-radius: var(--rounded-full);
+  display: flex;
+  align-items: center;
+  padding: var(--size-1);
+  background-color: var(--color-primary-backdrop);
+  border-radius: var(--rounded-full);
+}
+
+/* Floating bottom tool dock shared by the board, flow, and map scenes. The
+   capsule itself is `ore-dock floating`; this only themes what the dock
+   exposes as tokens and keeps the docked buttons at the scene's compact size. */
+.studio-dock {
+  --dock-bg: var(--surface-base);
+  --dock-border-color: var(--color-neutral-border);
+  --dock-shadow: var(--shadow-lg);
+  --dock-tool-gap: var(--size-1);
+  --button-radius: var(--rounded-full);
+  --button-min-height: var(--size-9);
+}
+
+/* Docked tool groups read as one cluster: tighter than the button group's
+   default bezel gap. `--group-gap` is declared on the group's own `:host`, so
+   the override has to land on the element itself. */
+.studio-dock ore-button-group:not(.zoom-group) {
+  --group-gap: var(--size-1);
+}
+
+/* Tooltips wrap each docked button, so they have to sit in the row like the buttons they hold. */
+.studio-dock ore-tooltip {
+  display: inline-flex;
+}
+
+/* The vertical dividers between tool groups: a short rule centred in the row.
+   Extra inline air so the rule never sits flush against the capsules on
+   either side (the dock's own tool gap alone is too tight). */
+.studio-dock ore-separator {
+  align-self: center;
+  height: var(--size-5);
+  margin-inline: var(--size-2);
+}
+
+/* Active tool/toggle in any dock (board tools, flow routing). */
+.studio-dock .is-active {
+  --button-bg: var(--color-primary-backdrop);
+  --button-color: var(--color-primary-dark);
+}
+
+/* Info badge shared by every scene (board hint, flow order, map stats): one
+   `ore-badge` pill centred above the floating bottom dock. The badge owns its
+   own visuals; this only places it and lets long text truncate (the full text
+   stays in `title`). */
+.studio-badge {
+  /* The pill truncates inside its own shadow tree, so the cap travels as a token. */
+  --badge-max-width: min(calc(100vw - var(--size-6)), 40rem);
+  /* Clears the dock: its bottom offset (--dock-offset) plus its real height,
+     which `trackDockHeight` publishes as --dock-height (the capsule wraps on
+     narrow viewports, so a fixed guess lands the pill inside the dock). The
+     fallback only covers the first frame before the observer reports. */
+  position: absolute;
+  bottom: calc(var(--dock-offset) + var(--dock-height, var(--size-11)) + var(--size-2));
+  left: 50%;
+  margin: 0;
+  pointer-events: none;
+  translate: -50% 0;
+}
+
+/* A custom element's own `display` outranks the UA sheet, so `hidden` needs the reset. */
+.studio-badge[hidden] {
+  display: none;
 }

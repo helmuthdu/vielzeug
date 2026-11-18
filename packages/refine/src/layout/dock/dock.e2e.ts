@@ -835,6 +835,84 @@ test.describe('Adaptive mobile layout', () => {
   });
 });
 
+test.describe('Floating', () => {
+  test('floats a content-hugging capsule inset from its edge', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 900, width: 1280 });
+    await fullBleed(page);
+    await refinePage.mountComponent(`
+      <ore-dock id="dock" floating label="Canvas actions">
+        <button>Undo</button>
+        <button>Redo</button>
+      </ore-dock>
+    `);
+
+    const { bar, host, pinned } = await geometry(page, 'dock');
+    const viewport = page.viewportSize();
+
+    // The host spans the container minus its own inset, so the capsule can centre itself.
+    expect(host.width).toBeLessThan(viewport?.width ?? 0);
+    expect(viewport!.width - host.width).toBeLessThan(2 * 48);
+    // Detached: inset from the bottom edge rather than flush with it.
+    expect(bar.bottom).toBeLessThan(900);
+    expect(bar.bottom).toBeGreaterThan(900 - 96);
+    // A capsule, not a strip: it hugs its content and sits in the middle of the container.
+    expect(bar.width).toBeLessThan(viewport?.width ?? 0);
+    expect(Math.abs((bar.left + bar.right) / 2 - (viewport?.width ?? 0) / 2)).toBeLessThan(2);
+    // A floating bar is detached at every scroll position, so it never reports the pinned hairline.
+    expect(pinned).toBe(false);
+  });
+
+  test('lets pointers through the empty strip beside the capsule', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 900, width: 1280 });
+    await fullBleed(page);
+    await refinePage.mountComponent(`
+      <div id="canvas" style="position: absolute; inset: 0; background: var(--color-canvas)"></div>
+      <ore-dock id="dock" floating label="Canvas actions"><button>Undo</button></ore-dock>
+    `);
+
+    const hit = await page.evaluate(() => {
+      const bar = document.querySelector('#dock')!.shadowRoot!.querySelector('.dock')!.getBoundingClientRect();
+      // Just outside the capsule, in the row the host still spans.
+      const beside = document.elementFromPoint(bar.left - 24, bar.top + bar.height / 2)?.id;
+      const inside = document.elementFromPoint(bar.left + bar.width / 2, bar.top + bar.height / 2)?.tagName;
+      return { beside, inside };
+    });
+
+    expect(hit.beside).toBe('canvas');
+    expect(hit.inside).toBe('BUTTON');
+  });
+
+  test('keeps a floating capsule inside a container narrower than the window', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 900, width: 1280 });
+    await refinePage.mountComponent(`
+      <ore-dock id="dock" floating label="Canvas actions"><button>Undo</button></ore-dock>
+    `);
+
+    // The shared fixture caps `.frame` well below the viewport, which is the docs-preview case:
+    // the bar must anchor to its containing block instead of escaping the frame.
+    await page.waitForFunction(() => document.querySelector('#dock')?.hasAttribute('data-preview-mode'));
+
+    const position = await page.locator('#dock').evaluate((dock) => getComputedStyle(dock).position);
+
+    expect(position).toBe('absolute');
+  });
+
+  test('has no violations for a floating capsule', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 900, width: 1280 });
+    await fullBleed(page);
+    await refinePage.mountComponent(`
+      <ore-dock floating label="Canvas actions">
+        <ore-button icon-only label="Undo"><ore-icon name="undo-2"></ore-icon></ore-button>
+        <ore-button slot="commit" color="primary">Save</ore-button>
+      </ore-dock>
+    `);
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
+  });
+});
+
 test.describe('Accessibility', () => {
   for (const slot of ['start', 'center', 'commit']) {
     test(`has no violations for a content-width ${slot} bar`, async ({ page, refinePage }) => {

@@ -20,7 +20,7 @@ keywords:
     path,
     dag,
   ]
-exports: [bezierRoute, orthogonalRoute, topologicalOrder, findCycles]
+exports: [bezierRoute, orthogonalRoute, topologicalOrder, findCyclicGroups]
 related: [atlas]
 environments: [browser, node, ssr, deno]
 ---
@@ -31,7 +31,7 @@ environments: [browser, node, ssr, deno]
 
 ## Why Wire?
 
-Node editors always rediscover the same hard parts: wires that route _around_ nodes instead of through them, bend counts that change every frame, and ordering or cycle checks that recurse until the stack dies on a big graph. Wire computes all of it as pure functions: cubic bezier paths anchored to port sides, A\* Manhattan routes over a padded-obstacle visibility graph with a per-bend penalty, input-order-stable topological sorting, and Tarjan SCC cycle detection — iterative, so 50,000-node chains are fine.
+Node editors always rediscover the same hard parts: wires that route _around_ nodes instead of through them, bend counts that change every frame, and ordering or cycle checks that recurse until the stack dies on a big graph. Wire computes all of it as pure functions: cubic bezier geometry anchored to port sides, A\* Manhattan routes over a padded-obstacle visibility graph with a per-bend penalty, input-order-stable topological sorting, and Tarjan SCC cycle detection — iterative, so 50,000-node chains are fine.
 
 ```ts
 // Before
@@ -39,10 +39,11 @@ Node editors always rediscover the same hard parts: wires that route _around_ no
 // breaks, and recursive DFS that stack-overflows on deep graphs.
 
 // After
-import { bezierRoute, findCycles, orthogonalRoute, topologicalOrder } from '@vielzeug/wire';
+import { bezierRoute, findCyclicGroups, orthogonalRoute, topologicalOrder } from '@vielzeug/wire';
 
-const d = bezierRoute({ side: 'right', x: 100, y: 40 }, { side: 'left', x: 320, y: 120 });
+const curve = bezierRoute({ side: 'right', x: 100, y: 40 }, { side: 'left', x: 320, y: 120 });
 
+// Pass every node bound; the router exempts each port's own node for its exit.
 const waypoints = orthogonalRoute(fromPort, toPort, { obstacles: nodeBounds });
 // waypoints is null when every route is blocked — render a dashed fallback.
 ```
@@ -85,13 +86,18 @@ yarn add @vielzeug/wire
 ## Quick Start
 
 ```ts
-import { bezierRoute, findCycles, orthogonalRoute, topologicalOrder } from '@vielzeug/wire';
+import { bezierRoute, bezierToSvgPath, findCyclicGroups, orthogonalRoute, topologicalOrder } from '@vielzeug/wire';
 
 // Curved wire from a right-facing port to a left-facing port.
-const d = bezierRoute({ side: 'right', x: 100, y: 40 }, { side: 'left', x: 320, y: 120 });
+const curve = bezierRoute({ side: 'right', x: 100, y: 40 }, { side: 'left', x: 320, y: 120 });
+const d = bezierToSvgPath(curve); // or draw curve.c1/curve.c2 on a canvas
 
 // Manhattan wire that avoids the node boxes.
-const points = orthogonalRoute({ x: 100, y: 40 }, { x: 320, y: 120 }, { obstacles: nodeBounds });
+const points = orthogonalRoute(
+  { side: 'right', x: 100, y: 40 },
+  { side: 'left', x: 320, y: 120 },
+  { obstacles: nodeBounds },
+);
 
 // Execution order and cycles for a validation pass.
 const order = topologicalOrder(
@@ -101,7 +107,7 @@ const order = topologicalOrder(
     { from: 'b', to: 'c' },
   ],
 );
-const cycles = findCycles(
+const groups = findCyclicGroups(
   ['a', 'b'],
   [
     { from: 'a', to: 'b' },
@@ -114,11 +120,11 @@ const cycles = findCycles(
 
 <div class="features-grid">
 
-- `bezierRoute()`: cubic bezier `d` string with control points anchored to port sides
-- `orthogonalRoute()`: A\* Manhattan polyline over a visibility graph built from obstacle corners, with a per-bend penalty and deterministic expansion order
-- `polylineToSvgPath()`: SVG `d` serialization with micro-precision formatting
+- `bezierRoute()`: cubic bezier geometry with control points anchored to port sides
+- `orthogonalRoute()`: A\* Manhattan polyline over a visibility graph built from obstacle corners, with a per-bend penalty, owner-obstacle exemption, and deterministic expansion order
+- `bezierToSvgPath()` / `polylineToSvgPath()`: SVG `d` serialization with micro-precision formatting
 - `topologicalOrder()`: Kahn ordering with stable input-order tie breaks; throws `WireGraphError` on cycles
-- `findCycles()`: iterative Tarjan SCCs — each cycle reported once, ordered deterministically
+- `findCyclicGroups()`: iterative Tarjan SCCs — each cyclic group reported once, ordered deterministically
 - `WireError` / `WireGraphError` / `WireConfigError`: typed errors
 - Zero runtime dependencies, no DOM requirement: routes and orders are pure computations
 

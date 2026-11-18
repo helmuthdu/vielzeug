@@ -53,6 +53,9 @@
     "test:types": "tsc -p tsconfig.type-tests.json",
     "verify:exports": "bun verify-exports.mjs"
   },
+  "dependencies": {
+    "@vielzeug/atlas": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^26.6.6",
     "typescript": "^6.0.3",

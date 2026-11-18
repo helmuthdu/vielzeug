@@ -53,7 +53,7 @@
 // harmony call gets revisited, this is what comes back into play.
 //
 // Every `base`/ink chroma value must also stay inside the sRGB-displayable
-// OKLCH gamut for its own L/H: verify with culori's `displayable()` before
+// OKLCH gamut for its own L/H: verify with palette's `isDisplayable()` before
 // hand-picking a chroma, never eyeball it. The gamut ceiling shrinks fast
 // near L0%/L100% and varies a lot by hue (amber/blue/teal are far narrower
 // than violet/red there), so "some existing family's chroma ratio/number"

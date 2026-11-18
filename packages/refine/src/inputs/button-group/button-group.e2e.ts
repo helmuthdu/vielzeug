@@ -84,6 +84,26 @@ test.describe('Segmented control', () => {
     expect(afterArrow).toEqual({ focused: 'grid', group: 'grid' });
   });
 
+  test('a tooltip-wrapped segment joins the selection', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-button-group value="list" label="View mode"><ore-tooltip content="List view" placement="top"><ore-button value="list">List</ore-button></ore-tooltip><ore-tooltip content="Grid view" placement="top"><ore-button value="grid">Grid</ore-button></ore-tooltip></ore-button-group>',
+    );
+
+    await page.locator('ore-tooltip ore-button[value="grid"]').click();
+
+    const state = await page.locator('ore-button-group').evaluate((group) => {
+      const buttons = Array.from(group.querySelectorAll<HTMLElement>('ore-button'));
+
+      return {
+        checked: buttons.map((b) => b.getAttribute('aria-checked')),
+        roles: buttons.map((b) => b.getAttribute('role')),
+        value: group.getAttribute('value'),
+      };
+    });
+
+    expect(state).toEqual({ checked: ['false', 'true'], roles: ['radio', 'radio'], value: 'grid' });
+  });
+
   test('segmented control passes axe checks', async ({ page, refinePage }) => {
     await refinePage.mountComponent(SEGMENTED);
 

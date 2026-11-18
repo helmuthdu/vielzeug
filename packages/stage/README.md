@@ -2,7 +2,7 @@
 
 > Retained-mode 2D canvas stage engine with DPR-aware layers, dirty repaints, and PNG export
 
-Every layer owns a cached backing surface: only dirty layers repaint, and the composite is one `drawImage` per layer. Paint callbacks draw in world units while the stage applies `dpr × matrix`; surfaces and the frame scheduler are injectable, so the engine is unit-testable without a GPU.
+Every layer owns a cached backing surface: only dirty layers repaint, and the composite is one `drawImage` per layer. Paint callbacks draw in world units while the stage applies `dpr × matrix`; surfaces and the frame scheduler are injectable, so the engine is unit-testable without a GPU. Geometry types (`Matrix`, `Rect`) and the `FrameScheduler` contract come from [`@vielzeug/atlas`](https://vielzeug.dev/atlas/api).
 
 ## Installation
 
@@ -37,10 +37,10 @@ stage.invalidate('tokens'); // only the tokens layer repaints
 - **`createStage()`**: layered retained-mode renderer with cached per-layer surfaces
 - **Dirty repaints**: invalidate one layer or all; frames coalesce via an injectable scheduler
 - **DPR-aware transforms**: paint in world units, the stage scales by `dpr × matrix`
-- **`drawSpriteFrame()`**: sprite-sheet cell slicing scaled into world rects
-- **`toBlob()`**: PNG export with typed unsupported-capability errors
+- **`StageController`**: one control type shared by main-thread and worker stages
+- **`toBlob()`**: PNG export that flushes pending frames, with typed unsupported-capability errors
 - **Injectable surfaces**: `createSurface` factory for tests and `OffscreenCanvas` workers
-- **`@vielzeug/stage/worker`**: worker-rendered stages via a transferred `OffscreenCanvas` and a versioned message protocol
+- **`@vielzeug/stage/worker`**: worker-rendered stages via a transferred `OffscreenCanvas` and a typed scene channel
 
 ## Documentation
 

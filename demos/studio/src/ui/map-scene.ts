@@ -1,39 +1,34 @@
 import { createCamera } from '@vielzeug/atlas';
-import { createDragGesture, createPinchGesture, createWheelGesture } from '@vielzeug/gesture';
-import { createStage, type Matrix } from '@vielzeug/stage';
+import { createDragGesture } from '@vielzeug/gesture';
+import { createStage, type StageController } from '@vielzeug/stage';
 import { createWorkerStage } from '@vielzeug/stage/worker';
+import { trackDockHeight } from './dock-badge.ts';
+import '@vielzeug/refine/badge';
 import '@vielzeug/refine/button';
+import '@vielzeug/refine/button-group';
+import '@vielzeug/refine/dock';
+import '@vielzeug/refine/separator';
 import '@vielzeug/refine/tooltip';
-import { createMapModel, FOV_RADIUS, type MapModel, TILE_SIZE } from '../core/map.ts';
-import { createMapLayers, MAP_LAYER_IDS, type MapSceneMessage } from '../core/map-layers.ts';
+import { createMapModel, type MapModel, TILE_SIZE } from '../core/map.ts';
+import { createMapLayers, type MapSceneMessage } from '../core/map-layers.ts';
 import MapWorker from '../worker/map.worker.ts?worker&inline';
+import { createCameraGestures } from './camera-gestures.ts';
 import type { SceneHandle } from './shell.ts';
 import './map.css';
 
-const ZOOM_STEP = 1.0015;
-
 type RenderMode = 'main' | 'worker';
 
-/** Common shape of a main-thread stage and a worker stage client. */
-type Renderer = {
-  dispose: () => void;
-  invalidate: (layerId?: string) => void;
-  /** Flush pending repaints synchronously (main-thread stages only). */
-  render?: (() => unknown) | undefined;
-  resize: (size: { height: number; width: number }, dpr: number) => void;
-  sendScene?: ((scene: MapSceneMessage) => void) | undefined;
-  setTransform: (matrix: Matrix) => void;
-  toBlob: (options?: { type?: string }) => Promise<Blob>;
-};
+const MODE_LABEL: Record<RenderMode, string> = { main: 'Main thread', worker: 'Worker thread' };
 
 /**
  * Mounts the map scene: a tabletop-style tile canvas rendered by
  * @vielzeug/stage. Terrain, tokens, and fog live on separate stage layers;
  * atlas computes visibility (shadowcasting FOV) and hit-tests tokens, and
- * the toolbar exports the composited canvas as a PNG. A mode toggle switches
- * between main-thread rendering and worker rendering (`@vielzeug/stage/worker`
- * with a transferred OffscreenCanvas); switching disposes the current stage
- * and mounts a fresh canvas because the canvas transfer is one-shot.
+ * the toolbar exports the composited canvas as a PNG. A segmented control
+ * switches between main-thread rendering and worker rendering
+ * (`@vielzeug/stage/worker` with a transferred OffscreenCanvas); switching
+ * disposes the current stage and mounts a fresh canvas because the canvas
+ * transfer is one-shot.
  */
 export function mountMapScene(container: HTMLElement): SceneHandle {
   container.innerHTML = '';
@@ -48,36 +43,71 @@ export function mountMapScene(container: HTMLElement): SceneHandle {
   mount.dataset.testid = 'map-mount';
   root.append(mount);
 
-  const toolbar = document.createElement('div');
-  toolbar.className = 'studio-toolbar map-toolbar';
+  // Screen-space preview that follows the pointer during a token drag, so the
+  // token feels dragged rather than jumping on release. Works in both render
+  // modes because it never touches the stage.
+  const ghost = document.createElement('div');
+  ghost.className = 'map-token-ghost';
+  ghost.dataset.testid = 'map-token-ghost';
+  ghost.hidden = true;
+  root.append(ghost);
+
+  const toolbar = document.createElement('ore-dock');
+  toolbar.setAttribute('floating', '');
+  toolbar.setAttribute('label', 'Map actions');
+  toolbar.className = 'studio-dock';
   toolbar.dataset.testid = 'map-toolbar';
   toolbar.innerHTML = `
     <ore-tooltip content="Export PNG" placement="top"><ore-button data-action="export" variant="ghost" icon-only label="Export PNG"><ore-icon name="image-down"></ore-icon></ore-button></ore-tooltip>
-    <ore-tooltip content="Render on a worker thread" placement="top"><ore-button data-action="mode" variant="ghost" icon-only label="Toggle render thread"><ore-icon name="cpu"></ore-icon></ore-button></ore-tooltip>
-    <span class="dock-sep" aria-hidden="true"></span>
-    <span class="map-status" data-testid="map-status"></span>`;
+    <ore-separator orientation="vertical"></ore-separator>
+    <ore-button-group label="Render thread" size="sm" value="main" data-testid="map-thread">
+      <ore-tooltip content="Render on the main thread" placement="top"><ore-button value="main" variant="ghost">Main</ore-button></ore-tooltip>
+      <ore-tooltip content="Render on a worker thread" placement="top"><ore-button value="worker" variant="ghost">Worker</ore-button></ore-tooltip>
+    </ore-button-group>
+    <ore-separator orientation="vertical"></ore-separator>`;
   root.append(toolbar);
 
-  const statusEl = toolbar.querySelector<HTMLElement>('[data-testid="map-status"]');
-  if (!statusEl) throw new Error('map status missing');
+  // Shared info pill above the dock (see .studio-badge in app.css).
+  const statusEl = document.createElement('ore-badge');
+  statusEl.setAttribute('variant', 'frost');
+  statusEl.setAttribute('rounded', 'full');
+  statusEl.className = 'studio-badge';
+  statusEl.dataset.testid = 'map-status';
+  root.append(statusEl);
+  // The status pill sits above the dock; track the capsule's real height.
+  const stopDockTrack = trackDockHeight(toolbar, root);
   const status: HTMLElement = statusEl;
-  const modeButton = toolbar.querySelector<HTMLElement>('[data-action="mode"]');
+  const threadGroup = toolbar.querySelector<HTMLElement>('[data-testid="map-thread"]');
   const exportButton = toolbar.querySelector<HTMLElement>('[data-action="export"]');
 
   // The main-thread model owns interaction (hit-testing, status). In worker
   // mode the worker owns a twin model and receives the same move messages,
   // so both renderers show the same scene.
   const model: MapModel = createMapModel();
-  const camera = createCamera({ initial: { x: -120, y: -120, zoom: 1 } });
+  // Terrain paints every tile in the visible rect; without a floor, zooming
+  // out far enough asks for millions of tiles and locks the main thread.
+  // At 0.25 the worst case is ~10k tiles on a large display.
+  // Framed so the island's hero token (world 24,168) sits clear of the
+  // floating dock: the camera point is the world coordinate at the viewport
+  // centre, so a smaller negative y lifts the scene on screen.
+  const camera = createCamera({ initial: { x: -120, y: -48, zoom: 1 }, minZoom: 0.25 });
   let mode: RenderMode = 'main';
   let detached: (() => void) | null = null;
-  let renderer: Renderer | null = null;
+  let renderer: StageController | null = null;
+  // A rejected drop (onto a wall) replaces the status line briefly.
+  let statusTimer = 0;
 
   function updateStatus(): void {
-    const visible = [...model.fog.visibleKeys].length;
-    status.textContent = `${mode} render · FOV radius ${String(FOV_RADIUS)} · ${String(visible)} tiles visible`;
+    const visible = model.fog.visible.size;
+    status.textContent = `${String(visible)} tiles visible · ${MODE_LABEL[mode]}`;
     status.dataset.visible = String(visible);
     status.dataset.mode = mode;
+  }
+
+  function flashStatus(message: string): void {
+    status.textContent = message;
+    window.clearTimeout(statusTimer);
+    statusTimer = window.setTimeout(updateStatus, 1600);
   }
 
   function attach(): void {
@@ -91,6 +121,8 @@ export function mountMapScene(container: HTMLElement): SceneHandle {
     }
 
     const dpr = window.devicePixelRatio || 1;
+    // Worker mode forwards model moves to the worker twin; main mode has none.
+    let scene: ((message: MapSceneMessage) => void) | null = null;
     if (mode === 'main') {
       renderer = createStage(canvas, {
         background: '#0b1220',
@@ -100,28 +132,24 @@ export function mountMapScene(container: HTMLElement): SceneHandle {
       });
     } else {
       const worker = new MapWorker() as Worker;
-      const remote = createWorkerStage(canvas, worker, {
+      const remote = createWorkerStage<MapSceneMessage>(canvas, worker, {
         background: '#0b1220',
         dpr,
-        layers: MAP_LAYER_IDS.map((id) => ({ id })),
         ...canvasSize(),
       });
-      renderer = {
-        dispose: () => {
-          remote.dispose();
-          worker.terminate();
-        },
-        invalidate: (layerId) => remote.invalidate(layerId),
-        resize: (size, nextDpr) => remote.resize(size, nextDpr),
-        sendScene: (scene) => remote.sendScene(scene),
-        setTransform: (matrix) => remote.setTransform(matrix),
-        toBlob: (options) => remote.toBlob(options),
-      };
+      // The creator owns the worker: terminate it when the stage is disposed.
+      remote.disposalSignal.addEventListener('abort', () => worker.terminate());
+      renderer = remote;
+      scene = (message) => remote.sendScene(message);
     }
-    const current: Renderer = renderer;
+    const current: StageController = renderer;
     current.setTransform(camera.matrix);
 
-    const unsubscribeCamera = camera.subscribe(() => current.setTransform(camera.matrix));
+    const unsubscribeCamera = camera.subscribe(() => {
+      current.setTransform(camera.matrix);
+      // Expose the camera for e2e assertions; the scene is canvas-only.
+      root.dataset.camera = `${camera.state.x.toFixed(1)},${camera.state.y.toFixed(1)}`;
+    });
     const unsubscribe = model.subscribe(() => current.invalidate('tokens'));
 
     function toWorld(clientX: number, clientY: number): { x: number; y: number } {
@@ -129,66 +157,69 @@ export function mountMapScene(container: HTMLElement): SceneHandle {
       return camera.toWorld({ x: clientX - box.left, y: clientY - box.top });
     }
 
-    let draggedTokenId: string | null = null;
+    type MapDrag = { kind: 'pan' } | { kind: 'token'; id: string };
+    let dragTarget: MapDrag | null = null;
+    let panLast = { x: 0, y: 0 };
     const drag = createDragGesture(canvas, {
       activationDistance: 4,
-      onEnd: (detail) => {
-        if (!draggedTokenId) return;
-        const world = toWorld(detail.current.x, detail.current.y);
-        const coord = { col: Math.floor(world.x / TILE_SIZE), row: Math.floor(world.y / TILE_SIZE) };
-        if (!model.isWall(coord)) {
-          model.moveToken(draggedTokenId, coord);
-          current.sendScene?.({ col: coord.col, id: draggedTokenId, row: coord.row, type: 'move' });
+      onEnd: () => {
+        ghost.hidden = true;
+        canvas.classList.remove('is-grabbing');
+        if (!dragTarget || dragTarget.kind === 'pan') {
+          dragTarget = null;
+          return;
         }
-        draggedTokenId = null;
+        const world = toWorld(panLast.x, panLast.y);
+        const coord = { col: Math.floor(world.x / TILE_SIZE), row: Math.floor(world.y / TILE_SIZE) };
+        if (model.isWall(coord)) {
+          flashStatus("Can't move onto a wall");
+        } else {
+          model.moveToken(dragTarget.id, coord);
+          scene?.({ col: coord.col, id: dragTarget.id, row: coord.row, type: 'move' });
+        }
+        dragTarget = null;
         model.refreshFov();
         current.invalidate('fog');
         updateStatus();
       },
-      onStart: (detail) => {
-        const token = model.tokenAtWorld(toWorld(detail.start.x, detail.start.y));
-        draggedTokenId = token?.id ?? null;
-      },
-    });
-
-    let pinchScale = 0;
-    const pinch = createPinchGesture(canvas, {
       onMove: (detail) => {
-        const box = canvas.getBoundingClientRect();
-        const centroid = { x: detail.centroid.x - box.left, y: detail.centroid.y - box.top };
-        const ratio = pinchScale === 0 ? 1 : detail.scale / pinchScale;
-        pinchScale = detail.scale;
-        if (ratio !== 1) camera.zoomAt(centroid, ratio);
-        if (detail.deltaCentroid.x !== 0 || detail.deltaCentroid.y !== 0) {
-          camera.panBy(detail.deltaCentroid.x, detail.deltaCentroid.y);
+        if (!dragTarget) return;
+        const previous = panLast;
+        panLast = { x: detail.current.x, y: detail.current.y };
+        if (dragTarget.kind === 'pan') {
+          // gesture's delta is cumulative from the start; pan needs per-move.
+          camera.panBy(detail.current.x - previous.x, detail.current.y - previous.y);
+          return;
         }
+        const box = root.getBoundingClientRect();
+        ghost.style.transform = `translate(${String(detail.current.x - box.left)}px, ${String(detail.current.y - box.top)}px)`;
       },
       onStart: (detail) => {
-        drag.cancel();
-        pinchScale = detail.scale;
+        panLast = { x: detail.start.x, y: detail.start.y };
+        const token = model.tokenAtWorld(toWorld(detail.start.x, detail.start.y));
+        if (token) {
+          dragTarget = { id: token.id, kind: 'token' };
+          ghost.hidden = false;
+          ghost.style.transform = `translate(${String(detail.start.x - root.getBoundingClientRect().left)}px, ${String(detail.start.y - root.getBoundingClientRect().top)}px)`;
+          return;
+        }
+        // Empty-area drag pans the map, like the other scenes' canvases.
+        dragTarget = { kind: 'pan' };
+        canvas.classList.add('is-grabbing');
       },
     });
 
-    const wheel = createWheelGesture(canvas, {
-      onWheel: (detail) => {
-        const box = canvas.getBoundingClientRect();
-        camera.zoomAt(
-          { x: detail.event.clientX - box.left, y: detail.event.clientY - box.top },
-          ZOOM_STEP ** -detail.deltaY,
-        );
-      },
-      preventDefault: true,
-    });
+    const cameraGestures = createCameraGestures(canvas, camera, () => drag.cancel());
 
     const observer = new ResizeObserver(() => {
       current.resize(canvasSize(), window.devicePixelRatio || 1);
+      camera.resize(canvasSize());
     });
     observer.observe(canvas);
 
     detached = () => {
       observer.disconnect();
-      wheel.dispose();
-      pinch.dispose();
+      cameraGestures.dispose();
       drag.dispose();
       unsubscribe();
       unsubscribeCamera();
@@ -200,8 +231,7 @@ export function mountMapScene(container: HTMLElement): SceneHandle {
 
   exportButton?.addEventListener('click', () => {
     if (!renderer) return;
-    // Worker mode rasterizes on demand; main mode needs a sync flush first.
-    renderer.render?.();
+    // toBlob flushes pending repaints on both modes before rasterizing.
     void renderer
       .toBlob({ type: 'image/png' })
       .then((blob) => {
@@ -220,14 +250,10 @@ export function mountMapScene(container: HTMLElement): SceneHandle {
       });
   });
 
-  modeButton?.addEventListener('click', () => {
-    mode = mode === 'main' ? 'worker' : 'main';
-    modeButton.classList.toggle('is-active', mode === 'worker');
-    modeButton.setAttribute('aria-pressed', String(mode === 'worker'));
-    modeButton
-      .closest('ore-tooltip')
-      ?.setAttribute('content', mode === 'worker' ? 'Rendering on a worker' : 'Render on a worker thread');
-    modeButton.dataset.mode = mode;
+  threadGroup?.addEventListener('change', (event) => {
+    const value = (event as CustomEvent<{ values?: string[] }>).detail?.values?.[0];
+    if (value !== 'main' && value !== 'worker') return;
+    mode = value;
     detached?.();
     detached = null;
     updateStatus();
@@ -238,10 +264,17 @@ export function mountMapScene(container: HTMLElement): SceneHandle {
   attach();
 
   function dispose(): void {
+    stopDockTrack();
+    window.clearTimeout(statusTimer);
     detached?.();
     detached = null;
     model.dispose();
     camera.dispose();
   }
-  return { camera, dispose, fit: () => camera.animateTo({ x: -120, y: -120, zoom: 1 }, { duration: 180 }) };
+  return {
+    camera,
+    dispose,
+    dock: toolbar,
+    fit: () => camera.animateTo({ x: -120, y: -48, zoom: 1 }, { duration: 180 }),
+  };
 }

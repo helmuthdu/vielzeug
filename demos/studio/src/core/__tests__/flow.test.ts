@@ -1,6 +1,14 @@
+import { portAnchor } from '@vielzeug/wire';
 import { describe, expect, it } from 'vitest';
 
-import { addEdgeCommand, createFlowModel, type FlowNode, portPoint, removeNodeCommand } from '../flow.ts';
+import {
+  addEdgeCommand,
+  createFlowModel,
+  type FlowNode,
+  nodeRect,
+  removeEdgeCommand,
+  removeNodeCommand,
+} from '../flow.ts';
 
 function node(id: string, x = 0, y = 0): FlowNode {
   return {
@@ -39,10 +47,10 @@ describe('flow model', () => {
     expect(model.portAnchor('a', 'ghost')).toBeUndefined();
   });
 
-  it('portPoint follows the node position', () => {
+  it('portAnchor follows the node position', () => {
     const n = node('n', 100, 50);
-    expect(portPoint(n, { id: 'top', offset: 0.25, side: 'top' })).toEqual({ x: 140, y: 50 });
-    expect(portPoint(n, { id: 'bottom', offset: 1, side: 'bottom' })).toEqual({ x: 260, y: 114 });
+    expect(portAnchor(nodeRect(n), 'top', 0.25)).toEqual({ side: 'top', x: 140, y: 50 });
+    expect(portAnchor(nodeRect(n), 'bottom', 1)).toEqual({ side: 'bottom', x: 260, y: 114 });
   });
 
   it('rejects duplicate ids and edges to unknown nodes', () => {
@@ -79,6 +87,17 @@ describe('flow model', () => {
     expect(model.getEdge('e3')).toBeDefined();
     command.revert({ signal: new AbortController().signal });
     expect(model.getEdge('e3')).toBeUndefined();
+  });
+
+  it('removing an edge round-trips', () => {
+    const model = seed();
+    const edge = model.getEdge('e1');
+    if (!edge) throw new Error('seed missing e1');
+    const command = removeEdgeCommand(model, edge);
+    command.apply({ signal: new AbortController().signal });
+    expect(model.getEdge('e1')).toBeUndefined();
+    command.revert({ signal: new AbortController().signal });
+    expect(model.getEdge('e1')).toBeDefined();
   });
 
   it('removing a node snapshots and restores its edges', () => {

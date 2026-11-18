@@ -49,11 +49,10 @@ describe('createWorkerStage', () => {
   test('transfers the canvas once in the init message', () => {
     const pair = createFakePair();
     const canvas = fakeCanvas();
-    const stage = createWorkerStage(canvas, pair.main, { height: 200, layers: [{ id: 'a' }], width: 400 });
+    const stage = createWorkerStage(canvas, pair.main, { height: 200, width: 400 });
     const init = pair.posted[0] as StageWorkerInit;
     expect(init.type).toBe('init');
     expect(init.protocol).toBe(STAGE_WORKER_PROTOCOL);
-    expect(init.layers).toEqual([{ id: 'a' }]);
     expect(pair.posted).toHaveLength(1);
     stage.dispose();
   });
@@ -61,14 +60,12 @@ describe('createWorkerStage', () => {
   test('throws StageUnsupportedError when the canvas cannot transfer', () => {
     const pair = createFakePair();
     const canvas = { getContext: () => null } as unknown as HTMLCanvasElement;
-    expect(() => createWorkerStage(canvas, pair.main, { height: 1, layers: [], width: 1 })).toThrow(
-      StageUnsupportedError,
-    );
+    expect(() => createWorkerStage(canvas, pair.main, { height: 1, width: 1 })).toThrow(StageUnsupportedError);
   });
 
   test('forwards resize, matrix, invalidate, and scene commands', () => {
     const pair = createFakePair();
-    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, layers: [], width: 10 });
+    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, width: 10 });
     pair.posted.length = 0;
     stage.resize({ height: 20, width: 30 }, 2);
     stage.setTransform([2, 0, 0, 2, 5, 5]);
@@ -77,7 +74,7 @@ describe('createWorkerStage', () => {
     const types = pair.posted.map((m) => (m as StageWorkerCommand).type);
     expect(types).toEqual(['resize', 'matrix', 'invalidate', 'scene']);
     const resize = pair.posted[0] as Extract<StageWorkerCommand, { type: 'resize' }>;
-    expect(resize).toMatchObject({ dpr: 2, height: 20, protocol: STAGE_WORKER_PROTOCOL, width: 30 });
+    expect(resize).toMatchObject({ dpr: 2, height: 20, width: 30 });
     const scene = pair.posted[3] as Extract<StageWorkerCommand, { type: 'scene' }>;
     expect(scene.scene).toEqual({ id: 'hero', kind: 'move' });
     stage.dispose();
@@ -85,7 +82,7 @@ describe('createWorkerStage', () => {
 
   test('ready resolves when the worker posts ready', async () => {
     const pair = createFakePair();
-    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, layers: [], width: 10 });
+    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, width: 10 });
     pair.self.postMessage({ protocol: STAGE_WORKER_PROTOCOL, type: 'ready' });
     await expect(stage.ready).resolves.toBeUndefined();
     stage.dispose();
@@ -93,7 +90,7 @@ describe('createWorkerStage', () => {
 
   test('toBlob resolves with the correlated blob', async () => {
     const pair = createFakePair();
-    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, layers: [], width: 10 });
+    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, width: 10 });
     const blob = new Blob(['png']);
     // Respond to the blob command with the same id.
     const originalPost = pair.main.postMessage;
@@ -101,7 +98,7 @@ describe('createWorkerStage', () => {
       originalPost(message, transfer);
       const msg = message as StageWorkerCommand;
       if (msg.type === 'blob') {
-        pair.self.postMessage({ blob, id: msg.id, ok: true, protocol: STAGE_WORKER_PROTOCOL, type: 'blob' });
+        pair.self.postMessage({ blob, id: msg.id, ok: true, type: 'blob' });
       }
     };
     await expect(stage.toBlob({ type: 'image/png' })).resolves.toBe(blob);
@@ -110,7 +107,7 @@ describe('createWorkerStage', () => {
 
   test('toBlob maps worker failure kinds to typed errors', async () => {
     const pair = createFakePair();
-    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, layers: [], width: 10 });
+    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, width: 10 });
     const originalPost = pair.main.postMessage;
     const respond = (kind?: string) => {
       pair.main.postMessage = (message: unknown, transfer?: Transferable[]) => {
@@ -122,7 +119,6 @@ describe('createWorkerStage', () => {
             id: msg.id,
             ...(kind === undefined ? {} : { kind }),
             ok: false,
-            protocol: STAGE_WORKER_PROTOCOL,
             type: 'blob',
           });
         }
@@ -141,7 +137,7 @@ describe('createWorkerStage', () => {
     const pair = createFakePair();
     const removeEventListener = vi.fn(pair.main.removeEventListener);
     const scope: WorkerScope = { ...pair.main, removeEventListener };
-    const stage = createWorkerStage(fakeCanvas(), scope, { height: 10, layers: [], width: 10 });
+    const stage = createWorkerStage(fakeCanvas(), scope, { height: 10, width: 10 });
     const pending = stage.toBlob();
     stage.dispose();
     await expect(pending).rejects.toThrow(StageDisposedError);
@@ -152,7 +148,7 @@ describe('createWorkerStage', () => {
 
   test('commands after dispose are not posted', () => {
     const pair = createFakePair();
-    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, layers: [], width: 10 });
+    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, width: 10 });
     stage.dispose();
     pair.posted.length = 0;
     stage.invalidate();
@@ -163,20 +159,38 @@ describe('createWorkerStage', () => {
     expect(stage.disposalSignal.aborted).toBe(true);
   });
 
-  test('protocol mismatch on worker messages is ignored with a warning', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  test('protocol mismatch on the ready handshake rejects and disposes the stage', async () => {
+    const pair = createFakePair();
+    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, width: 10 });
+    pair.self.postMessage({ protocol: 999, type: 'ready' });
+    await expect(stage.ready).rejects.toThrow(/protocol 999 does not match/);
+    expect(stage.disposed).toBe(true);
+    expect(stage.disposalSignal.aborted).toBe(true);
+  });
+
+  test('reports worker error events through reportError', async () => {
+    const reported: Error[] = [];
+    vi.stubGlobal('reportError', (err: Error) => reported.push(err));
     try {
       const pair = createFakePair();
-      const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, layers: [], width: 10 });
-      pair.self.postMessage({ protocol: 999, type: 'ready' });
-      await Promise.resolve();
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining('protocol'));
-      pair.self.postMessage({ protocol: STAGE_WORKER_PROTOCOL, type: 'ready' });
-      await expect(stage.ready).resolves.toBeUndefined();
+      const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, width: 10 });
+      pair.self.postMessage({ error: 'paint exploded', type: 'error' });
+      expect(reported).toHaveLength(1);
+      expect(reported[0]?.message).toContain('paint exploded');
       stage.dispose();
     } finally {
-      warn.mockRestore();
+      vi.unstubAllGlobals();
     }
+  });
+
+  test('validates size, dpr, and matrix on the main thread', () => {
+    const pair = createFakePair();
+    expect(() => createWorkerStage(fakeCanvas(), pair.main, { height: 0, width: 10 })).toThrow(/positive finite/);
+    expect(() => createWorkerStage(fakeCanvas(), pair.main, { dpr: -1, height: 10, width: 10 })).toThrow(/dpr/);
+    const stage = createWorkerStage(fakeCanvas(), pair.main, { height: 10, width: 10 });
+    expect(() => stage.resize({ height: Number.NaN, width: 10 })).toThrow(/positive finite/);
+    expect(() => stage.setTransform([Number.NaN, 0, 0, 1, 0, 0])).toThrow(/finite/);
+    stage.dispose();
   });
 });
 
@@ -193,7 +207,6 @@ describe('serveStage', () => {
       canvas: fakeCanvas() as unknown as OffscreenCanvas,
       dpr: 1,
       height: 10,
-      layers: [{ id: 'a' }],
       protocol: STAGE_WORKER_PROTOCOL,
       type: 'init',
       width: 10,
@@ -202,14 +215,12 @@ describe('serveStage', () => {
   }
 
   test('init creates the stage and posts ready', async () => {
-    const onStart = vi.fn();
-    const { pair, server } = serve(() => ({ layers: [], onStart }));
+    const { pair, server } = serve(() => ({ layers: [] }));
     const events: StageWorkerEvent[] = [];
     pair.main.addEventListener('message', (event) => events.push(event.data as StageWorkerEvent));
     pair.main.postMessage(initMessage());
     await new Promise((r) => setTimeout(r, 0));
     expect(events.some((m) => m.type === 'ready' && m.protocol === STAGE_WORKER_PROTOCOL)).toBe(true);
-    expect(onStart).toHaveBeenCalledOnce();
     expect(server.stage).toBeDefined();
     server.dispose();
   });
@@ -218,21 +229,44 @@ describe('serveStage', () => {
     const { pair, server } = serve(() => ({ layers: [] }));
     const responses: StageWorkerEvent[] = [];
     pair.main.addEventListener('message', (event) => responses.push(event.data as StageWorkerEvent));
-    pair.main.postMessage({ id: 1, protocol: STAGE_WORKER_PROTOCOL, type: 'blob' });
+    pair.main.postMessage({ id: 1, type: 'blob' });
     await new Promise((r) => setTimeout(r, 0));
     const msg = responses.find((m) => m.type === 'blob');
     expect(msg?.type === 'blob' && msg.ok === false && msg.id === 1).toBe(true);
     server.dispose();
   });
 
-  test('scene messages reach onScene and invalidate', async () => {
+  test('scene messages reach onScene without an automatic invalidate', async () => {
+    // Node test env has no canvas factory; stub one so render() can run.
+    class FakeSurface {
+      height = 0;
+      width = 0;
+      getContext() {
+        return {
+          clearRect: () => {},
+          drawImage: () => {},
+          fillRect: () => {},
+          setTransform: () => {},
+        };
+      }
+    }
+    vi.stubGlobal('OffscreenCanvas', FakeSurface);
     const onScene = vi.fn();
-    const { pair, server } = serve(() => ({ layers: [], onScene }));
-    pair.main.postMessage(initMessage());
-    await Promise.resolve();
-    pair.main.postMessage({ protocol: STAGE_WORKER_PROTOCOL, scene: { hello: 1 }, type: 'scene' });
-    expect(onScene).toHaveBeenCalledWith({ scene: { hello: 1 } });
-    server.dispose();
+    try {
+      const { pair, server } = serve(() => ({ layers: [{ id: 'a', paint: () => {} }], onScene }));
+      pair.main.postMessage(initMessage());
+      await Promise.resolve();
+      const stage = server.stage;
+      expect(stage).toBeDefined();
+      stage?.render();
+      pair.main.postMessage({ scene: { hello: 1 }, type: 'scene' });
+      expect(onScene).toHaveBeenCalledWith({ hello: 1 }, stage);
+      // The handler owns repaints: nothing was invalidated automatically.
+      expect(stage?.render().repainted).toEqual([]);
+      server.dispose();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   test('dispose command disposes the stage and calls onDispose', async () => {
@@ -242,7 +276,7 @@ describe('serveStage', () => {
     await Promise.resolve();
     const stage = server.stage;
     expect(stage).toBeDefined();
-    pair.main.postMessage({ protocol: STAGE_WORKER_PROTOCOL, type: 'dispose' });
+    pair.main.postMessage({ type: 'dispose' });
     expect(onDispose).toHaveBeenCalledOnce();
     expect(server.stage).toBeUndefined();
     server.dispose();
@@ -252,7 +286,7 @@ describe('serveStage', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       const { pair, server } = serve(() => ({ layers: [] }));
-      pair.main.postMessage({ protocol: STAGE_WORKER_PROTOCOL, type: 'nonsense' });
+      pair.main.postMessage({ type: 'nonsense' });
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('nonsense'));
       server.dispose();
     } finally {
@@ -260,17 +294,15 @@ describe('serveStage', () => {
     }
   });
 
-  test('protocol mismatch on main messages is ignored with a warning', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    try {
-      const { pair, server } = serve(() => ({ layers: [] }));
-      pair.main.postMessage({ ...initMessage(), protocol: 42 });
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining('protocol'));
-      expect(server.stage).toBeUndefined();
-      server.dispose();
-    } finally {
-      warn.mockRestore();
-    }
+  test('protocol mismatch on init posts an error event and creates no stage', async () => {
+    const { pair, server } = serve(() => ({ layers: [] }));
+    const events: StageWorkerEvent[] = [];
+    pair.main.addEventListener('message', (event) => events.push(event.data as StageWorkerEvent));
+    pair.main.postMessage({ ...initMessage(), protocol: 42 });
+    const error = events.find((m) => m.type === 'error');
+    expect(error?.type === 'error' && error.error).toContain('protocol 42');
+    expect(server.stage).toBeUndefined();
+    server.dispose();
   });
 
   test('a second init warns and does not recreate the stage', async () => {
@@ -290,20 +322,18 @@ describe('serveStage', () => {
   });
 
   test('commands after dispose are ignored even without removeEventListener', async () => {
-    const onStart = vi.fn();
-    const { pair, server } = serve(() => ({ layers: [], onStart }));
+    const { pair, server } = serve(() => ({ layers: [] }));
     pair.main.postMessage(initMessage());
     await Promise.resolve();
-    expect(onStart).toHaveBeenCalledOnce();
+    expect(server.stage).toBeDefined();
     server.dispose();
     // The fake self scope has no removeEventListener, so queued messages still
     // arrive; the disposed guard must swallow them instead of recreating.
     const events: StageWorkerEvent[] = [];
     pair.main.addEventListener('message', (event) => events.push(event.data as StageWorkerEvent));
     pair.main.postMessage(initMessage());
-    pair.main.postMessage({ id: 1, protocol: STAGE_WORKER_PROTOCOL, type: 'blob' });
+    pair.main.postMessage({ id: 1, type: 'blob' });
     await Promise.resolve();
-    expect(onStart).toHaveBeenCalledOnce();
     expect(server.stage).toBeUndefined();
     expect(events.filter((m) => m.type === 'ready' || m.type === 'blob')).toHaveLength(0);
   });

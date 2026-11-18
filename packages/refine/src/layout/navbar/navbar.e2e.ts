@@ -38,6 +38,26 @@ test.describe('Layout', () => {
     await expect(navbar.locator('[part="end"]')).toBeHidden();
   });
 
+  test('rounded attribute drives the floating bar radius', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-navbar id="plain" floating><span>Nav</span></ore-navbar>' +
+        '<ore-navbar id="full" floating rounded="full"><span>Nav</span></ore-navbar>',
+    );
+
+    const plain = await page
+      .locator('#plain')
+      .locator('[part="bar"]')
+      .evaluate((element) => getComputedStyle(element).borderRadius);
+    const full = await page
+      .locator('#full')
+      .locator('[part="bar"]')
+      .evaluate((element) => getComputedStyle(element).borderRadius);
+
+    // The default is the component's lg radius; `rounded="full"` must replace it.
+    expect(full).not.toBe(plain);
+    expect(parseFloat(full)).toBeGreaterThanOrEqual(9998);
+  });
+
   test('renders distinct shadows for different elevation levels', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-navbar id="low" variant="frost" elevation="1" ' +

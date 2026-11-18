@@ -9,29 +9,8 @@ export {
   type FrameScheduler,
 } from './camera.js';
 export { AtlasConfigError, AtlasError } from './errors.js';
-export { boundsOf, distanceToPolyline, pointInPolygon, pointNearPolygon } from './geometry.js';
-export {
-  apply,
-  around,
-  IDENTITY,
-  invert,
-  multiply,
-  rotate,
-  scale,
-  scaleOf,
-  toCssMatrix,
-  translate,
-} from './matrix.js';
-export {
-  type OBB,
-  obbBounds,
-  obbCenter,
-  obbCorners,
-  obbFromRect,
-  obbsIntersect,
-  pointInOBB,
-  rectIntersectsOBB,
-} from './obb.js';
+export { distanceToPolyline, pointInPolygon, pointNearPolygon } from './geometry.js';
+export { apply, around, IDENTITY, invert, multiply, rotate, scale, scaleOf, toCssMatrix, translate } from './matrix.js';
 export {
   containsPoint,
   containsRect,
@@ -44,7 +23,7 @@ export {
   rectsIntersect,
   unionRect,
 } from './rect.js';
-export type { Matrix, Point, Rect } from './shapes.js';
+export type { Matrix, Point, Rect, Size } from './shapes.js';
 export {
   type AlignEdge,
   alignRects,
@@ -53,14 +32,10 @@ export {
   type SnapGuideKind,
   type SnapOptions,
   type SnapResult,
-  type SpacingGuide,
-  type SpacingResult,
   snapRect,
-  snapSpacing,
 } from './snap.js';
 export {
   createSpatialIndex,
-  type SpatialEntry,
   type SpatialIndex,
   type SpatialIndexOptions,
   type SpatialQueryOptions,

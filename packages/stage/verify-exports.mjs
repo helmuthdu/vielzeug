@@ -11,8 +11,8 @@ for (const worker of workerModules) {
   if (typeof worker.serveStage !== 'function') {
     throw new Error('serveStage export missing');
   }
-  if (worker.STAGE_WORKER_PROTOCOL !== 1) {
-    throw new Error('STAGE_WORKER_PROTOCOL export missing or stale');
+  if (worker.STAGE_WORKER_PROTOCOL !== undefined || worker.checkProtocol !== undefined) {
+    throw new Error('worker protocol surface must stay internal');
   }
 }
 

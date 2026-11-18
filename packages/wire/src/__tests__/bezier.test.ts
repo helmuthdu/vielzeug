@@ -3,22 +3,34 @@ import { bezierRoute } from '../bezier.js';
 import { WireConfigError } from '../errors.js';
 
 describe('bezierRoute', () => {
-  it('emits a cubic path with default right-to-left sides', () => {
-    const d = bezierRoute({ x: 10, y: 20 }, { x: 110, y: 20 });
-    expect(d).toBe('M 10 20 C 50 20, 70 20, 110 20');
+  it('extends control points along the port sides with the default handle length', () => {
+    const curve = bezierRoute({ side: 'right', x: 10, y: 20 }, { side: 'left', x: 110, y: 20 });
+    expect(curve).toEqual({
+      c1: { x: 50, y: 20 },
+      c2: { x: 70, y: 20 },
+      from: { x: 10, y: 20 },
+      to: { x: 110, y: 20 },
+    });
   });
 
-  it('extends control points along explicit port sides', () => {
-    const d = bezierRoute({ side: 'bottom', x: 0, y: 0 }, { side: 'top', x: 0, y: 100 }, { offset: 30 });
-    expect(d).toBe('M 0 0 C 0 30, 0 70, 0 100');
+  it('honors a custom handle length and explicit sides', () => {
+    const curve = bezierRoute({ side: 'bottom', x: 0, y: 0 }, { side: 'top', x: 0, y: 100 }, { handleLength: 30 });
+    expect(curve.c1).toEqual({ x: 0, y: 30 });
+    expect(curve.c2).toEqual({ x: 0, y: 70 });
   });
 
-  it('supports zero offset', () => {
-    expect(bezierRoute({ x: 1, y: 2 }, { x: 3, y: 4 }, { offset: 0 })).toBe('M 1 2 C 1 2, 3 4, 3 4');
+  it('supports zero handle length', () => {
+    const curve = bezierRoute({ side: 'right', x: 1, y: 2 }, { side: 'left', x: 3, y: 4 }, { handleLength: 0 });
+    expect(curve.c1).toEqual({ x: 1, y: 2 });
+    expect(curve.c2).toEqual({ x: 3, y: 4 });
   });
 
-  it('validates offset', () => {
-    expect(() => bezierRoute({ x: 0, y: 0 }, { x: 1, y: 1 }, { offset: -1 })).toThrow(WireConfigError);
-    expect(() => bezierRoute({ x: 0, y: 0 }, { x: 1, y: 1 }, { offset: Number.NaN })).toThrow(WireConfigError);
+  it('validates handle length', () => {
+    expect(() =>
+      bezierRoute({ side: 'right', x: 0, y: 0 }, { side: 'left', x: 1, y: 1 }, { handleLength: -1 }),
+    ).toThrow(WireConfigError);
+    expect(() =>
+      bezierRoute({ side: 'right', x: 0, y: 0 }, { side: 'left', x: 1, y: 1 }, { handleLength: Number.NaN }),
+    ).toThrow(WireConfigError);
   });
 });

@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Add @vielzeug/wire with bezier and orthogonal edge routing plus deterministic graph ordering and cycle detection.",
+      "comment": "Add @vielzeug/wire with bezier and orthogonal edge routing (geometry output with SVG serializers), required-side port anchors with owner-obstacle exemption, plus deterministic graph ordering and cyclic-group detection.",
       "packageName": "@vielzeug/wire",
       "type": "minor"
     }

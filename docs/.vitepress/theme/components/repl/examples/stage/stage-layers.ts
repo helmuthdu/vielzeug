@@ -72,6 +72,6 @@ canvas.addEventListener('dblclick', () => {
   stage.invalidate('tokens')
 })
 
-console.log('layers:', stage.layerIds.join(', '))`,
+console.log('stage ready: grid + tokens layers')`,
   name: 'createStage - Layered pan/zoom canvas',
 };

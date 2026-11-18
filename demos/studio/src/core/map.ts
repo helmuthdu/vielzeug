@@ -72,7 +72,7 @@ export function createMapModel(): MapModel {
   const tokens = new Map<string, MapToken>(TOKENS.map((t) => [t.id, t]));
   const order = TOKENS.map((t) => t.id);
   const walls = new Set(WALLS.map((c) => tileKey(c)));
-  const index: SpatialIndex<MapToken> = createSpatialIndex<MapToken>();
+  const index: SpatialIndex = createSpatialIndex();
   const fog: Fog = createFog();
   const listeners = new Set<() => void>();
   let disposed = false;
@@ -82,14 +82,14 @@ export function createMapModel(): MapModel {
   };
 
   for (const token of tokens.values()) {
-    index.insert(token.id, tileToRect(token, GRID), token);
+    index.set(token.id, tileToRect(token, GRID));
   }
 
   const model: MapModel = {
     dispose() {
       if (disposed) return;
       disposed = true;
-      index.dispose();
+      index.clear();
       listeners.clear();
     },
     [Symbol.dispose]: () => model.dispose(),
@@ -103,16 +103,18 @@ export function createMapModel(): MapModel {
       if (!token) return false;
       const next: MapToken = { ...token, col: coord.col, row: coord.row };
       tokens.set(id, next);
-      index.update(id, tileToRect(next, GRID));
+      index.set(id, tileToRect(next, GRID));
       notify();
       return true;
     },
     refreshFov() {
       const hero = tokens.get('hero');
-      fog.demote();
-      if (!hero) return;
-      const lit = computeFov(hero, FOV_RADIUS, { blocks: (c) => model.isWall(c) });
-      fog.revealKeys(lit);
+      if (!hero) {
+        fog.update([]);
+        notify();
+        return;
+      }
+      fog.update(computeFov(hero, FOV_RADIUS, { blocks: (c) => model.isWall(c) }));
       notify();
     },
     subscribe(listener, options) {
@@ -134,8 +136,8 @@ export function createMapModel(): MapModel {
       return tokens.get(id);
     },
     tokenAtWorld(point) {
-      const hits = index.queryPoint(point);
-      return hits[0]?.value;
+      const id = index.queryPoint(point)[0];
+      return id === undefined ? undefined : tokens.get(id);
     },
     tokenRect(token) {
       return tileToRect(token, GRID);

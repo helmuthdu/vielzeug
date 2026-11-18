@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boundsOf, distanceToPolyline, pointInPolygon, pointNearPolygon } from '../geometry.js';
+import { distanceToPolyline, pointInPolygon, pointNearPolygon } from '../geometry.js';
 
 const square = [
   { x: 0, y: 0 },
@@ -55,15 +55,5 @@ describe('geometry', () => {
     expect(pointNearPolygon(square, { x: 10.5, y: 5 }, 1)).toBe(true);
     expect(pointNearPolygon(square, { x: 12, y: 5 }, 1)).toBe(false);
     expect(pointNearPolygon(square, { x: 5, y: 5 }, 0)).toBe(true);
-  });
-
-  it('computes bounds of point sets', () => {
-    expect(
-      boundsOf([
-        { x: 1, y: 2 },
-        { x: -1, y: 8 },
-      ]),
-    ).toEqual({ height: 6, width: 2, x: -1, y: 2 });
-    expect(boundsOf([])).toBeNull();
   });
 });

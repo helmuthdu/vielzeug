@@ -5,4 +5,4 @@ description: Practical examples and recipes for @vielzeug/atlas.
 
 ## Examples
 
-- [Getting Started](./examples/getting-started.md)
+- [Pan, Zoom and Culling](./examples/pan-zoom-and-culling.md)

@@ -64,7 +64,10 @@ onUnmounted(() => window.removeEventListener('popstate', handlePopState));
           </div>
         </div>
 
-        <div aria-label="Voyage, E-commerce, and CRM reference applications" class="app-constellation" role="group">
+        <div
+          aria-label="Voyage, E-commerce, CRM, and Studio reference applications"
+          class="app-constellation"
+          role="group">
           <a
             href="#demos"
             v-for="(demo, index) in SHOWCASE_DEMOS"
@@ -486,6 +489,15 @@ onUnmounted(() => window.removeEventListener('popstate', handlePopState));
   animation: compose-bottom 900ms 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.app-window-4 {
+  top: -2%;
+  left: -7%;
+  z-index: 0;
+  width: 56%;
+  transform: rotateY(9deg) rotateZ(-2deg);
+  animation: compose-left 950ms 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .app-window-1:hover,
 .app-window-1:focus-visible {
   transform: translateY(-8px) rotateY(2deg) rotateZ(-0.5deg);
@@ -494,7 +506,9 @@ onUnmounted(() => window.removeEventListener('popstate', handlePopState));
 .app-window-2:hover,
 .app-window-2:focus-visible,
 .app-window-3:hover,
-.app-window-3:focus-visible {
+.app-window-3:focus-visible,
+.app-window-4:hover,
+.app-window-4:focus-visible {
   transform: translateY(-8px) rotateY(-2deg) rotateZ(0.5deg);
 }
 
@@ -945,6 +959,14 @@ onUnmounted(() => window.removeEventListener('popstate', handlePopState));
   }
 }
 
+@keyframes compose-left {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translate3d(-60px, -30px, -130px) rotateY(13deg) rotateZ(-3deg);
+  }
+}
+
 @media (max-width: 1100px) {
   .hero-inner {
     grid-template-columns: 1fr;
@@ -1086,6 +1108,7 @@ onUnmounted(() => window.removeEventListener('popstate', handlePopState));
   .app-window-1,
   .app-window-2,
   .app-window-3,
+  .app-window-4,
   .app-window:hover,
   .app-window:focus-visible {
     transform: none;

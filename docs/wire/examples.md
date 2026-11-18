@@ -5,4 +5,4 @@ description: Practical examples and recipes for @vielzeug/wire.
 
 ## Examples
 
-- [Getting Started](./examples/getting-started.md)
+- [Edges Around Nodes](./examples/edges-around-nodes.md)

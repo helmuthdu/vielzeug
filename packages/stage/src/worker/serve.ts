@@ -3,7 +3,7 @@ import { StageDisposedError, StageUnsupportedError } from '../errors.js';
 import type { Stage, StageLayerOptions } from '../stage.js';
 import { createStage } from '../stage.js';
 import type { StageWorkerCommand, StageWorkerErrorKind, StageWorkerInit } from './protocol.js';
-import { checkProtocol, STAGE_WORKER_PROTOCOL } from './protocol.js';
+import { STAGE_WORKER_PROTOCOL } from './protocol.js';
 
 /** The message scope available inside a worker (`self` in production). */
 export type WorkerSelfScope = Readonly<{
@@ -12,16 +12,16 @@ export type WorkerSelfScope = Readonly<{
   removeEventListener?: (type: 'message', listener: (event: { data: unknown }) => void) => void;
 }>;
 
-export type StageSceneMessage = Readonly<{ scene: unknown }>;
-
-export type ServeStageSetup = Readonly<{
-  /** Layer painters, keyed by the ids the main thread declared in its init. */
+export type ServeStageSetup<Scene = unknown> = Readonly<{
+  /** Layer painters; the worker owns them, the main thread never names layers. */
   layers: readonly StageLayerOptions[];
-  /** Called for each `scene` command forwarded from the main thread. */
-  onScene?: ((message: StageSceneMessage) => void) | undefined;
-  /** Called after the stage is created; useful to keep model state alive. */
-  onStart?: ((stage: Stage) => void) | undefined;
-  /** Called on dispose; release anything `onStart` allocated. */
+  /**
+   * Called for each `scene` command forwarded from the main thread. The
+   * handler owns repaints: call `stage.invalidate(layerId)` for the layers
+   * the payload actually changed.
+   */
+  onScene?: ((scene: Scene, stage: Stage) => void) | undefined;
+  /** Called on dispose; release anything the setup or `onScene` allocated. */
   onDispose?: (() => void) | undefined;
 }>;
 
@@ -36,18 +36,21 @@ export type StageServer = Readonly<{
  * creates a `createStage` bound to the transferred `OffscreenCanvas`, and
  * services resize/transform/invalidate/scene/blob commands. Painters are
  * registered worker-side in `setup`; the main thread only names the layers.
+ * `Scene` is the application payload type handled by `onScene`.
  */
-export function serveStage(scope: WorkerSelfScope, setup: (init: StageWorkerInit) => ServeStageSetup): StageServer {
+export function serveStage<Scene = unknown>(
+  scope: WorkerSelfScope,
+  setup: (init: StageWorkerInit) => ServeStageSetup<Scene>,
+): StageServer {
   let stage: Stage | undefined;
-  let current: ServeStageSetup | undefined;
+  let current: ServeStageSetup<Scene> | undefined;
   let disposed = false;
 
   const fail = (error: unknown): void => {
-    scope.postMessage({ error: String(error), protocol: STAGE_WORKER_PROTOCOL, type: 'error' });
+    scope.postMessage({ error: String(error), type: 'error' });
   };
 
   const handle = (message: StageWorkerCommand | StageWorkerInit): void => {
-    if (!checkProtocol(message, 'main→worker')) return;
     // After dispose the scope may still deliver queued messages (a scope
     // without removeEventListener cannot be fully detached).
     if (disposed) return;
@@ -57,15 +60,22 @@ export function serveStage(scope: WorkerSelfScope, setup: (init: StageWorkerInit
           warn('Ignoring a second init message; the canvas was already transferred.');
           return;
         }
+        if (message.protocol !== STAGE_WORKER_PROTOCOL) {
+          fail(
+            new StageUnsupportedError(
+              `Main thread protocol ${String(message.protocol)} does not match ${STAGE_WORKER_PROTOCOL}.`,
+            ),
+          );
+          return;
+        }
         current = setup(message);
-        stage = createStage(message.canvas as unknown as HTMLCanvasElement, {
+        stage = createStage(message.canvas, {
           background: message.background,
           dpr: message.dpr,
           height: message.height,
           layers: current.layers,
           width: message.width,
         });
-        current.onStart?.(stage);
         scope.postMessage({ protocol: STAGE_WORKER_PROTOCOL, type: 'ready' });
         return;
       }
@@ -82,8 +92,7 @@ export function serveStage(scope: WorkerSelfScope, setup: (init: StageWorkerInit
         return;
       }
       case 'scene': {
-        current?.onScene?.({ scene: message.scene });
-        stage?.invalidate();
+        if (stage) current?.onScene?.(message.scene as Scene, stage);
         return;
       }
       case 'blob': {
@@ -93,7 +102,6 @@ export function serveStage(scope: WorkerSelfScope, setup: (init: StageWorkerInit
             id: message.id,
             kind: 'failed',
             ok: false,
-            protocol: STAGE_WORKER_PROTOCOL,
             type: 'blob',
           });
           return;
@@ -102,7 +110,7 @@ export function serveStage(scope: WorkerSelfScope, setup: (init: StageWorkerInit
         void stage
           .toBlob(message.options)
           .then((blob) => {
-            scope.postMessage({ blob, id: message.id, ok: true, protocol: STAGE_WORKER_PROTOCOL, type: 'blob' });
+            scope.postMessage({ blob, id: message.id, ok: true, type: 'blob' });
           })
           .catch((error: unknown) => {
             const kind: StageWorkerErrorKind =
@@ -111,14 +119,7 @@ export function serveStage(scope: WorkerSelfScope, setup: (init: StageWorkerInit
                 : error instanceof StageUnsupportedError
                   ? 'unsupported'
                   : 'failed';
-            scope.postMessage({
-              error: String(error),
-              id: message.id,
-              kind,
-              ok: false,
-              protocol: STAGE_WORKER_PROTOCOL,
-              type: 'blob',
-            });
+            scope.postMessage({ error: String(error), id: message.id, kind, ok: false, type: 'blob' });
           });
         return;
       }

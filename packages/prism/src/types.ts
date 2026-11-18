@@ -467,7 +467,7 @@ export interface HeatmapChartConfig
   cells: HeatmapCell[];
   /**
    * Ramp colors low → high (default a light-to-deep blue). Parseable colors
-   * (`#hex`/`rgb()`) interpolate continuously; CSS vars and named colors select
+   * (`#hex`/`rgb()`/named) interpolate continuously; CSS vars select
    * the nearest step instead.
    */
   colorRange?: string[];

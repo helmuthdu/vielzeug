@@ -1,4 +1,11 @@
-/** A color in sRGB. `r`, `g`, `b` are 0–255 and `a` is 0–1. Parsed values may fall outside the displayable range; formatting clamps. */
+/**
+ * A color in extended-range sRGB. `r`, `g`, `b` are 0–255 for displayable
+ * colors but may fall outside that range when a color was produced from an
+ * out-of-gamut OKLCH/HSL value or parsed from out-of-range channels; nothing
+ * in the conversion pipeline clips them. `a` is always clamped to 0–1. Use
+ * `isDisplayable` to test the gamut and the formatters (which clamp) to
+ * produce display-safe output.
+ */
 export type Rgba = Readonly<{
   r: number;
   g: number;
@@ -14,20 +21,12 @@ export type Hsla = Readonly<{
   a: number;
 }>;
 
-/** A color in OKLab. `l` is lightness 0–1, `a`/`b` are opponent axes around zero, `alpha` is 0–1. */
-export type Oklab = Readonly<{
-  l: number;
-  a: number;
-  b: number;
-  alpha: number;
-}>;
-
-/** A color in OKLCH. `l` is lightness 0–1, `c` is chroma, `h` is hue in degrees, `alpha` is 0–1. */
+/** A color in OKLCH. `l` is lightness 0–1, `c` is chroma, `h` is hue in degrees, `a` is alpha 0–1. */
 export type Oklch = Readonly<{
   l: number;
   c: number;
   h: number;
-  alpha: number;
+  a: number;
 }>;
 
 /** Options for the string formatters. When `alpha` is true the alpha channel is always written; otherwise it is written only when the color is translucent. */

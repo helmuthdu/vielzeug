@@ -1,48 +1,37 @@
-import { fmt } from './_format.js';
+import { SIDE_VECTOR } from './_sides.js';
 import { WireConfigError } from './errors.js';
-import type { Point, PortSide } from './types.js';
+import type { CubicBezier, PortAnchor } from './types.js';
 
-/** Default control-point distance for `bezierRoute()` when `offset` is omitted. */
-const DEFAULT_OFFSET = 40;
-
-const SIDE_VECTOR: Readonly<Record<PortSide, Point>> = {
-  bottom: { x: 0, y: 1 },
-  left: { x: -1, y: 0 },
-  right: { x: 1, y: 0 },
-  top: { x: 0, y: -1 },
-};
+/** Default control-point distance for `bezierRoute()` when `handleLength` is omitted. */
+const DEFAULT_HANDLE_LENGTH = 40;
 
 /** Configuration for `bezierRoute()`. */
 export interface BezierRouteOptions {
   /** Distance each control point extends outward from its port along the port side. Defaults to 40. */
-  offset?: number;
+  handleLength?: number;
 }
 
 /**
- * Builds a cubic bezier SVG path `d` string between two ports.
+ * Builds a cubic bezier segment between two ports.
  *
- * Control points extend outward from each port along its side; a missing `side` is
- * inferred as `right` for `from` and `left` for `to`, matching left-to-right flows.
+ * Control points extend outward from each port along its side, so the curve leaves
+ * and enters ports perpendicular to the node edge.
  */
-export function bezierRoute(
-  from: Point & { side?: PortSide },
-  to: Point & { side?: PortSide },
-  options: BezierRouteOptions = {},
-): string {
-  const offset = options.offset ?? DEFAULT_OFFSET;
-  if (!Number.isFinite(offset) || offset < 0) {
-    throw new WireConfigError(`Bezier offset must be a finite non-negative number, received ${String(offset)}.`);
+export function bezierRoute(from: PortAnchor, to: PortAnchor, options: BezierRouteOptions = {}): CubicBezier {
+  const handleLength = options.handleLength ?? DEFAULT_HANDLE_LENGTH;
+  if (!Number.isFinite(handleLength) || handleLength < 0) {
+    throw new WireConfigError(
+      `Bezier handleLength must be a finite non-negative number, received ${String(handleLength)}.`,
+    );
   }
 
-  const fromSide = from.side ?? 'right';
-  const toSide = to.side ?? 'left';
-  const fromVector = SIDE_VECTOR[fromSide];
-  const toVector = SIDE_VECTOR[toSide];
+  const fromVector = SIDE_VECTOR[from.side];
+  const toVector = SIDE_VECTOR[to.side];
 
-  const c1x = from.x + fromVector.x * offset;
-  const c1y = from.y + fromVector.y * offset;
-  const c2x = to.x + toVector.x * offset;
-  const c2y = to.y + toVector.y * offset;
-
-  return `M ${fmt(from.x)} ${fmt(from.y)} C ${fmt(c1x)} ${fmt(c1y)}, ${fmt(c2x)} ${fmt(c2y)}, ${fmt(to.x)} ${fmt(to.y)}`;
+  return {
+    c1: { x: from.x + fromVector.x * handleLength, y: from.y + fromVector.y * handleLength },
+    c2: { x: to.x + toVector.x * handleLength, y: to.y + toVector.y * handleLength },
+    from: { x: from.x, y: from.y },
+    to: { x: to.x, y: to.y },
+  };
 }

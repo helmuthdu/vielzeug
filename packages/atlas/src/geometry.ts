@@ -1,4 +1,5 @@
-import type { Point, Rect } from './shapes.js';
+import { AtlasConfigError } from './errors.js';
+import type { Point } from './shapes.js';
 
 /**
  * Ray-casting point-in-polygon test. `polygon` is an open ring; an implicit closing
@@ -31,8 +32,8 @@ function distanceToSegment(point: Point, a: Point, b: Point): number {
 
 /**
  * Shortest distance from a point to a polyline (an open path; no implicit closing
- * edge). Returns Infinity for paths with fewer than two points unless the single
- * point coincides with `point` (distance 0) — callers pass real geometry.
+ * edge). Returns Infinity for an empty path and the point-to-point distance for
+ * a single-point path.
  */
 export function distanceToPolyline(path: readonly Point[], point: Point): number {
   if (path.length === 0) return Infinity;
@@ -50,25 +51,10 @@ export function distanceToPolyline(path: readonly Point[], point: Point): number
  * the hit test for stroked shapes (outlines, wires rendered as strokes).
  */
 export function pointNearPolygon(polygon: readonly Point[], point: Point, tolerance: number): boolean {
-  if (tolerance < 0) return false;
+  if (!(tolerance >= 0)) {
+    throw new AtlasConfigError(`tolerance must be a non-negative finite number; received ${String(tolerance)}.`);
+  }
   const closed = polygon.length > 0 ? [...polygon, polygon[0]] : polygon;
   if (distanceToPolyline(closed, point) <= tolerance) return true;
   return pointInPolygon(polygon, point);
-}
-
-/** Axis-aligned bounding box of a point set; null for empty input. */
-export function boundsOf(points: Iterable<Point>): Rect | null {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  let found = false;
-  for (const point of points) {
-    found = true;
-    if (point.x < minX) minX = point.x;
-    if (point.y < minY) minY = point.y;
-    if (point.x > maxX) maxX = point.x;
-    if (point.y > maxY) maxY = point.y;
-  }
-  return found ? { height: maxY - minY, width: maxX - minX, x: minX, y: minY } : null;
 }

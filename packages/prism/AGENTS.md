@@ -5,7 +5,7 @@ Responsive SVG charting library with explicit data updates. Each chart factory m
 ## Local contracts
 
 - **DOM-output package**: renders SVG into the host DOM. REPL examples use the Preview pane (`docs/AGENTS.md`); register under `docs/.vitepress/theme/components/repl/examples/prism/`.
-- Depends on `@vielzeug/orbit` (`workspace:*`). No other external runtime dependencies.
+- Depends on `@vielzeug/orbit` and `@vielzeug/palette` (`workspace:*`). No other external runtime dependencies; color math (parse, luminance, mixing, formatting) comes from palette rather than local implementations.
 - Tests live in `src/__tests__/`, one file per chart type plus shared suites for scales, animation, and internals. `vitest.setup.ts` stubs `ResizeObserver` (jsdom has none) and exposes the `axeCheck` global.
 
 ## Accessibility testing

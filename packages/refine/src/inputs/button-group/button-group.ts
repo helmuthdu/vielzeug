@@ -114,7 +114,7 @@ const BUTTON_GROUP_ORIENTATIONS = ['horizontal', 'vertical'] as const;
  *
  * @fires change - Emitted when the selected button changes. detail: { values: string[], labels: string[], originalEvent?: Event }
  *
- * @slot - Place ore-button elements here
+ * @slot - Place ore-button elements here, each optionally wrapped in an ore-tooltip
  *
  * @cssprop --group-gap - Gap between buttons (non-attached mode)
  * @cssprop --group-radius - Border radius of the group container, defaults to the `rounded` attribute's token
@@ -131,6 +131,10 @@ const BUTTON_GROUP_ORIENTATIONS = ['horizontal', 'vertical'] as const;
  * <ore-button-group attached value="list" label="View mode" color="primary">
  *   <ore-button value="list">List</ore-button>
  *   <ore-button value="grid">Grid</ore-button>
+ * </ore-button-group>
+ * <ore-button-group value="copy" label="Copy format">
+ *   <ore-tooltip content="Copy as text" placement="top"><ore-button value="text">Text</ore-button></ore-tooltip>
+ *   <ore-tooltip content="Copy as HTML" placement="top"><ore-button value="html">HTML</ore-button></ore-tooltip>
  * </ore-button-group>
  * <ore-button-group orientation="vertical" size="sm">
  *   <ore-button>Top</ore-button>
@@ -167,10 +171,12 @@ define<OreButtonGroupProps>(BUTTON_GROUP_TAG, {
     const selectedValue = signal<string | undefined>(props.value.value);
     const segmented = computed(() => selectedValue.value !== undefined);
 
-    // Direct children only: the same set the stylesheet's `::slotted(ore-button)`
-    // rules reach, so the selection can never claim a button the group does not
-    // visually own (a nested group's buttons stay its own).
-    const getButtons = (): HTMLElement[] => Array.from(el.querySelectorAll<HTMLElement>(':scope > ore-button'));
+    // Direct children only — plus a button wrapped in a direct `ore-tooltip`
+    // child, the documented way to put a tooltip on a segment. Both selectors
+    // stay one hop from the group, so the selection can never claim a button
+    // the group does not visually own (a nested group's buttons stay its own).
+    const getButtons = (): HTMLElement[] =>
+      Array.from(el.querySelectorAll<HTMLElement>(':scope > ore-button, :scope > ore-tooltip > ore-button'));
     const getSelectableButtons = (): HTMLElement[] =>
       getButtons().filter((button) => button.getAttribute('value') !== null && !button.hasAttribute('disabled'));
 
@@ -271,7 +277,10 @@ define<OreButtonGroupProps>(BUTTON_GROUP_TAG, {
             .composedPath()
             .find((node): node is HTMLElement => node instanceof HTMLElement && node.localName === 'ore-button');
 
-          if (!button || button.closest('ore-button-group') !== el) return;
+          // Same discovery set as the selection maintenance: a button outside
+          // it (e.g. wrapped in something other than a direct tooltip) is not
+          // an option of this group, so it must not move the selection either.
+          if (!button || !getButtons().includes(button) || button.closest('ore-button-group') !== el) return;
 
           const value = button.getAttribute('value');
 

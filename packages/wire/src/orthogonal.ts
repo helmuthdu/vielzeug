@@ -1,46 +1,31 @@
+import { MinHeap } from './_heap.js';
+import { DELTA, Dir, type Move, OPPOSITE, SIDE_DIR, SIDE_VECTOR } from './_sides.js';
 import { WireConfigError } from './errors.js';
-import type { Point, PortPoint, PortSide, Rect } from './types.js';
+import type { Point, PortAnchor, PortSide, Rect } from './types.js';
 
 /** Configuration for `orthogonalRoute()`. */
 export interface OrthogonalRouteOptions {
   /** Cost added per bend, on top of path length. Defaults to 12. */
   bendPenalty?: number;
-  /** Rectangles the route must not cross, typically node boxes inflated by the caller. */
+  /**
+   * Rectangles the route must not cross — typically every node's raw bounding box.
+   * `padding` supplies the clearance, so do not inflate the rects yourself. The
+   * obstacles a port sits inside are exempted for that port's straight exit segment
+   * only; the rest of the route still avoids them.
+   */
   obstacles?: readonly Rect[];
   /** Distance obstacles are inflated by; routes may travel along the inflated boundary. Defaults to 8. */
   padding?: number;
   /**
-   * Distance the route stubs straight out of a port that names a `side` before it may
-   * bend, and straight into the target port. Defaults to 16; `0` disables stubs.
+   * Distance the route runs straight out of a port before it may bend, and straight
+   * into the target port. Defaults to 16; `0` disables the directional stubs (a port
+   * inside an obstacle still exits straight to clear it).
    */
   stub?: number;
 }
 
-/** Grid movement directions; 0 marks the start state with no incoming direction. */
-const Dir = { Down: 4, Left: 1, None: 0, Right: 2, Up: 3 } as const;
-type Dir = (typeof Dir)[keyof typeof Dir];
-
-const DELTA: Readonly<Record<Exclude<Dir, 0>, Point>> = {
-  [Dir.Left]: { x: -1, y: 0 },
-  [Dir.Right]: { x: 1, y: 0 },
-  [Dir.Up]: { x: 0, y: -1 },
-  [Dir.Down]: { x: 0, y: 1 },
-};
-
-/** Outward direction a port on the given side faces. */
-const SIDE_DIR: Readonly<Record<PortSide, Exclude<Dir, 0>>> = {
-  bottom: Dir.Down,
-  left: Dir.Left,
-  right: Dir.Right,
-  top: Dir.Up,
-};
-
-const OPPOSITE: Readonly<Record<Exclude<Dir, 0>, Exclude<Dir, 0>>> = {
-  [Dir.Down]: Dir.Up,
-  [Dir.Left]: Dir.Right,
-  [Dir.Right]: Dir.Left,
-  [Dir.Up]: Dir.Down,
-};
+/** Number of direction slots packed per grid node in a state id (`node * DIR_COUNT + dir`). */
+const DIR_COUNT = 5;
 
 interface PaddedRect {
   x0: number;
@@ -82,63 +67,51 @@ function spanBlocked(a: Point, b: Point, obstacles: readonly PaddedRect[]): bool
   return false;
 }
 
-/** Binary heap ordered by (f, then state id) so expansion is fully deterministic. */
-class OpenSet {
-  private readonly items: { f: number; state: number }[] = [];
+/** Obstacles whose padded interior contains `point` — the obstacles that "own" the port. */
+function ownersOf(point: Point, obstacles: readonly PaddedRect[]): PaddedRect[] {
+  return obstacles.filter((rect) => pointBlocked(point.x, point.y, [rect]));
+}
 
-  get size(): number {
-    return this.items.length;
+/**
+ * Distance from `point` to the padded boundary of `owners`, measured along `dir`.
+ * Zero when the point is outside every owner.
+ */
+function escapeDistance(point: Point, dir: Move, owners: readonly PaddedRect[]): number {
+  const delta = DELTA[dir];
+  let distance = 0;
+  for (const rect of owners) {
+    const along =
+      delta.x > 0
+        ? rect.x1 - point.x
+        : delta.x < 0
+          ? point.x - rect.x0
+          : delta.y > 0
+            ? rect.y1 - point.y
+            : point.y - rect.y0;
+    if (along > distance) distance = along;
   }
-
-  push(f: number, state: number): void {
-    const items = this.items;
-    items.push({ f, state });
-    let i = items.length - 1;
-    while (i > 0) {
-      const parent = (i - 1) >> 1;
-      if (items[parent]!.f <= items[i]!.f) break;
-      [items[parent], items[i]] = [
-        items[i] as { f: number; state: number },
-        items[parent] as { f: number; state: number },
-      ];
-      i = parent;
-    }
-  }
-
-  pop(): number {
-    const items = this.items;
-    const top = items[0] as { f: number; state: number };
-    const last = items.pop() as { f: number; state: number };
-    if (items.length > 0) {
-      items[0] = last;
-      let i = 0;
-      for (;;) {
-        const left = i * 2 + 1;
-        const right = left + 1;
-        let smallest = i;
-        if (left < items.length && items[left]!.f < items[smallest]!.f) smallest = left;
-        if (right < items.length && items[right]!.f < items[smallest]!.f) smallest = right;
-        if (smallest === i) break;
-        [items[i], items[smallest]] = [
-          items[smallest] as { f: number; state: number },
-          items[i] as { f: number; state: number },
-        ];
-        i = smallest;
-      }
-    }
-    return top.state;
-  }
+  return distance;
 }
 
 /**
  * Routes a Manhattan (axis-aligned) polyline between two ports over a visibility grid
  * built from the obstacle corners, using A* with a per-bend penalty.
  *
+ * Pass every node's raw rect as `obstacles`; `padding` supplies the clearance. A port
+ * that sits inside an obstacle (its own node, since ports are on node boundaries) is
+ * exempted only for the straight exit segment out of that port; the searched route
+ * never enters any padded obstacle interior, including its own nodes.
+ *
  * Returns the waypoint polyline with `from` first and `to` last, or `null` when every
- * route is blocked. Cost is path length plus `bendPenalty` per bend, so among equal
- * length routes the one with fewer bends wins. Expansion order is fully deterministic.
+ * route is blocked (including a blocked exit segment). Cost is path length plus
+ * `bendPenalty` per bend, so among equal length routes the one with fewer bends wins.
+ * Expansion order is fully deterministic.
  */
-export function orthogonalRoute(from: PortPoint, to: PortPoint, options: OrthogonalRouteOptions = {}): Point[] | null {
+export function orthogonalRoute(
+  from: PortAnchor,
+  to: PortAnchor,
+  options: OrthogonalRouteOptions = {},
+): Point[] | null {
   const padding = options.padding ?? 8;
   const bendPenalty = options.bendPenalty ?? 12;
   const stub = options.stub ?? 16;
@@ -157,44 +130,57 @@ export function orthogonalRoute(from: PortPoint, to: PortPoint, options: Orthogo
   if (start.x === goal.x && start.y === goal.y) return [start];
 
   const obstacles = (options.obstacles ?? []).map((rect) => padRect(rect, padding));
+  const startOwners = ownersOf(start, obstacles);
+  const goalOwners = ownersOf(goal, obstacles);
+  // Obstacles to check against for a segment leaving `owners`: everything except those owners.
+  const othersFor = (owners: readonly PaddedRect[]): PaddedRect[] =>
+    owners.length === 0 ? obstacles : obstacles.filter((rect) => !owners.includes(rect));
+  const startOthers = othersFor(startOwners);
+  const goalOthers = othersFor(goalOwners);
 
   // Port stubs: the route leaves the source port straight along its side and enters
-  // the target port along that side, so wires never peel off a port sideways.
-  const fromDir = stub > 0 && from.side ? SIDE_DIR[from.side] : Dir.None;
-  const toDir = stub > 0 && to.side ? SIDE_DIR[to.side] : Dir.None;
+  // the target port along that side, so wires never peel off a port sideways. A port
+  // inside an obstacle always exits straight far enough to clear the obstacle margin,
+  // even when `stub` is smaller than that distance (or zero).
+  const fromDir = SIDE_DIR[from.side];
+  const toDir = SIDE_DIR[to.side];
 
-  // Straight shot: when the direct segment agrees with both port sides and is clear,
-  // it is optimal by construction (also covers facing ports closer than two stubs).
+  // Straight shot: when the direct segment agrees with both port sides and is clear
+  // of every obstacle except the endpoints' own owners, it is optimal by construction
+  // (also covers facing ports closer than two stubs).
   if (start.x === goal.x || start.y === goal.y) {
-    const dir: Dir =
+    const dir: Move =
       start.x !== goal.x ? (goal.x > start.x ? Dir.Right : Dir.Left) : goal.y > start.y ? Dir.Down : Dir.Up;
-    const agreesWithStart = fromDir === Dir.None || fromDir === dir;
-    const agreesWithGoal = toDir === Dir.None || (OPPOSITE[toDir as Exclude<Dir, 0>] as Dir) === dir;
-    if (agreesWithStart && agreesWithGoal && !spanBlocked(start, goal, obstacles)) return [start, goal];
+    // A port with no forced exit (no stub, no owner to escape) accepts any direction.
+    const agreesWithStart = (stub === 0 && startOwners.length === 0) || fromDir === dir;
+    const agreesWithGoal = (stub === 0 && goalOwners.length === 0) || OPPOSITE[toDir] === dir;
+    const freeSpan = obstacles.filter((rect) => !startOwners.includes(rect) && !goalOwners.includes(rect));
+    if (agreesWithStart && agreesWithGoal && !spanBlocked(start, goal, freeSpan)) return [start, goal];
   }
 
-  const stubPoint = (point: Point, dir: Dir): Point => {
-    if (dir === Dir.None) return point;
-    const delta = DELTA[dir as Exclude<Dir, 0>];
-    return { x: point.x + delta.x * stub, y: point.y + delta.y * stub };
+  const exitTip = (point: Point, side: PortSide, dir: Move, owners: readonly PaddedRect[]): Point => {
+    const vector = SIDE_VECTOR[side];
+    const distance = Math.max(stub, escapeDistance(point, dir, owners));
+    return { x: point.x + vector.x * distance, y: point.y + vector.y * distance };
   };
-  const fromStub = stubPoint(start, fromDir);
-  const toStub = stubPoint(goal, toDir);
-  // A stub that runs into an obstacle (or a blocked stub tip) cannot be honored;
-  // route without stubs instead of failing.
-  const stubsUsable =
-    (fromDir === Dir.None || !spanBlocked(start, fromStub, obstacles)) &&
-    (toDir === Dir.None || !spanBlocked(goal, toStub, obstacles));
+  const fromTip = exitTip(start, from.side, fromDir, startOwners);
+  const toTip = exitTip(goal, to.side, toDir, goalOwners);
 
-  const routeStart = stubsUsable ? fromStub : start;
-  const routeGoal = stubsUsable ? toStub : goal;
-  const startDir = stubsUsable ? fromDir : Dir.None;
-  // The route must not arrive at the goal stub moving along the port's outward
+  // The exit segment may cross its own owners but no other obstacle; a blocked exit
+  // means the port is walled in, so no route exists.
+  if (spanBlocked(start, fromTip, startOthers)) return null;
+  if (spanBlocked(goal, toTip, goalOthers)) return null;
+
+  const routeStart = fromTip;
+  const routeGoal = toTip;
+  // `stub: 0` disables the directional stubs unless an owner escape forced one.
+  const startDir: Dir = stub > 0 || startOwners.length > 0 ? fromDir : Dir.None;
+  // The route must not arrive at the goal tip moving along the port's outward
   // direction (that would overshoot the port and double back); any other incoming
   // direction continues smoothly into the final stub segment.
-  const forbiddenIncoming = stubsUsable && toDir !== Dir.None ? (toDir as Dir) : (Dir.None as Dir);
+  const forbiddenIncoming: Dir = stub > 0 || goalOwners.length > 0 ? toDir : Dir.None;
 
-  // Grid lines: every obstacle edge plus the endpoints' own rows and columns.
+  // Grid lines: every obstacle edge plus the exit tips' own rows and columns.
   const xs = new Set<number>([routeStart.x, routeGoal.x]);
   const ys = new Set<number>([routeStart.y, routeGoal.y]);
   for (const rect of obstacles) {
@@ -219,15 +205,15 @@ export function orthogonalRoute(from: PortPoint, to: PortPoint, options: Orthogo
   if (pointBlocked(nodeX(goalNode), nodeY(goalNode), obstacles)) return null;
 
   // State = grid node × incoming direction (Dir.None only for the start).
-  const stateCount = nodeCount * 5;
+  const stateCount = nodeCount * DIR_COUNT;
   const gScore = new Float64Array(stateCount).fill(Number.POSITIVE_INFINITY);
   const parent = new Int32Array(stateCount).fill(-1);
   const closed = new Uint8Array(stateCount);
 
   const heuristic = (node: number): number => Math.abs(nodeX(node) - routeGoal.x) + Math.abs(nodeY(node) - routeGoal.y);
-  const stateId = (node: number, dir: Dir): number => node * 5 + dir;
+  const stateId = (node: number, dir: Dir): number => node * DIR_COUNT + dir;
 
-  const open = new OpenSet();
+  const open = new MinHeap();
   const startState = stateId(startNode, startDir);
   gScore[startState] = 0;
   open.push(heuristic(startNode), startState);
@@ -238,8 +224,8 @@ export function orthogonalRoute(from: PortPoint, to: PortPoint, options: Orthogo
     if (closed[current]) continue;
     closed[current] = 1;
 
-    const node = Math.floor(current / 5);
-    const incoming = (current % 5) as Dir;
+    const node = Math.floor(current / DIR_COUNT);
+    const incoming = (current % DIR_COUNT) as Dir;
     if (node === goalNode && (forbiddenIncoming === Dir.None || incoming !== forbiddenIncoming)) {
       goalState = current;
       break;
@@ -263,10 +249,7 @@ export function orthogonalRoute(from: PortPoint, to: PortPoint, options: Orthogo
       const nx = nodeX(neighbor);
       const ny = nodeY(neighbor);
       if (pointBlocked(nx, ny, obstacles)) continue;
-      const delta = DELTA[dir as Exclude<Dir, 0>];
-      const fromPoint: Point = { x: cx + delta.x * 0, y: cy + delta.y * 0 };
-      const toPoint: Point = { x: nx, y: ny };
-      if (spanBlocked(fromPoint, toPoint, obstacles)) continue;
+      if (spanBlocked({ x: cx, y: cy }, { x: nx, y: ny }, obstacles)) continue;
 
       const step = Math.abs(nx - cx) + Math.abs(ny - cy);
       const bend = incoming !== Dir.None && incoming !== dir ? bendPenalty : 0;
@@ -284,7 +267,7 @@ export function orthogonalRoute(from: PortPoint, to: PortPoint, options: Orthogo
 
   const nodes: number[] = [];
   for (let state = goalState; state !== -1; state = parent[state] as number) {
-    nodes.push(Math.floor(state / 5));
+    nodes.push(Math.floor(state / DIR_COUNT));
   }
   nodes.reverse();
 

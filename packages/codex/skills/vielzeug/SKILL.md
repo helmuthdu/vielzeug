@@ -65,7 +65,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/gesture`: Framework-neutral pointer drag, pan, pinch, and wheel recognition with lifecycle-owned handles
 - `@vielzeug/herald`: Typed synchronous event bus with wildcard subscriptions, one-shot waits, and lifecycle tracing
 - `@vielzeug/illusionist`: Typed, deterministic, locale-aware fake data generator with seeded PRNG
-- `@vielzeug/ink`: Freehand stroke smoothing, width profiling, and SVG path output
+- `@vielzeug/ink`: Causal stroke stabilization, smoothing, speed-based width profiling, and SVG path output
 - `@vielzeug/keymap`: Headless keyboard shortcut manager with chord sequences
 - `@vielzeug/ledger`: Serialized reversible command history with atomic framework-neutral state and cancellation ownership
 - `@vielzeug/lingua`: Typed i18n with pluralization and lazy locale loading

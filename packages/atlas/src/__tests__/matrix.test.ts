@@ -43,19 +43,19 @@ describe('matrix', () => {
     expect(invert(scale(0))).toBeNull();
   });
 
-  it('applies a matrix around an anchor point', () => {
-    const anchor = { x: 100, y: 50 };
-    const m = around(anchor, scale(2));
-    const p = apply(m, anchor);
-    close(p.x, 100);
-    close(p.y, 50);
+  it('applies a matrix around an anchor', () => {
+    const m = around({ x: 10, y: 10 }, scale(2));
+    expect(apply(m, { x: 10, y: 10 })).toEqual({ x: 10, y: 10 });
+    expect(apply(m, { x: 15, y: 10 })).toEqual({ x: 20, y: 10 });
   });
 
-  it('decomposes uniform scale', () => {
-    close(scaleOf(multiply(rotate(1.2), scale(3.5))), 3.5);
+  it('averages axis scale', () => {
+    close(scaleOf(scale(2, 4)), 3);
+    close(scaleOf(rotate(0.5)), 1);
+    expect(scaleOf(scale(0))).toBe(0);
   });
 
   it('serializes to a CSS matrix() value', () => {
-    expect(toCssMatrix([1, 2, 3, 4, 5, 6])).toBe('matrix(1,2,3,4,5,6)');
+    expect(toCssMatrix(translate(10, 20))).toBe('matrix(1,0,0,1,10,20)');
   });
 });

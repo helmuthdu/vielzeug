@@ -1,4 +1,4 @@
-import { iterateTileRange, tileToRect, visibleTileRange } from '@vielzeug/atlas/grid';
+import { iterateTileRange, tileKey, tileToRect, visibleTileRange } from '@vielzeug/atlas/grid';
 import type { StageLayerOptions } from '@vielzeug/stage';
 import { GRID, type MapModel, TILE_SIZE } from './map.ts';
 
@@ -50,7 +50,7 @@ export function createMapLayers(model: MapModel): readonly StageLayerOptions[] {
       paint: (ctx, { visibleRect }) => {
         const range = visibleTileRange(visibleRect, GRID);
         for (const coord of iterateTileRange(range)) {
-          const state = model.fog.state(coord);
+          const state = model.fog.state(tileKey(coord));
           if (state === 'visible') continue;
           const rect = tileToRect(coord, GRID);
           ctx.fillStyle = state === 'seen' ? 'rgba(11, 18, 32, 0.55)' : 'rgba(11, 18, 32, 0.94)';
@@ -60,8 +60,6 @@ export function createMapLayers(model: MapModel): readonly StageLayerOptions[] {
     },
   ];
 }
-
-export const MAP_LAYER_IDS = ['terrain', 'tokens', 'fog'] as const;
 
 /** Payload the main thread forwards to the worker-side map model. */
 export type MapSceneMessage = Readonly<{ col: number; id: string; row: number; type: 'move' }>;

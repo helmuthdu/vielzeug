@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Heatmap color ramp interpolates in linear light via @vielzeug/palette; parseColor accepts hsl() and oklch() color strings",
+      "packageName": "@vielzeug/prism",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

@@ -1,8 +1,6 @@
 import { AtlasConfigError } from './errors.js';
-import { containsPoint, containsRect, rectsIntersect } from './rect.js';
+import { containsRect, inflateRect, rectsIntersect } from './rect.js';
 import type { Point, Rect } from './shapes.js';
-
-export type SpatialEntry<T> = Readonly<{ id: string; rect: Rect; value: T }>;
 
 export type SpatialIndexOptions = Readonly<{
   /** Maximum children per node before a split. Default 8. */
@@ -14,29 +12,38 @@ export type SpatialQueryOptions = Readonly<{
   tolerance?: number;
 }>;
 
-export type SpatialIndex<T> = Readonly<{
-  insert(id: string, rect: Rect, value: T): void;
-  /** Re-index an existing id; throws for unknown ids. */
-  update(id: string, rect: Rect): void;
-  remove(id: string): boolean;
-  get(id: string): SpatialEntry<T> | undefined;
-  queryRect(rect: Rect): SpatialEntry<T>[];
-  queryPoint(point: Point, options?: SpatialQueryOptions): SpatialEntry<T>[];
+/**
+ * A Map-like index over ids and their bounding rects. The index stores only
+ * geometry — the caller owns the data and looks it up from returned ids —
+ * so stored values can never go stale.
+ */
+export type SpatialIndex<K = string> = Readonly<{
+  /** Insert `id`, or move it to `rect` when it already exists. */
+  set(id: K, rect: Rect): void;
+  delete(id: K): boolean;
+  /** Current rect for `id`, or undefined. */
+  get(id: K): Rect | undefined;
+  has(id: K): boolean;
   clear(): void;
   readonly size: number;
   /** Bounding box of all entries; null when empty. */
   readonly bounds: Rect | null;
-  dispose(): void;
-  readonly disposed: boolean;
-  readonly disposalSignal: AbortSignal;
-  [Symbol.dispose]: () => void;
+  /** Ids whose rect overlaps or touches `rect`. */
+  queryRect(rect: Rect): K[];
+  /** Ids whose rect contains `point`, or comes within `tolerance` of it. */
+  queryPoint(point: Point, options?: SpatialQueryOptions): K[];
 }>;
 
-type Leaf<T> = { children: SpatialEntry<T>[]; leaf: true; rect: Rect | null };
-type Branch<T> = { children: Node<T>[]; leaf: false; rect: Rect | null };
-type Node<T> = Leaf<T> | Branch<T>;
+interface LeafEntry<K> {
+  id: K;
+  rect: Rect;
+}
 
-function rectOf<T>(node: Node<T> | SpatialEntry<T>): Rect {
+type Leaf<K> = { children: LeafEntry<K>[]; leaf: true; rect: Rect | null };
+type Branch<K> = { children: Node<K>[]; leaf: false; rect: Rect | null };
+type Node<K> = Leaf<K> | Branch<K>;
+
+function rectOf<K>(node: Node<K> | LeafEntry<K>): Rect {
   return node.rect as Rect;
 }
 
@@ -55,7 +62,11 @@ function area(rect: Rect): number {
   return rect.width * rect.height;
 }
 
-function recompute<T>(node: Node<T>): void {
+function rectsEqual(a: Rect, b: Rect): boolean {
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
+function recompute<K>(node: Node<K>): void {
   let rect: Rect | null = null;
   for (const child of node.children) {
     rect = rect === null ? { ...rectOf(child) } : unionRects(rect, rectOf(child));
@@ -66,21 +77,20 @@ function recompute<T>(node: Node<T>): void {
 /**
  * Dynamic R-tree (Guttman, quadratic split) over axis-aligned rectangles:
  * O(log n) rect and point queries for hit-testing, marquee selection, and
- * viewport culling over thousands of items.
+ * viewport culling over thousands of items. Rect intersection uses closed
+ * intervals, so zero-area entries (lines, points) are findable.
  */
-export function createSpatialIndex<T>(options: SpatialIndexOptions = {}): SpatialIndex<T> {
+export function createSpatialIndex<K = string>(options: SpatialIndexOptions = {}): SpatialIndex<K> {
   const maxEntries = options.maxEntriesPerNode ?? 8;
   if (!Number.isInteger(maxEntries) || maxEntries < 4) {
     throw new AtlasConfigError(`maxEntriesPerNode must be an integer >= 4, received ${maxEntries}`);
   }
   const minEntries = Math.max(2, Math.ceil(maxEntries / 3));
-  const entries = new Map<string, SpatialEntry<T>>();
-  let root: Node<T> = { children: [], leaf: true, rect: null };
-  let disposed = false;
-  const controller = new AbortController();
+  const entries = new Map<K, LeafEntry<K>>();
+  let root: Node<K> = { children: [], leaf: true, rect: null };
 
-  const pickChild = (node: Branch<T>, rect: Rect): Node<T> => {
-    let best: Node<T> | null = null;
+  const pickChild = (node: Branch<K>, rect: Rect): Node<K> => {
+    let best: Node<K> | null = null;
     let bestEnlargement = Infinity;
     let bestArea = Infinity;
     for (const child of node.children) {
@@ -92,10 +102,10 @@ export function createSpatialIndex<T>(options: SpatialIndexOptions = {}): Spatia
         bestArea = area(current);
       }
     }
-    return best as Node<T>;
+    return best as Node<K>;
   };
 
-  const split = (node: Node<T>): [Node<T>, Node<T>] => {
+  const split = (node: Node<K>): [Node<K>, Node<K>] => {
     const items = node.children;
     // Quadratic pick-seeds: the pair wasting the most area when combined.
     let si = 0;
@@ -112,8 +122,8 @@ export function createSpatialIndex<T>(options: SpatialIndexOptions = {}): Spatia
         }
       }
     }
-    const groupA: Array<Node<T> | SpatialEntry<T>> = [items[si]];
-    const groupB: Array<Node<T> | SpatialEntry<T>> = [items[sj]];
+    const groupA: Array<Node<K> | LeafEntry<K>> = [items[si]];
+    const groupB: Array<Node<K> | LeafEntry<K>> = [items[sj]];
     let rectA = rectOf(items[si]);
     let rectB = rectOf(items[sj]);
     const remaining = items.filter((_, index) => index !== si && index !== sj);
@@ -143,28 +153,28 @@ export function createSpatialIndex<T>(options: SpatialIndexOptions = {}): Spatia
     }
     const a = (
       node.leaf
-        ? { children: groupA as SpatialEntry<T>[], leaf: true, rect: null }
-        : { children: groupA as Node<T>[], leaf: false, rect: null }
-    ) as Node<T>;
+        ? { children: groupA as LeafEntry<K>[], leaf: true, rect: null }
+        : { children: groupA as Node<K>[], leaf: false, rect: null }
+    ) as Node<K>;
     const b = (
       node.leaf
-        ? { children: groupB as SpatialEntry<T>[], leaf: true, rect: null }
-        : { children: groupB as Node<T>[], leaf: false, rect: null }
-    ) as Node<T>;
+        ? { children: groupB as LeafEntry<K>[], leaf: true, rect: null }
+        : { children: groupB as Node<K>[], leaf: false, rect: null }
+    ) as Node<K>;
     recompute(a);
     recompute(b);
     return [a, b];
   };
 
   /** Insert `item` under `node`; returns the split pair when `node` overflows. */
-  const insertInto = (node: Node<T>, item: Node<T> | SpatialEntry<T>): [Node<T>, Node<T>] | null => {
+  const insertInto = (node: Node<K>, item: Node<K> | LeafEntry<K>): [Node<K>, Node<K>] | null => {
     if (node.leaf) {
-      node.children.push(item as SpatialEntry<T>);
+      node.children.push(item as LeafEntry<K>);
       node.rect = node.rect === null ? { ...rectOf(item) } : unionRects(node.rect, rectOf(item));
       if (node.children.length > maxEntries) return split(node);
       return null;
     }
-    const branch = node as Branch<T>;
+    const branch = node as Branch<K>;
     const child = pickChild(branch, rectOf(item));
     const overflow = insertInto(child, item);
     recompute(node);
@@ -177,11 +187,7 @@ export function createSpatialIndex<T>(options: SpatialIndexOptions = {}): Spatia
     return null;
   };
 
-  const insert = (id: string, rect: Rect, value: T): void => {
-    if (disposed) throw new AtlasConfigError('Cannot insert into a disposed spatial index');
-    if (entries.has(id)) throw new AtlasConfigError(`Spatial index already contains id: ${id}`);
-    const entry: SpatialEntry<T> = { id, rect: { ...rect }, value };
-    entries.set(id, entry);
+  const insertEntry = (entry: LeafEntry<K>): void => {
     // A fully emptied root stays as an empty branch after removals; revive it as a leaf.
     if (!root.leaf && root.children.length === 0) {
       root = { children: [], leaf: true, rect: null };
@@ -194,19 +200,19 @@ export function createSpatialIndex<T>(options: SpatialIndexOptions = {}): Spatia
   };
 
   /** Depth-first remove; returns true when `node` became empty. */
-  const removeFrom = (node: Node<T>, entry: SpatialEntry<T>): boolean => {
+  const removeFrom = (node: Node<K>, entry: LeafEntry<K>): boolean => {
     if (node.leaf) {
       const index = node.children.indexOf(entry);
       if (index !== -1) node.children.splice(index, 1);
       recompute(node);
       return node.children.length === 0;
     }
-    const branch = node as Branch<T>;
+    const branch = node as Branch<K>;
     for (let i = branch.children.length - 1; i >= 0; i--) {
       const child = branch.children[i];
       // Prune by containment, not intersection: a branch rect is the union of
       // its children, so the entry's rect is always contained in the child
-      // that holds it — even for zero-area rects, which never "intersect".
+      // that holds it.
       if (child.rect && containsRect(child.rect, entry.rect)) {
         if (removeFrom(child, entry)) branch.children.splice(i, 1);
       }
@@ -215,7 +221,7 @@ export function createSpatialIndex<T>(options: SpatialIndexOptions = {}): Spatia
     return branch.children.length === 0;
   };
 
-  const remove = (id: string): boolean => {
+  const deleteEntry = (id: K): boolean => {
     const entry = entries.get(id);
     if (!entry) return false;
     entries.delete(id);
@@ -227,23 +233,15 @@ export function createSpatialIndex<T>(options: SpatialIndexOptions = {}): Spatia
     return true;
   };
 
-  const queryInto = (node: Node<T>, bounds: Rect, hits: (rect: Rect) => boolean, out: SpatialEntry<T>[]): void => {
+  const queryInto = (node: Node<K>, hits: (rect: Rect) => boolean, out: K[]): void => {
     if (!node.rect || !hits(node.rect)) return;
     if (node.leaf) {
       for (const entry of node.children) {
-        if (hits(entry.rect)) out.push(entry);
+        if (hits(entry.rect)) out.push(entry.id);
       }
       return;
     }
-    for (const child of (node as Branch<T>).children) queryInto(child, bounds, hits, out);
-  };
-
-  const dispose = (): void => {
-    if (disposed) return;
-    disposed = true;
-    entries.clear();
-    root = { children: [], leaf: true, rect: null };
-    controller.abort();
+    for (const child of (node as Branch<K>).children) queryInto(child, hits, out);
   };
 
   return {
@@ -254,45 +252,42 @@ export function createSpatialIndex<T>(options: SpatialIndexOptions = {}): Spatia
       entries.clear();
       root = { children: [], leaf: true, rect: null };
     },
-    get disposalSignal() {
-      return controller.signal;
-    },
-    dispose,
-    [Symbol.dispose]: dispose,
-    get disposed() {
-      return disposed;
-    },
+    delete: deleteEntry,
     get(id) {
-      return entries.get(id);
+      return entries.get(id)?.rect;
     },
-    insert,
+    has(id) {
+      return entries.has(id);
+    },
     queryPoint(point, queryOptions) {
       const tolerance = queryOptions?.tolerance ?? 0;
-      const out: SpatialEntry<T>[] = [];
-      if (tolerance === 0) {
-        // A zero-size query box never "intersects" under rect semantics (touching
-        // edges are not overlap), so point queries use inclusive containment.
-        queryInto(root, { height: 0, width: 0, x: point.x, y: point.y }, (rect) => containsPoint(rect, point), out);
-        return out;
+      if (!(tolerance >= 0)) {
+        throw new AtlasConfigError(`tolerance must be a non-negative finite number, received ${tolerance}`);
       }
-      const box: Rect = { height: tolerance * 2, width: tolerance * 2, x: point.x - tolerance, y: point.y - tolerance };
-      queryInto(root, box, (rect) => rectsIntersect(rect, box), out);
+      // A point is a zero-size box; closed-interval intersection makes it hit
+      // rects that merely touch it, so one shared path covers both query kinds.
+      const box: Rect = inflateRect({ ...point, height: 0, width: 0 }, tolerance);
+      const out: K[] = [];
+      queryInto(root, (rect) => rectsIntersect(rect, box), out);
       return out;
     },
     queryRect(rect) {
-      const out: SpatialEntry<T>[] = [];
-      queryInto(root, rect, (candidate) => rectsIntersect(candidate, rect), out);
+      const out: K[] = [];
+      queryInto(root, (candidate) => rectsIntersect(candidate, rect), out);
       return out;
     },
-    remove,
+    set(id, rect) {
+      const existing = entries.get(id);
+      if (existing) {
+        if (rectsEqual(existing.rect, rect)) return;
+        deleteEntry(id);
+      }
+      const entry: LeafEntry<K> = { id, rect: { ...rect } };
+      entries.set(id, entry);
+      insertEntry(entry);
+    },
     get size() {
       return entries.size;
-    },
-    update(id, rect) {
-      const entry = entries.get(id);
-      if (!entry) throw new AtlasConfigError(`Unknown spatial index id: ${id}`);
-      remove(id);
-      insert(id, rect, entry.value);
     },
   };
 }

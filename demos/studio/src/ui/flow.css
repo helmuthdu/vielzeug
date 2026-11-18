@@ -31,6 +31,20 @@
   stroke-width: var(--border-2);
 }
 
+/* Wide transparent twin for pointer/touch selection of a wire. */
+.flow-edge-hit {
+  pointer-events: stroke;
+  cursor: pointer;
+  fill: none;
+  stroke: transparent;
+  stroke-width: var(--size-4);
+}
+
+.flow-edge-selected,
+.flow-edge-hit.flow-edge-selected {
+  stroke: var(--color-primary);
+}
+
 .flow-edge-temp {
   stroke: var(--color-primary);
   stroke-dasharray: var(--size-1) var(--size-2);
@@ -58,7 +72,7 @@
   padding: var(--size-2);
   cursor: grab;
   user-select: none;
-  background-color: var(--color-neutral-lighter);
+  background-color: var(--surface-raised);
   border: var(--border-2) solid var(--color-neutral-border);
   border-radius: var(--rounded-lg);
   box-shadow: var(--shadow-md);
@@ -84,7 +98,7 @@
   width: var(--size-3);
   height: var(--size-3);
   cursor: crosshair;
-  background-color: var(--color-neutral-lighter);
+  background-color: var(--surface-raised);
   border: var(--border-2) solid var(--color-primary);
   border-radius: var(--rounded-full);
 }
@@ -122,21 +136,5 @@
   translate: -50% 0;
 }
 
-.flow-status {
-  position: absolute;
-  bottom: var(--size-4);
-  left: 50%;
-  padding: var(--size-1) var(--size-3);
-  font-size: var(--text-sm);
-  color: var(--text-color-body);
-  pointer-events: none;
-  background-color: var(--color-neutral-lighter);
-  border: var(--border) solid var(--color-neutral-border);
-  border-radius: var(--rounded-full);
-  translate: -50% 0;
-}
-
-.flow-status[data-state='cycle'] {
-  color: var(--color-error);
-  border-color: var(--color-error);
-}
+/* Layout comes from the shared .studio-badge in app.css; the cycle alert is
+   announced through the badge's own `color="error"` attribute. */

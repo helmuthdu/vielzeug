@@ -10,5 +10,5 @@ export class WireError extends Error {
 /** Thrown when a graph operation receives an edge that references a node id outside the supplied node set. */
 export class WireGraphError extends WireError {}
 
-/** Thrown when routing options are invalid, such as a negative `offset`, `padding`, or `bendPenalty`. */
+/** Thrown when routing options are invalid, such as a negative `handleLength`, `padding`, `stub`, or `bendPenalty`. */
 export class WireConfigError extends WireError {}

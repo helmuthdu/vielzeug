@@ -1,5 +1,5 @@
 export const wireRoutingExample = {
-  code: `import { bezierRoute, orthogonalRoute, polylineToSvgPath } from '@vielzeug/wire'
+  code: `import { bezierRoute, bezierToSvgPath, orthogonalRoute, polylineToSvgPath } from '@vielzeug/wire'
 
 // Three node boxes; edges must route around them.
 const nodes = [
@@ -33,11 +33,15 @@ function addPath(d, color, dashed) {
 }
 
 // Curved wire from node 1's right port to node 3's left port.
-addPath(bezierRoute({ side: 'right', x: 116, y: 47 }, { side: 'left', x: 260, y: 111 }), '#38bdf8')
+addPath(bezierToSvgPath(bezierRoute({ side: 'right', x: 116, y: 47 }, { side: 'left', x: 260, y: 111 })), '#38bdf8')
 
 // Manhattan wire from node 2 to node 3, routed around node 1's column.
-// The edge's own nodes are excluded: an endpoint inside a padded obstacle is blocked.
-const points = orthogonalRoute({ x: 116, y: 173 }, { x: 260, y: 111 }, { obstacles: [obstacles[0]], padding: 10 })
+// Every node is an obstacle; the router exempts each port's own node for its exit.
+const points = orthogonalRoute(
+  { side: 'right', x: 116, y: 173 },
+  { side: 'left', x: 260, y: 111 },
+  { obstacles, padding: 10 },
+)
 if (points) addPath(polylineToSvgPath(points), '#a78bfa')
 
 document.body.appendChild(svg)

@@ -54,11 +54,8 @@
 }
 
 .studio-stroke-preview {
-  fill: none;
-  stroke: var(--color-primary);
-  stroke-width: var(--border-2);
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  fill: var(--color-primary);
+  stroke: none;
 }
 
 .studio-shape.is-selected {
@@ -108,47 +105,8 @@
   --button-min-height: var(--size-9);
 }
 
-/* Floating bottom tool dock shared by the board, flow, and map scenes. */
-.studio-toolbar {
-  --button-radius: var(--rounded-full);
-  --button-min-height: var(--size-9);
-  position: absolute;
-  bottom: var(--size-5);
-  left: 50%;
-  z-index: 1;
-  display: flex;
-  gap: var(--size-1);
-  align-items: center;
-  padding: var(--size-1);
-  background-color: var(--surface-base);
-  border: var(--border) solid var(--color-neutral-border);
-  border-radius: var(--rounded-full);
-  box-shadow: var(--shadow-lg);
-  transform: translateX(-50%);
-}
-
-.studio-toolbar ore-tooltip {
-  display: inline-flex;
-}
-
-/* Active tool/toggle in any dock (board tools, flow routing). */
-.studio-toolbar .is-active {
-  --button-bg: var(--color-primary-backdrop);
-  --button-color: var(--color-primary-dark);
-}
-
-.board-dock .dock-group {
-  display: flex;
-  align-items: center;
-}
-
-.dock-sep {
-  width: var(--border-2);
-  height: var(--size-5);
-  margin-inline: var(--size-1);
-  background-color: var(--color-divider);
-  border-radius: var(--rounded-full);
-}
+/* Shared dock theming lives on .studio-dock in app.css; the board scene only
+   keeps its selection-toolbar capsule here. */
 
 .studio-guides {
   position: absolute;
@@ -170,6 +128,13 @@
 .studio-guide.is-grid.is-vertical {
   background: repeating-linear-gradient(to bottom, var(--color-warning) 0 4px, transparent 4px 8px);
 }
+/* Spacing guides read as a separate concern: dashed and in the error hue. */
+.studio-guide.is-spacing {
+  background: repeating-linear-gradient(to right, var(--color-error) 0 4px, transparent 4px 8px);
+}
+.studio-guide.is-spacing.is-vertical {
+  background: repeating-linear-gradient(to bottom, var(--color-error) 0 4px, transparent 4px 8px);
+}
 .studio-guide-cap {
   position: absolute;
   top: 0;
@@ -180,25 +145,8 @@
   pointer-events: none;
   translate: -50% -50%;
 }
-.studio-spacing-line {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-top: 1px dashed var(--color-error);
-}
-.studio-spacing-line.is-vertical {
-  border-top: none;
-  border-left: 1px dashed var(--color-error);
-}
-.studio-spacing-mark {
-  position: absolute;
-  top: 0;
-  left: 0;
-  font-size: var(--text-xs);
-  line-height: 1;
+.studio-guide-cap.is-spacing {
   color: var(--color-error);
-  pointer-events: none;
-  translate: -50% -50%;
 }
 
 /* Konva-style selection chrome (screen space, constant size at any zoom). */
@@ -250,3 +198,15 @@
 .studio-handle[data-handle='sw'] {
   cursor: nesw-resize;
 }
+
+/* Touch targets: the visible dot stays --size-3, but the hit area grows to at
+   least 24px on coarse pointers (same trick as .flow-port). */
+@media (pointer: coarse) {
+  .studio-handle::after {
+    position: absolute;
+    inset: calc(var(--size-3) * -1);
+    content: '';
+  }
+}
+
+/* Empty-board guidance uses the shared .studio-badge in app.css. */

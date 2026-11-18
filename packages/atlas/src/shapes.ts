@@ -6,6 +6,8 @@
 
 export type Point = Readonly<{ x: number; y: number }>;
 
+export type Size = Readonly<{ width: number; height: number }>;
+
 export type Rect = Readonly<{ x: number; y: number; width: number; height: number }>;
 
 /**

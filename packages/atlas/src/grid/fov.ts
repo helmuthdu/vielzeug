@@ -9,7 +9,7 @@
  */
 
 import { AtlasConfigError } from '../errors.js';
-import type { TileCoord } from './tile.js';
+import { type TileCoord, tileKey } from './tile.js';
 
 /** Decides whether a tile blocks sight. */
 export type BlockPredicate = (coord: TileCoord) => boolean;
@@ -35,7 +35,7 @@ export function computeFov(origin: TileCoord, radius: number, options: FovOption
   }
   const blocks = options.blocks ?? _noBlocks;
   const lit = new Set<string>();
-  lit.add(`${origin.col}:${origin.row}`);
+  lit.add(tileKey(origin));
   if (radius === 0) return lit;
 
   // Each octant maps (row, col) offsets onto grid offsets: row walks out
@@ -79,7 +79,7 @@ export function computeFov(origin: TileCoord, radius: number, options: FovOption
 
       const distSq = dx * dx + dy * dy;
       if (distSq <= radiusSq) {
-        lit.add(`${origin.col + dx}:${origin.row + dy}`);
+        lit.add(tileKey({ col: origin.col + dx, row: origin.row + dy }));
       }
 
       if (blocks({ col: origin.col + dx, row: origin.row + dy })) {
@@ -113,27 +113,25 @@ export interface FogSnapshot {
 }
 
 /**
- * Three-state fog-of-war bookkeeping: `unseen` tiles were never observed,
- * `seen` tiles were observed earlier but are not currently in view, and
- * `visible` tiles are in view right now. Keys are `tileKey` strings.
+ * Three-state fog-of-war bookkeeping over `tileKey` strings: `unseen` tiles
+ * were never observed, `seen` tiles were observed earlier but are not
+ * currently in view, and `visible` tiles are in view right now. `computeFov`
+ * produces the same keys, so its result feeds `update()` directly.
  */
 export interface Fog {
-  /** Demotes every `visible` tile to `seen` (call before revealing a new view). */
-  demote(): void;
   /** Serializable snapshot for save files. */
   exportState(): FogSnapshot;
-  /** Removes tiles from both sets, returning them to `unseen`. */
-  hide(coords: Iterable<TileCoord>): void;
   /** Replaces all fog state with a snapshot. */
   importState(snapshot: FogSnapshot): void;
-  /** Moves tiles from `unseen`/`seen` to `visible`. */
-  reveal(coords: Iterable<TileCoord>): void;
-  /** Like {@link Fog.reveal}, but takes `tileKey` strings (as produced by `computeFov`). */
-  revealKeys(keys: Iterable<string>): void;
   /** Current state of one tile. */
-  state(coord: TileCoord): FogState;
-  /** Tiles currently in view. */
-  readonly visibleKeys: Iterable<string>;
+  state(key: string): FogState;
+  /**
+   * Applies a new view: the previously visible tiles become `seen`, the given
+   * keys become `visible`, and keys already `seen` stay seen.
+   */
+  update(visibleKeys: Iterable<string>): void;
+  /** Keys currently in view. */
+  readonly visible: ReadonlySet<string>;
 }
 
 /** Creates an empty fog-of-war tracker (everything `unseen`). */
@@ -142,19 +140,8 @@ export function createFog(): Fog {
   const visible = new Set<string>();
 
   return {
-    demote() {
-      for (const key of visible) seen.add(key);
-      visible.clear();
-    },
     exportState() {
       return { seen: [...seen], visible: [...visible] };
-    },
-    hide(coords) {
-      for (const { col, row } of coords) {
-        const key = `${col}:${row}`;
-        seen.delete(key);
-        visible.delete(key);
-      }
     },
     importState(snapshot) {
       seen.clear();
@@ -162,25 +149,19 @@ export function createFog(): Fog {
       for (const key of snapshot.seen) seen.add(key);
       for (const key of snapshot.visible) visible.add(key);
     },
-    reveal(coords) {
-      for (const { col, row } of coords) {
-        const key = `${col}:${row}`;
-        seen.delete(key);
-        visible.add(key);
-      }
-    },
-    revealKeys(keys) {
-      for (const key of keys) {
-        seen.delete(key);
-        visible.add(key);
-      }
-    },
-    state(coord) {
-      const key = `${coord.col}:${coord.row}`;
+    state(key) {
       if (visible.has(key)) return 'visible';
       return seen.has(key) ? 'seen' : 'unseen';
     },
-    get visibleKeys() {
+    update(visibleKeys) {
+      for (const key of visible) seen.add(key);
+      visible.clear();
+      for (const key of visibleKeys) {
+        seen.delete(key);
+        visible.add(key);
+      }
+    },
+    get visible() {
       return visible;
     },
   };

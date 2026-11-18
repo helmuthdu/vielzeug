@@ -1,4 +1,4 @@
-export type ShowcaseDemoId = 'voyage' | 'eshop' | 'crm';
+export type ShowcaseDemoId = 'voyage' | 'eshop' | 'crm' | 'studio';
 
 type ShowcaseFeature = {
   description: string;
@@ -156,6 +156,52 @@ export const SHOWCASE_DEMOS: ShowcaseDemo[] = [
     ],
     source: 'https://github.com/helmuthdu/vielzeug/tree/main/demos/crm',
     summary: 'Revenue dashboards, opportunities, customer context, filtering, and business workflows.',
+  },
+  {
+    category: 'Canvas editing',
+    detailAlt: 'Vielzeug Studio flow scene with draggable nodes, bezier-routed ports, and a topological order readout',
+    detailImage: 'ss_studio_flow',
+    features: [
+      {
+        description: 'Freehand ink, node graphs, and a tile map share one camera model.',
+        icon: 'frame',
+        title: 'Infinite canvas',
+      },
+      {
+        description: 'Stabilized strokes, port-to-port wire routing, and color ramps.',
+        icon: 'pen-tool',
+        title: 'Editor primitives',
+      },
+      {
+        description: 'Heavy scenes repaint on a worker thread with one click.',
+        icon: 'cpu',
+        title: 'Worker rendering',
+      },
+      {
+        description: 'Every edit is reversible through serialized command history.',
+        icon: 'history',
+        title: 'Undo everywhere',
+      },
+    ],
+    headline: 'Every pixel, under your control.',
+    homeAlt: 'Vielzeug Studio map scene with tile terrain, fog of war, tokens, and floating toolbar',
+    homeImage: 'ss_studio_map',
+    href: '/demos/studio/',
+    icon: 'pen-tool',
+    id: 'studio',
+    imageHeight: 900,
+    imageWidth: 1440,
+    name: 'Studio',
+    packages: [
+      { name: 'atlas', purpose: 'Camera and spatial index' },
+      { name: 'stage', purpose: 'Layered canvas rendering' },
+      { name: 'ink', purpose: 'Stabilized freehand strokes' },
+      { name: 'wire', purpose: 'Node graph edge routing' },
+      { name: 'palette', purpose: 'Color conversion and ramps' },
+      { name: 'ledger', purpose: 'Reversible edits' },
+    ],
+    source: 'https://github.com/helmuthdu/vielzeug/tree/main/demos/studio',
+    summary: 'Freehand board, node flow editor, tile map with fog of war, and color workspace on one canvas stack.',
   },
 ];
 

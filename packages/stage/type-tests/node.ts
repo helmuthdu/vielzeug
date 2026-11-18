@@ -1,27 +1,29 @@
+import type { FrameScheduler, Matrix, Rect, Size } from '@vielzeug/atlas';
 import {
   createStage,
-  type FrameScheduler,
-  type Matrix,
   type PaintContext,
-  type Rect,
   type Stage,
   StageConfigError,
+  type StageController,
   StageError,
   type StageFrameInfo,
   type StageOptions,
-  type StageSpriteSheet,
   StageUnsupportedError,
 } from '@vielzeug/stage';
+import { createWorkerStage, type WorkerScope, type WorkerStage } from '@vielzeug/stage/worker';
 
 declare const canvas: HTMLCanvasElement;
+declare const worker: WorkerScope;
 
 const scheduler: FrameScheduler = {
   cancelFrame: (handle: number) => void handle,
+  now: () => performance.now(),
   requestFrame: (callback: (time: number) => void) => requestAnimationFrame(callback),
 };
 const matrix: Matrix = [1, 0, 0, 1, 0, 0];
-const rect: Rect = { height: 10, width: 10, x: 0, y: 0 };
-const sheet: StageSpriteSheet = { columns: 4, frameHeight: 16, frames: 8, frameWidth: 16 };
+const size: Size = { height: 200, width: 200 };
+
+type Scene = Readonly<{ type: 'move' }>;
 
 const options: StageOptions & Readonly<{ height: number; width: number }> = {
   height: 400,
@@ -38,16 +40,25 @@ const options: StageOptions & Readonly<{ height: number; width: number }> = {
 };
 
 const stage: Stage = createStage(canvas, options);
-stage.resize({ height: 200, width: 200 }, 2);
+stage.resize(size, 2);
 stage.setTransform(matrix);
 stage.invalidate('tiles');
 const info: StageFrameInfo = stage.render(0);
 void info;
-stage.drawSpriteFrame(canvas.getContext('2d') as CanvasRenderingContext2D, canvas, sheet, 0, rect);
+const rect: Rect = stage.visibleRect;
+void rect;
 const blob: Promise<Blob> = stage.toBlob();
 void blob;
-const ids: readonly string[] = stage.layerIds;
-void ids;
+
+// Both modes are interchangeable wherever only control is needed.
+const mainController: StageController = stage;
+void mainController;
+const remote: WorkerStage<Scene> = createWorkerStage<Scene>(canvas, worker, { height: 400, width: 400 });
+const remoteController: StageController = remote;
+void remoteController;
+remote.sendScene({ type: 'move' });
+void remote.ready;
+
 void new StageError('x');
 void new StageConfigError('x');
 void new StageUnsupportedError('x');

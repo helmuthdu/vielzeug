@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "feat(palette): color parsing, conversion, mixing, and contrast",
+      "comment": "feat(palette): color parsing (incl. named colors), lossless conversions, OKLab mixing, gamut-fitted ramps, and contrast",
       "packageName": "@vielzeug/palette",
       "type": "minor"
     }

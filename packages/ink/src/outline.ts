@@ -1,9 +1,8 @@
 /** Closed variable-width polygon approximating a stroked path. */
 
-import { clamp, requireStrokePoints } from './_validate.js';
+import { clamp, requireFiniteNumber, requireStrokePoints } from './_validate.js';
 import { InkConfigError } from './errors.js';
 import type { Point, StrokePoint } from './types.js';
-import { strokeWidths } from './widths.js';
 
 /** Unit normal at sample `i` of a polyline, derived from the central tangent; falls back to adjacent segments. */
 function normalAt(points: readonly Point[], i: number): Point {
@@ -37,32 +36,22 @@ function appendCap(outline: Point[], center: Point, startAngle: number, radius: 
  *
  * Each sample is offset by half its width along the local normal; the ring runs the start cap,
  * the left side forward, the end cap, and the right side backward, so it is closed without a
- * repeated final point. When `widths` is omitted, widths come from
- * `strokeWidths(points, { baseWidth: 4 })`. Deterministic: identical input produces an identical
- * ring.
+ * repeated final point. Pass a constant `width` for a uniform stroke, or one width per point
+ * (from `strokeWidths`) for a variable one. Deterministic: identical input produces an identical ring.
  *
- * @throws {import('./errors.js').InkConfigError} When `points` is invalid or `widths` has the wrong
- * shape.
+ * @throws {import('./errors.js').InkConfigError} When `widths` is a mismatched array or holds non-positive values.
  */
-export function strokeOutline(points: readonly StrokePoint[], widths?: readonly number[]): Point[] {
+export function strokeOutline(points: readonly StrokePoint[], widths: number | readonly number[]): Point[] {
   const input = requireStrokePoints(points, 1);
-  let perPoint: readonly number[];
-  if (widths !== undefined) {
-    if (!Array.isArray(widths) || widths.length !== input.length) {
-      throw new InkConfigError(
-        `Expected widths to be an array of ${input.length} number(s), received ${Array.isArray(widths) ? `${widths.length}` : typeof widths}.`,
-      );
+  const perPoint: readonly number[] = typeof widths === 'number' ? input.map(() => widths) : widths;
+  if (perPoint.length !== input.length) {
+    throw new InkConfigError(`Expected widths to hold ${input.length} number(s), received ${perPoint.length}.`);
+  }
+  for (const [index, w] of perPoint.entries()) {
+    requireFiniteNumber(w, `widths[${index}]`);
+    if (w <= 0) {
+      throw new InkConfigError(`Expected widths[${index}] to be a positive finite number, received ${w}.`);
     }
-    for (const [index, width] of widths.entries()) {
-      if (typeof width !== 'number' || !Number.isFinite(width) || width <= 0) {
-        throw new InkConfigError(
-          `Expected widths[${index}] to be a positive finite number, received ${String(width)}.`,
-        );
-      }
-    }
-    perPoint = widths;
-  } else {
-    perPoint = strokeWidths(input, { baseWidth: 4 });
   }
 
   const left: Point[] = [];

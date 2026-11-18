@@ -1,7 +1,7 @@
 import { bind, define, getHost, html, onCleanup, onMounted, prop, useSlots } from '@vielzeug/ore';
 import { signal, watch } from '@vielzeug/ripple';
 
-import { listen } from '../shared';
+import { createResizeTracker, listen, type ResizeTracker } from '../shared';
 import dockStyles from './dock.css?inline';
 
 /** Edges a dock can pin to. */
@@ -19,6 +19,8 @@ export const DOCK_PHONE_QUERY = '(width < 640px)';
 export type OreDockProps = {
   /** Fuse the tool row into one segmented capsule, leaving the flanks alone */
   attached?: boolean;
+  /** Detach the bar from its edge and float it as a capsule inset from that edge */
+  floating?: boolean;
   /** Accessible name for the toolbar landmark */
   label?: string;
   /** Mobile sizing: adapt to occupied slots, fill the row, or always hug and center */
@@ -55,6 +57,13 @@ export type OreDockProps = {
  * make it a containing block for `position: fixed` descendants, trapping any panel a slotted
  * control opens (a menu, a tooltip) inside the bar's own box.
  *
+ * `floating` replaces the strip with a capsule: the bar detaches from its edge on every width,
+ * hugs its content, centers itself in the container, and carries its own border and shadow. It is
+ * detached at every scroll position, so the pinned hairline never applies. A floating bar is
+ * anchored to the viewport, which would let it escape a docs preview; the same container heuristic
+ * the navbar uses flips it to `position: absolute` (reflected as `data-preview-mode`) whenever its
+ * container is narrower than the window.
+ *
  * Sizing reaches slotted content through custom properties only (`--dock-tool-flex`,
  * `--dock-tool-radius`): a shadow-tree `::slotted()` declaration ranks below any document-tree
  * rule on the same property, so a consumer that sets `flex` or `width` on a dock child outranks
@@ -73,6 +82,7 @@ export type OreDockProps = {
  *
  * @attr {string} side - Edge to pin to: 'top' | 'bottom' (default)
  * @attr {boolean} sticky - Pin to the edge while the container scrolls (default true)
+ * @attr {boolean} floating - Detach the bar from its edge as a capsule inset from that edge
  * @attr {boolean} attached - Fuse the tool row into one segmented capsule
  * @attr {string} mobile-layout - Phone sizing: 'auto' (default) | 'full' | 'compact'
  * @attr {string} label - Accessible name for the toolbar landmark
@@ -86,7 +96,8 @@ export type OreDockProps = {
  * @cssprop --dock-color - Bar ink
  * @cssprop --dock-border-color - Hairline shown while the bar is pinned, and the pill's border
  * @cssprop --dock-blur - Blur radius behind the bar. Set `0` to drop it
- * @cssprop --dock-radius - Bar corner radius, used by the pinned phone pill
+ * @cssprop --dock-radius - Bar corner radius, used by the pinned phone pill and the floating capsule
+ * @cssprop --dock-shadow - Shadow under a `floating` bar
  * @cssprop --dock-offset - Inset from the viewport's edges
  * @cssprop --dock-gap - Gap between the bar's places, above the phone width
  * @cssprop --dock-tool-gap - Gap between the tools in the row
@@ -122,6 +133,7 @@ export const DOCK_TAG = 'ore-dock' as const;
 define<OreDockProps>(DOCK_TAG, {
   props: {
     attached: prop.bool(false),
+    floating: prop.bool(false),
     label: prop.string('Page actions'),
     mobileLayout: prop.oneOf(DOCK_MOBILE_LAYOUTS, 'auto'),
     side: prop.oneOf(DOCK_SIDES, 'bottom'),
@@ -140,11 +152,34 @@ define<OreDockProps>(DOCK_TAG, {
     // Slot claim is computed in JS, not CSS: `:has()` cannot see slotted content and a `<slot>`
     // always matches `:empty`, so "is this place taken?" has no selector-side answer. The zones
     // read the result through `?hidden=`, and the host reflects it for variant styling.
+    // A floating bar is positioned against the viewport, which would let it escape the frame of
+    // a docs preview. The same container heuristic the navbar uses flips the bar to
+    // `position: absolute` whenever its container is narrower than the window, which keeps it
+    // inside the preview shell. The tracker only exists while the bar floats.
+    const isPreviewMode = signal(false);
+    let resizeTracker: ResizeTracker | undefined;
+
+    const syncPreviewTracking = (): void => {
+      if (props.floating.value && !resizeTracker) {
+        resizeTracker = createResizeTracker(el, () => {
+          isPreviewMode.value = resizeTracker?.isPreviewMode.value ?? false;
+        });
+      } else if (!props.floating.value && resizeTracker) {
+        resizeTracker.dispose();
+        resizeTracker = undefined;
+        isPreviewMode.value = false;
+      }
+    };
+
+    syncPreviewTracking();
+    watch(props.floating, syncPreviewTracking);
+
     bind({
       attr: {
         'data-center-claimed': () => (hasCenter.value ? true : undefined),
         'data-commit-claimed': () => (hasCommit.value ? true : undefined),
         'data-pinned': () => (isPinned.value ? true : undefined),
+        'data-preview-mode': () => (isPreviewMode.value ? true : undefined),
         'data-start-claimed': () => (hasStart.value ? true : undefined),
         'data-tools-claimed': () => (hasTools.value ? true : undefined),
       },
@@ -154,7 +189,9 @@ define<OreDockProps>(DOCK_TAG, {
     // would report a freshly mounted bar as pinned. jsdom never fires the callback, which leaves
     // the bar unpinned: its CSS fallback, and all jsdom can assert. Real pinning is e2e's job.
     const syncPinned = (): void => {
-      if (!props.sticky.value) {
+      // A floating bar is detached from its edge at every scroll position, so there is no
+      // "holding the edge" state to report: it carries its own border instead of the hairline.
+      if (!props.sticky.value || props.floating.value) {
         isPinned.value = false;
 
         return;
@@ -199,9 +236,13 @@ define<OreDockProps>(DOCK_TAG, {
       syncPinned();
     });
 
-    watch(() => [props.side.value, props.sticky.value], syncPinned);
+    watch(() => [props.side.value, props.sticky.value, props.floating.value], syncPinned);
 
-    onCleanup(() => detachGeometry?.());
+    onCleanup(() => {
+      detachGeometry?.();
+      resizeTracker?.dispose();
+      resizeTracker = undefined;
+    });
 
     return html`
       <div

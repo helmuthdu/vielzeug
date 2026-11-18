@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "ore-button-group finds segments wrapped in a direct ore-tooltip child",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

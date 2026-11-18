@@ -7,5 +7,5 @@ export class InkError extends Error {
   }
 }
 
-/** Thrown when ink options are invalid, such as a negative `tolerance`, a `tension` outside `[0, 1]`, or a non-positive `baseWidth`. */
+/** Thrown when ink options are invalid, such as a negative `tolerance`, a `tension` outside `[0, 1]`, or a non-positive `width`. */
 export class InkConfigError extends InkError {}

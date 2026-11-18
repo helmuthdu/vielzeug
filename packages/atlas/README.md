@@ -15,25 +15,26 @@ yarn add @vielzeug/atlas
 ```ts
 import { createCamera, createSpatialIndex } from '@vielzeug/atlas';
 
+// state.x/y is the world point at the viewport centre
 const camera = createCamera();
+camera.resize({ height: 600, width: 800 });
 camera.zoomAt({ x: 400, y: 300 }, 1.2); // world point under the cursor stays fixed
 
 const index = createSpatialIndex();
-index.insert('a', { height: 10, width: 10, x: 0, y: 0 });
-index.queryRect(camera.visibleRect({ x: 800, y: 600 })); // viewport culling
+index.set('a', { height: 10, width: 10, x: 0, y: 0 });
+index.queryRect(camera.visibleRect); // viewport culling, returns ids
 ```
 
 ## Features
 
-- `createCamera()`: anchor-preserving zoom/rotate, screen-space pan, `fitBounds()`, rotated `visibleRect()`, and `animateTo()` with an injectable frame scheduler
-- `createSpatialIndex()`: dynamic R-tree with `insert`/`update`/`remove`/`queryRect`/`queryPoint`
+- `createCamera()`: viewport-centred state, anchor-preserving zoom/rotate, screen-space pan, `fitBounds()`, rotated `visibleRect`, and `animateTo()` with an injectable frame scheduler
+- `createSpatialIndex()`: dynamic R-tree with `set`/`delete`/`get`/`queryRect`/`queryPoint` over ids
 - Matrix helpers in Canvas2D element order, including `invert()` and `toCssMatrix()`
-- Rect/AABB math: union, intersection, containment, inflation, bounds-from-points
-- OBB math: corners, bounds, point-in-box, and SAT box-box intersection
+- Rect/AABB math: union, closed-interval intersection, containment, inflation, bounds-from-points
 - Narrow-phase geometry: `pointInPolygon`, `distanceToPolyline`, `pointNearPolygon`
-- Snapping: `snapRect()` with candidate/grid targets and guide descriptors, `snapSpacing()` for equal-gap spacing guides, plus pure `alignRects()`/`distributeRects()`
+- Snapping: `snapRect()` with candidate, grid, and equal-gap (`spacing`) targets and kind-tagged guide descriptors, plus pure `alignRects()`/`distributeRects()`
 - `@vielzeug/atlas/grid` subpath: square-tile coordinate math, viewport tile ranges, 8-octant shadowcasting `computeFov()`, and three-state `createFog()`
-- Typed errors and the Vielzeug disposal contract throughout
+- Typed errors; the camera follows the Vielzeug disposal contract
 - Zero runtime dependencies, no DOM requirement
 
 ## Documentation

@@ -25,7 +25,7 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/gesture` | Framework-neutral pointer drag, pan, pinch, and wheel recognition with lifecycle-owned handles | N/A | N/A | N/A |
 | `@vielzeug/herald` | Typed synchronous event bus with wildcard subscriptions, one-shot waits, and lifecycle tracing | N/A | N/A | N/A |
 | `@vielzeug/illusionist` | Typed, deterministic, locale-aware fake data generator with seeded PRNG | `arsenal`, `coins`, `tempo` | N/A | N/A |
-| `@vielzeug/ink` | Freehand stroke smoothing, width profiling, and SVG path output | N/A | N/A | N/A |
+| `@vielzeug/ink` | Causal stroke stabilization, smoothing, speed-based width profiling, and SVG path output | N/A | N/A | N/A |
 | `@vielzeug/keymap` | Headless keyboard shortcut manager with chord sequences | N/A | N/A | N/A |
 | `@vielzeug/ledger` | Serialized reversible command history with atomic framework-neutral state and cancellation ownership | N/A | N/A | N/A |
 | `@vielzeug/lingua` | Typed i18n with pluralization and lazy locale loading | N/A | N/A | `ripple` |
@@ -36,7 +36,7 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/palette` | Color parsing, conversion, mixing, and contrast for design tools | N/A | N/A | N/A |
 | `@vielzeug/patchwork` | RFC 6902 JSON Patch: structural diff, immutable apply, and guarded tryApply for sync protocols. | N/A | N/A | N/A |
 | `@vielzeug/postmaster` | Typed durable job outbox with leased processing, retries, and dead-letter recovery | `arsenal`, `vault` | N/A | N/A |
-| `@vielzeug/prism` | Responsive SVG charts with explicit updates: line, bar, area, scatter, pie, radar, heatmap, sparkline | `orbit` | N/A | N/A |
+| `@vielzeug/prism` | Responsive SVG charts with explicit updates: line, bar, area, scatter, pie, radar, heatmap, sparkline | `orbit`, `palette` | N/A | N/A |
 | `@vielzeug/pulse` | Typed WebSocket client with channels, rooms, presence, reconnect | `arsenal` | N/A | N/A |
 | `@vielzeug/refine` | Accessible, themeable web components built on ore | `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `necromancer`, `orbit`, `ore`, `ripple`, `scribe`, `sentinel`, `sigil`, `tempo` | N/A | N/A |
 | `@vielzeug/ripple` | Reactive runtime primitives: signals, derived values, effects, scopes, watchers, and async resources | N/A | N/A | N/A |
@@ -49,7 +49,7 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/sigil` | QR code generation and scanning: pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning | N/A | N/A | N/A |
 | `@vielzeug/sourcerer` | Reactive collection sources with local, page, cursor, and infinite pagination | `arsenal` | N/A | N/A |
 | `@vielzeug/spell` | Zero-dependency schema validation with Standard Schema interoperability | `arsenal` | N/A | N/A |
-| `@vielzeug/stage` | Retained-mode 2D canvas stage engine with DPR-aware layers, dirty repaints, and PNG export | N/A | N/A | N/A |
+| `@vielzeug/stage` | Retained-mode 2D canvas stage engine with DPR-aware layers, dirty repaints, and PNG export | `atlas` | N/A | N/A |
 | `@vielzeug/tabula` | Typed CSV and TSV: RFC 4180 parser with schema-validated rows, streaming reader, and safe serializer. | `spell` | N/A | N/A |
 | `@vielzeug/tandem` | Offline-first sync engine with rev baselines, tombstoned deletions, and idle-batched pushes | `arsenal` | N/A | N/A |
 | `@vielzeug/tavern` | Table sessions over mesh: host-owned state replication with guest command forwarding | `mesh` | N/A | N/A |

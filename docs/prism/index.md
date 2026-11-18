@@ -92,7 +92,7 @@ chart.dispose();
 | Feature            | Prism                                                            | Hand-written SVG                             |
 | ------------------ | ---------------------------------------------------------------- | -------------------------------------------- |
 | Bundle size        | <PackageInfo package="prism" type="size" />                      | No chart package                             |
-| Zero dependencies  | <ore-icon name="x" size="16"></ore-icon> (uses Orbit)            | <ore-icon name="check" size="16"></ore-icon> |
+| Zero dependencies  | <ore-icon name="x" size="16"></ore-icon> (uses Orbit, Palette)   | <ore-icon name="check" size="16"></ore-icon> |
 | Data updates       | `ChartHandle.update()` replaces chart data                       | You implement the update path                |
 | Responsive sizing  | `ResizeObserver` recalculates the chart layout                   | You implement the resize behavior            |
 | Chart interactions | Built-in pointer and keyboard interactions on supported charts   | You implement them                           |

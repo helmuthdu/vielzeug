@@ -71,7 +71,7 @@ export interface BoardModel {
 export function createBoardModel(): BoardModel {
   const order: string[] = [];
   const shapes = new Map<string, BoardShape>();
-  const index: SpatialIndex<BoardShape> = createSpatialIndex<BoardShape>();
+  const index: SpatialIndex = createSpatialIndex();
   const listeners = new Set<() => void>();
   let selection: string[] = [];
   const controller = new AbortController();
@@ -85,7 +85,7 @@ export function createBoardModel(): BoardModel {
       if (shapes.has(shape.id)) return;
       shapes.set(shape.id, { ...shape });
       order.push(shape.id);
-      index.insert(shape.id, shapeBounds(shape), shape);
+      index.set(shape.id, shapeBounds(shape));
       notify();
     },
     get disposalSignal() {
@@ -94,7 +94,7 @@ export function createBoardModel(): BoardModel {
     dispose() {
       controller.abort();
       listeners.clear();
-      index.dispose();
+      index.clear();
     },
     get disposed() {
       return controller.signal.aborted;
@@ -107,14 +107,15 @@ export function createBoardModel(): BoardModel {
       const hits = index.queryPoint(point, { tolerance });
       let topmost: BoardShape | null = null;
       let topmostZ = -1;
-      for (const entry of hits) {
-        const shape = entry.value;
+      for (const id of hits) {
+        const shape = shapes.get(id);
+        if (!shape) continue;
         // Strokes need polygon narrow-phase inside their bounds; rects already passed it.
         if (shape.kind === 'stroke') {
           const local = { x: point.x - shape.x, y: point.y - shape.y };
           if (!pointInPolygon(shape.outline, local) && tolerance <= 0) continue;
         }
-        const z = order.indexOf(entry.id);
+        const z = order.indexOf(id);
         if (z > topmostZ) {
           topmostZ = z;
           topmost = shape;
@@ -125,7 +126,7 @@ export function createBoardModel(): BoardModel {
     marquee(rect) {
       return index
         .queryRect(rect)
-        .map((entry) => order.indexOf(entry.id))
+        .map((id) => order.indexOf(id))
         .sort((a, b) => a - b)
         .map((z) => order[z] as string);
     },
@@ -134,7 +135,7 @@ export function createBoardModel(): BoardModel {
       if (!shape) return false;
       shape.x = position.x;
       shape.y = position.y;
-      index.update(id, shapeBounds(shape));
+      index.set(id, shapeBounds(shape));
       notify();
       return true;
     },
@@ -144,17 +145,14 @@ export function createBoardModel(): BoardModel {
       const at = order.indexOf(id);
       if (at !== -1) order.splice(at, 1);
       selection = selection.filter((selected) => selected !== id);
-      index.remove(id);
+      index.delete(id);
       notify();
       return true;
     },
     replace(shape) {
-      const stored = shapes.get(shape.id);
-      if (!stored) return false;
-      // Mutate in place so the spatial index's value reference stays fresh,
-      // matching how moveTo updates the stored object.
-      Object.assign(stored, shape);
-      index.update(shape.id, shapeBounds(stored));
+      if (!shapes.has(shape.id)) return false;
+      shapes.set(shape.id, { ...shape });
+      index.set(shape.id, shapeBounds(shape));
       notify();
       return true;
     },

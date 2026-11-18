@@ -131,6 +131,10 @@ async function main(): Promise<void> {
       `Validating ${total} REPL example${total === 1 ? '' : 's'} across ${targets.length} package${targets.length === 1 ? '' : 's'}...`,
     );
 
+    // A package whose examples are all browserOnly (or that has none) generates
+    // no snippet tests; vitest would exit 1 on "No test files found".
+    if (total === 0) return;
+
     execFileSync(
       resolveVitestBin(),
       ['run', '--config', join(__dirname, 'vitest.repl.config.ts'), '--reporter=verbose'],

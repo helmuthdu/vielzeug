@@ -50,6 +50,9 @@ function navigate(): void {
   const mount = scenes[name];
   if (!mount) throw new Error(`Unknown studio scene: ${name}`);
   scene = mount(sceneContainer);
+  // The zoom cluster lives in the scene's dock (it belongs with the canvas
+  // tools, not the nav); the shell keeps driving it from here.
+  if (scene.dock) scene.dock.append(shell.createZoomCluster());
   shell.setScene(sceneInfo(name));
   shell.attachCamera(scene.camera ?? null, scene.fit ?? null);
 }

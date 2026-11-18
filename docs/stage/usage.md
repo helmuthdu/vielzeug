@@ -24,6 +24,8 @@ const stage = createStage(canvas, {
 
 Each layer paints into its own cached backing surface. The stage composites all surfaces onto the visible canvas in registration order whenever a frame is scheduled. Paint callbacks receive a context already transformed by `dpr × matrix`, so they draw in **world units** and can cull against `frame.visibleRect`.
 
+Layers are fixed when the stage is created — the same in both render modes. Hide a layer by returning early from its paint and invalidating it. The stage sizes the canvas backing store; you own the canvas CSS size (set it via CSS or a `ResizeObserver`).
+
 ## Driving the Transform
 
 The stage takes a world→screen matrix in CSS pixels (it applies DPR itself). Pair it with an `@vielzeug/atlas` camera:
@@ -51,7 +53,7 @@ token.x += 10;
 stage.invalidate('tokens'); // only the tokens layer repaints next frame
 ```
 
-Invalidations within one frame coalesce into a single scheduled frame. Call `stage.render()` to force a synchronous repaint (useful in tests and right before `toBlob()`).
+Invalidations within one frame coalesce into a single scheduled frame. Call `stage.render()` to force a synchronous repaint (useful in tests).
 
 ## Resize and DPR Changes
 
@@ -63,29 +65,14 @@ new ResizeObserver(([entry]) => {
 
 `resize()` resizes the canvas backing store and invalidates all layers; surfaces are reallocated at the new pixel size.
 
-## Sprite Sheets
-
-`drawSpriteFrame()` slices one cell of a sheet and draws it scaled into a world-space rect:
-
-```ts
-const sheet = { columns: 8, frameHeight: 32, frameWidth: 32, frames: 24 };
-stage.drawSpriteFrame(ctx, sheetImage, sheet, Math.floor(time / 100) % 24, {
-  height: 32,
-  width: 32,
-  x: token.x,
-  y: token.y,
-});
-```
-
 ## Exporting a PNG
 
 ```ts
-stage.render(); // make sure the latest invalidations are composited
 const blob = await stage.toBlob();
 await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
 ```
 
-`toBlob()` throws `StageUnsupportedError` when the canvas cannot produce a blob — the stage never silently degrades.
+`toBlob()` flushes any pending repaint before rasterizing, so it always captures the current frame — no manual `render()` first. It throws `StageUnsupportedError` when the canvas cannot produce a blob — the stage never silently degrades.
 
 ## Testing with Injected Surfaces
 
@@ -98,6 +85,7 @@ const stage = createStage(fakeCanvas, {
   height: 200,
   scheduler: {
     cancelFrame: (id) => frames.queued.delete(id),
+    now: () => 0,
     requestFrame: (cb) => {
       frames.queued.add(cb);
       return frames.queued.size;
@@ -111,22 +99,25 @@ The default factory uses `OffscreenCanvas` when present, else a canvas from the 
 
 ## Worker Rendering
 
-The `@vielzeug/stage/worker` subpath renders the composited canvas inside a Web Worker. The main thread transfers an `OffscreenCanvas` once and then drives the stage over a versioned message protocol; painters live worker-side.
+The `@vielzeug/stage/worker` subpath renders the composited canvas inside a Web Worker. The main thread transfers an `OffscreenCanvas` once and then drives the stage over an internal message protocol; painters live worker-side. A `WorkerStage` and a main-thread `Stage` share the `StageController` type, so code that only controls a stage works with either.
 
 ```ts
 // main.ts
 import { createWorkerStage } from '@vielzeug/stage/worker';
 
+type Scene = Readonly<{ col: number; id: string; row: number; type: 'move' }>;
+
 const worker = new Worker(new URL('./stage.worker.ts', import.meta.url), { type: 'module' });
-const stage = createWorkerStage(canvas, worker, {
+const stage = createWorkerStage<Scene>(canvas, worker, {
   height: 600,
-  layers: [{ id: 'scene' }],
   width: 800,
 });
+// The creator owns the worker: terminate it when the stage is disposed.
+stage.disposalSignal.addEventListener('abort', () => worker.terminate());
 
 await stage.ready; // the worker created its stage
 stage.setTransform([1, 0, 0, 1, 0, 0]);
-stage.invalidate('scene');
+stage.sendScene({ col: 3, id: 'hero', row: 2, type: 'move' });
 const blob = await stage.toBlob({ type: 'image/png' }); // correlated round-trip
 stage.dispose(); // also rejects any in-flight blob requests
 ```
@@ -135,17 +126,23 @@ stage.dispose(); // also rejects any in-flight blob requests
 // stage.worker.ts
 import { serveStage } from '@vielzeug/stage/worker';
 
-serveStage(self, () => ({
+serveStage<Scene>(self, () => ({
   layers: [{ id: 'scene', paint: (ctx) => ctx.fillRect(0, 0, 800, 600) }],
+  onScene: (scene, stage) => {
+    applyMove(scene);
+    stage.invalidate('scene'); // the handler owns repaints
+  },
 }));
 ```
 
 Notes:
 
+- The worker owns its painters. `serveStage`'s `setup` returns the `layers` (and optional `onScene`/`onDispose` hooks); the main thread never names layers.
 - The canvas transfer is **one-shot**: `createWorkerStage` calls `transferControlToOffscreen()` on construction. To go back to main-thread rendering, mount a fresh `<canvas>` element.
 - `toBlob()` sends a `blob` command and resolves with the worker's response; requests are correlated by id and reject with `StageDisposedError` if the client is disposed while one is in flight.
-- `sendScene(scene)` forwards arbitrary app data to the worker's `onScene` hook — useful for mirroring model state (e.g. token moves) without shipping painters to the main thread.
-- A protocol mismatch between the two halves logs a dev warning and is otherwise ignored; bump `STAGE_WORKER_PROTOCOL` only with a coordinated rebuild of both halves.
+- `sendScene(scene)` forwards your typed payload to the worker's `onScene(scene, stage)` hook — useful for mirroring model state (e.g. token moves) without shipping painters to the main thread. The handler decides which layers to invalidate; nothing repaints automatically.
+- Invalid size, DPR, or matrix input throws `StageConfigError` on the main thread, exactly like `createStage`.
+- Worker-side exceptions are reported through `reportError`, the same path an uncaught main-thread paint error takes. The protocol version is checked once at the init/ready handshake; a stale cached worker rejects `ready` with a `StageError` and disposes the stage.
 
 ## Best Practices
 
@@ -153,3 +150,4 @@ Notes:
 - Put rarely-changing content (tile grids, backgrounds) on lower layers so pointer-driven changes only repaint upper layers.
 - Dispose the stage when the view unmounts: `using stage = createStage(...)` or `stage.dispose()`. Disposal cancels scheduled frames and releases every backing surface.
 - Treat `StageUnsupportedError` as a hard capability gap (feature-detect or surface it to the user); there is deliberately no fallback path.
+- In worker mode, invalidate only the layers a scene message changed — `onScene` runs on every forwarded payload.
