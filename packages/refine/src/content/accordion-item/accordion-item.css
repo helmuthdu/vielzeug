@@ -258,6 +258,15 @@
     }
   }
 
+  @media (pointer: fine) {
+    :host([variant='solid']:not([size])),
+    :host([variant='solid'][size='md']),
+    :host([variant='flat']:not([size])),
+    :host([variant='flat'][size='md']) {
+      --accordion-item-details-padding: var(--size-2) var(--size-4);
+    }
+  }
+
   /* ========================================
      States
      ======================================== */

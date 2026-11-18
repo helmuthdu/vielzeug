@@ -47,11 +47,6 @@
     border-radius: var(--rounded-lg);
   }
 
-  :host([variant='solid']),
-  :host([variant='flat']) {
-    padding-block: 0;
-  }
-
   /* Solid variant (default) */
   :host([variant='solid']) {
     --_bg: var(--accordion-bg, var(--color-contrast-50));

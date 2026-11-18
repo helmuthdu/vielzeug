@@ -9,14 +9,23 @@
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
-  test('aligns solid and flat row height with their container', async ({ page, refinePage }) => {
+  test('keeps grouped spacing while using shorter solid and flat rows', async ({ page, refinePage }) => {
     await page.evaluate(() => {
       document.querySelector('style')?.remove();
       const frame = document.querySelector<HTMLElement>('.frame');
 
       if (!frame) throw new Error('Expected the component frame.');
 
-      frame.style.setProperty('--size-2', '8px');
+      Object.entries({
+        '--border': '1px',
+        '--size-2': '8px',
+        '--size-3': '12px',
+        '--size-4': '16px',
+        '--size-11': '44px',
+        '--text-base': '16px',
+      }).forEach(([name, value]) => {
+        frame.style.setProperty(name, value);
+      });
     });
 
     await refinePage.mountComponent(`
@@ -26,24 +35,35 @@ test.describe('Layout', () => {
       <ore-accordion variant="flat">
         <ore-accordion-item><span slot="title">Flat</span>Content</ore-accordion-item>
       </ore-accordion>
+      <ore-accordion variant="bordered">
+        <ore-accordion-item><span slot="title">Bordered</span>Content</ore-accordion-item>
+      </ore-accordion>
     `);
 
-    const heightDifferences = await page.locator('ore-accordion').evaluateAll((accordions) =>
+    const measurements = await page.locator('ore-accordion').evaluateAll((accordions) =>
       accordions.map((accordion) => {
         const row = accordion.querySelector('ore-accordion-item');
+        const summary = row?.shadowRoot?.querySelector('summary');
 
-        if (!row) throw new Error('Expected an accordion row.');
+        if (!row || !summary) throw new Error('Expected an accordion row summary.');
 
-        const container = accordion.getBoundingClientRect();
-        const rowHeight = row.getBoundingClientRect().height;
-        const style = getComputedStyle(accordion);
-        const borderHeight = Number.parseFloat(style.borderTopWidth) + Number.parseFloat(style.borderBottomWidth);
+        const containerStyle = getComputedStyle(accordion);
+        const summaryStyle = getComputedStyle(summary);
 
-        return container.height - borderHeight - rowHeight;
+        return {
+          containerPadding: [containerStyle.paddingTop, containerStyle.paddingBottom],
+          summaryHeight: summary.getBoundingClientRect().height,
+          summaryPadding: [summaryStyle.paddingTop, summaryStyle.paddingBottom],
+        };
       }),
     );
 
-    expect(heightDifferences).toEqual([0, 0]);
+    expect(measurements[0]?.containerPadding).toEqual(['8px', '8px']);
+    expect(measurements[1]?.containerPadding).toEqual(['8px', '8px']);
+    expect(measurements[0]?.summaryPadding).toEqual(['8px', '8px']);
+    expect(measurements[1]?.summaryPadding).toEqual(['8px', '8px']);
+    expect(measurements[0]?.summaryHeight).toBeLessThan(measurements[2]?.summaryHeight ?? 0);
+    expect(measurements[1]?.summaryHeight).toBeLessThan(measurements[2]?.summaryHeight ?? 0);
   });
 });
 
