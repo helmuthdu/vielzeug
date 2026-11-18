@@ -8,6 +8,45 @@
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
+test.describe('Layout', () => {
+  test('aligns solid and flat row height with their container', async ({ page, refinePage }) => {
+    await page.evaluate(() => {
+      document.querySelector('style')?.remove();
+      const frame = document.querySelector<HTMLElement>('.frame');
+
+      if (!frame) throw new Error('Expected the component frame.');
+
+      frame.style.setProperty('--size-2', '8px');
+    });
+
+    await refinePage.mountComponent(`
+      <ore-accordion variant="solid">
+        <ore-accordion-item><span slot="title">Solid</span>Content</ore-accordion-item>
+      </ore-accordion>
+      <ore-accordion variant="flat">
+        <ore-accordion-item><span slot="title">Flat</span>Content</ore-accordion-item>
+      </ore-accordion>
+    `);
+
+    const heightDifferences = await page.locator('ore-accordion').evaluateAll((accordions) =>
+      accordions.map((accordion) => {
+        const row = accordion.querySelector('ore-accordion-item');
+
+        if (!row) throw new Error('Expected an accordion row.');
+
+        const container = accordion.getBoundingClientRect();
+        const rowHeight = row.getBoundingClientRect().height;
+        const style = getComputedStyle(accordion);
+        const borderHeight = Number.parseFloat(style.borderTopWidth) + Number.parseFloat(style.borderBottomWidth);
+
+        return container.height - borderHeight - rowHeight;
+      }),
+    );
+
+    expect(heightDifferences).toEqual([0, 0]);
+  });
+});
+
 test.describe('Interaction', () => {
   test('expands panel on click', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
