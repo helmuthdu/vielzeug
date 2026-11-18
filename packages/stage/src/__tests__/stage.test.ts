@@ -46,6 +46,7 @@ function makeSurface(width: number, height: number): FakeSurface {
     ctx,
     getContext: () => ctx,
     height,
+    toBlob: (cb: (blob: Blob | null) => void) => cb(new Blob(['surface'])),
     width,
   };
 }
@@ -91,6 +92,7 @@ function makeScheduler() {
 function setup(options: Partial<Parameters<typeof createStage>[1]> = {}) {
   const canvas = makeCanvas();
   const surfaces: FakeSurface[] = [];
+  const created: Array<{ h: number; w: number }> = [];
   const frames = makeScheduler();
   const stage = createStage(canvas, {
     height: 200,
@@ -98,13 +100,14 @@ function setup(options: Partial<Parameters<typeof createStage>[1]> = {}) {
     width: 400,
     ...options,
     createSurface: (w, h) => {
+      created.push({ h, w });
       const surface = makeSurface(w, h);
       surfaces.push(surface);
       return surface;
     },
     scheduler: frames.scheduler,
   });
-  return { canvas, frames, stage, surfaces };
+  return { canvas, created, frames, stage, surfaces };
 }
 
 describe('createStage', () => {
@@ -367,5 +370,131 @@ describe('createStage', () => {
   it('rejects a non-finite transform', () => {
     const { stage } = setup();
     expect(() => stage.setTransform([Number.NaN, 0, 0, 1, 0, 0])).toThrow(/finite/);
+  });
+
+  describe('region/scale export', () => {
+    it('re-paints layers into scratch surfaces at the requested pixel size', async () => {
+      const { created, stage, surfaces } = setup({ dpr: 2, layers: [{ id: 'a', paint: () => {} }] });
+      stage.render();
+      created.length = 0;
+      const liveSurfaces = [...surfaces];
+      stage.canvas.toBlob = (cb) => cb(new Blob(['png']));
+      await stage.toBlob({ region: { height: 50, width: 80, x: 5, y: 7 }, scale: 3 });
+      // Output surface plus one scratch per layer, sized round(region * scale).
+      const scratch = surfaces.filter((s) => !liveSurfaces.includes(s));
+      expect(scratch).toHaveLength(2);
+      expect(created).toEqual([
+        { h: 150, w: 240 },
+        { h: 150, w: 240 },
+      ]);
+      // Scratch surfaces are released after the export.
+      for (const surface of scratch) {
+        expect(surface.width).toBe(0);
+        expect(surface.height).toBe(0);
+      }
+    });
+
+    it('paints layers with scale × translate(-region) and keeps live state untouched', async () => {
+      const seen: unknown[][] = [];
+      const { frames, stage, surfaces } = setup({
+        dpr: 2,
+        layers: [
+          {
+            id: 'a',
+            paint: (ctx) => {
+              const calls = (ctx as unknown as { calls: RecordedCall[] }).calls;
+              const world = [...calls].reverse().find((c) => c.name === 'setTransform');
+              seen.push(world?.args ?? []);
+            },
+          },
+        ],
+      });
+      stage.setTransform([2, 0, 0, 2, 0, 0]);
+      stage.render();
+      seen.length = 0;
+      const liveSurface = surfaces[0];
+      stage.canvas.toBlob = (cb) => cb(new Blob(['png']));
+      await stage.toBlob({ region: { height: 100, width: 200, x: 10, y: 20 }, scale: 4 });
+      // exportMatrix = translate(-10, -20) × scale(4) → [4, 0, 0, 4, -40, -80].
+      expect(seen).toEqual([[4, 0, 0, 4, -40, -80]]);
+      // Live viewport, transform, and dirty flags are unchanged: the live
+      // layer surface survives intact, no frame is scheduled, and the next
+      // render repaints nothing.
+      expect(liveSurface.width).toBeGreaterThan(0);
+      expect(frames.pending()).toBe(0);
+      expect(stage.render().repainted).toEqual([]);
+      expect(stage.matrix).toEqual([2, 0, 0, 2, 0, 0]);
+    });
+
+    it('composites scratch layers in registration order over the background', async () => {
+      const { stage, surfaces } = setup({
+        background: '#abcdef',
+        layers: [
+          { id: 'a', paint: () => {} },
+          { id: 'b', paint: () => {} },
+        ],
+      });
+      stage.canvas.toBlob = (cb) => cb(new Blob(['png']));
+      await stage.toBlob({ region: { height: 10, width: 10, x: 0, y: 0 }, scale: 1 });
+      // Scratch order: [output, layer a, layer b]; the output surface receives
+      // the background fill and both layer drawImage calls in order.
+      const [output, layerA, layerB] = surfaces;
+      expect(output?.ctx.calls.filter((c) => c.name === 'fillRect')).toHaveLength(1);
+      const draws = output?.ctx.calls.filter((c) => c.name === 'drawImage') ?? [];
+      expect(draws).toHaveLength(2);
+      expect(draws[0]?.args[0]).toBe(layerA);
+      expect(draws[1]?.args[0]).toBe(layerB);
+    });
+
+    it('defaults the region to the visible rect and scale to device pixels per world unit', async () => {
+      const seen: unknown[][] = [];
+      let frameDpr = 0;
+      const { created, stage, surfaces } = setup({
+        dpr: 2,
+        layers: [
+          {
+            id: 'a',
+            paint: (_ctx, frame) => {
+              frameDpr = frame.dpr;
+              const calls = (_ctx as unknown as { calls: RecordedCall[] }).calls;
+              const world = [...calls].reverse().find((c) => c.name === 'setTransform');
+              seen.push(world?.args ?? []);
+            },
+          },
+        ],
+      });
+      stage.setTransform([2, 0, 0, 2, 0, 0]);
+      stage.render();
+      seen.length = 0;
+      created.length = 0;
+      stage.canvas.toBlob = (cb) => cb(new Blob(['png']));
+      // scale omitted → dpr × matrix scale = 4; region 200×100 world units →
+      // 800×400 export pixels.
+      await stage.toBlob({ region: { height: 100, width: 200, x: 0, y: 0 } });
+      expect(seen).toEqual([[4, 0, 0, 4, 0, 0]]);
+      expect(frameDpr).toBe(1);
+      expect(created).toEqual([
+        { h: 400, w: 800 },
+        { h: 400, w: 800 },
+      ]);
+      expect(surfaces).toHaveLength(3);
+    });
+
+    it('rejects invalid regions and scales', async () => {
+      const { stage } = setup({ layers: [{ id: 'a', paint: () => {} }] });
+      await expect(stage.toBlob({ region: { height: 0, width: 10, x: 0, y: 0 } })).rejects.toThrow(/region/);
+      await expect(stage.toBlob({ region: { height: 10, width: Number.NaN, x: 0, y: 0 } })).rejects.toThrow(/region/);
+      await expect(
+        stage.toBlob({ region: { height: 10, width: 10, x: Number.POSITIVE_INFINITY, y: 0 } }),
+      ).rejects.toThrow(/region/);
+      await expect(stage.toBlob({ scale: 0 })).rejects.toThrow(/scale/);
+      await expect(stage.toBlob({ scale: Number.NaN })).rejects.toThrow(/scale/);
+    });
+
+    it('throws the disposed error for region export after dispose', async () => {
+      const { stage } = setup({ layers: [{ id: 'a', paint: () => {} }] });
+      stage.dispose();
+      await expect(stage.toBlob({ region: { height: 10, width: 10, x: 0, y: 0 } })).rejects.toThrow(/disposed/i);
+    });
   });
 });

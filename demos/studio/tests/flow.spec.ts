@@ -153,12 +153,11 @@ test('add node and delete selection round-trip through undo', async ({ page }) =
 });
 
 test('clicking a wire selects it and Backspace deletes it', async ({ page }) => {
+  // Click the midpoint of the first wire's visible path.
   const edges = page.locator('[data-testid="flow-edges"] .flow-edge:not(.flow-edge-temp)');
   const before = await edges.count();
 
-  // Click the midpoint of the first wire's wide invisible hit path.
-  const hit = page.locator('[data-testid="flow-edges"] .flow-edge-hit').first();
-  const point = await hit.evaluate((el) => {
+  const point = await edges.first().evaluate((el) => {
     const path = el as unknown as SVGPathElement;
     const p = path.getPointAtLength(path.getTotalLength() / 2);
     const ctm = path.getScreenCTM();

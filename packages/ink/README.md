@@ -32,8 +32,8 @@ const d = polylineToSvgPath(strokeOutline(stabilized, widths), { close: true });
 
 - `stabilizeStroke()`: causal Streamline-style averaging for live drawing; the stroke ends where the pen lifted
 - `smoothStroke()`: deterministic Catmull-Rom resampling after capture
-- `strokeWidths()`: widths from real pen speed (`distance / Δtime`) with pressure modulation
-- `strokeOutline()`: closed variable-width outline polygon with capped ends; constant width with a single number
+- `strokeWidths()`: widths from real pen speed (`distance / Δtime`) with pressure modulation, arc-length end tapers, and synthesized pressure for mouse strokes
+- `strokeOutline()`: closed variable-width outline polygon; selectable round/butt/square caps and round/bevel/miter joins; constant width with a single number
 - `simplifyStroke()`: Ramer-Douglas-Peucker decimation preserving endpoints
 - `polylineToSvgPath()`: SVG `d` strings for strokes and closed rings, with configurable precision
 - Pure functions, zero dependencies, no DOM requirement

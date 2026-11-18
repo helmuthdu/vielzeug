@@ -5,7 +5,16 @@ const modules = [await import('./dist/index.js'), require('./dist/index.cjs')];
 const gridModules = [await import('./dist/grid/index.js'), require('./dist/grid/index.cjs')];
 
 for (const atlas of modules) {
-  for (const name of ['createCamera', 'createSpatialIndex', 'snapRect', 'alignRects', 'distributeRects']) {
+  for (const name of [
+    'createCamera',
+    'createSpatialIndex',
+    'snapRect',
+    'alignRects',
+    'distributeRects',
+    'frameMatrix',
+    'boundsOfFrame',
+    'resizeRect',
+  ]) {
     if (typeof atlas[name] !== 'function') {
       throw new Error(`${name} export missing`);
     }

@@ -31,17 +31,7 @@
   stroke-width: var(--border-2);
 }
 
-/* Wide transparent twin for pointer/touch selection of a wire. */
-.flow-edge-hit {
-  pointer-events: stroke;
-  cursor: pointer;
-  fill: none;
-  stroke: transparent;
-  stroke-width: var(--size-4);
-}
-
-.flow-edge-selected,
-.flow-edge-hit.flow-edge-selected {
+.flow-edge-selected {
   stroke: var(--color-primary);
 }
 

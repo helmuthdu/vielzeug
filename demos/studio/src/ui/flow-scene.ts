@@ -5,7 +5,10 @@ import { createLedger } from '@vielzeug/ledger';
 import {
   bezierRoute,
   bezierToSvgPath,
+  type CubicBezier,
   findCyclicGroups,
+  hitBezier,
+  hitPolyline,
   orthogonalRoute,
   polylineToSvgPath,
   topologicalOrder,
@@ -52,6 +55,9 @@ function screenPoint(viewport: HTMLElement, clientX: number, clientY: number): P
   const box = viewport.getBoundingClientRect();
   return { x: clientX - box.left, y: clientY - box.top };
 }
+
+/** Click tolerance for wire selection, in screen pixels before zoom scaling. */
+const EDGE_HIT_SCREEN_PX = 8;
 
 function makeNode(x: number, y: number, label: string): FlowNode {
   return {
@@ -178,23 +184,27 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
     }
   }
 
-  function edgePath(edge: FlowEdge): { d: string; fallback: boolean } {
+  /** The drawn geometry of one edge, shared by rendering and hit-testing. */
+  type EdgeGeometry = { kind: 'bezier'; curve: CubicBezier } | { kind: 'polyline'; points: Point[] };
+
+  function edgeGeometry(edge: FlowEdge): { geometry: EdgeGeometry | null; d: string; fallback: boolean } {
     const from = model.portAnchor(edge.from.node, edge.from.port);
     const to = model.portAnchor(edge.to.node, edge.to.port);
-    if (!from || !to) return { d: '', fallback: false };
+    if (!from || !to) return { d: '', fallback: false, geometry: null };
     if (orthogonal) {
       // Every node rect is an obstacle; the router exempts each port's own node
       // for that port's straight exit segment.
       const points = orthogonalRoute(from, to, { obstacles: model.nodes.map(nodeRect) });
-      if (points) return { d: polylineToSvgPath(points), fallback: false };
+      if (points) return { d: polylineToSvgPath(points), fallback: false, geometry: { kind: 'polyline', points } };
       // Unreachable during layout: dashed bezier fallback so the wire stays visible.
-      return { d: bezierToSvgPath(bezierRoute(from, to)), fallback: true };
+      const curve = bezierRoute(from, to);
+      return { d: bezierToSvgPath(curve), fallback: true, geometry: { curve, kind: 'bezier' } };
     }
-    return { d: bezierToSvgPath(bezierRoute(from, to)), fallback: false };
+    const curve = bezierRoute(from, to);
+    return { d: bezierToSvgPath(curve), fallback: false, geometry: { curve, kind: 'bezier' } };
   }
 
   const edgeEls = new Map<string, SVGPathElement>();
-  const edgeHitEls = new Map<string, SVGPathElement>();
 
   function syncEdges(): void {
     const cycles = findCyclicGroups(
@@ -209,12 +219,6 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
         edgeEls.delete(id);
       }
     }
-    for (const [id, el] of edgeHitEls) {
-      if (!live.has(id)) {
-        el.remove();
-        edgeHitEls.delete(id);
-      }
-    }
     for (const edge of model.edges) {
       let el = edgeEls.get(edge.id);
       if (!el) {
@@ -224,23 +228,11 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
         edgesSvg.append(el);
         edgeEls.set(edge.id, el);
       }
-      // Wide transparent twin under the visible wire: makes the edge clickable
-      // (and touch-selectable) without widening the drawn stroke.
-      let hit = edgeHitEls.get(edge.id);
-      if (!hit) {
-        hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        hit.classList.add('flow-edge-hit');
-        hit.dataset.edgeId = edge.id;
-        edgesSvg.append(hit);
-        edgeHitEls.set(edge.id, hit);
-      }
-      const { d, fallback } = edgePath(edge);
+      const { d, fallback } = edgeGeometry(edge);
       el.setAttribute('d', d);
-      hit.setAttribute('d', d);
       el.classList.toggle('flow-edge-fallback', fallback);
       el.classList.toggle('flow-edge-cyclic', cyclicNodes.has(edge.from.node) && cyclicNodes.has(edge.to.node));
       el.classList.toggle('flow-edge-selected', edge.id === selectedEdgeId);
-      hit.classList.toggle('flow-edge-selected', edge.id === selectedEdgeId);
     }
     for (const node of model.nodes) {
       const el = nodeEls.get(node.id);
@@ -480,19 +472,40 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
     shouldStart: (event) => event.button === 0 || event.pointerType !== 'mouse',
   });
 
-  // Plain click/tap (no drag) selects: an edge hit path first, then a node,
-  // then clears. Drags select in the gesture's onStart and suppress this path.
+  // Plain click/tap (no drag) selects: a node first (they stack above wires),
+  // then the nearest wire within the hit threshold, then clears. Drags select
+  // in the gesture's onStart and suppress this path.
   viewport.addEventListener('click', (event) => {
     if (suppressClick) return;
-    const atPoint = viewport.ownerDocument.elementFromPoint(event.clientX, event.clientY) ?? event.target;
-    const edgeEl = atPoint instanceof Element ? atPoint.closest<SVGPathElement>('.flow-edge-hit') : null;
-    if (edgeEl) {
-      selectedEdgeId = edgeEl.dataset.edgeId ?? null;
-      selectedNodeId = null;
-      syncEdges();
-      return;
-    }
     const nodeEl = nodeFromEvent(event);
+    if (!nodeEl) {
+      // Math hit-test against each wire's real geometry, so selection works
+      // without invisible DOM twins. The threshold is fixed in screen pixels
+      // and divided by zoom to stay the same size at any scale.
+      const point = screenPoint(viewport, event.clientX, event.clientY);
+      const worldPoint = camera.toWorld(point);
+      const threshold = EDGE_HIT_SCREEN_PX / camera.state.zoom;
+      let bestId: string | null = null;
+      let bestDistance = Infinity;
+      for (const edge of model.edges) {
+        const { geometry } = edgeGeometry(edge);
+        if (!geometry) continue;
+        const hit =
+          geometry.kind === 'bezier'
+            ? hitBezier(geometry.curve, worldPoint, { threshold })
+            : hitPolyline(geometry.points, worldPoint, { threshold });
+        if (hit && hit.distance < bestDistance) {
+          bestDistance = hit.distance;
+          bestId = edge.id;
+        }
+      }
+      if (bestId) {
+        selectedEdgeId = bestId;
+        selectedNodeId = null;
+        syncEdges();
+        return;
+      }
+    }
     selectedEdgeId = null;
     selectedNodeId = nodeEl ? (nodeEl.dataset.nodeId as string) : null;
     syncNodes();

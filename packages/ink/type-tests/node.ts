@@ -6,7 +6,11 @@ import {
   polylineToSvgPath,
   type SmoothStrokeOptions,
   type StabilizeStrokeOptions,
+  type StrokeCap,
+  type StrokeJoin,
+  type StrokeOutlineOptions,
   type StrokePoint,
+  type StrokeTaperOptions,
   type StrokeWidthOptions,
   simplifyStroke,
   smoothStroke,
@@ -45,6 +49,15 @@ if (widths.length !== stroke.length) throw new Error('expected one width per poi
 const ring: Point[] = strokeOutline(stroke, widths);
 expectPoints(ring);
 expectPoints(strokeOutline(stroke, 4));
+
+const cap: StrokeCap = 'square';
+const join: StrokeJoin = 'miter';
+const outlineOptions: StrokeOutlineOptions = { cap, join, miterLimit: 4 };
+expectPoints(strokeOutline(stroke, widths, outlineOptions));
+
+const taper: StrokeTaperOptions = { end: 20, start: 20 };
+const tapered: number[] = strokeWidths(stroke, { simulatePressure: true, taper, width: 4 });
+if (tapered.length !== stroke.length) throw new Error('expected one width per point');
 
 const simplified: StrokePoint[] = simplifyStroke(stroke, 0.5);
 expectPoints(simplified);

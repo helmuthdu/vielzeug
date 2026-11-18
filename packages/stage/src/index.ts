@@ -6,6 +6,7 @@ export {
   createStage,
   type PaintContext,
   type Stage,
+  type StageBlobOptions,
   type StageController,
   type StageFrameInfo,
   type StageLayerOptions,

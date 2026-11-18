@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "add frameMatrix, boundsOfFrame, and resizeRect for positioned frames and editor resizing",
+      "packageName": "@vielzeug/atlas",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/atlas"
+}

@@ -3,15 +3,21 @@ import {
   AtlasConfigError,
   AtlasError,
   alignRects,
+  boundsOfFrame,
   type Camera,
   type CameraOptions,
   type CameraState,
   createCamera,
   createSpatialIndex,
   distributeRects,
+  type FrameOptions,
+  frameMatrix,
   type Matrix,
   type Point,
   type Rect,
+  type ResizeEdges,
+  type ResizeOptions,
+  resizeRect,
   type Size,
   type SnapOptions,
   type SnapResult,
@@ -71,6 +77,11 @@ const edge: AlignEdge = 'horizontal-center';
 const aligned: Rect[] = alignRects([rect, rect], edge);
 const distributed: Rect[] = distributeRects([rect, rect, rect], 'x');
 
+const frame: Matrix = frameMatrix({ rotation: 0.5, scale: 2, x: 10, y: 20 } satisfies FrameOptions);
+const framed: Rect = boundsOfFrame(rect, frame);
+const resizeEdges: ResizeEdges = 'nw';
+const resized: Rect = resizeRect(rect, resizeEdges, point, { aspect: 1.5, min: 4 } satisfies ResizeOptions);
+
 const grid: GridConfig = { tileSize: 32 };
 const coord: TileCoord = worldToTile(point, grid);
 const tileRect: Rect = tileToRect(coord, grid);
@@ -103,6 +114,8 @@ void numericIndex;
 void snapped;
 void aligned;
 void distributed;
+void framed;
+void resized;
 void tileRect;
 void center;
 void tiles;

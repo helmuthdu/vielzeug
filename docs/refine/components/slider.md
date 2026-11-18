@@ -185,14 +185,15 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 
 ### CSS Custom Properties
 
-| Property               | Description                                             | Default                     |
-| ---------------------- | ------------------------------------------------------- | --------------------------- |
-| `--slider-height`      | Height of the slider track                              | Size-dependent              |
-| `--slider-size`        | Thumb diameter                                          | Size-dependent              |
-| `--slider-thumb-inset` | Space reserved at each endpoint for a custom thumb size | Size-dependent              |
-| `--slider-track-bg`    | Track background color                                  | `var(--color-contrast-300)` |
-| `--slider-fill`        | Active fill color                                       | Theme color                 |
-| `--slider-thumb-bg`    | Thumb background color                                  | `var(--color-contrast-100)` |
+| Property                | Description                                             | Default                     |
+| ----------------------- | ------------------------------------------------------- | --------------------------- |
+| `--slider-height`       | Height of the slider track                              | Size-dependent              |
+| `--slider-size`         | Thumb diameter                                          | Size-dependent              |
+| `--slider-touch-target` | Minimum height of the pointer interaction surface       | `--size-11` (2.75rem)       |
+| `--slider-thumb-inset`  | Space reserved at each endpoint for a custom thumb size | Size-dependent              |
+| `--slider-track-bg`     | Track background color                                  | `var(--color-contrast-300)` |
+| `--slider-fill`         | Active fill color                                       | Theme color                 |
+| `--slider-thumb-bg`     | Thumb background color                                  | `var(--color-contrast-100)` |
 
 ## Accessibility
 

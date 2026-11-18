@@ -160,6 +160,36 @@ scaleOf(transform); // average axis scale
 toCssMatrix(transform); // 'matrix(...)' for CSS transforms
 ```
 
+## Frames and Resizing
+
+Shapes on a board are placed with a position, an optional rotation, and an optional scale. `frameMatrix()` composes that into one local→world matrix, and `boundsOfFrame()` turns a local rect into the world AABB your spatial index and selection queries need:
+
+```ts
+import { apply, boundsOfFrame, frameMatrix } from '@vielzeug/atlas';
+
+const frame = frameMatrix({ rotation: Math.PI / 6, scale: 2, x: 100, y: 50 });
+const world = apply(frame, localPoint); // local → world
+const aabb = boundsOfFrame(localRect, frame); // world AABB, ready for index.set()
+```
+
+`origin` pivots rotation and scale around a world point; it defaults to `{ x, y }`, which makes rotation and scale pure post-transforms of the placement. `toCssMatrix(frame)` feeds the same transform straight to a DOM overlay.
+
+Resize handles are the other half of editor math. `resizeRect()` takes the dragged handle's direction (`'e'`, `'nw'`, …), the pointer's world position, and keeps the opposite edge(s) fixed:
+
+```ts
+import { resizeRect } from '@vielzeug/atlas';
+
+// Dragging the bottom-right handle; shapes never collapse below 4 units.
+const next = resizeRect(selection, 'se', worldPointer, { min: 4 });
+// Shift-drag convention: lock the selection's current ratio.
+const square = resizeRect(selection, 'se', worldPointer, {
+  aspect: selection.width / selection.height,
+  min: 4,
+});
+```
+
+On a corner drag with `aspect` set, the axis the pointer moved further along drives the other, so the drag feels direct from either side. Commit the returned rect to your model on pointer-up, the same way you commit a snapped move.
+
 ## Tile Grids
 
 Tile and map editors live on a square grid. The `@vielzeug/atlas/grid` subpath converts between world coordinates and tile coordinates, and enumerates only the tiles a viewport can see:

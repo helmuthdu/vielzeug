@@ -1,26 +1,29 @@
 ---
 title: 'Atlas: API Reference'
-description: API reference for the Atlas camera, spatial index, matrix, rect, and narrow-phase geometry helpers.
+description: API reference for the Atlas camera, spatial index, matrix, rect, frame, and narrow-phase geometry helpers.
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol                               | Purpose                                                  | Execution | Common gotcha                                             |
-| ------------------------------------ | -------------------------------------------------------- | --------- | --------------------------------------------------------- |
-| `createCamera()`                     | Pan/zoom/rotate camera with anchor-preserving transforms | Sync      | `x`/`y` is the world point at the viewport centre         |
-| `createSpatialIndex()`               | Dynamic R-tree over world-space rects                    | Sync      | Broad-phase only: bounds overlap, not exact shape hits    |
-| `multiply()` etc.                    | Canvas2D-order matrix composition                        | Sync      | Element order is `[a,b,c,d,e,f]`, not row-major 3×3       |
-| `rectFromPoints()`                   | AABB of a point set                                      | Sync      | Returns `null` only for iterable input that may be empty  |
-| `pointInPolygon()`                   | Even-odd ray-cast containment                            | Sync      | Boundary points are implementation-defined; add tolerance |
-| `distanceToPolyline()`               | Distance to the nearest segment                          | Sync      | Returns `Infinity` for empty paths                        |
-| `snapRect()`                         | Alignment, grid, and equal-gap snapping with guides      | Sync      | Each axis resolves independently; alignment wins          |
-| `alignRects()`                       | Align rects to a shared edge or center                   | Sync      | Pure: returns new rects, input untouched                  |
-| `distributeRects()`                  | Equalize gaps along one axis                             | Sync      | Needs 3+ rects; outermost rects stay fixed                |
-| `AtlasError`                         | Base class for all atlas errors                          | Sync      | Narrow with `instanceof AtlasError`                       |
-| `AtlasConfigError`                   | Invalid options and negative tolerances                  | Sync      | Thrown at call time                                       |
-| `Point` / `Rect` / `Size` / `Matrix` | Structural shapes shared across the canvas toolkit       | Sync      | All readonly; treat as values                             |
+| Symbol                               | Purpose                                                    | Execution | Common gotcha                                               |
+| ------------------------------------ | ---------------------------------------------------------- | --------- | ----------------------------------------------------------- |
+| `createCamera()`                     | Pan/zoom/rotate camera with anchor-preserving transforms   | Sync      | `x`/`y` is the world point at the viewport centre           |
+| `createSpatialIndex()`               | Dynamic R-tree over world-space rects                      | Sync      | Broad-phase only: bounds overlap, not exact shape hits      |
+| `multiply()` etc.                    | Canvas2D-order matrix composition                          | Sync      | Element order is `[a,b,c,d,e,f]`, not row-major 3×3         |
+| `rectFromPoints()`                   | AABB of a point set                                        | Sync      | Returns `null` only for iterable input that may be empty    |
+| `pointInPolygon()`                   | Even-odd ray-cast containment                              | Sync      | Boundary points are implementation-defined; add tolerance   |
+| `distanceToPolyline()`               | Distance to the nearest segment                            | Sync      | Returns `Infinity` for empty paths                          |
+| `snapRect()`                         | Alignment, grid, and equal-gap snapping with guides        | Sync      | Each axis resolves independently; alignment wins            |
+| `alignRects()`                       | Align rects to a shared edge or center                     | Sync      | Pure: returns new rects, input untouched                    |
+| `distributeRects()`                  | Equalize gaps along one axis                               | Sync      | Needs 3+ rects; outermost rects stay fixed                  |
+| `frameMatrix()`                      | Local→world matrix for a positioned, rotated, scaled frame | Sync      | `origin` is a world pivot; defaults to `{ x, y }`           |
+| `boundsOfFrame()`                    | AABB of a rect under a frame matrix                        | Sync      | Grows the bounds for rotation; not a tight oriented box     |
+| `resizeRect()`                       | Resize a rect by dragging named edges                      | Sync      | `aspect` is width/height; corner drags derive the free axis |
+| `AtlasError`                         | Base class for all atlas errors                            | Sync      | Narrow with `instanceof AtlasError`                         |
+| `AtlasConfigError`                   | Invalid options and negative tolerances                    | Sync      | Thrown at call time                                         |
+| `Point` / `Rect` / `Size` / `Matrix` | Structural shapes shared across the canvas toolkit         | Sync      | All readonly; treat as values                               |
 
 ## Package Entry Point
 
@@ -180,6 +183,38 @@ All matrices use Canvas2D element order `[a, b, c, d, e, f]`; composition `multi
 
 ---
 
+## Frame Functions
+
+A frame places a local shape in world space: a position, an optional clockwise rotation (radians), and an optional scale pivoting around a world `origin`.
+
+```ts
+function frameMatrix(options: FrameOptions): Matrix;
+function boundsOfFrame(rect: Rect, matrix: Matrix): Rect;
+function resizeRect(rect: Rect, edges: ResizeEdges, point: Point, options?: ResizeOptions): Rect;
+```
+
+| Function                                            | Description                                                                                                                                      |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `frameMatrix({ x, y, rotation?, scale?, origin? })` | Local→world matrix: `around(origin, rotate · scale) · translate(x, y)`; `origin` defaults to `{ x, y }`, `scale` is a number or `{ x?, y? }`     |
+| `boundsOfFrame(rect, matrix)`                       | Axis-aligned world bounds: the AABB of the four transformed corners                                                                              |
+| `resizeRect(rect, edges, point, { min?, aspect? })` | Resized rect dragging the edge(s) named by `edges` (`'e'`, `'w'`, `'n'`, `'s'`, or a corner like `'nw'`) to `point`; opposite edge(s) stay fixed |
+
+`frameMatrix` composes the matrix helpers for the common positioned-shape case, so `apply(frameMatrix({ rotation, scale, x, y }), localPoint)` places a shape's local coordinates in the world. `boundsOfFrame` pairs with it for culling and selection: rotation grows the AABB, which is what a spatial index needs.
+
+`resizeRect` is the resize-handle math for editors. `min` (default 0) keeps the result from collapsing on either axis. `aspect` (width/height) locks the ratio: a corner drag derives the free axis from the axis that moved further, an edge drag grows the free dimension about its centre.
+
+```ts
+import { boundsOfFrame, frameMatrix, resizeRect } from '@vielzeug/atlas';
+
+const frame = frameMatrix({ rotation: Math.PI / 6, scale: 2, x: 100, y: 50 });
+boundsOfFrame({ height: 40, width: 100, x: 0, y: 0 }, frame); // world AABB
+resizeRect(selection, 'se', worldPointer, { min: 4 }); // drag the bottom-right corner
+```
+
+All three throw `AtlasConfigError` on non-finite inputs; `resizeRect` also throws for unknown `edges`, a negative `min`, or a non-positive `aspect`.
+
+---
+
 ## Geometry Functions
 
 | Function                                      | Description                                                                 |
@@ -225,7 +260,7 @@ From the `@vielzeug/atlas/grid` subpath:
 
 ## Errors
 
-| Class              | Thrown when                                                  |
-| ------------------ | ------------------------------------------------------------ |
-| `AtlasError`       | Base class; catch-all via `instanceof AtlasError`            |
-| `AtlasConfigError` | Invalid options/clamps and negative snap or query tolerances |
+| Class              | Thrown when                                                                     |
+| ------------------ | ------------------------------------------------------------------------------- |
+| `AtlasError`       | Base class; catch-all via `instanceof AtlasError`                               |
+| `AtlasConfigError` | Invalid options/clamps, negative snap or query tolerances, and bad frame inputs |

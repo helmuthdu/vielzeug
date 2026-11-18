@@ -162,6 +162,53 @@ body {
   display: inline-flex;
 }
 
+/* Ink-width capsule: the pen button's right half. The pen is the group's last
+   segment, so while it is checked this capsule cancels the dock gap to butt
+   flush against it, squares its own left edge, and takes the same fill as the
+   selected segment: button + slider read as one control that expands for the
+   pen. Height matches the docked buttons (tokens only). */
+.studio-dock .studio-pen-pill {
+  display: inline-flex;
+  align-items: center;
+  height: var(--size-9);
+  padding-inline: var(--size-2);
+  margin-inline-start: calc(var(--dock-tool-gap) * -1);
+  background: var(--color-primary);
+  border-start-start-radius: 0;
+  border-start-end-radius: var(--rounded-full);
+  border-end-start-radius: 0;
+  border-end-end-radius: var(--rounded-full);
+}
+
+.studio-dock .studio-pen-pill[hidden] {
+  display: none;
+}
+
+/* The checked pen segment drops its right rounding and matches the capsule's
+   fill, so the two halves form one continuous capsule. `--button-radius` and
+   the selected-fill tokens are the button's documented override surface. */
+.studio-dock [data-tool='pen'][aria-checked='true'] {
+  --button-radius: var(--rounded-full) 0 0 var(--rounded-full);
+  --button-selected-bg: var(--color-primary);
+}
+
+/* The slider rides inside the filled capsule, so the form defaults (12rem min
+   width, 44px touch target, visible label) all come down to toolbar scale and
+   the track/thumb flip to the surface palette to read on the filled half. The
+   label text stays in the DOM as the accessible name: the component mirrors
+   slot text to `aria-label`, so hiding it visually costs nothing. */
+.studio-dock .studio-pen-width {
+  --slider-min-width: var(--size-20);
+  --slider-touch-target: var(--size-9);
+  --slider-track-bg: color-mix(in oklch, var(--color-surface) 35%, transparent);
+  --slider-fill: var(--color-surface);
+  --slider-thumb-bg: var(--color-surface);
+}
+
+.studio-dock .studio-pen-width::part(label) {
+  display: none;
+}
+
 /* The vertical dividers between tool groups: a short rule centred in the row.
    Extra inline air so the rule never sits flush against the capsules on
    either side (the dock's own tool gap alone is too tight). */

@@ -8,6 +8,16 @@ const SIZES = {
   sm: { rail: 8, thumb: 16 },
 } as const;
 
+test.describe('Visibility', () => {
+  test('hidden hides the host', async ({ page, refinePage }) => {
+    // `:host { display: inline-flex }` outranks the UA `[hidden]` rule, so the
+    // component carries its own `:host([hidden])` rule. This asserts the
+    // consumer-visible contract with the full Refine stylesheet loaded.
+    await refinePage.mountComponent('<ore-slider hidden data-testid="hidden-slider"></ore-slider>');
+    await expect(page.getByTestId('hidden-slider')).toBeHidden();
+  });
+});
+
 test.describe('Pointer interaction', () => {
   for (const range of [false, true]) {
     for (const reason of ['blur', 'second-touch']) {

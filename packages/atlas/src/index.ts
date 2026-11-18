@@ -9,6 +9,14 @@ export {
   type FrameScheduler,
 } from './camera.js';
 export { AtlasConfigError, AtlasError } from './errors.js';
+export {
+  boundsOfFrame,
+  type FrameOptions,
+  frameMatrix,
+  type ResizeEdges,
+  type ResizeOptions,
+  resizeRect,
+} from './frame.js';
 export { distanceToPolyline, pointInPolygon, pointNearPolygon } from './geometry.js';
 export { apply, around, IDENTITY, invert, multiply, rotate, scale, scaleOf, toCssMatrix, translate } from './matrix.js';
 export {
