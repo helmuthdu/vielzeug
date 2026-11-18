@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Shift the default primary hue off violet",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

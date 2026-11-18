@@ -1024,10 +1024,10 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   content: '';
   background: conic-gradient(
     from 0deg at 45% 50%,
-    oklch(56% 0.22 293deg),
+    var(--hp-purple),
     oklch(60% 0.24 340deg),
     oklch(55% 0.22 220deg),
-    oklch(56% 0.22 293deg)
+    var(--hp-purple)
   );
   border-radius: 50%;
   opacity: 0.55;
@@ -1256,7 +1256,7 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .hl-keyword {
-  color: oklch(60% 0.18 293deg);
+  color: var(--hp-purple);
 }
 .hl-string {
   color: oklch(55% 0.15 155deg);
@@ -1276,9 +1276,6 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   color: oklch(58% 0.02 260deg);
 }
 
-.dark .hl-keyword {
-  color: oklch(72% 0.18 293deg);
-}
 .dark .hl-string {
   color: oklch(72% 0.15 155deg);
 }
@@ -1459,7 +1456,7 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   width: 44px;
   height: 44px;
   color: var(--hp-purple);
-  border: 1px solid oklch(70% 0.12 293deg / 20%);
+  border: 1px solid color-mix(in oklch, var(--hp-purple) 20%, transparent);
   border-radius: var(--rounded-md);
 }
 

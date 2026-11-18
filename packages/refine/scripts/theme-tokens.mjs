@@ -40,17 +40,10 @@
 // the text/border color directly on the page canvas. For that pairing to
 // clear WCAG AA against a near-white canvas, light-mode base needs to be
 // dark enough on its own (roughly L ≤ 56%): this is a second, independent
-// reason every family's light-mode base sits in the low-to-mid 50s, not
-// just the light-ink-direction one above.
-//
-// Info/success/warning previously stayed bright in both schemes (dark ink
-// throughout) for two reasons that got overridden by the harmony request
-// above: colorblind-friendliness from keeping semantic colors at different
-// lightnesses (hue alone still differentiates them, which is how most
-// production design systems handle this) and warning's amber identity
-// (loses saturation/reads as ochre once dark enough for light ink: see
-// warning's own comment). Both are real trade-offs, not non-issues; if the
-// harmony call gets revisited, this is what comes back into play.
+// constraint on each family's light-mode lightness, independently of ink.
+// Primary and error use darker bases than info/success/warning to preserve
+// role separation under protan/deutan simulation. Color is still only a
+// secondary cue: components must also communicate state with text or icons.
 //
 // Every `base`/ink chroma value must also stay inside the sRGB-displayable
 // OKLCH gamut for its own L/H: verify with palette's `isDisplayable()` before
@@ -116,17 +109,17 @@ export const SHADE_RAMP = {
 
 // 11-step adaptive neutral scale: surfaces (50-400) and text (500-900).
 export const CONTRAST_SCALE = [
-  { dark: '17% 0.001 250deg', light: '99% 0.001 264deg', note: 'Canvas, page background', step: 50 },
-  { dark: '21% 0.001 250deg', light: '97% 0.001 264deg', note: 'Cards, elevated surfaces', step: 100 },
-  { dark: '23.5% 0.001 250deg', light: '95.5% 0.001 264deg', note: 'Midpoint: chip base, subtle fills', step: 150 },
-  { dark: '26% 0.001 250deg', light: '94% 0.001 264deg', note: 'Nested cards, hover states', step: 200 },
-  { dark: '32% 0.001 250deg', light: '89% 0.002 264deg', note: 'Borders, dividers', step: 300 },
-  { dark: '40% 0.001 250deg', light: '81% 0.002 264deg', note: 'Disabled backgrounds, subtle UI', step: 400 },
-  { dark: '62% 0.001 250deg', light: '49% 0.002 264deg', note: 'Tertiary text - AA compliant (4.5:1 on canvas/card/sunken)', step: 500 },
-  { dark: '68% 0.001 250deg', light: '40% 0.002 264deg', note: 'Secondary text - AA compliant', step: 600 },
-  { dark: '78% 0.001 250deg', light: '32% 0.002 264deg', note: 'Body text - AAA compliant', step: 700 },
-  { dark: '88% 0.001 250deg', light: '22% 0.002 264deg', note: 'Headings - AAA compliant', step: 800 },
-  { dark: '95% 0.001 250deg', light: '12% 0.002 264deg', note: 'High contrast text - AAA compliant', step: 900 },
+  { dark: '17% 0.001 70deg', light: '99% 0.001 70deg', note: 'Canvas, page background', step: 50 },
+  { dark: '21% 0.001 70deg', light: '97% 0.001 70deg', note: 'Cards, elevated surfaces', step: 100 },
+  { dark: '23.5% 0.001 70deg', light: '95.5% 0.001 70deg', note: 'Midpoint: chip base, subtle fills', step: 150 },
+  { dark: '26% 0.001 70deg', light: '94% 0.001 70deg', note: 'Nested cards, hover states', step: 200 },
+  { dark: '32% 0.001 70deg', light: '89% 0.002 70deg', note: 'Borders, dividers', step: 300 },
+  { dark: '40% 0.001 70deg', light: '81% 0.002 70deg', note: 'Disabled backgrounds, subtle UI', step: 400 },
+  { dark: '62% 0.001 70deg', light: '49% 0.002 70deg', note: 'Tertiary text - AA compliant (4.5:1 on canvas/card/sunken)', step: 500 },
+  { dark: '68% 0.001 70deg', light: '40% 0.002 70deg', note: 'Secondary text - AA compliant', step: 600 },
+  { dark: '78% 0.001 70deg', light: '32% 0.002 70deg', note: 'Body text - AAA compliant', step: 700 },
+  { dark: '88% 0.001 70deg', light: '22% 0.002 70deg', note: 'Headings - AAA compliant', step: 800 },
+  { dark: '95% 0.001 70deg', light: '12% 0.002 70deg', note: 'High contrast text - AAA compliant', step: 900 },
 ];
 
 // One authored `base` (or `baseRaw` for secondary, whose base is a color-mix
@@ -135,32 +128,25 @@ export const CONTRAST_SCALE = [
 // module doc comment above.
 export const COLOR_FAMILIES = [
   {
-    // Reverted a brightened light-mode base (was 64%, briefly): `base`
-    // isn't only a fill behind `content`/`contrast`: bordered/outline/
-    // ghost/text button (and badge/chip/etc.) variants paint `base` itself
-    // directly as the text/border color on the page canvas. At 64% that
-    // pairing was 3.27:1 against canvas (fails AA); tightened to 52% for a
-    // safer 5.35:1 margin than even the original 56% (4.52:1, thin). See
-    // the module comment above for why this makes neutral invert with
-    // scheme again instead of matching info/success/warning's direction.
+    // Keep neutral nearly achromatic, with a slight warm bias to echo the
+    // logo's warm-gray geometry without turning UI surfaces yellow.
     content: { dark: { c: 0, l: '22%' }, light: { c: 0, l: '99%' } },
     contrast: { dark: { c: 0, l: '13%' }, light: { c: 0, l: '99%' } },
-    description: 'True gray: neutral UI surfaces',
+    description: 'Warm gray: neutral UI surfaces',
     halo: 'flat', // no glassy highlight in dark mode, unlike the branded colors below
     name: 'neutral',
-    base: { dark: '72% 0 250deg', light: '52% 0 264deg' },
+    base: { dark: '72% 0.004 70deg', light: '52% 0.004 70deg' },
   },
   {
     // content = ink on the translucent frost fill, contrast = ink on the
     // fully opaque solid fill: contrast stays closer to the true extreme.
     content: { dark: { c: 0.3, l: '22%' }, light: { c: 0.05, l: '97%' } },
     contrast: { dark: { c: 0.3, l: '14%' }, light: { c: 0.045, l: '98%' } },
-    description: 'Periwinkle violet: primary brand color',
-    hueKnob: { name: '--color-primary-hue', value: '293deg' },
+    description: 'Deep petrol: primary brand color',
+    hueKnob: { name: '--color-primary-hue', value: '190deg' },
     name: 'primary',
-    // Dark-mode chroma capped at 0.148 (was 0.2): oklch's displayable sRGB
-    // chroma ceiling at L72% H293deg is ~0.161, so 0.2 was already clipping.
-    base: { dark: '72% 0.148 var(--color-primary-hue)', light: '56% 0.22 var(--color-primary-hue)' },
+    // These chroma values stay below 90% of the sRGB ceilings at L63%/L38%.
+    base: { dark: '63% 0.098 var(--color-primary-hue)', light: '38% 0.059 var(--color-primary-hue)' },
   },
   {
     // Same content-vs-contrast softening as every other family. Secondary's
@@ -183,74 +169,34 @@ export const COLOR_FAMILIES = [
     },
   },
   {
-    // Light-mode base darkened 60%→54% to match neutral/primary/secondary/
-    // error's weight and ink direction (light ink): requested explicitly
-    // twice: buttons/inputs across colors should all read as "light text on
-    // a saturated fill" for visual harmony, not a mix of light and dark
-    // text depending on color. This drops the lightness-spread-for-
-    // colorblind-differentiation idea tried earlier in favor of that
-    // consistency; hue alone still differentiates info/success/warning/
-    // error from each other, which is how most production design systems
-    // (Material, Tailwind, Bootstrap) do it anyway.
-    // Light-mode hue shifted 230deg→255deg (cyan-blue → blue): at L~54%,
-    // the sRGB chroma ceiling isn't flat across hue: cyan(230) sits in a
-    // trough (~0.11), blue(255) is on a rising slope (~0.17), ~55% more
-    // headroom for the same AA constraints. This is the same "wrong hue
-    // for this lightness reads as muted no matter how you tune it" fix
-    // applied to warning, generalized to the whole bright→dark set at
-    // once, per request. Dark mode (L74%) keeps 230deg: its own ceiling
-    // there doesn't have the same trough, no reason to change it.
-    content: { dark: { cAbs: 0.024, l: '15%' }, light: { cAbs: 0.0122, l: '97%' } },
-    contrast: { dark: { cAbs: 0.019, l: '12%' }, light: { cAbs: 0.0081, l: '98%' } },
-    description: 'Blue (light mode) · cyan-blue (dark mode): informational messages',
+    // Keep familiar semantic hues; lightness and chroma are tuned together
+    // for canvas contrast and simulated role separation.
+    content: { dark: { cAbs: 0.004, l: '15%' }, light: { cAbs: 0.004, l: '97%' } },
+    contrast: { dark: { cAbs: 0.004, l: '12%' }, light: { cAbs: 0.004, l: '98%' } },
+    description: 'Blue: informational messages',
     name: 'info',
-    base: { dark: '74% 0.133 230deg', light: '54% 0.169 255deg' },
+    base: { dark: '78% 0.109 244deg', light: '53% 0.118 244deg' },
   },
   {
-    // Same reasoning as info. Light-mode hue shifted 160deg (teal) →
-    // 137deg (green): teal is in this lightness's chroma trough (~0.10),
-    // green is near its local peak (~0.14). L nudged 54%→53% too: at
-    // 137deg specifically, 54% left content.light's margin thinner
-    // (4.46:1, just under AA) than the other 3: 53% restores the same
-    // ~4.5-4.9 margin band as info/error/warning. Dark mode (L78%, 160deg)
-    // unchanged.
-    content: { dark: { cAbs: 0.027, l: '15%' }, light: { cAbs: 0.0494, l: '97%' } },
-    contrast: { dark: { cAbs: 0.022, l: '12%' }, light: { cAbs: 0.0323, l: '98%' } },
-    description: 'Green (light mode) · teal (dark mode): positive outcomes & confirmations',
+    content: { dark: { cAbs: 0.004, l: '15%' }, light: { cAbs: 0.004, l: '97%' } },
+    contrast: { dark: { cAbs: 0.004, l: '12%' }, light: { cAbs: 0.004, l: '98%' } },
+    description: 'Bluish green: positive outcomes & confirmations',
     name: 'success',
-    base: { dark: '78% 0.14 160deg', light: '53% 0.145 137deg' },
+    base: { dark: '78% 0.148 165deg', light: '53% 0.1 165deg' },
   },
   {
-    // Same reasoning as info/success, with one honest caveat: warning's
-    // hue family (yellow, ~65-100deg) sits in this lightness's chroma
-    // TROUGH no matter which yellow-ish hue you pick (checked the whole
-    // range): yellow's own chroma peaks at high L (dark mode's 84% base
-    // benefits from staying at 70deg amber), not at the ~54% light mode
-    // needs for AA. 70deg (amber, matching dark mode's own hue) turns out
-    // to be at the better edge of that trough anyway (C=0.111 vs. gold's
-    // 95deg at C=0.105): every other family here got a real "wrong hue
-    // for this L" fix; this one is "least-wrong hue", warning is
-    // structurally the least saturated of the 4 at this lightness and
-    // that isn't fixable by hue alone.
-    content: { dark: { cAbs: 0.026, l: '15%' }, light: { cAbs: 0.0184, l: '97%' } },
-    contrast: { dark: { cAbs: 0.021, l: '12%' }, light: { cAbs: 0.0122, l: '98%' } },
+    content: { dark: { cAbs: 0.004, l: '15%' }, light: { cAbs: 0.004, l: '97%' } },
+    contrast: { dark: { cAbs: 0.004, l: '12%' }, light: { cAbs: 0.004, l: '98%' } },
     description: 'Amber: cautionary states & alerts',
     name: 'warning',
-    base: { dark: '84% 0.113 70deg', light: '54% 0.111 70deg' },
+    base: { dark: '78% 0.147 70deg', light: '54% 0.105 70deg' },
   },
   {
-    // Reverted a brightened light-mode base (was 64%): same bug as
-    // neutral's: `base` is painted directly as bordered/outline/ghost/
-    // text button text/border color on the page canvas, not just as a fill
-    // behind content/contrast. At 64% that pairing was 3.63:1 against
-    // canvas (fails AA); back to the original 54% (5.44:1). Same L22/L14
-    // (dark)/L97/L98 (light) shape as primary: error inverts with scheme
-    // again, like primary/secondary/neutral.
-    content: { dark: { cAbs: 0.077, l: '22%' }, light: { cAbs: 0.0125, l: '97%' } },
-    contrast: { dark: { cAbs: 0.052, l: '14%' }, light: { cAbs: 0.0088, l: '98%' } },
-    description: 'Vermilion: destructive actions & errors',
+    content: { dark: { cAbs: 0.004, l: '15%' }, light: { cAbs: 0.004, l: '97%' } },
+    contrast: { dark: { cAbs: 0.004, l: '12%' }, light: { cAbs: 0.004, l: '98%' } },
+    description: 'Red: destructive actions & errors',
     name: 'error',
-    base: { dark: '66% 0.18 29deg', light: '54% 0.2 29deg' },
+    base: { dark: '63% 0.178 29deg', light: '38% 0.141 29deg' },
   },
 ];
 
