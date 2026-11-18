@@ -464,7 +464,7 @@ Horizontal coverflow mirrors layout and Left/Right navigation for `dir="rtl"`. A
 | `orientation`       | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Slide direction and keyboard axis                                                           |
 | `slide-index`       | `number`                                                                  | `0`            | Active slide (zero-based). Writable at any time; reflected as an attribute after navigation |
 | `loop`              | `boolean`                                                                 | `true`         | Wrap last→first and first→last.                                                             |
-| `autoplay`          | `boolean`                                                                 | `false`        | Advance slides on a timer; provides a persistent pause/resume control                      |
+| `autoplay`          | `boolean`                                                                 | `false`        | Advance slides on a timer; provides a persistent pause/resume control                       |
 | `autoplay-interval` | `number`                                                                  | `5000`         | Milliseconds between automatic advances; reactive: changing it restarts the timer           |
 | `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A            | Theme color for prev/next navigation buttons                                                |
 | `show-controls`     | `boolean`                                                                 | `true`         | Show prev/next navigation buttons                                                           |
@@ -497,13 +497,13 @@ Horizontal coverflow mirrors layout and Left/Right navigation for `dir="rtl"`. A
 
 **`ore-carousel` CSS Parts**
 
-| Part         | Element        | Description                                                    |
-| ------------ | -------------- | -------------------------------------------------------------- |
-| `track`           | `<div>`        | The slide track: also the `aria-live` region                                                               |
-| `controls`        | `<div>`        | Navigation controls, including prev/next buttons and the autoplay toggle                                  |
-| `prev-btn`        | `<ore-button>` | The previous-slide button                                                                                 |
-| `next-btn`        | `<ore-button>` | The next-slide button                                                                                     |
-| `indicators`      | `<div>`        | Navigation bar containing the indicator `tablist`, controls, and autoplay toggle                         |
+| Part              | Element        | Description                                                                                                            |
+| ----------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `track`           | `<div>`        | The slide track: also the `aria-live` region                                                                           |
+| `controls`        | `<div>`        | Navigation controls, including prev/next buttons and the autoplay toggle                                               |
+| `prev-btn`        | `<ore-button>` | The previous-slide button                                                                                              |
+| `next-btn`        | `<ore-button>` | The next-slide button                                                                                                  |
+| `indicators`      | `<div>`        | Navigation bar containing the indicator `tablist`, controls, and autoplay toggle                                       |
 | `autoplay-toggle` | `<ore-button>` | Pause/resume autoplay control in the navigation bar; shown only when autoplay is enabled and there are multiple slides |
 
 **`ore-carousel-slide`**

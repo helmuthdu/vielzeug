@@ -65,9 +65,9 @@ The pause control remains available when `show-controls="false"` hides the previ
 
 ### CSS Parts
 
-| Part    | Description               |
-| ------- | ------------------------- |
-| `track`        | The animated ticker track                             |
+| Part           | Description                                            |
+| -------------- | ------------------------------------------------------ |
+| `track`        | The animated ticker track                              |
 | `controls`     | Previous/next controls and the persistent pause toggle |
 | `pause-toggle` | The persistent pause/resume button                     |
 
