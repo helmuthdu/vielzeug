@@ -54,7 +54,18 @@
   :host([variant='solid']) ::slotted(ore-accordion-item),
   :host([variant='flat']) ::slotted(ore-accordion-item),
   :host([variant='frost']) ::slotted(ore-accordion-item) {
-    border-radius: var(--accordion-item-radius);
+    --_accordion-top-radius: 0px;
+    --_accordion-bottom-radius: 0px;
+    border-radius: var(--_accordion-top-radius) var(--_accordion-top-radius) var(--_accordion-bottom-radius)
+      var(--_accordion-bottom-radius);
+  }
+
+  :host(:is([variant='solid'], [variant='flat'], [variant='frost'])) ::slotted(ore-accordion-item:first-of-type) {
+    --_accordion-top-radius: var(--accordion-item-radius);
+  }
+
+  :host(:is([variant='solid'], [variant='flat'], [variant='frost'])) ::slotted(ore-accordion-item:last-of-type) {
+    --_accordion-bottom-radius: var(--accordion-item-radius);
   }
 
   /* Solid variant (default) */

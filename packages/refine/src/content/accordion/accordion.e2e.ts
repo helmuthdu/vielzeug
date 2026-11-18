@@ -124,51 +124,63 @@ test.describe('Layout', () => {
     }
   });
 
-  test('rounds every frost item in a contained group', async ({ page, refinePage }) => {
-    await page.evaluate(() => {
-      document.querySelector('style')?.remove();
-      const frame = document.querySelector<HTMLElement>('.frame');
+  for (const variant of ['solid', 'flat', 'frost']) {
+    test(`keeps adjoining ${variant} item corners square when collapsed and expanded`, async ({ page, refinePage }) => {
+      await page.evaluate(() => {
+        document.querySelector('style')?.remove();
+        const frame = document.querySelector<HTMLElement>('.frame');
 
-      if (!frame) throw new Error('Expected the component frame.');
+        if (!frame) throw new Error('Expected the component frame.');
 
-      Object.entries({
-        '--rounded-lg': '8px',
-        '--rounded-xl': '12px',
-        '--size-2': '8px',
-      }).forEach(([name, value]) => {
-        frame.style.setProperty(name, value);
+        Object.entries({
+          '--rounded-lg': '8px',
+          '--rounded-xl': '12px',
+          '--size-2': '8px',
+        }).forEach(([name, value]) => {
+          frame.style.setProperty(name, value);
+        });
       });
-    });
 
-    await refinePage.mountComponent(`
-      <ore-accordion variant="frost">
+      for (const expanded of [false, true]) {
+        await refinePage.mountComponent(
+          `
+      <ore-accordion variant="${variant}">
         <ore-accordion-item><span slot="title">First</span>Content</ore-accordion-item>
-        <ore-accordion-item expanded><span slot="title">Middle</span>Content</ore-accordion-item>
+        <ore-accordion-item><span slot="title">Middle</span>Content</ore-accordion-item>
         <ore-accordion-item><span slot="title">Last</span>Content</ore-accordion-item>
       </ore-accordion>
-    `);
+    `.replaceAll('<ore-accordion-item>', `<ore-accordion-item${expanded ? ' expanded' : ''}>`),
+        );
 
-    const measurements = await page.locator('ore-accordion-item').evaluateAll((items) =>
-      items.map((item) => {
-        const summary = item.shadowRoot?.querySelector('summary');
-        const content = item.shadowRoot?.querySelector('.content-wrapper');
+        const measurements = await page.locator('ore-accordion-item').evaluateAll((items) =>
+          items.map((item) => {
+            const summary = item.shadowRoot?.querySelector('summary');
+            const content = item.shadowRoot?.querySelector('.content-wrapper');
 
-        if (!summary || !content) throw new Error('Expected the accordion item internals.');
+            if (!summary || !content) throw new Error('Expected the accordion item internals.');
 
-        return {
-          contentRadius: getComputedStyle(content).borderRadius,
-          itemRadius: getComputedStyle(item).borderRadius,
-          summaryRadius: getComputedStyle(summary).borderRadius,
-        };
-      }),
-    );
+            return {
+              contentRadius: getComputedStyle(content).borderRadius,
+              itemRadius: getComputedStyle(item).borderRadius,
+              summaryRadius: getComputedStyle(summary).borderRadius,
+            };
+          }),
+        );
 
-    expect(measurements.map(({ itemRadius }) => itemRadius)).toEqual(['4px', '4px', '4px']);
-    expect(measurements[0]?.summaryRadius).toBe('4px');
-    expect(measurements[1]?.summaryRadius).toBe('4px 4px 0px 0px');
-    expect(measurements[1]?.contentRadius).toBe('0px 0px 4px 4px');
-    expect(measurements[2]?.summaryRadius).toBe('4px');
-  });
+        expect(measurements.map(({ itemRadius }) => itemRadius)).toEqual(['4px 4px 0px 0px', '0px', '0px 0px 4px 4px']);
+        expect(measurements.map(({ summaryRadius }) => summaryRadius)).toEqual([
+          '4px 4px 0px 0px',
+          '0px',
+          expanded ? '0px' : '0px 0px 4px 4px',
+        ]);
+        expect(measurements.map(({ contentRadius }) => contentRadius)).toEqual([
+          '0px',
+          '0px',
+          expanded ? '0px 0px 4px 4px' : '0px',
+        ]);
+      }
+    });
+  }
 });
 
 test.describe('Interaction', () => {

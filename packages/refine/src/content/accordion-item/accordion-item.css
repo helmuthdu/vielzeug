@@ -4,7 +4,10 @@
        ======================================== */
 
   :host {
-    --accordion-details-radius: var(--accordion-item-radius, var(--rounded-lg));
+    --_accordion-top-radius: var(--accordion-item-radius, var(--rounded-lg));
+    --_accordion-bottom-radius: var(--accordion-item-radius, var(--rounded-lg));
+    --accordion-details-radius: var(--_accordion-top-radius) var(--_accordion-top-radius)
+      var(--_accordion-bottom-radius) var(--_accordion-bottom-radius);
     --accordion-summary-radius: 0;
     --accordion-item-transition: var(--transition-normal);
     --accordion-item-expand-easing: var(--ease-spring);
@@ -18,7 +21,8 @@
 
   details {
     width: 100%;
-    border-radius: var(--accordion-item-radius);
+    border-radius: var(--_accordion-top-radius) var(--_accordion-top-radius) var(--_accordion-bottom-radius)
+      var(--_accordion-bottom-radius);
   }
 
   summary {
@@ -180,16 +184,10 @@
   }
 
   :host([variant='frost']:not([expanded])) summary {
-    border-radius: var(--accordion-details-radius);
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
   }
 
-  :host([variant='frost'][expanded]) summary {
-    border-radius: var(--_accordion-summary-open-radius, var(--accordion-details-radius));
-  }
-
   :host([variant='frost']) .content-wrapper {
-    border-radius: var(--_accordion-content-open-radius, var(--accordion-summary-radius));
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
   }
 
@@ -321,14 +319,8 @@
 
   /* Expanded state - adjust border radius */
   :host([expanded]) {
-    --accordion-details-radius: var(
-      --_accordion-summary-open-radius,
-      var(--accordion-item-radius, var(--rounded-lg)) var(--accordion-item-radius, var(--rounded-lg)) 0 0
-    );
-    --accordion-summary-radius: var(
-      --_accordion-content-open-radius,
-      0 0 var(--accordion-item-radius, var(--rounded-lg)) var(--accordion-item-radius, var(--rounded-lg))
-    );
+    --accordion-details-radius: var(--_accordion-top-radius) var(--_accordion-top-radius) 0 0;
+    --accordion-summary-radius: 0 0 var(--_accordion-bottom-radius) var(--_accordion-bottom-radius);
   }
 
   @media (forced-colors: active) {

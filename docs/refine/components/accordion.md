@@ -49,7 +49,7 @@ Only one item can be expanded at a time. Use `single` mode for mutually exclusiv
 ## Variants
 
 Seven variants apply to all items through the parent accordion, including frost for translucent surfaces.
-Contained variants keep an inset group surface and derive item corners from `outer radius − inset`, so the curves nest instead of repeating the same radius. Frost applies the derived radius to every item, including its expanded summary and content.
+Contained variants (`solid`, `flat`, and `frost`) keep an inset group surface and derive the inner radius from `outer radius − inset`. Only the first item's top corners and the last item's bottom corners are rounded; adjoining item corners stay square, including when expanded.
 
 <ComponentPreview vertical>
 
@@ -262,15 +262,15 @@ Prevent interaction with specific items.
 
 ### CSS Custom Properties
 
-| Property                      | Description                                       | Default                    |
-| ----------------------------- | ------------------------------------------------- | -------------------------- |
-| `--accordion-item-bg`         | Item background color                             | `transparent`              |
-| `--accordion-item-radius`     | Item border radius; contained parents derive it from the group radius minus its inset | `var(--rounded-lg)` |
-| `--accordion-item-padding`    | Item inner padding                                | Size-dependent             |
-| `--accordion-item-transition` | Transition duration for expand/collapse animation | `var(--transition-normal)` |
-| `--accordion-border-color`    | Container border color (solid/flat variants)      | Theme-dependent            |
-| `--accordion-divider-color`   | Divider color between items (text variant)        | Theme-dependent            |
-| `--accordion-shadow`          | Container box shadow                              | Theme-dependent            |
+| Property                      | Description                                                                           | Default                    |
+| ----------------------------- | ------------------------------------------------------------------------------------- | -------------------------- |
+| `--accordion-item-bg`         | Item background color                                                                 | `transparent`              |
+| `--accordion-item-radius`     | Item border radius; contained parents derive it from the group radius minus its inset | `var(--rounded-lg)`        |
+| `--accordion-item-padding`    | Item inner padding                                                                    | Size-dependent             |
+| `--accordion-item-transition` | Transition duration for expand/collapse animation                                     | `var(--transition-normal)` |
+| `--accordion-border-color`    | Container border color (solid/flat variants)                                          | Theme-dependent            |
+| `--accordion-divider-color`   | Divider color between items (text variant)                                            | Theme-dependent            |
+| `--accordion-shadow`          | Container box shadow                                                                  | Theme-dependent            |
 
 ## Accessibility
 
