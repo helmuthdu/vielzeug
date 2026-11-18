@@ -1,7 +1,20 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Tue, 17 Nov 2026 07:34:49 GMT and should not be manually modified.
+This log was last generated on Wed, 18 Nov 2026 09:39:29 GMT and should not be manually modified.
 
+## 26.11.23
+
+Wed, 18 Nov 2026 09:39:29 GMT
+
+### Minor changes
+
+- ore-button-group finds segments wrapped in a direct ore-tooltip child
+- ore-dock gains a floating mode: a detached, content-hugging capsule anchored above the bottom edge, with --dock-shadow theming and preview-mode containment.
+
+### Patches
+
+- ore-navbar: the rounded attribute now drives the bar radius (its internal token was named --_navbar-radius, which roundedVariantMixin never fed).
+- Theme contrast test computes WCAG ratios and sRGB gamut checks with @vielzeug/palette instead of culori (dev-only; culori removed)
 ## 26.11.22
 
 Tue, 17 Nov 2026 07:34:49 GMT

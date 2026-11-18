@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/gesture
 
-This log was last generated on Tue, 17 Nov 2026 07:34:49 GMT and should not be manually modified.
+This log was last generated on Wed, 18 Nov 2026 09:39:29 GMT and should not be manually modified.
 
+## 26.11.23
+
+Wed, 18 Nov 2026 09:39:29 GMT
+
+### Minor changes
+
+- feat(gesture): add pinch and wheel gestures
 ## 26.11.22
 
 Tue, 17 Nov 2026 07:34:49 GMT

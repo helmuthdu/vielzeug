@@ -2,6 +2,37 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "ore-button-group finds segments wrapped in a direct ore-tooltip child",
+            "commit": "e4e73252fb374b22ccb77948d8296dbf29964045"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "ore-dock gains a floating mode: a detached, content-hugging capsule anchored above the bottom edge, with --dock-shadow theming and preview-mode containment.",
+            "commit": "e4e73252fb374b22ccb77948d8296dbf29964045"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "ore-navbar: the rounded attribute now drives the bar radius (its internal token was named --_navbar-radius, which roundedVariantMixin never fed).",
+            "commit": "e4e73252fb374b22ccb77948d8296dbf29964045"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Theme contrast test computes WCAG ratios and sRGB gamut checks with @vielzeug/palette instead of culori (dev-only; culori removed)",
+            "commit": "e4e73252fb374b22ccb77948d8296dbf29964045"
+          }
+        ]
+      },
+      "date": "Wed, 18 Nov 2026 09:39:29 GMT",
+      "tag": "@vielzeug/refine_v26.11.23",
+      "version": "26.11.23"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "agent@vielzeug",

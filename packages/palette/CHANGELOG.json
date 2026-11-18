@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat(palette): color parsing (incl. named colors), lossless conversions, OKLab mixing, gamut-fitted ramps, and contrast",
+            "commit": "e4e73252fb374b22ccb77948d8296dbf29964045"
+          }
+        ]
+      },
+      "date": "Wed, 18 Nov 2026 09:39:29 GMT",
+      "tag": "@vielzeug/palette_v26.11.23",
+      "version": "26.11.23"
+    }
+  ],
+  "name": "@vielzeug/palette"
+}

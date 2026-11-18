@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add @vielzeug/atlas: viewport-centred camera with cached transforms and anchor-preserving zoom, Map-like dynamic R-tree spatial index, matrix/rect math with closed-interval queries, narrow-phase hit-testing, alignment/grid/equal-gap snapping with kind-tagged guides, and the @vielzeug/atlas/grid subpath with tile math, shadowcasting FOV, and fog-of-war.",
+            "commit": "e4e73252fb374b22ccb77948d8296dbf29964045"
+          }
+        ]
+      },
+      "date": "Wed, 18 Nov 2026 09:39:29 GMT",
+      "tag": "@vielzeug/atlas_v26.11.23",
+      "version": "26.11.23"
+    }
+  ],
+  "name": "@vielzeug/atlas"
+}

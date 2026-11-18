@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Heatmap color ramp interpolates in linear light via @vielzeug/palette; parseColor accepts hsl() and oklch() color strings",
+            "commit": "e4e73252fb374b22ccb77948d8296dbf29964045"
+          }
+        ]
+      },
+      "date": "Wed, 18 Nov 2026 09:39:29 GMT",
+      "tag": "@vielzeug/prism_v26.11.23",
+      "version": "26.11.23"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/stage",
-  "version": "0.1.0",
+  "version": "26.11.23",
   "description": "Retained-mode 2D canvas stage engine with DPR-aware layers, dirty repaints, and PNG export",
   "repository": {
     "type": "git",

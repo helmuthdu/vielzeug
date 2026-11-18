@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat(gesture): add pinch and wheel gestures",
+            "commit": "e4e73252fb374b22ccb77948d8296dbf29964045"
+          }
+        ]
+      },
+      "date": "Wed, 18 Nov 2026 09:39:29 GMT",
+      "tag": "@vielzeug/gesture_v26.11.23",
+      "version": "26.11.23"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "agent@vielzeug",
