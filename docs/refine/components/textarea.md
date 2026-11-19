@@ -140,6 +140,7 @@ Control the resize handle with the `resize` attribute. Avoid `resize="horizontal
 | `value`           | `string`                                                                  | `''`         | Current value                                     |
 | `name`            | `string`                                                                  | `''`         | Form field name                                   |
 | `placeholder`     | `string`                                                                  | `''`         | Placeholder text                                  |
+| `enterkeyhint`    | [EnterKeyHint](../api.md#enterkeyhint)                                    | Unset        | Native virtual-keyboard return-key label          |
 | `rows`            | `number`                                                                  | -            | Visible row count (sets minimum height)           |
 | `maxlength`       | `number`                                                                  | -            | Maximum character count: enables counter when set |
 | `helper`          | `string`                                                                  | `''`         | Helper text below the field                       |

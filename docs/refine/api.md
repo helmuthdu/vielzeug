@@ -23,20 +23,21 @@ description: Published component, stylesheet, framework type, and error entry po
 | `animateReflow()`                           | Token-driven FLIP reflow for keyed lists                                             | Async (next frame) | Exported from the package root; elements need stable keys or it correctly does nothing |
 | `setMotionMode()` / `getMotionMode()`       | Read/write the `data-motion` attribute on `<html>`                                   | Sync               | Exported from the package root; an unknown mode throws `RangeError`                    |
 | `RefineError`                               | Base class for package-defined public errors                                         | Sync               | Component configuration warnings do not throw this error                               |
+| `EnterKeyHint`                              | Typed native virtual-keyboard return-key labels                                      | Types only         | Labels do not change keyboard handling or submission behavior                          |
 
 ## Package Entry Point
 
-| Import                              | Purpose                                                                                                                                                        |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@vielzeug/refine`                  | Export `registerIcons`, icon definition types, `RefineError`, `animateReflow`, the motion-mode functions, and the field readers without registering components |
-| `@vielzeug/refine/<component>`      | Register one component and export its tag constant, props, events, and related types                                                                           |
-| `@vielzeug/refine/theme`            | `createThemeController()` and its theme types                                                                                                                  |
-| `@vielzeug/refine/blueprint`        | On-demand UI document contract: `parseUiBlueprint()`, the node types, bounds, `UI_BLUEPRINT_REGISTRY`, and `UI_BLUEPRINT_JSON_SCHEMA`                          |
-| `@vielzeug/refine/blueprint/render` | `renderUiBlueprint()` and the thirteen component tags it registers                                                                                             |
-| `@vielzeug/refine/tokens.css`       | Required global design contract                                                                                                                                |
-| `@vielzeug/refine/fouc.css`         | Optional pre-upgrade visibility rule                                                                                                                           |
-| `@vielzeug/refine/styles/*`         | Focused theme, animation, layer, and preflight stylesheets                                                                                                     |
-| `@vielzeug/refine/frameworks/*`     | TypeScript augmentations for DOM, React, and Vue                                                                                                               |
+| Import                              | Purpose                                                                                                                                                                        |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@vielzeug/refine`                  | Export `registerIcons`, icon definition types, `EnterKeyHint`, `RefineError`, `animateReflow`, the motion-mode functions, and the field readers without registering components |
+| `@vielzeug/refine/<component>`      | Register one component and export its tag constant, props, events, and related types                                                                                           |
+| `@vielzeug/refine/theme`            | `createThemeController()` and its theme types                                                                                                                                  |
+| `@vielzeug/refine/blueprint`        | On-demand UI document contract: `parseUiBlueprint()`, the node types, bounds, `UI_BLUEPRINT_REGISTRY`, and `UI_BLUEPRINT_JSON_SCHEMA`                                          |
+| `@vielzeug/refine/blueprint/render` | `renderUiBlueprint()` and the thirteen component tags it registers                                                                                                             |
+| `@vielzeug/refine/tokens.css`       | Required global design contract                                                                                                                                                |
+| `@vielzeug/refine/fouc.css`         | Optional pre-upgrade visibility rule                                                                                                                                           |
+| `@vielzeug/refine/styles/*`         | Focused theme, animation, layer, and preflight stylesheets                                                                                                                     |
+| `@vielzeug/refine/frameworks/*`     | TypeScript augmentations for DOM, React, and Vue                                                                                                                               |
 
 ## Icon Registration and Adapters
 
@@ -112,6 +113,12 @@ Each component page lists its attributes, JavaScript properties, events, slots, 
 
 The [`query-bar`](./components/query-bar.md) entry also exports `QueryState`, `QueryTokenDef`, `QueryQuickFilter`, `QueryBarLabels`, and pure grammar helpers. Vocabulary entries default to single selection; `selection: 'multiple'` allows distinct values for the same key. `anyLabel` customizes the unrestricted single-selection choice, such as “Default order” for sorting. Options accept an optional `icon` (registered `ore-icon` name), displayed beside their labels in the drawer. `tokenValues(state, key)` reads all values, `removeToken(state, token)` removes an exact pair, and `clearTokens(state, key)` clears a group. Its unified field contains applied filters, with a compact secondary row for filter entry, quick toggles, and a `toolbar-end` slot for application content such as a result count. Drawer selection uses the same state and vocabulary as typed suggestions. Pending edits block incidental backdrop/swipe dismissal; explicit Cancel, Close, and Escape discard them. Search-hidden selections remain visible in a summary.
 
+## EnterKeyHint
+
+Import `EnterKeyHint` from `@vielzeug/refine`. Its values are `'enter'`, `'done'`, `'go'`, `'next'`, `'previous'`, `'search'`, and `'send'`.
+
+The `enterkeyhint` attribute on `ore-input`, `ore-textarea`, and `ore-message-composer` forwards this label to the native editor's virtual keyboard. It is only a keyboard hint: it does not change submission, newline, or shortcut behavior.
+
 ## Framework Types
 
 ```ts
@@ -151,6 +158,8 @@ theme.dispose();
 Owns the light/dark/system theme for the document: a reactive `preference` signal, the effective `resolved` mode (`'dark' | 'light'` after resolving `system` against the OS), and the DOM application `styles/theme.css` expects: the `.dark` class plus the `color-scheme` property on the root element, so every `light-dark()` token resolves to the right branch. While in `system` mode the controller tracks the OS `prefers-color-scheme` via sentinel's `createMediaQuery`.
 
 The controller does **not** persist the preference or expose an accent color: those are consumer concerns (wire `watch(controller.preference, save)` for persistence; set `--color-primary-hue` yourself). Options: `initial` (starting preference, default `'system'`), `root` (element carrying the classes, default `document.documentElement`), `target` (window whose `matchMedia` backs `system`). The handle is disposable: `dispose()`, `disposed`, `disposalSignal`, `[Symbol.dispose]`.
+
+Theme application temporarily suppresses CSS transitions on the root, its descendants, their pseudo-elements, and reachable open shadow trees, commits the new palette, then restores transitions synchronously. Other animations and unrelated subtrees are not disabled. Closed shadow roots are not reachable; their owners must handle transition policy themselves. This uses temporary inline stylesheets, so the page's content security policy must permit them. Direct class changes bypass the controller's suppression. The standalone IIFE exposes the same utility as `Refine.createThemeController`.
 
 ### `eventFieldValue(event)` / `eventFieldChecked(event)`
 

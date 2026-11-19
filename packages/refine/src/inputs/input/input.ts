@@ -13,7 +13,7 @@ import {
   touchTargetMixin,
 } from '../../styles';
 import type { InputType } from '../../types';
-import { INPUT_VARIANTS, type InputVariant } from '../../types';
+import { ENTER_KEY_HINTS, type EnterKeyHint, INPUT_VARIANTS, type InputVariant } from '../../types';
 
 const INPUT_INPUTMODES = ['none', 'text', 'decimal', 'numeric', 'tel', 'search', 'email', 'url'] as const;
 
@@ -37,6 +37,8 @@ export type OreInputProps = TextFieldProps<InputVariant> & {
   autocomplete?: string;
   /** Show a clear (×) button when the field has a value */
   clearable?: boolean;
+  /** Return-key label forwarded to the native input; does not change submission behavior. */
+  enterkeyhint?: EnterKeyHint;
   /** Virtual keyboard hint for mobile devices */
   inputmode?: (typeof INPUT_INPUTMODES)[number];
   /**
@@ -88,6 +90,9 @@ const VALID_INPUT_TYPES = [
  * @attr {string} type - HTML input type: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search'
  * @attr {string} value - Current input value
  * @attr {string} placeholder - Placeholder text
+ * @attr {string} autocomplete - Native browser autofill hint
+ * @attr {string} inputmode - Virtual-keyboard layout: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url'
+ * @attr {string} enterkeyhint - Return-key label: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
  * @attr {string} name - Form field name
  * @attr {string} helper - Helper text displayed below the input (fallback when the `helper` slot is empty)
  * @attr {string} error - Error message: marks the field as invalid (fallback when the `error` slot is empty)
@@ -157,6 +162,7 @@ define<OreInputProps>(INPUT_TAG, {
     'aria-label': prop.string(),
     autocomplete: prop.string(),
     clearable: prop.bool(false),
+    enterkeyhint: prop.oneOf(ENTER_KEY_HINTS),
     error: prop.string(),
     fullwidth: prop.bool(false),
     helper: prop.string(),
@@ -322,6 +328,7 @@ define<OreInputProps>(INPUT_TAG, {
               placeholder="${props.placeholder}"
               autocomplete="${props.autocomplete}"
               inputmode="${props.inputmode}"
+              enterkeyhint="${props.enterkeyhint}"
               maxlength="${props.maxlength}"
               minlength="${props.minlength}"
               pattern="${props.pattern}"

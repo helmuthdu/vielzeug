@@ -12,3 +12,4 @@ export { eventFieldChecked, eventFieldValue } from './inputs/shared/native-field
 export { getMotionMode, MOTION_MODES, type MotionMode, setMotionMode } from './motion';
 export type { Reflow, ReflowOptions } from './reflow';
 export { animateReflow } from './reflow';
+export type { EnterKeyHint } from './shared/types';
