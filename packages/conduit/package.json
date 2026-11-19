@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/conduit",
-  "version": "26.11.26",
+  "version": "26.11.27",
   "description": "Typed dependency injection container",
   "repository": {
     "type": "git",

@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add createDismissal and announce primitives",
+            "commit": "c264c14e0e8e2fb79edaf5ee65d96ca438993f40"
+          }
+        ]
+      },
+      "date": "Thu, 19 Nov 2026 21:35:32 GMT",
+      "tag": "@vielzeug/focus_v26.11.27",
+      "version": "26.11.27"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

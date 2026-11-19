@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/atlas",
-  "version": "26.11.26",
+  "version": "26.11.27",
   "description": "Spatial math, camera, and indexing primitives for 2D canvases",
   "repository": {
     "type": "git",
