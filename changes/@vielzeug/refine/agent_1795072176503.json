@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Change the default control radius from 12px to 8px; set --radius to var(--rounded-xl) to restore it (see migration guide)",
+      "comment": "Use an 8px default control radius and tune neutral surfaces; set --radius to var(--rounded-xl) to restore the previous 12px radius (see migration guide)",
       "packageName": "@vielzeug/refine",
       "type": "minor"
     }

@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Set violet as the default primary hue",
+      "comment": "Use a more vibrant violet default primary palette",
       "packageName": "@vielzeug/refine",
       "type": "patch"
     }
