@@ -115,6 +115,13 @@ export type OreDrawerProps = {
    * When omitted, `aria-labelledby` points to the visible header title instead.
    */
   label?: string;
+  /**
+   * When true (default), the drawer is modal: the page behind it is inert and
+   * Escape closes it. Set to false for a modeless inspector: the page stays
+   * interactive while the drawer is open, the backdrop is removed, and Escape
+   * still closes it when the focus is inside the drawer.
+   */
+  modal?: boolean;
   /** Controlled open state */
   open?: boolean;
   /** When true, backdrop clicks do not close the drawer (default: false) */
@@ -153,6 +160,7 @@ export type OreDrawerProps = {
  * @attr {string} drag-handle-placement - 'inset' (default) | 'outside'
  * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
  * @attr {boolean} persistent - Prevent backdrop-click from closing (default: false)
+ * @attr {boolean} modal - Keep the page behind inert and close on Escape anywhere (default: true); set false for a modeless inspector
  * @attr {boolean} swipe-from-content - Allow touch dragging from the body at its scroll boundary (default: true)
  *
  * @fires open-change - When the drawer state changes. detail: { open, reason }
@@ -201,6 +209,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
     'drag-handle-placement': prop.oneOf(['outside', 'inset'] as const, 'inset'),
     'initial-focus': prop.string(),
     label: prop.string(),
+    modal: prop.bool(true),
     open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     persistent: prop.bool(false),
     placement: prop.oneOf(['left', 'right', 'top', 'bottom'] as const, 'right'),
@@ -506,6 +515,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
       host: el,
       initialFocus: props['initial-focus'],
       isPersistent: () => Boolean(props.persistent.value),
+      modal: props.modal,
       onCleanup,
       onEvent,
       onNativeClose: (reason) => {
@@ -759,7 +769,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
     return html`
       <dialog
         ref=${dialogRef}
-        aria-modal="true"
+        aria-modal="${() => (props.modal.value ? 'true' : 'false')}"
         aria-label="${() => props.label.value ?? null}"
         aria-labelledby="${() => (!props.label.value ? drawerLabelId : null)}">
         <div class="panel" part="panel" ref=${panelRef}>

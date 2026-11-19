@@ -31,6 +31,12 @@ describe('ore-drawer', () => {
       };
     }
 
+    if (!HTMLDialogElement.prototype.show) {
+      HTMLDialogElement.prototype.show = function () {
+        this.setAttribute('open', '');
+      };
+    }
+
     if (!HTMLDialogElement.prototype.close) {
       HTMLDialogElement.prototype.close = function () {
         this.removeAttribute('open');
@@ -843,6 +849,118 @@ describe('ore-drawer', () => {
   });
 });
 
+// ─── Modeless ─────────────────────────────────────────────────────────────────
+
+describe('ore-drawer modeless', () => {
+  let fixture: Fixture<HTMLElement>;
+
+  beforeAll(async () => {
+    if (!HTMLDialogElement.prototype.showModal) {
+      HTMLDialogElement.prototype.showModal = function () {
+        this.setAttribute('open', '');
+      };
+    }
+
+    if (!HTMLDialogElement.prototype.show) {
+      HTMLDialogElement.prototype.show = function () {
+        this.setAttribute('open', '');
+      };
+    }
+
+    if (!HTMLDialogElement.prototype.close) {
+      HTMLDialogElement.prototype.close = function () {
+        this.removeAttribute('open');
+        this.dispatchEvent(new Event('close'));
+      };
+    }
+
+    await import('./drawer');
+  });
+
+  afterEach(() => {
+    fixture?.dispose();
+  });
+
+  it('opens without inerting the background', async () => {
+    const sibling = document.createElement('div');
+
+    document.body.append(sibling);
+
+    try {
+      fixture = await mount('ore-drawer', { attrs: { modal: 'false' } });
+
+      await fixture.attr('open', '');
+
+      expect(fixture.query('dialog')?.hasAttribute('open')).toBe(true);
+      expect(sibling.hasAttribute('inert')).toBe(false);
+    } finally {
+      sibling.remove();
+    }
+  });
+
+  it('closes on Escape keydown inside the dialog', async () => {
+    fixture = await mount('ore-drawer', { attrs: { modal: 'false', open: '', placement: 'right' } });
+
+    let detail: unknown;
+
+    fixture.element.addEventListener('open-change', (e) => {
+      detail = (e as CustomEvent).detail;
+    });
+
+    fixture
+      .query<HTMLDialogElement>('dialog')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Escape' }));
+    await fixture.flush();
+
+    const panel = fixture.query('.panel');
+
+    panel?.dispatchEvent(new Event('transitionend', { bubbles: true }));
+    await fixture.flush();
+
+    expect(fixture.query('dialog[open]')).toBeFalsy();
+    expect((detail as { reason?: string })?.reason).toBe('escape');
+  });
+
+  it('does not close on Escape keydown when persistent', async () => {
+    fixture = await mount('ore-drawer', { attrs: { modal: 'false', open: '', persistent: '' } });
+
+    fixture
+      .query<HTMLDialogElement>('dialog')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Escape' }));
+    await fixture.flush();
+
+    expect(fixture.query('dialog[open]')).toBeTruthy();
+  });
+
+  it('does not close on Escape keydown already prevented inside the dialog', async () => {
+    fixture = await mount('ore-drawer', { attrs: { modal: 'false', open: '', placement: 'right' } });
+
+    // A control inside the dialog (an open select, say) consumes Escape to close
+    // its own dropdown and marks the event as handled.
+    const inner = document.createElement('div');
+
+    fixture.query('.panel')?.append(inner);
+
+    inner.addEventListener('keydown', (e) => e.preventDefault());
+    inner.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Escape' }));
+    await fixture.flush();
+
+    expect(fixture.query('dialog[open]')).toBeTruthy();
+  });
+
+  it('ignores Escape keydown when modal', async () => {
+    fixture = await mount('ore-drawer', { attrs: { open: '', placement: 'right' } });
+
+    fixture
+      .query<HTMLDialogElement>('dialog')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Escape' }));
+    await fixture.flush();
+
+    // Modal drawers close via the native `cancel` event, not the modeless keydown path.
+    expect(fixture.query('dialog[open]')).toBeTruthy();
+  });
+});
+
 // ─── Accessibility ────────────────────────────────────────────────────────────
 
 describe('ore-drawer accessibility', () => {
@@ -851,6 +969,12 @@ describe('ore-drawer accessibility', () => {
   beforeAll(async () => {
     if (!HTMLDialogElement.prototype.showModal) {
       HTMLDialogElement.prototype.showModal = function () {
+        this.setAttribute('open', '');
+      };
+    }
+
+    if (!HTMLDialogElement.prototype.show) {
+      HTMLDialogElement.prototype.show = function () {
         this.setAttribute('open', '');
       };
     }
@@ -907,6 +1031,13 @@ describe('ore-drawer accessibility', () => {
       fixture = await mount('ore-drawer');
 
       expect(fixture.query('dialog')?.getAttribute('aria-modal')).toBe('true');
+    });
+
+    it('modeless drawer has aria-modal="false"', async () => {
+      fixture = await mount('ore-drawer', { attrs: { modal: 'false', open: '' } });
+
+      expect(fixture.query('dialog')?.getAttribute('aria-modal')).toBe('false');
+      expect(fixture.element.hasAttribute('modal')).toBe(false);
     });
   });
 

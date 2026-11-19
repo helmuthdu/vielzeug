@@ -41,6 +41,22 @@
     pointer-events: auto;
   }
 
+  /*
+   * Modeless drawer (`modal` attribute removed): the dialog is not in the top layer,
+   * so no ::backdrop is painted and the page stays interactive. The full-viewport
+   * dialog must not capture pointer events: only the panel is clickable, so it
+   * re-enables them. It also needs an explicit stacking level since it no longer
+   * floats above the page via the top layer.
+   */
+  :host(:not([modal])) dialog[open] {
+    z-index: var(--z-overlay);
+    pointer-events: none;
+  }
+
+  :host(:not([modal])) dialog[open] .panel {
+    pointer-events: auto;
+  }
+
   dialog::backdrop {
     background: var(--_backdrop-bg);
     opacity: 1;
@@ -270,9 +286,11 @@
       color var(--transition-fast);
   }
 
-  .close-btn:hover {
-    color: var(--color-contrast-800);
-    background: var(--color-contrast-200);
+  @media (hover: hover) {
+    .close-btn:hover {
+      color: var(--color-contrast-800);
+      background: var(--color-contrast-200);
+    }
   }
 
   .close-btn:active {
