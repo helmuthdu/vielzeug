@@ -46,9 +46,19 @@ function toolTip(label: string, shortcut: string): string {
   return `${label} (${formatShortcut(shortcut)})`;
 }
 
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+/**
+ * True when the key was typed into a field. Composed keydowns from a custom
+ * element's shadow `<input>` retarget to the host, so the path is walked
+ * instead of trusting `event.target`.
+ */
+function isEditableTarget(event: KeyboardEvent): boolean {
+  return event
+    .composedPath()
+    .some(
+      (node) =>
+        node instanceof HTMLElement &&
+        (node.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(node.tagName)),
+    );
 }
 
 function screenPoint(viewport: HTMLElement, clientX: number, clientY: number): Point {
@@ -660,7 +670,7 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
         trigger: 'keyup',
       },
     ],
-    { when: (event) => !isEditableTarget(event.target) },
+    { when: (event) => !isEditableTarget(event) },
   );
   const unmountKeymap = keymap.mount(viewport.ownerDocument);
 

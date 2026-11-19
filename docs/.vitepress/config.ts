@@ -472,6 +472,8 @@ export default defineConfig({
             { link: '/atlas/usage#exact-hit-testing', text: 'Exact Hit-Testing' },
             { link: '/atlas/usage#snapping-and-alignment', text: 'Snapping and Alignment' },
             { link: '/atlas/usage#tile-grids', text: 'Tile Grids' },
+            { link: '/atlas/usage#hex-grids', text: 'Hex Grids' },
+            { link: '/atlas/usage#topologies-and-pathfinding', text: 'Topologies and Pathfinding' },
             { link: '/atlas/usage#field-of-view-and-fog', text: 'Field of View and Fog' },
             { link: '/atlas/usage#matrix-helpers', text: 'Matrix Helpers' },
             { link: '/atlas/usage#best-practices', text: 'Best Practices' },
@@ -497,7 +499,10 @@ export default defineConfig({
           text: 'API Reference',
         },
         {
-          items: [{ link: '/atlas/examples/pan-zoom-and-culling', text: 'Pan, Zoom and Culling' }],
+          items: [
+            { link: '/atlas/examples/pan-zoom-and-culling', text: 'Pan, Zoom and Culling' },
+            { link: '/atlas/examples/hex-and-pathfinding', text: 'Hex Grids and Pathfinding' },
+          ],
           link: '/atlas/examples',
           text: 'Examples',
         },

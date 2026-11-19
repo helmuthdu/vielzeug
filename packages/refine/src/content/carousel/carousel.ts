@@ -1,8 +1,10 @@
 import { createPanGesture } from '@vielzeug/gesture';
+import { type SpringHandle, spring } from '@vielzeug/necromancer';
 import { bind, define, getHost, html, onMounted, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { createElementSize } from '@vielzeug/sentinel';
 import { announce, elementDirection } from '../../core';
+import { getMotionMode } from '../../motion';
 import { projectFling } from '../../shared/fling';
 import { SWIPE_EDITABLE_SELECTOR, SWIPE_SURFACES, swipePath } from '../../shared/swipe';
 import { THEME_COLORS, type ThemeColor } from '../../types';
@@ -199,6 +201,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     let focusedSlide: HTMLElement | undefined;
     let pointerInside = false;
     let focusWithin = false;
+    let interacting = false;
     let autoplayTimer: ReturnType<typeof setInterval> | null = null;
 
     // Slide cache: populated immediately, refreshed on slotchange.
@@ -216,7 +219,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     const showIndicators = computed(() => props['show-indicators'].value !== false);
     const canAutoplay = computed(() => Boolean(props.autoplay.value) && slideCount.value > 1);
     const isCoverflow = computed(() => props.variant.value === 'coverflow');
-    const isRtl = (): boolean => isCoverflow.value && isHorizontal.value && elementDirection(el) === 'rtl';
+    const isRtl = (): boolean => isHorizontal.value && elementDirection(el) === 'rtl';
 
     // ── Navigation ───────────────────────────────────────────────────────────
 
@@ -324,6 +327,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         !props.autoplay.value ||
         slideCount.value < 2 ||
         autoplayPaused.value ||
+        interacting ||
         (!ignoreInteraction && (pointerInside || focusWithin)) ||
         autoplayTimer !== null
       )
@@ -504,25 +508,117 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
           event.preventDefault();
         }
       };
+      let flight: SpringHandle | undefined;
+      let offset = 0;
+      let targetOffset = 0;
+      let startOffset = 0;
+      let origin = 0;
+      let extent = 0;
+      let committing = false;
+      let mounted = true;
+      const direction = (): number => (isRtl() ? -1 : 1);
+      const directManipulation = (): boolean => (props.variant.value ?? 'default') === 'default' && extent > 0;
+      const resetDrag = (): void => {
+        flight?.dispose();
+        flight = undefined;
+        offset = targetOffset = startOffset = 0;
+        interacting = false;
+        const dragged = slides.filter((slide) => slide.hasAttribute('data-dragging'));
+        for (const slide of dragged) {
+          slide.setAttribute('data-dragging', 'reset');
+          slide.style.removeProperty('--_carousel-position');
+        }
+        // Wraparound can relocate offscreen slides to the opposite side; never transition that reset.
+        if (dragged.length) void track.offsetWidth;
+        for (const slide of dragged) slide.removeAttribute('data-dragging');
+        if (mounted) startAutoplay();
+      };
+      const renderDrag = (value: number): void => {
+        offset = value;
+        const count = slides.length;
+        slides.forEach((slide, index) => {
+          let relative = index - origin;
+          if (looping.value) {
+            if (relative > count / 2) relative -= count;
+            if (relative < -count / 2) relative += count;
+            // A two-slide loop uses its one neighbor on either side of the finger.
+            if (count === 2 && Math.abs(relative) === 1) relative = value * direction() > 0 ? -1 : 1;
+          }
+          slide.setAttribute('data-dragging', '');
+          slide.style.setProperty('--_carousel-position', `${relative * extent * direction() + value}px`);
+        });
+      };
+      const outsideEdge = (value: number): boolean => {
+        const logical = value * direction();
+        return !looping.value && ((origin === 0 && logical > 0) || (origin === slides.length - 1 && logical < 0));
+      };
+      const dragPosition = (distance: number): number => {
+        const value = startOffset + distance;
+        if (!outsideEdge(value)) return Math.max(-extent, Math.min(extent, value));
+        // A small free pull followed by bounded, asymptotic edge resistance.
+        const over = Math.max(0, Math.abs(value) - 12);
+        return Math.sign(value) * (Math.min(Math.abs(value), 12) + (64 * over) / (over + 150));
+      };
       const pan = createPanGesture(el, {
         axis: () => (isHorizontal.value ? 'x' : 'y'),
+        disabled: () => slideCount.value < 2,
         onEnd: ({ distance, velocity, reason }) => {
           if (reason !== 'release') {
             suppressClick = false;
+            resetDrag();
             return;
           }
-          // Velocity-aware: a quick flick advances just like a slow drag past
-          // the threshold, and a flick back toward the start cancels it
-          // (see shared/fling).
-          const projected = projectFling(distance, velocity);
-
-          if (Math.abs(projected) < 48) return;
-
-          if (projected * (isRtl() ? -1 : 1) < 0) next();
-          else prev();
+          const projected = projectFling(startOffset + distance, velocity) * direction();
+          const step = Math.abs(projected) < 48 ? 0 : projected < 0 ? 1 : -1;
+          const requested = activeIndex.value + step;
+          const index = looping.value
+            ? (requested + slides.length) % slides.length
+            : Math.max(0, Math.min(slides.length - 1, requested));
+          if (!directManipulation()) {
+            goTo(index);
+            resetDrag();
+            return;
+          }
+          renderDrag(dragPosition(distance));
+          targetOffset = index === origin ? 0 : -step * extent * direction();
+          committing = true;
+          try {
+            goTo(index);
+          } finally {
+            committing = false;
+          }
+          if (!interacting) return;
+          const frequency = 15;
+          const gap = Math.abs(targetOffset - offset);
+          const room = outsideEdge(startOffset + distance) ? Math.min(gap, 76 - Math.abs(offset)) : gap;
+          // Critical damping and bounded initial momentum keep a fast release inside its destination.
+          const maxVelocity = frequency * room;
+          const handle = spring(offset, targetOffset, renderDrag, {
+            damping: 2 * frequency,
+            motion: getMotionMode(),
+            stiffness: frequency ** 2,
+            velocity: Math.max(-maxVelocity, Math.min(maxVelocity, velocity)),
+          });
+          flight = handle;
+          void handle.result.then((outcome) => {
+            if (flight === handle && outcome.status === 'finished') resetDrag();
+          });
+        },
+        onMove: ({ distance }) => {
+          if (directManipulation()) renderDrag(dragPosition(distance));
         },
         onStart: () => {
           suppressClick = true;
+          interacting = true;
+          stopAutoplay();
+          startOffset = offset - targetOffset;
+          flight?.dispose();
+          flight = undefined;
+          offset = startOffset;
+          targetOffset = 0;
+          origin = activeIndex.value;
+          const bounds = track.getBoundingClientRect();
+          extent = isHorizontal.value ? bounds.width : bounds.height;
         },
         shouldStart: (event) => {
           const path = event.composedPath();
@@ -542,9 +638,21 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         },
       });
       const gestureState = watch(
-        () => [activeIndex.value, props.orientation.value, props.variant.value],
-        () => pan.cancel(),
+        () => [activeIndex.value, props.orientation.value, props.variant.value, props.loop.value],
+        () => {
+          if (committing) {
+            committing = false;
+            return;
+          }
+          pan.cancel();
+          resetDrag();
+        },
       );
+      const size = createElementSize(track);
+      const stopSizing = size.subscribe(() => {
+        pan.cancel();
+        resetDrag();
+      });
       const shadowRoot = el.shadowRoot!;
       const slot = shadowRoot.querySelector<HTMLSlotElement>('slot')!;
 
@@ -552,6 +660,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       // nodes change, scoped to this component's slot, no polling overhead.
       const onSlotChange = (): void => {
         pan.cancel();
+        resetDrag();
         const previous = slides;
 
         refreshSlides();
@@ -573,6 +682,10 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       }
 
       return () => {
+        mounted = false;
+        stopSizing();
+        size.dispose();
+        resetDrag();
         observeCoverflow = () => {};
         for (const observer of sizes.values()) observer.dispose();
         if (layoutFrame !== undefined) cancelAnimationFrame(layoutFrame);

@@ -184,7 +184,7 @@ export const SHOWCASE_DEMOS: ShowcaseDemo[] = [
       },
     ],
     headline: 'Every pixel, under your control.',
-    homeAlt: 'Vielzeug Studio map scene with tile terrain, fog of war, tokens, and floating toolbar',
+    homeAlt: 'Vielzeug Studio map scene with tile terrain, hero and enemy tokens, and a floating toolbar',
     homeImage: 'ss_studio_map',
     href: '/demos/studio/',
     icon: 'pen-tool',

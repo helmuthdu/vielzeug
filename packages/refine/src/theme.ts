@@ -41,6 +41,41 @@ export interface ThemeController {
 }
 
 const DARK_SCHEME_QUERY = '(prefers-color-scheme: dark)';
+let switchSequence = 0;
+
+function withoutTransitions(root: HTMLElement, apply: () => void): void {
+  const styles: HTMLStyleElement[] = [];
+  const previous = root.getAttribute('data-theme-switching');
+  const addStyle = (target: HTMLElement | ShadowRoot, selector: string): void => {
+    const style = root.ownerDocument.createElement('style');
+    // Theme changes must also override author transitions and pseudo-elements.
+    style.textContent = `${selector} { transition: none !important; }`;
+    target.appendChild(style);
+    styles.push(style);
+  };
+  const visit = (element: Element): void => {
+    if (element.shadowRoot) {
+      addStyle(element.shadowRoot, ':host, *, *::before, *::after');
+      for (const child of element.shadowRoot.children) visit(child);
+    }
+    for (const child of element.children) visit(child);
+  };
+
+  try {
+    const id = String(++switchSequence);
+    const scope = `[data-theme-switching="${id}"]`;
+    root.setAttribute('data-theme-switching', id);
+    addStyle(root, `${scope}, ${scope} *, ${scope}::before, ${scope}::after, ${scope} *::before, ${scope} *::after`);
+    visit(root);
+    apply();
+    // Commit the new palette while transitions are disabled, including shadow descendants.
+    void root.offsetHeight;
+  } finally {
+    for (const style of styles) style.remove();
+    if (previous === null) root.removeAttribute('data-theme-switching');
+    else root.setAttribute('data-theme-switching', previous);
+  }
+}
 
 /** Creates a document theme controller. Call once at app startup. */
 export function createThemeController(options: ThemeControllerOptions = {}): ThemeController {
@@ -61,9 +96,11 @@ export function createThemeController(options: ThemeControllerOptions = {}): The
 
   const apply = effect(() => {
     const dark = resolved.value === 'dark';
-    root.classList.toggle('dark', dark);
-    root.classList.toggle('light', !dark);
-    root.style.colorScheme = dark ? 'dark' : 'light';
+    withoutTransitions(root, () => {
+      root.classList.toggle('dark', dark);
+      root.classList.toggle('light', !dark);
+      root.style.colorScheme = dark ? 'dark' : 'light';
+    });
   });
 
   let disposed = false;

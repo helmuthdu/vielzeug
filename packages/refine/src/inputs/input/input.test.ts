@@ -15,6 +15,18 @@ describe('ore-input', () => {
   // ─── Rendering ──────────────────────────────────────────────────────────────
 
   describe('Rendering', () => {
+    it('forwards return-key hints reactively to the native input', async () => {
+      fixture = await mount('ore-input', { attrs: { enterkeyhint: 'next' } });
+      const input = fixture.query<HTMLInputElement>('input')!;
+      expect(input.getAttribute('enterkeyhint')).toBe('next');
+      fixture.element.setAttribute('enterkeyhint', 'search');
+      await fixture.flush();
+      expect(input.getAttribute('enterkeyhint')).toBe('search');
+      fixture.element.removeAttribute('enterkeyhint');
+      await fixture.flush();
+      expect(input.hasAttribute('enterkeyhint')).toBe(false);
+    });
+
     it('renders wrapper, field, and input elements', async () => {
       fixture = await mount('ore-input');
 

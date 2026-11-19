@@ -102,9 +102,19 @@ function scaleShape(shape: BoardShape, rect: Rect): BoardShape {
 
 let nextShapeId = 1;
 
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+/**
+ * True when the key was typed into a field. Composed keydowns from a custom
+ * element's shadow `<input>` retarget to the host, so the path is walked
+ * instead of trusting `event.target`.
+ */
+function isEditableTarget(event: KeyboardEvent): boolean {
+  return event
+    .composedPath()
+    .some(
+      (node) =>
+        node instanceof HTMLElement &&
+        (node.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(node.tagName)),
+    );
 }
 
 function rectBetween(a: Point, b: Point): Rect {
@@ -893,7 +903,7 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
       },
       { handler: () => toolEvent('TEMP_PAN_END'), id: 'space-pan-end', shortcut: 'space', trigger: 'keyup' },
     ],
-    { when: (event) => !isEditableTarget(event.target) },
+    { when: (event) => !isEditableTarget(event) },
   );
   // Click-selection complements the drag gesture: selection changes happen on
   // click (after a full press/release) so a drag never causes a stray reselect.

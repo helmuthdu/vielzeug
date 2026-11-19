@@ -89,6 +89,17 @@ An unset `delay` opens on a trigger-aware dwell: 300ms on hover (so sweeping a p
 
 Set `delay` or `close-delay` explicitly to override; `delay="0"` forces an immediate open on every trigger.
 
+### Shared Hover Warm-Up
+
+The nearest ancestor with `data-tooltip-group` or `role="toolbar"` scopes hover warm-up. After one tooltip opens by hover, its siblings open immediately while a tooltip is open and for 500ms after the last closes. The first hover after that window uses the normal 300ms dwell again. Ungrouped tooltips and separate groups remain independent; an explicit `delay` always wins. Focus and click remain immediate when `delay` is unset.
+
+```html
+<div data-tooltip-group>
+  <ore-tooltip content="Undo last change"><ore-button>Undo</ore-button></ore-tooltip>
+  <ore-tooltip content="Redo last change"><ore-button>Redo</ore-button></ore-tooltip>
+</div>
+```
+
 <ComponentPreview>
 
 ```html

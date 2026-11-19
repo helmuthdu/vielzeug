@@ -362,10 +362,12 @@
 
   /* ── Shared interactive states: all variants use --_* tokens set above ── */
 
-  [part='button']:hover {
-    color: var(--_hover-color, var(--_color));
-    background: var(--_hover-bg, var(--_bg));
-    border-color: var(--_hover-border-color, var(--_border-color));
+  @media (hover: hover) {
+    [part='button']:hover {
+      color: var(--_hover-color, var(--_color));
+      background: var(--_hover-bg, var(--_bg));
+      border-color: var(--_hover-border-color, var(--_border-color));
+    }
   }
 
   [part='button']:active {
@@ -408,7 +410,12 @@
   }
 
   /* Hover depth: halo border effect matching ore-input focus style */
-  [part='button']:hover,
+  @media (hover: hover) {
+    [part='button']:hover {
+      border-color: var(--_hover-border-color, var(--_theme-focus));
+      box-shadow: var(--_resting-shadow), var(--_focus-shadow), var(--_theme-shadow), var(--_theme-halo);
+    }
+  }
   [part='button']:active {
     border-color: var(--_hover-border-color, var(--_theme-focus));
     box-shadow: var(--_resting-shadow), var(--_focus-shadow), var(--_theme-shadow), var(--_theme-halo);
@@ -418,11 +425,13 @@
      and `--_focus-shadow` rather than `none`, so opting into elevation still works on
      these variants and a keyboard-focused one keeps its ring, while the defaults (both a
      transparent `--shadow-none`) stay decoration-free. */
-  :host([variant='ghost']) [part='button']:hover,
-  :host([variant='text']) [part='button']:hover {
-    border-color: transparent;
-    box-shadow: var(--_resting-shadow), var(--_focus-shadow);
-    transform: none;
+  @media (hover: hover) {
+    :host([variant='ghost']) [part='button']:hover,
+    :host([variant='text']) [part='button']:hover {
+      border-color: transparent;
+      box-shadow: var(--_resting-shadow), var(--_focus-shadow);
+      transform: none;
+    }
   }
 
   /* ...nor on :active: stay borderless even though the shared rule above now

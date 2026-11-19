@@ -34,9 +34,11 @@
     transition: color var(--transition-fast);
   }
 
-  .link:hover {
-    color: var(--color-contrast-900);
-    text-decoration: underline;
+  @media (hover: hover) {
+    .link:hover {
+      color: var(--color-contrast-900);
+      text-decoration: underline;
+    }
   }
 
   .link:focus-visible {

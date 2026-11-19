@@ -147,8 +147,10 @@
     transition: background var(--transition-fast);
   }
 
-  .file-item:hover {
-    background: var(--color-contrast-100);
+  @media (hover: hover) {
+    .file-item:hover {
+      background: var(--color-contrast-100);
+    }
   }
 
   .file-icon {
@@ -165,8 +167,6 @@
   }
 
   .file-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
     font-size: var(--text-sm);
     font-weight: var(--font-medium);
     color: var(--color-contrast-700);
@@ -201,16 +201,20 @@
       background var(--transition-fast);
   }
 
-  .file-remove:hover {
-    color: var(--color-error);
-    background: var(--color-error-backdrop, color-mix(in oklch, var(--color-error) 12%, transparent));
+  @media (hover: hover) {
+    .file-remove:hover {
+      color: var(--color-error);
+      background: var(--color-error-backdrop, color-mix(in oklch, var(--color-error) 12%, transparent));
+    }
   }
 
   /* Signal 03/04: retry and replace share one neutral-hover treatment: distinct from remove's
      error-red hover so the destructive action doesn't blend in with the recovery ones. */
-  .file-action:hover {
-    color: var(--_theme-focus, var(--color-primary));
-    background: var(--_theme-backdrop, color-mix(in oklch, var(--color-primary) 12%, transparent));
+  @media (hover: hover) {
+    .file-action:hover {
+      color: var(--_theme-focus, var(--color-primary));
+      background: var(--_theme-backdrop, color-mix(in oklch, var(--color-primary) 12%, transparent));
+    }
   }
 
   /* ========================================
@@ -296,12 +300,32 @@
   }
 
   .file-card-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
     font-size: var(--text-xs);
     color: var(--color-contrast-600);
     text-align: center;
     white-space: nowrap;
+  }
+
+  .file-name,
+  .file-card-name {
+    display: flex;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .file-card-name {
+    justify-content: center;
+  }
+
+  .file-name-stem {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-name-extension {
+    flex-shrink: 0;
   }
 
   /* Signal 04: a small badge over the thumbnail corner: an explicit success/error indicator
@@ -353,14 +377,18 @@
       color var(--transition-fast);
   }
 
-  .file-card-remove:hover {
-    color: var(--color-canvas);
-    background: var(--color-error);
+  @media (hover: hover) {
+    .file-card-remove:hover {
+      color: var(--color-canvas);
+      background: var(--color-error);
+    }
   }
 
-  .file-card-action:not(.file-card-remove):hover {
-    color: var(--color-canvas);
-    background: var(--color-primary);
+  @media (hover: hover) {
+    .file-card-action:not(.file-card-remove):hover {
+      color: var(--color-canvas);
+      background: var(--color-primary);
+    }
   }
 
   .file-card .file-progress-meta,
@@ -373,12 +401,16 @@
        Hover & Focus
        ======================================== */
 
-  :host(:not([disabled])) .dropzone:hover {
-    border-color: var(--color-contrast-400);
+  @media (hover: hover) {
+    :host(:not([disabled])) .dropzone:hover {
+      border-color: var(--color-contrast-400);
+    }
   }
 
-  :host(:not([disabled])) .dropzone:hover .dropzone-title u {
-    text-decoration-color: var(--_theme-focus, var(--color-primary));
+  @media (hover: hover) {
+    :host(:not([disabled])) .dropzone:hover .dropzone-title u {
+      text-decoration-color: var(--_theme-focus, var(--color-primary));
+    }
   }
 
   :host(:not([disabled])) .dropzone:focus-visible {
@@ -386,7 +418,13 @@
     box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
   }
 
-  :host(:not([disabled])) .dropzone:hover .dropzone-icon,
+  @media (hover: hover) {
+    :host(:not([disabled])) .dropzone:hover .dropzone-icon {
+      color: var(--_theme-focus, var(--color-primary));
+      transform: translateY(-1px);
+    }
+  }
+
   :host(:not([disabled])) .dropzone:focus-visible .dropzone-icon {
     color: var(--_theme-focus, var(--color-primary));
     transform: translateY(-1px);
@@ -456,12 +494,14 @@
     --_border-color: var(--file-input-border-color, color-mix(in oklch, var(--_theme-focus) 20%, transparent));
   }
 
-  :host([variant='flat']) .dropzone:hover {
-    background: var(--file-input-hover-bg, color-mix(in oklch, var(--_theme-base) 6%, var(--color-contrast-100)));
-    border-color: var(
-      --file-input-hover-border-color,
-      color-mix(in oklch, var(--_theme-base) 35%, var(--color-contrast-300))
-    );
+  @media (hover: hover) {
+    :host([variant='flat']) .dropzone:hover {
+      background: var(--file-input-hover-bg, color-mix(in oklch, var(--_theme-base) 6%, var(--color-contrast-100)));
+      border-color: var(
+        --file-input-hover-border-color,
+        color-mix(in oklch, var(--_theme-base) 35%, var(--color-contrast-300))
+      );
+    }
   }
 
   :host([variant='flat']) .dropzone:focus-visible,
@@ -477,8 +517,10 @@
     --_border-color: var(--file-input-border-color, var(--_theme-border));
   }
 
-  :host([variant='bordered']) .dropzone:hover {
-    border-color: var(--file-input-hover-border-color, var(--_theme-focus));
+  @media (hover: hover) {
+    :host([variant='bordered']) .dropzone:hover {
+      border-color: var(--file-input-hover-border-color, var(--_theme-focus));
+    }
   }
 
   /* Outline */
@@ -497,9 +539,11 @@
     --_border-color: var(--file-input-border-color, transparent);
   }
 
-  :host(:not([disabled])[variant='ghost']) .dropzone:hover {
-    background: var(--file-input-hover-bg, var(--color-contrast-100));
-    border-color: var(--file-input-hover-border-color, var(--color-contrast-200));
+  @media (hover: hover) {
+    :host(:not([disabled])[variant='ghost']) .dropzone:hover {
+      background: var(--file-input-hover-bg, var(--color-contrast-100));
+      border-color: var(--file-input-hover-border-color, var(--color-contrast-200));
+    }
   }
 }
 

@@ -233,11 +233,12 @@ test.describe('Focus', () => {
         background: cs?.backgroundColor ?? '',
         focused: inner?.matches(':focus-visible') ?? false,
         outlineStyle: cs?.outlineStyle ?? '',
+        transitionDuration: cs?.transitionDuration,
       };
     });
 
     // The themed focus background paints (a resolved color, not transparent)...
-    expect(focused).toMatchObject({ focused: true, outlineStyle: 'none' });
+    expect(focused).toMatchObject({ focused: true, outlineStyle: 'none', transitionDuration: '0s' });
     expect(focused.background).not.toBe('rgba(0, 0, 0, 0)');
   });
 });

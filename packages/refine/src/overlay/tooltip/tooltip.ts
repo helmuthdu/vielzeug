@@ -31,6 +31,19 @@ const VALID_TOOLTIP_TRIGGERS = new Set<TooltipTrigger>(['click', 'focus', 'hover
 const HOVER_DWELL_MS = 300;
 /** Grace period before an unset `close-delay` hides the tooltip, absorbing pointer jitter across the trigger edge. */
 const CLOSE_DWELL_MS = 100;
+const SKIP_DWELL_MS = 500;
+const hoverGroups = new WeakMap<Element, { open: Set<HTMLElement>; closedAt: number }>();
+
+function hoverGroup(host: HTMLElement) {
+  const scope = host.closest('[data-tooltip-group], [role="toolbar"]');
+  if (!scope) return undefined;
+  let group = hoverGroups.get(scope);
+  if (!group) {
+    group = { closedAt: -Infinity, open: new Set() };
+    hoverGroups.set(scope, group);
+  }
+  return group;
+}
 
 /** `undefined` (attribute unset or unparseable) means "use the trigger-dependent default", keeping an explicit `delay="0"` immediate. */
 const parseDelayMs = (value: string | null): number | undefined => {
@@ -150,6 +163,15 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
     let tooltipEl: HTMLElement | null = null;
     let showTimer: ReturnType<typeof setTimeout> | null = null;
     let hideTimer: ReturnType<typeof setTimeout> | null = null;
+    let activeGroup: ReturnType<typeof hoverGroup>;
+
+    const releaseGroup = (): void => {
+      if (!activeGroup) return;
+      activeGroup.open.delete(el);
+      activeGroup.closedAt = Date.now();
+      activeGroup = undefined;
+    };
+    onCleanup(releaseGroup);
 
     const clearShowTimer = (): void => {
       if (!showTimer) return;
@@ -170,8 +192,17 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
       disabled: isDisabled,
       getPanel: () => tooltipEl,
       onCleanup,
-      onClose: (reason) => emit('open-change', { open: false, reason }),
-      onOpen: (reason) => emit('open-change', { open: true, reason }),
+      onClose: (reason) => {
+        releaseGroup();
+        emit('open-change', { open: false, reason });
+      },
+      onOpen: (reason) => {
+        if (reason === 'hover') {
+          activeGroup = hoverGroup(el);
+          activeGroup?.open.add(el);
+        }
+        emit('open-change', { open: true, reason });
+      },
       onPlacementChange: (p) => {
         const side = p.split('-')[0] as TooltipPlacement;
 
@@ -200,7 +231,9 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
       clearHideTimer();
       clearShowTimer();
 
-      const delay = props.delay.value ?? (reason === 'hover' ? HOVER_DWELL_MS : 0);
+      const group = reason === 'hover' ? hoverGroup(el) : undefined;
+      const warm = group && (group.open.size > 0 || Date.now() - group.closedAt < SKIP_DWELL_MS);
+      const delay = props.delay.value ?? (reason === 'hover' && !warm ? HOVER_DWELL_MS : 0);
 
       if (delay > 0) {
         showTimer = setTimeout(() => {

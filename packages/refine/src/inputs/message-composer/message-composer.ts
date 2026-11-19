@@ -38,7 +38,7 @@ import {
   touchTargetMixin,
 } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
-import { FIELD_VARIANTS, type FieldVariant } from '../../types';
+import { ENTER_KEY_HINTS, type EnterKeyHint, FIELD_VARIANTS, type FieldVariant } from '../../types';
 import { errorAttr } from '../shared/field-binding';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderFieldStatusRegion, renderStatusIcon } from '../shared/templates';
@@ -71,6 +71,8 @@ export type OreMessageComposerProps = {
   color?: ThemeColor;
   /** Disable the whole composer (field, slots, and send action) */
   disabled?: boolean;
+  /** Return-key label; defaults to `send` for enter-to-send, otherwise `enter`. */
+  enterkeyhint?: EnterKeyHint;
   /** Error message shown below the field */
   error?: string;
   /** Stretch the composer to the full width of its container */
@@ -132,6 +134,7 @@ export type OreMessageComposerProps = {
  *
  * @attr {string} value - Current text value
  * @attr {string} placeholder - Placeholder text
+ * @attr {string} enterkeyhint - Return-key label: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'; derives from send-shortcut when unset
  * @attr {string} label - Accessible name for the field (not rendered visually)
  * @attr {string} name - Form field name
  * @attr {string} helper - Helper text shown below the field
@@ -195,6 +198,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     ...disablableBundle,
     ...loadableBundle,
     'clear-on-send': prop.bool(true),
+    enterkeyhint: prop.oneOf(ENTER_KEY_HINTS),
     error: prop.string(),
     fullwidth: prop.bool(false),
     helper: prop.string(),
@@ -321,6 +325,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
           rows="${() => props.rows.value ?? 1}"
           name="${() => props.name.value ?? ''}"
           placeholder="${() => props.placeholder.value ?? 'Message…'}"
+          enterkeyhint="${() => props.enterkeyhint.value ?? (props['send-shortcut'].value === 'enter' ? 'send' : 'enter')}"
           maxlength="${() => props.maxlength.value}"
           ?disabled="${isDisabled}"
           ?readonly="${() => Boolean(props.readonly.value)}"

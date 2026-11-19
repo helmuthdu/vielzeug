@@ -59,10 +59,12 @@
       background var(--transition-fast);
   }
 
-  button[part='decrement-btn']:hover:not(:disabled),
-  button[part='increment-btn']:hover:not(:disabled) {
-    color: var(--color-contrast-900);
-    background: var(--color-contrast-150, var(--color-contrast-100));
+  @media (hover: hover) {
+    button[part='decrement-btn']:hover:not(:disabled),
+    button[part='increment-btn']:hover:not(:disabled) {
+      color: var(--color-contrast-900);
+      background: var(--color-contrast-150, var(--color-contrast-100));
+    }
   }
 
   button[part='decrement-btn']:active:not(:disabled),

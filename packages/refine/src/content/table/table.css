@@ -65,8 +65,10 @@
     transition: background var(--transition-fast);
   }
 
-  tbody tr:hover {
-    background: var(--_row-hover-bg);
+  @media (hover: hover) {
+    tbody tr:hover {
+      background: var(--_row-hover-bg);
+    }
   }
 
   /* ── Cells ───────────────────────────────────────────────────────────── */

@@ -112,12 +112,16 @@
        Hover & Active States
        ======================================== */
 
-  :host(:hover:not([disabled], [checked])) .switch-track {
-    background: var(--color-contrast-400);
+  @media (hover: hover) {
+    :host(:hover:not([disabled], [checked])) .switch-track {
+      background: var(--color-contrast-400);
+    }
   }
 
-  :host(:hover:not([disabled])[checked]) .switch-track {
-    filter: brightness(1.1);
+  @media (hover: hover) {
+    :host(:hover:not([disabled])[checked]) .switch-track {
+      filter: brightness(1.1);
+    }
   }
 
   /* ========================================

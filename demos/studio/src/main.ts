@@ -54,8 +54,12 @@ function navigate(): void {
   if (!mount) throw new Error(`Unknown studio scene: ${name}`);
   scene = mount(sceneContainer);
   // The zoom cluster lives in the scene's dock (it belongs with the canvas
-  // tools, not the nav); the shell keeps driving it from here.
-  if (scene.dock) scene.dock.append(shell.createZoomCluster());
+  // tools, not the nav); the shell keeps driving it from here. A scene's
+  // dockTail (its primary action) moves to the very end, after the zoom.
+  if (scene.dock) {
+    scene.dock.append(shell.createZoomCluster());
+    if (scene.dockTail) scene.dock.append(scene.dockTail);
+  }
   shell.setScene(sceneInfo(name));
   shell.attachCamera(scene.camera ?? null, scene.fit ?? null);
 }

@@ -13,6 +13,11 @@ export type FormValidityMethods = {
 export const COMPONENT_SIZES = ['sm', 'md', 'lg'] as const;
 export type ComponentSize = (typeof COMPONENT_SIZES)[number];
 
+/** Native virtual-keyboard return-key labels. */
+export const ENTER_KEY_HINTS = ['enter', 'done', 'go', 'next', 'previous', 'search', 'send'] as const;
+/** A virtual-keyboard action label; it does not bind a keyboard shortcut. */
+export type EnterKeyHint = (typeof ENTER_KEY_HINTS)[number];
+
 /** Semantic theme colors */
 export const THEME_COLORS = ['primary', 'secondary', 'info', 'success', 'warning', 'error'] as const;
 export type ThemeColor = (typeof THEME_COLORS)[number];

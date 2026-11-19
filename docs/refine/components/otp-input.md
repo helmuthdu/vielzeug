@@ -161,6 +161,12 @@ Cell and group labels are screen-reader-only and default to English. Override th
 
 </ComponentPreview>
 
+## Code Insertion
+
+Only the first cell advertises `autocomplete="one-time-code"`. When the browser inserts a complete code there, the component distributes it across the cells instead of keeping only its last character.
+
+Typing, multi-character insertion, and paste use the same character filtering. Bulk insertion starts at the receiving cell, preserves preceding cells, and discards characters beyond the remaining cells. Numeric codes accept digits; alphanumeric codes also accept ASCII letters. Focus moves to the next cell, or stays on the last cell after completion.
+
 ## API Reference
 
 ### Attributes
@@ -189,10 +195,11 @@ Cell and group labels are screen-reader-only and default to English. Override th
 
 ### Events
 
-| Event      | Detail                                 | Description                           |
-| ---------- | -------------------------------------- | ------------------------------------- |
-| `change`   | `{ value: string, complete: boolean }` | Fired on every cell input             |
-| `complete` | `{ value: string }`                    | Fired when all cells have been filled |
+| Event      | Detail                                     | Description                                                                                   |
+| ---------- | ------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `input`    | Native `Event`                             | Emitted after insertion; read the joined host value with `eventFieldValue(event)`             |
+| `change`   | Native `Event`                             | Emitted after insertion or deletion; read the joined host value with `eventFieldValue(event)` |
+| `complete` | `{ value: string, originalEvent?: Event }` | Fired when all cells have been filled                                                         |
 
 ### CSS Custom Properties
 
@@ -212,7 +219,7 @@ Cell and group labels are screen-reader-only and default to English. Override th
 
 ## Accessibility
 
-The OTP input component follows WCAG 2.1 Level AA standards. It renders a `role="group"` container named by the visible `label` (via `aria-labelledby`) or, when no label is shown, by the `labels.group` string. Each cell input has `autocomplete="one-time-code"` set automatically, `aria-disabled` reflects the disabled state, and an active `error` sets `aria-invalid` plus `aria-errormessage` on the group.
+The OTP input renders a `role="group"` container named by the visible `label` (via `aria-labelledby`) or, when no label is shown, by the `labels.group` string. The first cell advertises `autocomplete="one-time-code"`; subsequent cells use `autocomplete="off"`. An active `error` sets `aria-invalid` plus `aria-errormessage` on the group.
 
 Keyboard navigation is fully supported: focus auto-advances to the next cell on valid input, `Backspace` moves back and clears the cell, `Tab` moves focus out of the group, and pasting fills cells from the focused cell onward.
 

@@ -86,8 +86,10 @@
     display: none;
   }
 
-  .row:hover {
-    background: var(--list-item-hover-bg, var(--color-contrast-100));
+  @media (hover: hover) {
+    .row:hover {
+      background: var(--list-item-hover-bg, var(--color-contrast-100));
+    }
   }
 
   .row:focus-visible {

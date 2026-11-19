@@ -47,12 +47,16 @@
     border-color: var(--_outline-border-color);
   }
 
-  .badge:hover {
-    background: var(--_filled-hover-bg);
+  @media (hover: hover) {
+    .badge:hover {
+      background: var(--_filled-hover-bg);
+    }
   }
 
-  :host([variant='outline']) .badge:hover {
-    background: var(--_outline-hover-bg);
+  @media (hover: hover) {
+    :host([variant='outline']) .badge:hover {
+      background: var(--_outline-hover-bg);
+    }
   }
 
   .badge:focus-visible {

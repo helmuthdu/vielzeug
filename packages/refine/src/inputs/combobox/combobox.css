@@ -100,8 +100,10 @@
     display: none;
   }
 
-  .clear-btn:hover {
-    color: var(--color-contrast-600);
+  @media (hover: hover) {
+    .clear-btn:hover {
+      color: var(--color-contrast-600);
+    }
   }
 
   .combobox-suffix-end {
@@ -198,9 +200,6 @@
     line-height: var(--leading-normal);
     cursor: pointer;
     border-radius: var(--rounded-sm);
-    transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
   }
 
   /* Truncate long labels so options always stay single-line (fixed virtualizer row height). */
@@ -223,8 +222,10 @@
     white-space: nowrap;
   }
 
-  .option:hover:not([data-disabled]) {
-    background: var(--_option-hover-bg);
+  @media (hover: hover) {
+    .option:hover:not([data-disabled]) {
+      background: var(--_option-hover-bg);
+    }
   }
 
   .option[data-focused]:not([data-disabled]) {
@@ -299,7 +300,12 @@
     border-radius: var(--rounded-sm);
   }
 
-  .no-results-create:hover,
+  @media (hover: hover) {
+    .no-results-create:hover {
+      background: color-mix(in oklch, var(--_theme-base, var(--color-primary)) 10%, transparent);
+    }
+  }
+
   .no-results-create[data-focused] {
     background: color-mix(in oklch, var(--_theme-base, var(--color-primary)) 10%, transparent);
   }

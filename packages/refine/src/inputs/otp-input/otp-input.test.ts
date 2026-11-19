@@ -108,6 +108,70 @@ describe('ore-otp-input', () => {
   // ─── Events ──────────────────────────────────────────────────────────────────
 
   describe('Events', () => {
+    it('distributes a replacement code and emits one complete event with the full value', async () => {
+      fixture = await mount('ore-otp-input');
+      const cells = fixture.queryAll<HTMLInputElement>('input.cell');
+      const complete = vi.fn();
+      const change = vi.fn();
+      fixture.element.addEventListener('complete', complete);
+      fixture.element.addEventListener('change', change);
+      cells[0].value = '123456';
+      cells[0].dispatchEvent(
+        new InputEvent('input', {
+          bubbles: true,
+          data: '123456',
+          inputType: 'insertReplacementText',
+        }),
+      );
+      await fixture.flush();
+
+      expect(cells.map((cell) => cell.value)).toEqual(['1', '2', '3', '4', '5', '6']);
+      expect(fixture.element.getAttribute('value')).toBe('123456');
+      expect(complete).toHaveBeenCalledOnce();
+      expect(change).toHaveBeenCalledOnce();
+      expect(fixture.shadow?.activeElement).toBe(cells[5]);
+    });
+
+    it('filters and clips multi-character input from the receiving cell like paste', async () => {
+      fixture = await mount('ore-otp-input', { attrs: { length: '4', value: '12' } });
+      const cells = fixture.queryAll<HTMLInputElement>('input.cell');
+      cells[2].value = '3 a4-5';
+      cells[2].dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText' }));
+      await fixture.flush();
+      expect(cells.map((cell) => cell.value)).toEqual(['1', '2', '3', '4']);
+      expect(fixture.element.getAttribute('value')).toBe('1234');
+    });
+
+    it('replaces an unselected digit without duplicating it or the public input event', async () => {
+      fixture = await mount('ore-otp-input', { attrs: { length: '4', value: '1234' } });
+      const cells = fixture.queryAll<HTMLInputElement>('input.cell');
+      const input = vi.fn();
+      fixture.element.addEventListener('input', input);
+      cells[0].value = '19';
+      cells[0].dispatchEvent(
+        new InputEvent('input', {
+          bubbles: true,
+          composed: true,
+          data: '9',
+          inputType: 'insertText',
+        }),
+      );
+      await fixture.flush();
+      expect(cells.map((cell) => cell.value)).toEqual(['9', '2', '3', '4']);
+      expect(fixture.element.getAttribute('value')).toBe('9234');
+      expect(input).toHaveBeenCalledOnce();
+    });
+
+    it('synchronizes the host value when an invalid edit clears an existing digit', async () => {
+      fixture = await mount('ore-otp-input', { attrs: { length: '4', value: '1234' } });
+      const cells = fixture.queryAll<HTMLInputElement>('input.cell');
+      cells[0].value = 'a';
+      cells[0].dispatchEvent(new InputEvent('input', { bubbles: true, data: 'a', inputType: 'insertText' }));
+      await fixture.flush();
+      expect(cells.map((cell) => cell.value)).toEqual(['', '2', '3', '4']);
+      expect(fixture.element.getAttribute('value')).toBe('234');
+    });
+
     it('fires change after paste with the host value', async () => {
       fixture = await mount('ore-otp-input', { attrs: { length: '4' } });
 

@@ -2,6 +2,8 @@
 
 A flexible tabs component for organizing content into switchable panels. Keyboard accessible, with a sliding active pill, and available in five visual styles.
 
+Pointer selection slides the active pill; keyboard selection places it immediately. Panels reveal without an entrance animation so repeated navigation stays immediate.
+
 ## Variants
 
 #### Solid (Default)

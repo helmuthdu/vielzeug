@@ -25,6 +25,18 @@
 /* The dock and the status pill are the shared `ore-dock floating` /
    .studio-badge pair (see app.css). */
 
+/* The cursor says what the active tool does: select pans, paint tools aim at
+   a cell, placement tools drop a token. */
+.map-canvas[data-tool='block'],
+.map-canvas[data-tool='erase'] {
+  cursor: crosshair;
+}
+
+.map-canvas[data-tool='hero'],
+.map-canvas[data-tool='enemy'] {
+  cursor: copy;
+}
+
 .map-canvas.is-grabbing {
   cursor: grabbing;
 }
@@ -46,4 +58,175 @@
 
 .map-token-ghost[hidden] {
   display: none;
+}
+
+/* The ghost is tinted by the dragged unit's team, matching the canvas tokens. */
+.map-token-ghost[data-team='hero'] {
+  background-color: var(--color-success);
+  border-color: var(--color-success-border);
+}
+
+.map-token-ghost[data-team='enemy'] {
+  background-color: var(--color-error);
+  border-color: var(--color-error-border);
+}
+
+/* Inspector form: compact stack inside the modeless right drawer. */
+.map-inspector-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4);
+}
+
+.map-inspector-counters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-3);
+}
+
+.map-inspector-counters ore-counter {
+  width: 100%;
+}
+
+.map-inspector-ability {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
+}
+
+.map-inspector-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* The shell moves this element to the end of the dock, after the zoom
+   cluster; it only wraps the Run turn tooltip. */
+.map-dock-tail {
+  display: inline-flex;
+}
+
+/* Turn-result entries are interactive: hovering or focusing one highlights
+   that enemy on the map, so they need hover/focus affordances. */
+.map-turn-entry {
+  padding: var(--size-2) var(--size-3);
+  cursor: pointer;
+  border-radius: var(--rounded-lg);
+}
+
+.map-turn-entry:hover {
+  background-color: var(--color-neutral-backdrop);
+}
+
+.map-turn-entry:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Phase headings split the enemy and hero halves of the round. */
+.map-turn-heading {
+  margin: var(--size-3) 0 var(--size-1);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-color-secondary);
+}
+
+.map-turn-heading:first-child {
+  margin-top: 0;
+}
+
+.map-turn-entry ul {
+  padding-left: var(--size-4);
+  margin: var(--size-1) 0 0;
+  color: var(--text-color-secondary);
+}
+
+.map-turn-kills {
+  margin: var(--size-3) 0 0;
+  font-weight: var(--font-semibold);
+  color: var(--color-error);
+}
+
+/* Game-over card: centred over the map, the map stays visible behind it. */
+.map-gameover {
+  position: absolute;
+  inset: 0;
+  /* Above the dock (which lifts to --z-modal) so its buttons stay clickable. */
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.map-gameover[hidden] {
+  display: none;
+}
+
+.map-gameover-card {
+  display: grid;
+  gap: var(--size-2);
+  justify-items: center;
+  padding: var(--size-6);
+  text-align: center;
+  pointer-events: auto;
+  background-color: var(--surface-overlay);
+  border: var(--border) solid var(--color-divider);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-xl);
+}
+
+.map-gameover-actions {
+  display: flex;
+  gap: var(--size-2);
+}
+
+.map-gameover-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--color-error);
+}
+
+/* The same card reports both endings, so the title follows the outcome. */
+.map-gameover[data-outcome='victory'] .map-gameover-title {
+  color: var(--color-success);
+}
+
+.map-gameover-sub {
+  margin: 0;
+  color: var(--text-color-secondary);
+}
+
+/* The render-thread toggle is a developer control: it floats above the dock
+   at the bottom-left, out of the editing dock and out of the map's pan and
+   drop surfaces. The navbar floats over the scene at the top, so the bottom
+   strip is the only collision-free home. */
+.map-thread-dock {
+  position: absolute;
+  bottom: calc(var(--dock-offset) + var(--dock-height, var(--size-11)) + var(--size-6));
+  left: var(--size-3);
+  z-index: var(--z-sticky);
+  padding: var(--size-1);
+  background-color: var(--surface-overlay);
+  border: var(--border) solid var(--color-divider);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-md);
+}
+
+/* A modeless drawer stacks at --z-overlay, which sat above the dock and hid
+   Run turn; the dock belongs above the panels it feeds. */
+.map-root .studio-dock {
+  --dock-z-index: var(--z-modal);
+}
+
+/* While the bottom Turn panel is open, lift the dock and the badge clear of
+   it (panel height: --drawer-size plus the drawer's bottom bleed). */
+.map-root[data-turn-open] {
+  --dock-offset: calc(var(--drawer-size, 16rem) + var(--size-8) + var(--size-5));
+}
+
+/* Enemy tokens are diamonds; the drag ghost follows the dragged unit's
+   shape instead of always being a circle. */
+.map-token-ghost[data-team='enemy'] {
+  border-radius: var(--rounded-sm);
+  rotate: 45deg;
 }

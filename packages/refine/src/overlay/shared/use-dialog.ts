@@ -23,6 +23,12 @@ export type UseDialogOptions = {
   host: HTMLElement;
   initialFocus: Readable<string | undefined>;
   isPersistent: () => boolean;
+  /**
+   * When `false`, the overlay opens modeless: `dialog.show()` instead of `showModal()`,
+   * no background lock, and no Escape close-watcher (Escape is handled manually so
+   * `persistent` and `onEscape` still apply). Defaults to modal when omitted.
+   */
+  modal?: Readable<boolean | undefined>;
   /** Cleanup registrar from the component setup ctx. Automatically called on disconnect. */
   onCleanup: (fn: () => void) => void;
   /**
@@ -203,11 +209,17 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
       // Clean up any leftover 'closing' class from the previous close animation
       // before opening so the entry @starting-style and transition work correctly.
       dialog.classList.remove('closing');
-      focus.captureReturnFocus();
+      const modeless = options.modal && !options.modal.value;
+      // A modeless overlay never traps focus, so there is no return point to
+      // restore: capturing one would yank focus back on close from wherever
+      // the user has since moved it.
+      if (!modeless) focus.captureReturnFocus();
       options.beforeOpen?.(dialog);
-      dialog.showModal();
-      bgLock.lock(options.host);
-      focus.applyInitialFocus();
+
+      if (modeless) dialog.show();
+      else dialog.showModal();
+      if (!modeless) bgLock.lock(options.host);
+      if (!modeless) focus.applyInitialFocus();
       isOpen.value = true;
       options.onOpen?.(reason);
     },
@@ -268,6 +280,26 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     if (e.target === options.dialogRef.value) requestClose('outsideClick');
   };
 
+  // A modeless dialog gets no native close-watcher, so Escape never fires `cancel`.
+  // Mirror the modal `cancel` path for keydowns that land inside the dialog: same
+  // persistent guard and same cancelable `close-request` route. A key already
+  // consumed by a control inside the dialog — an open select closing its own
+  // dropdown with Escape — must not also close the dialog.
+  const handleModelessKeydown = (e: KeyboardEvent): void => {
+    if (!options.modal || options.modal.value) return;
+    if (e.key !== 'Escape') return;
+    if (e.defaultPrevented) return;
+
+    if (options.isPersistent()) return;
+
+    if (options.onEscape?.()) return;
+
+    // Only mark the key handled when the dialog actually closes: a persistent
+    // or intercepted Escape must not suppress page-level Escape handlers.
+    e.preventDefault();
+    requestClose('escape');
+  };
+
   // ── Internal native close handler ─────────────────────────────────────────
   // `e.target` must be checked against the native `<dialog>` itself, the same way
   // `handleBackdropClick` already does: a bubbling `close`-named event fired by *any* descendant
@@ -298,6 +330,7 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
 
     options.onEvent(dialog, 'close', handleNativeClose);
     options.onEvent(dialog, 'cancel', handleCancel);
+    options.onEvent(dialog, 'keydown', handleModelessKeydown);
 
     let initialized = false;
 

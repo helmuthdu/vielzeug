@@ -7,6 +7,29 @@
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
+test('accepts a complete native insertion without truncation or duplicate input events', async ({
+  page,
+  refinePage,
+}) => {
+  await refinePage.mountComponent('<ore-otp-input label="Verification code"></ore-otp-input>');
+  await page.evaluate(() => {
+    const host = document.querySelector('ore-otp-input')!;
+    const values: string[] = [];
+    host.addEventListener('input', () => {
+      if ('value' in host && typeof host.value === 'string') values.push(host.value);
+      host.setAttribute('data-input-values', JSON.stringify(values));
+    });
+  });
+  const cells = page.locator('ore-otp-input input.cell');
+  await cells.first().fill('123456');
+  await expect(page.locator('ore-otp-input')).toHaveAttribute('value', '123456');
+  await expect(page.locator('ore-otp-input')).toHaveAttribute('data-input-values', '["123456"]');
+  expect(await cells.evaluateAll((elements) => elements.map((element) => (element as HTMLInputElement).value))).toEqual(
+    ['1', '2', '3', '4', '5', '6'],
+  );
+  await expect(cells.last()).toBeFocused();
+});
+
 test.describe('Layout', () => {
   test('uses the control radius and keeps the public radius override', async ({ page, refinePage }) => {
     await refinePage.mountComponent(

@@ -51,9 +51,11 @@
     border-width: 0;
   }
 
-  :host(:not([variant])) button:hover:not(:disabled, [aria-current='page']),
-  :host([variant='ghost']) button:hover:not(:disabled, [aria-current='page']) {
-    background: var(--_theme-backdrop);
+  @media (hover: hover) {
+    :host(:not([variant])) button:hover:not(:disabled, [aria-current='page']),
+    :host([variant='ghost']) button:hover:not(:disabled, [aria-current='page']) {
+      background: var(--_theme-backdrop);
+    }
   }
 
   :host([variant='solid']) button {
@@ -62,8 +64,10 @@
     border-color: var(--_theme-base);
   }
 
-  :host([variant='solid']) button:hover:not(:disabled, [aria-current='page']) {
-    background: var(--_theme-focus);
+  @media (hover: hover) {
+    :host([variant='solid']) button:hover:not(:disabled, [aria-current='page']) {
+      background: var(--_theme-focus);
+    }
   }
 
   :host([variant='flat']) button {
@@ -73,9 +77,11 @@
     box-shadow: var(--inset-shadow-2xs);
   }
 
-  :host([variant='flat']) button:hover:not(:disabled, [aria-current='page']) {
-    color: var(--_theme-contrast);
-    background: var(--_theme-focus);
+  @media (hover: hover) {
+    :host([variant='flat']) button:hover:not(:disabled, [aria-current='page']) {
+      color: var(--_theme-contrast);
+      background: var(--_theme-focus);
+    }
   }
 
   :host([variant='bordered']) button {
@@ -85,10 +91,12 @@
     box-shadow: var(--inset-shadow-xs);
   }
 
-  :host([variant='bordered']) button:hover:not(:disabled, [aria-current='page']) {
-    color: var(--_theme-contrast);
-    background: var(--_theme-focus);
-    border-color: var(--_theme-focus);
+  @media (hover: hover) {
+    :host([variant='bordered']) button:hover:not(:disabled, [aria-current='page']) {
+      color: var(--_theme-contrast);
+      background: var(--_theme-focus);
+      border-color: var(--_theme-focus);
+    }
   }
 
   :host([variant='outline']) button {
@@ -97,9 +105,11 @@
     border-color: var(--_theme-base);
   }
 
-  :host([variant='outline']) button:hover:not(:disabled, [aria-current='page']) {
-    background: var(--_theme-backdrop);
-    border-color: var(--_theme-focus);
+  @media (hover: hover) {
+    :host([variant='outline']) button:hover:not(:disabled, [aria-current='page']) {
+      background: var(--_theme-backdrop);
+      border-color: var(--_theme-focus);
+    }
   }
 
   :host([variant='text']) button {
@@ -109,9 +119,11 @@
     border-width: 0;
   }
 
-  :host([variant='text']) button:hover:not(:disabled, [aria-current='page']) {
-    color: var(--_theme-focus);
-    background: transparent;
+  @media (hover: hover) {
+    :host([variant='text']) button:hover:not(:disabled, [aria-current='page']) {
+      color: var(--_theme-focus);
+      background: transparent;
+    }
   }
 
   :host([variant='frost']) button {
@@ -129,13 +141,17 @@
     }
   }
 
-  :host([variant='frost']) button:hover:not(:disabled, [aria-current='page']) {
-    background: color-mix(in oklch, var(--_theme-backdrop) 65%, transparent);
-    border-color: color-mix(in oklch, var(--_theme-focus) 55%, transparent);
+  @media (hover: hover) {
+    :host([variant='frost']) button:hover:not(:disabled, [aria-current='page']) {
+      background: color-mix(in oklch, var(--_theme-backdrop) 65%, transparent);
+      border-color: color-mix(in oklch, var(--_theme-focus) 55%, transparent);
+    }
   }
 
-  button:hover:not(:disabled, [aria-current='page']) {
-    background: var(--color-contrast-100);
+  @media (hover: hover) {
+    button:hover:not(:disabled, [aria-current='page']) {
+      background: var(--color-contrast-100);
+    }
   }
 
   /* Press feedback borrows ore-button's physical press (button.css): the page

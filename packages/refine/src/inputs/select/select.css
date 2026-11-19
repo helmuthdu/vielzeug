@@ -238,8 +238,10 @@
     white-space: nowrap;
   }
 
-  .option:hover:not([data-disabled]) {
-    background: var(--color-contrast-100);
+  @media (hover: hover) {
+    .option:hover:not([data-disabled]) {
+      background: var(--color-contrast-100);
+    }
   }
 
   .option[data-focused]:not([data-disabled]) {

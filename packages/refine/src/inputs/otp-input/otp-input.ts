@@ -245,31 +245,31 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
 
       return /^[a-z\d]$/i.test(char);
     }
-    function handleInput(e: Event, index: number) {
-      const input = e.target as HTMLInputElement;
-      let val = input.value;
-
-      // Keep only last character if multiple were typed somehow
-      if (val.length > 1) val = val.slice(-1);
-
-      // Validate character
-      if (val && !isAllowed(val)) {
-        input.value = '';
-
-        return;
-      }
-
-      input.value = val;
-
+    function insertCharacters(raw: string, startIndex: number, originalEvent: Event) {
       const allInputs = getInputs();
+      const chars = [...raw].filter(isAllowed).slice(0, allInputs.length - startIndex);
 
-      emitOtpState(e);
+      chars.forEach((char, index) => {
+        allInputs[startIndex + index].value = char;
+      });
 
-      // Auto-advance
-      if (val && index < allInputs.length - 1) {
-        allInputs[index + 1].focus();
-        allInputs[index + 1].select();
+      emitOtpState(originalEvent);
+
+      if (chars.length) {
+        const next = allInputs[Math.min(startIndex + chars.length, allInputs.length - 1)];
+        next.focus();
+        next.select();
       }
+    }
+    function handleInput(e: Event, index: number) {
+      e.stopPropagation();
+      const input = e.target as HTMLInputElement;
+      // A single typed character replaces the cell even if its old digit wasn't selected.
+      const raw =
+        e instanceof InputEvent && e.inputType === 'insertText' && e.data?.length === 1 ? e.data : input.value;
+
+      input.value = '';
+      insertCharacters(raw, index, e);
     }
     function handleKeydown(e: KeyboardEvent, index: number) {
       const input = e.target as HTMLInputElement;
@@ -299,25 +299,7 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
     function handlePaste(e: ClipboardEvent, startIndex = 0): void {
       e.preventDefault();
 
-      const pasted = e.clipboardData?.getData('text') ?? '';
-      const chars = pasted
-        .split('')
-        .filter((c) => isAllowed(c))
-        // Paste fills from the focused cell onward (after autofill or a partial
-        // retype, focus sits mid-group; position-dependent paste was a dead end).
-        .slice(0, lengthValue.value - startIndex);
-      const allInputs = getInputs();
-
-      chars.forEach((char, i) => {
-        if (allInputs[startIndex + i]) allInputs[startIndex + i].value = char;
-      });
-
-      emitOtpState(e);
-
-      // Focus the cell after the last pasted char
-      const focusIdx = Math.min(startIndex + chars.length, allInputs.length - 1);
-
-      allInputs[focusIdx]?.focus();
+      insertCharacters(e.clipboardData?.getData('text') ?? '', startIndex, e);
     }
 
     watch(props.value, (value) => {
@@ -374,7 +356,6 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
                   part="cell"
                   type="${() => (props.masked.value ? 'password' : 'text')}"
                   inputmode="${() => (props.type.value === 'numeric' ? 'numeric' : 'text')}"
-                  maxlength="1"
                   autocomplete="${() => (i === 0 ? 'one-time-code' : 'off')}"
                   aria-label="${() => labels.value.digit(i + 1, lengthValue.value)}"
                   disabled="${() => (isDisabled.value ? true : null)}"

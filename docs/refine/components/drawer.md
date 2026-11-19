@@ -408,22 +408,25 @@ A bottom sheet: `size="content"` fits the actions, `detents` lets a dragged shee
 
 ### Attributes
 
-| Attribute               | Type                                     | Default    | Description                                                                                                    |
-| ----------------------- | ---------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
-| `open`                  | `boolean`                                | N/A        | Controlled visibility                                                                                          |
-| `default-open`          | `boolean`                                | `false`    | Initial visibility when `open` is not provided                                                                 |
-| `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`  | Edge the drawer slides in from                                                                                 |
-| `size`                  | `'sm' \| 'lg' \| 'full' \| 'content'`    | unset      | Size preset; `content` fits top/bottom sheets to content with bounded body scrolling                           |
-| `detents`               | `string`                                 | N/A        | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only |
-| `title`                 | `string`                                 | N/A        | Visible header title text                                                                                      |
-| `label`                 | `string`                                 | N/A        | Accessible name (`aria-label`); also shown as the header title when `title` is not set                         |
-| `drag-handle-placement` | `'outside' \| 'inset'`                   | `'inset'`  | Position of the swipe drag handle                                                                              |
-| `swipe-from-content`    | `boolean`                                | `true`     | Allow outward touch dragging from the body when its scroll chain starts at the closing boundary                |
-| `dismissible`           | `boolean`                                | `true`     | Shows a close (×) button in the header                                                                         |
-| `backdrop`              | `'opaque' \| 'blur' \| 'transparent'`    | `'opaque'` | Backdrop style, matching `ore-dialog`                                                                          |
-| `persistent`            | `boolean`                                | `false`    | Prevents backdrop click from requesting close                                                                  |
+| Attribute               | Type                                     | Default    | Description                                                                                                       |
+| ----------------------- | ---------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| `open`                  | `boolean`                                | N/A        | Controlled visibility                                                                                             |
+| `default-open`          | `boolean`                                | `false`    | Initial visibility when `open` is not provided                                                                    |
+| `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`  | Edge the drawer slides in from                                                                                    |
+| `size`                  | `'sm' \| 'lg' \| 'full' \| 'content'`    | unset      | Size preset; `content` fits top/bottom sheets to content with bounded body scrolling                              |
+| `detents`               | `string`                                 | N/A        | Comma-separated drag snap points as fractions of panel size (e.g. `'0.5,0.75'`); `bottom`/`top` placement only    |
+| `title`                 | `string`                                 | N/A        | Visible header title text                                                                                         |
+| `label`                 | `string`                                 | N/A        | Accessible name (`aria-label`); also shown as the header title when `title` is not set                            |
+| `drag-handle-placement` | `'outside' \| 'inset'`                   | `'inset'`  | Position of the swipe drag handle                                                                                 |
+| `swipe-from-content`    | `boolean`                                | `true`     | Allow outward touch dragging from the body when its scroll chain starts at the closing boundary                   |
+| `dismissible`           | `boolean`                                | `true`     | Shows a close (×) button in the header                                                                            |
+| `backdrop`              | `'opaque' \| 'blur' \| 'transparent'`    | `'opaque'` | Backdrop style, matching `ore-dialog`                                                                             |
+| `modal`                 | `boolean`                                | `true`     | When `false`, the drawer is modeless: no backdrop, the page stays interactive, and Escape closes only from inside |
+| `persistent`            | `boolean`                                | `false`    | Prevents backdrop click from requesting close                                                                     |
 
 Beyond these attributes, any element inside the drawer's content — in the body or the slots — accepts `data-drawer-close`: clicking it closes the drawer through the same cancelable `close-request` path as the close button (reason `trigger`).
+
+A modeless drawer (`modal="false"`) is for inspectors and side panels that edit what is behind them: the page keeps receiving input, no backdrop veil is painted, and the panel floats above the content. Because the page is never inert, focus never moves into the panel on open; `Escape` closes the drawer only while the focus is inside it, so give the user a visible close button (the default) and listen to `open-change` to react to dismissal. A control inside the panel that consumes `Escape` itself — an open `ore-select` closing its dropdown — swallows the key, so the first `Escape` dismisses the dropdown and only the next one closes the drawer.
 
 Add `data-no-swipe` to a body descendant to exclude its entire subtree from content dragging. This does not disable native scrolling or clicks. Set `swipe-from-content="false"` on the drawer to disable all content dragging; the handle remains available.
 
@@ -456,9 +459,9 @@ Add `data-no-swipe` to a body descendant to exclude its entire subtree from cont
 
 The drawer component follows the WAI-ARIA Dialog Pattern best practices.
 
-The panel uses `role="dialog"` with `aria-modal="true"` to signal that content outside is inert. Always provide a `label` attribute to give screen readers a descriptive panel title. When `dismissible` is set, the close button carries `aria-label="Close"` automatically.
+The panel uses `role="dialog"` with `aria-modal="true"` to signal that content outside is inert. Always provide a `label` attribute to give screen readers a descriptive panel title. When `dismissible` is set, the close button carries `aria-label="Close"` automatically. With `modal="false"` the drawer reports `aria-modal="false"`: the page stays interactive and nothing is inerted, so keyboard users reach the panel with regular `Tab` navigation instead of a focus trap.
 
-`Tab` and `Shift+Tab` move focus between focusable elements inside the panel. `Escape` closes the drawer when `dismissible` is set. Focus moves into the panel on open and returns to the trigger element on close.
+`Tab` and `Shift+Tab` move focus between focusable elements inside the panel. `Escape` closes the drawer when `dismissible` is set. In modal mode, focus moves into the panel on open and returns to the trigger element on close; in modeless mode focus stays where it is and `Escape` closes only from inside the panel.
 
 ## Related Components
 

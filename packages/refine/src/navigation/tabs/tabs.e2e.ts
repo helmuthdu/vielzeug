@@ -494,6 +494,34 @@ test.describe('Touch layout', () => {
 });
 
 test.describe('Interaction', () => {
+  test('places keyboard selection immediately without animating the pill or panel', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await refinePage.mountComponent(`
+      <ore-tabs value="one">
+        <ore-tab-item slot="tabs" value="one">First</ore-tab-item>
+        <ore-tab-item slot="tabs" value="two">Second</ore-tab-item>
+        <ore-tab-panel value="one">First panel</ore-tab-panel>
+        <ore-tab-panel value="two">Second panel</ore-tab-panel>
+      </ore-tabs>
+    `);
+    await page.getByRole('tab', { exact: true, name: 'First' }).focus();
+    await page.keyboard.press('ArrowRight');
+    const feedback = await page.locator('ore-tabs').evaluate(async (tabs) => {
+      await new Promise(requestAnimationFrame);
+      const indicator = tabs.shadowRoot!.querySelector<HTMLElement>('.indicator')!;
+      const tab = tabs.querySelector<HTMLElement>('ore-tab-item[value="two"]')!;
+      const panel = tabs.querySelector<HTMLElement>('ore-tab-panel[value="two"]')!;
+      return {
+        animations: indicator.getAnimations().length,
+        offset: Math.abs(indicator.getBoundingClientRect().x - tab.getBoundingClientRect().x),
+        panelAnimation: getComputedStyle(panel.shadowRoot!.querySelector('[role="tabpanel"]')!).animationName,
+      };
+    });
+    expect(feedback.offset).toBeLessThan(1);
+    expect(feedback.animations).toBe(0);
+    expect(feedback.panelAnimation).toBe('none');
+  });
+
   test('clicking tab makes it active', async ({ page, refinePage }) => {
     // Tabs need value attributes for the active state to propagate from context
     await refinePage.mountComponent(

@@ -24,7 +24,7 @@ import {
   sizeVariantMixin,
   touchTargetMixin,
 } from '../../styles';
-import { FIELD_VARIANTS, type FieldVariant } from '../../types';
+import { ENTER_KEY_HINTS, type EnterKeyHint, FIELD_VARIANTS, type FieldVariant } from '../../types';
 import { errorAttr } from '../shared/field-binding';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderFieldStatusRegion, renderStatusIcon } from '../shared/templates';
@@ -43,6 +43,8 @@ export type OreTextareaEvents = {
 export type OreTextareaProps = TextFieldProps<FieldVariant> & {
   /** Allow auto-grow with content */
   'auto-resize'?: boolean;
+  /** Return-key label forwarded to the native textarea; does not change newline behavior. */
+  enterkeyhint?: EnterKeyHint;
   /**
    * Shows an inline spinner inside the field and forces the inner `<textarea>` into
    * `disabled` for the duration: use while an async validation/submission request
@@ -75,6 +77,7 @@ export type OreTextareaProps = TextFieldProps<FieldVariant> & {
  * @attr {string} label-placement - 'inset' | 'outside'
  * @attr {string} value - Current value
  * @attr {string} placeholder - Placeholder text
+ * @attr {string} enterkeyhint - Return-key label: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
  * @attr {string} name - Form field name
  * @attr {number} rows - Visible row count
  * @attr {number} maxlength - Max character count (shows counter)
@@ -139,6 +142,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     ...disablableBundle,
     ...roundableBundle,
     'auto-resize': prop.bool(false),
+    enterkeyhint: prop.oneOf(ENTER_KEY_HINTS),
     error: prop.string(),
     fullwidth: prop.bool(false),
     helper: prop.string(),
@@ -272,6 +276,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
             id="${textareaId}"
             name="${props.name}"
             placeholder="${props.placeholder}"
+            enterkeyhint="${props.enterkeyhint}"
             rows="${props.rows}"
             maxlength="${props.maxlength}"
             ?disabled="${isDisabled}"

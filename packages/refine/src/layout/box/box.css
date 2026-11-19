@@ -45,9 +45,11 @@
   }
 
   /* Subtle hover for solid/default + color (frost manages its own hover) */
-  :host([color]:not([variant='frost']):hover) {
-    --_bg: color-mix(in oklch, var(--_theme-base) 16%, var(--color-contrast-50));
-    --_border-color: var(--_theme-focus);
+  @media (hover: hover) {
+    :host([color]:not([variant='frost']):hover) {
+      --_bg: color-mix(in oklch, var(--_theme-base) 16%, var(--color-contrast-50));
+      --_border-color: var(--_theme-focus);
+    }
   }
 }
 

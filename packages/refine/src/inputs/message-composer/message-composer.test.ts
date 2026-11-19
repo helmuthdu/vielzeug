@@ -19,6 +19,21 @@ describe('ore-message-composer', () => {
   // ─── Rendering ──────────────────────────────────────────────────────────────
 
   describe('Rendering', () => {
+    it('keeps the return-key hint aligned with the send shortcut and respects explicit overrides', async () => {
+      fixture = await mount('ore-message-composer');
+      const input = getTextarea(fixture);
+      expect(input.getAttribute('enterkeyhint')).toBe('send');
+      fixture.element.setAttribute('send-shortcut', 'mod+enter');
+      await fixture.flush();
+      expect(input.getAttribute('enterkeyhint')).toBe('enter');
+      fixture.element.setAttribute('enterkeyhint', 'done');
+      await fixture.flush();
+      expect(input.getAttribute('enterkeyhint')).toBe('done');
+      fixture.element.removeAttribute('enterkeyhint');
+      await fixture.flush();
+      expect(input.getAttribute('enterkeyhint')).toBe('enter');
+    });
+
     it('renders a textarea and a default send button', async () => {
       fixture = await mount('ore-message-composer');
 

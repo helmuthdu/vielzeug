@@ -48,7 +48,7 @@ Different input types for various use cases.
 ```html
 <ore-grid cols="1" cols-sm="3" cols-md="4" cols-lg="5" gap="md" style="width: 100%;">
   <ore-input variant="bordered" color="secondary" type="text" placeholder="Text input"></ore-input>
-  <ore-input variant="bordered" color="success" type="email" placeholder="email@example.com"></ore-input>
+  <ore-input variant="bordered" color="success" type="email" autocomplete="email" enterkeyhint="next" placeholder="email@example.com"></ore-input>
   <ore-input variant="bordered" color="warning" type="password" placeholder="Password"></ore-input>
   <ore-input variant="bordered" color="error" type="number" placeholder="123"></ore-input>
 </ore-grid>
@@ -266,23 +266,26 @@ For first-run forms, combine a visible label, helper text, and progressive valid
 
 ### Attributes
 
-| Attribute         | Type                                                                        | Default     | Description                                                                     |
-| ----------------- | --------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------- |
-| `type`            | `'text' \| 'email' \| 'password' \| 'search' \| 'url' \| 'tel' \| 'number'` | `'text'`    | Input type                                                                      |
-| `value`           | `string`                                                                    | `''`        | Current input value                                                             |
-| `name`            | `string`                                                                    | `''`        | Form field name                                                                 |
-| `placeholder`     | `string`                                                                    | `''`        | Placeholder text                                                                |
-| `label`           | `string`                                                                    | `''`        | Label text                                                                      |
-| `label-placement` | `'inset' \| 'outside'`                                                      | `'inset'`   | Label placement                                                                 |
-| `helper`          | `string`                                                                    | `''`        | Helper text below input                                                         |
-| `disabled`        | `boolean`                                                                   | `false`     | Disable the input                                                               |
-| `readonly`        | `boolean`                                                                   | `false`     | Make the input read-only                                                        |
-| `clearable`       | `boolean`                                                                   | `false`     | Show a clear button when the field has a value                                  |
-| `required`        | `boolean`                                                                   | `false`     | Participate in native form validation while blank (read-only inputs are exempt) |
-| `fullwidth`       | `boolean`                                                                   | `false`     | Expand to full width                                                            |
-| `size`            | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`      | Input size                                                                      |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'`         | `'solid'`   | Visual variant                                                                  |
-| `color`           | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`             | `'primary'` | Color theme                                                                     |
+| Attribute         | Type                                                                                  | Default     | Description                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------- |
+| `type`            | `'text' \| 'email' \| 'password' \| 'search' \| 'url' \| 'tel' \| 'number'`           | `'text'`    | Input type                                                                      |
+| `value`           | `string`                                                                              | `''`        | Current input value                                                             |
+| `name`            | `string`                                                                              | `''`        | Form field name                                                                 |
+| `placeholder`     | `string`                                                                              | `''`        | Placeholder text                                                                |
+| `autocomplete`    | `string`                                                                              | Unset       | Native browser autofill hint                                                    |
+| `inputmode`       | `'none' \| 'text' \| 'decimal' \| 'numeric' \| 'tel' \| 'search' \| 'email' \| 'url'` | Unset       | Native virtual-keyboard layout hint                                             |
+| `enterkeyhint`    | [EnterKeyHint](../api.md#enterkeyhint)                                                | Unset       | Native virtual-keyboard return-key label                                        |
+| `label`           | `string`                                                                              | `''`        | Label text                                                                      |
+| `label-placement` | `'inset' \| 'outside'`                                                                | `'inset'`   | Label placement                                                                 |
+| `helper`          | `string`                                                                              | `''`        | Helper text below input                                                         |
+| `disabled`        | `boolean`                                                                             | `false`     | Disable the input                                                               |
+| `readonly`        | `boolean`                                                                             | `false`     | Make the input read-only                                                        |
+| `clearable`       | `boolean`                                                                             | `false`     | Show a clear button when the field has a value                                  |
+| `required`        | `boolean`                                                                             | `false`     | Participate in native form validation while blank (read-only inputs are exempt) |
+| `fullwidth`       | `boolean`                                                                             | `false`     | Expand to full width                                                            |
+| `size`            | `'sm' \| 'md' \| 'lg'`                                                                | `'md'`      | Input size                                                                      |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'`                   | `'solid'`   | Visual variant                                                                  |
+| `color`           | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'`                       | `'primary'` | Color theme                                                                     |
 
 ### Slots
 

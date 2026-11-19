@@ -291,6 +291,7 @@ If you're building a Slack/Notion-style inline `/`-command menu anchored under t
 | `send-icon`     | `string`                                                  | `'arrow-up'`     | Lucide icon name for the default send button                                                                                     |
 | `send-label`    | `string`                                                  | `'Send message'` | Accessible label for the default send button                                                                                     |
 | `send-shortcut` | `'enter' \| 'mod+enter'`                                  | `'enter'`        | Keyboard shortcut that sends                                                                                                     |
+| `enterkeyhint`  | [EnterKeyHint](../api.md#enterkeyhint)                    | Derived          | Native return-key label: `send` with `send-shortcut="enter"`, otherwise `enter`; an explicit value overrides the label           |
 | `clear-on-send` | `boolean`                                                 | `true`           | Clear the value and refocus after a non-cancelled `send`                                                                         |
 
 ### Events

@@ -15,6 +15,15 @@ describe('ore-textarea', () => {
   // ─── Rendering ──────────────────────────────────────────────────────────────
 
   describe('Rendering', () => {
+    it('forwards an explicit return-key hint without imposing one by default', async () => {
+      fixture = await mount('ore-textarea');
+      const input = fixture.query<HTMLTextAreaElement>('textarea')!;
+      expect(input.hasAttribute('enterkeyhint')).toBe(false);
+      fixture.element.setAttribute('enterkeyhint', 'done');
+      await fixture.flush();
+      expect(input.getAttribute('enterkeyhint')).toBe('done');
+    });
+
     it('renders wrapper, field, and textarea elements', async () => {
       fixture = await mount('ore-textarea');
 

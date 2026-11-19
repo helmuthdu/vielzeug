@@ -175,8 +175,10 @@
   }
 
   /* ── Shared hover state reads per-variant --accordion-item-hover-bg ── */
-  :host summary:hover {
-    background: var(--accordion-item-hover-bg);
+  @media (hover: hover) {
+    :host summary:hover {
+      background: var(--accordion-item-hover-bg);
+    }
   }
 
   :host([variant='frost']) details {

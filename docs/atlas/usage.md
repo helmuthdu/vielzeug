@@ -211,6 +211,43 @@ for (const coord of iterateTileRange(visibleTileRange(camera.visibleRect, grid))
 
 `tileKey(coord)` yields the stable `"col:row"` string used by the FOV and fog APIs (and convenient as a `Map` key).
 
+## Hex Grids
+
+Hex maps use axial coordinates (`{ q, r }`) and a layout that maps them to world space. The same render-loop shape as tiles applies — cull with `visibleHexes`, draw with `hexCorners`:
+
+```ts
+import { hexCorners, hexToWorld, visibleHexes, worldToHex } from '@vielzeug/atlas/grid';
+
+const layout = { orientation: 'pointy', size: 30 } as const;
+
+worldToHex({ x: 41, y: -18 }, layout); // the hex under the cursor
+hexToWorld({ q: 1, r: -1 }, layout); // its centre; worldToHex inverts it exactly
+
+for (const hex of visibleHexes(camera.visibleRect, layout)) {
+  drawPolygon(hexCorners(hex, layout));
+}
+```
+
+`hexDistance`, `hexNeighbors`, `hexRange`, and `hexLine` are the pure-grid primitives: distance in steps, the six adjacent hexes, every hex within a radius, and the hexes a straight walk crosses (`hexLine(a, b)` reversed equals `hexLine(b, a)`). `computeHexFov(origin, radius, { blocks })` lights the hexes whose line to the viewer is unobstructed; a blocking hex is itself visible.
+
+## Topologies and Pathfinding
+
+`findPath()` is A\* and `reachable()` a Dijkstra flood, both generic over a `GridTopology` — the four facts a search needs about a grid (`distance`, `key`, `line`, `neighbors`). `squareTopology()` and `hexTopology` cover the two built-in grids, so one movement rule works on both:
+
+```ts
+import { findPath, hexTopology, reachable } from '@vielzeug/atlas/grid';
+
+const passable = (hex) => Math.abs(hex.q) <= 24 && Math.abs(hex.r) <= 24 && !walls.has(`${hex.q}:${hex.r}`);
+
+const route = findPath({ q: 0, r: 0 }, { q: 8, r: -3 }, { passable, topology: hexTopology });
+// route: the cheapest cell path, both ends included, or null when unreachable.
+
+const flood = reachable({ q: 0, r: 0 }, 4, { passable, topology: hexTopology });
+// flood: Map<"q:r", { cost, prev }> of every cell a move-4 unit can enter.
+```
+
+`cost(coord)` prices entering a cell (default 1), so difficult terrain is a predicate, not a special search. `reachable` keys by `topology.key` and keeps each cell's `prev`, so highlighting the movement range and rebuilding the walked route read the same flood. The `passable` predicate must bound the world: an unbounded search space with an unreachable goal expands forever.
+
 ## Field of View and Fog
 
 `computeFov()` runs recursive shadowcasting over the eight octants and returns the set of `tileKey` strings a viewer can see within a radius. Blocking tiles are visible but cast shadows behind themselves:

@@ -9,6 +9,10 @@ description: Duration and easing tokens, named animations, utility classes, moti
 
 Refine's shared duration and easing tokens define the timing scale for tokenized component motion. Components may also expose custom properties for specialized timing, such as repeating progress indicators. [Motion Mode](#motion-mode) reduces tokenized CSS motion across light and shadow DOM; see the component references for any component-specific timing controls.
 
+## Repeated Keyboard Feedback
+
+Command palette, combobox, query-bar, and menu rows paint focus and selection colors without transitions. Tabs place their active pill immediately for keyboard selection, retain its slide on pointer selection, and reveal panels without an entrance animation. Overlay opening and list-reflow motion remain separate from this immediate navigation feedback.
+
 ## Duration & Easing
 
 **Duration scale:**

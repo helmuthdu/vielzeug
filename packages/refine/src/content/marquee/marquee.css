@@ -53,7 +53,12 @@
     animation-direction: reverse;
   }
 
-  :host([pause-on-hover]:hover:not([data-marquee-resumed])) .track,
+  @media (hover: hover) {
+    :host([pause-on-hover]:hover:not([data-marquee-resumed])) .track {
+      animation-play-state: paused;
+    }
+  }
+
   :host([pause-on-hover]:focus-within:not([data-marquee-resumed])) .track,
   :host([data-marquee-paused]) .track {
     animation-play-state: paused;

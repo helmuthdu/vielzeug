@@ -41,6 +41,15 @@ export type {
 
 const isImageFile = (file: File): boolean => file.type.startsWith('image/');
 
+function filename(name: string, className: string) {
+  const dot = name.lastIndexOf('.');
+  const hasExtension = dot > 0 && dot < name.length - 1;
+  const stem = hasExtension ? name.slice(0, dot) : name;
+  const extension = hasExtension ? name.slice(dot) : '';
+
+  return html`<span class="${className}" title="${name}"><span class="file-name-stem">${stem}</span><span class="file-name-extension">${extension}</span></span>`;
+}
+
 /** File input component properties */
 export type OreFileInputProps = {
   /** Accepted file types (comma-separated, e.g. '.jpg, .png, image/*') */
@@ -597,7 +606,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
                           </button>
                         </span>
                       </span>
-                      <span class="file-card-name" title="${file.name}">${file.name}</span>
+                      ${filename(file.name, 'file-card-name')}
                       ${when(
                         () => queue.fileState(file).status === 'uploading',
                         () => html`
@@ -627,7 +636,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
                           aria-hidden="true"></ore-icon>
                       </span>
                       <span class="file-meta">
-                        <span class="file-name" title="${file.name}">${file.name}</span>
+                        ${filename(file.name, 'file-name')}
                         ${when(
                           () => queue.fileState(file).status === 'uploading',
                           () => html`

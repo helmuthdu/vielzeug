@@ -33,6 +33,11 @@ export type SceneHandle = {
    * cluster to it (scenes stay independent of the shell itself).
    */
   dock?: HTMLElement | undefined;
+  /**
+   * A dock element the shell moves to the very end of the dock, after the
+   * zoom cluster — for the scene's primary action.
+   */
+  dockTail?: HTMLElement | undefined;
   /** Restore the scene's framing; omitted when there is nothing to frame. */
   fit?: (() => void) | undefined;
   dispose(): void;
