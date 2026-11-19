@@ -175,7 +175,7 @@ Control the resize handle with the `resize` attribute. Avoid `resize="horizontal
 | ------------------------------- | ------------------------------------------------------------ | ----------------------------- |
 | `--textarea-bg`                 | Background color                                             | Variant-dependent             |
 | `--textarea-border-color`       | Border color                                                 | Variant-dependent             |
-| `--textarea-radius`             | Border radius                                                | `var(--rounded-lg)`           |
+| `--textarea-radius`             | Border radius                                                | `var(--rounded-xl)`           |
 | `--textarea-padding`            | Inner padding (block inline)                                 | `var(--size-2) var(--size-3)` |
 | `--textarea-gap`                | Gap between label and field                                  | Size-dependent                |
 | `--textarea-font-size`          | Font size                                                    | `var(--text-sm)`              |

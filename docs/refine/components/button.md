@@ -131,7 +131,7 @@ Use `prefix` and `suffix` slots to add icons alongside text. For icon-only butto
 
 ## Rounded
 
-The `rounded` attribute sets the border radius from the theme scale. Used without a value (or with `"full"`) it produces a pill shape.
+Buttons default to `--rounded-xl` (12px at a 16px root). The `rounded` attribute selects another radius from the theme scale; use `rounded="lg"` for the previous 8px shape. Used without a value (or with `"full"`) it produces a pill shape.
 
 <ComponentPreview center>
 
@@ -471,7 +471,7 @@ Listen for the selection:
 | `--button-border-color`              | Border color                                            | Variant-dependent     |
 | `--button-border-top`                | Top border width (used by attached groups)              | N/A                   |
 | `--button-border-start`              | Inline-start border width (used by attached groups)     | N/A                   |
-| `--button-radius`                    | Border radius                                           | `var(--rounded-lg)`   |
+| `--button-radius`                    | Border radius                                           | `var(--rounded-xl)`   |
 | `--button-padding`                   | Inner padding                                           | Size-dependent        |
 | `--button-gap`                       | Gap between icon and text                               | Size-dependent        |
 | `--button-font-size`                 | Font size                                               | Size-dependent        |
@@ -489,7 +489,7 @@ Listen for the selection:
 | Property         | Description                                          | Default             |
 | ---------------- | ---------------------------------------------------- | ------------------- |
 | `--group-gap`    | Spacing between buttons (non-attached)               | `var(--size-2)`     |
-| `--group-radius` | Border radius on first/last buttons in attached mode | `var(--rounded-lg)` |
+| `--group-radius` | Border radius on first/last buttons in attached mode | `var(--rounded-xl)` |
 
 ## Accessibility
 

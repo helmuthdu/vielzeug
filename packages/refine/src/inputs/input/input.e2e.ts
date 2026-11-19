@@ -37,6 +37,53 @@ test.describe('Accessibility', () => {
 });
 
 test.describe('Layout', () => {
+  test('uses softer corners independently of size and variant', async ({ page, refinePage }) => {
+    const cases = [
+      { attrs: '', radius: '12px' },
+      { attrs: 'size="sm" variant="flat"', radius: '12px' },
+      { attrs: 'size="lg" variant="frost"', radius: '12px' },
+      { attrs: 'variant="text"', radius: '0px' },
+      { attrs: 'rounded="lg"', radius: '8px' },
+      { attrs: 'rounded="none"', radius: '0px' },
+      { attrs: 'rounded="full"', radius: '9999px' },
+      { attrs: 'style="--input-radius: var(--rounded-2xl)"', radius: '16px' },
+      { attrs: 'style="--rounded-xl: 1rem"', radius: '16px' },
+    ];
+
+    await refinePage.mountComponent(
+      cases.map(({ attrs }, index) => `<ore-input id="shape-${index}" ${attrs} label="Name"></ore-input>`).join(''),
+    );
+
+    for (const [index, { radius }] of cases.entries()) {
+      await expect(page.locator(`#shape-${index} [part="field"]`)).toHaveCSS('border-radius', radius);
+    }
+  });
+
+  test('composed fields inherit the input default and retain explicit rounding', async ({ page, refinePage }) => {
+    const tags = [
+      'ore-select',
+      'ore-combobox',
+      'ore-number-input',
+      'ore-date-picker',
+      'ore-time-picker',
+      'ore-query-bar',
+    ];
+
+    await refinePage.mountComponent(
+      tags
+        .flatMap((tag) => [
+          `<${tag} id="${tag}-default" label="Value"></${tag}>`,
+          `<${tag} id="${tag}-explicit" label="Value" rounded="lg"></${tag}>`,
+        ])
+        .join(''),
+    );
+
+    for (const tag of tags) {
+      await expect(page.locator(`#${tag}-default ore-input [part="field"]`).first()).toHaveCSS('border-radius', '12px');
+      await expect(page.locator(`#${tag}-explicit ore-input [part="field"]`).first()).toHaveCSS('border-radius', '8px');
+    }
+  });
+
   test('honors the documented input color override', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-input label="Stance" value="Stance 1" style="--input-color:rgb(255 255 255);--input-bg:rgb(32 32 32)"></ore-input>',

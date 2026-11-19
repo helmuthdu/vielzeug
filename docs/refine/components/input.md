@@ -91,7 +91,7 @@ Three sizes for different contexts.
 
 ## Rounded (Custom Border Radius)
 
-Use the `rounded` attribute to apply border radius from the theme. Use it without a value (or `rounded="full"`) for pill shape, or specify a theme value like `"lg"`, `"xl"`, etc.
+Inputs default to `--rounded-xl` (12px at a 16px root). Use the `rounded` attribute to select another theme radius, including `rounded="lg"` for the previous 8px shape. Use it without a value (or `rounded="full"`) for a pill shape.
 
 <ComponentPreview center>
 
@@ -322,7 +322,7 @@ For first-run forms, combine a visible label, helper text, and progressive valid
 | `--input-color`              | Text color                                             | Variant-dependent   |
 | `--input-border-color`       | Border color                                           | Variant-dependent   |
 | `--input-placeholder-color`  | Placeholder text color                                 | Theme-dependent     |
-| `--input-radius`             | Border radius                                          | `var(--rounded-lg)` |
+| `--input-radius`             | Border radius                                          | `var(--rounded-xl)` |
 | `--input-padding`            | Inner padding (block inline)                           | Size-dependent      |
 | `--input-gap`                | Gap between prefix/suffix icons and input text         | Size-dependent      |
 | `--input-font-size`          | Font size                                              | Size-dependent      |

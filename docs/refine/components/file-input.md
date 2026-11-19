@@ -54,7 +54,7 @@ Three sizes for different contexts.
 
 ## Rounded (Custom Border Radius)
 
-Use the `rounded` attribute to apply a border radius from the theme.
+Dropzones default to `--rounded-xl` (12px at a 16px root). Use the `rounded` attribute to select another theme radius, including `rounded="lg"` for the previous 8px shape.
 
 <ComponentPreview center>
 
@@ -301,7 +301,7 @@ fileInput.addEventListener('remove', ({ detail }) => {
 | --------------------------------- | -------------------------------------------------- | ------------------- |
 | `--file-input-bg`                 | Dropzone background color                          | Variant-dependent   |
 | `--file-input-border-color`       | Dropzone border color                              | Variant-dependent   |
-| `--file-input-radius`             | Border radius                                      | `var(--rounded-lg)` |
+| `--file-input-radius`             | Border radius                                      | `var(--rounded-xl)` |
 | `--file-input-min-height`         | Minimum dropzone height                            | `var(--size-40)`    |
 | `--file-input-font-size`          | Font size                                          | `var(--text-sm)`    |
 | `--file-input-hover-bg`           | Dropzone background on hover (flat/ghost variants) | Variant-dependent   |

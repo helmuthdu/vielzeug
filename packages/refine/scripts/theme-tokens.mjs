@@ -109,12 +109,12 @@ export const SHADE_RAMP = {
 
 // 11-step adaptive neutral scale: surfaces (50-400) and text (500-900).
 export const CONTRAST_SCALE = [
-  { dark: '17% 0.001 70deg', light: '99% 0.001 70deg', note: 'Canvas, page background', step: 50 },
-  { dark: '21% 0.001 70deg', light: '97% 0.001 70deg', note: 'Cards, elevated surfaces', step: 100 },
-  { dark: '23.5% 0.001 70deg', light: '95.5% 0.001 70deg', note: 'Midpoint: chip base, subtle fills', step: 150 },
-  { dark: '26% 0.001 70deg', light: '94% 0.001 70deg', note: 'Nested cards, hover states', step: 200 },
-  { dark: '32% 0.001 70deg', light: '89% 0.002 70deg', note: 'Borders, dividers', step: 300 },
-  { dark: '40% 0.001 70deg', light: '81% 0.002 70deg', note: 'Disabled backgrounds, subtle UI', step: 400 },
+  { dark: '17% 0.0005 70deg', light: '99% 0.001 70deg', note: 'Canvas, page background', step: 50 },
+  { dark: '21% 0.0005 70deg', light: '97% 0.001 70deg', note: 'Cards, elevated surfaces', step: 100 },
+  { dark: '23.5% 0.0005 70deg', light: '95.5% 0.001 70deg', note: 'Midpoint: chip base, subtle fills', step: 150 },
+  { dark: '26% 0.0005 70deg', light: '94% 0.001 70deg', note: 'Nested cards, hover states', step: 200 },
+  { dark: '32% 0.0005 70deg', light: '89% 0.002 70deg', note: 'Borders, dividers', step: 300 },
+  { dark: '40% 0.0005 70deg', light: '81% 0.002 70deg', note: 'Disabled backgrounds, subtle UI', step: 400 },
   { dark: '62% 0.001 70deg', light: '49% 0.002 70deg', note: 'Tertiary text - AA compliant (4.5:1 on canvas/card/sunken)', step: 500 },
   { dark: '68% 0.001 70deg', light: '40% 0.002 70deg', note: 'Secondary text - AA compliant', step: 600 },
   { dark: '78% 0.001 70deg', light: '32% 0.002 70deg', note: 'Body text - AAA compliant', step: 700 },

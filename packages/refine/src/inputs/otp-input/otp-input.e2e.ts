@@ -8,6 +8,16 @@
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
+  test('uses softer cell corners and keeps the public radius override', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-otp-input id="default" label="Code" length="4"></ore-otp-input>' +
+        '<ore-otp-input id="custom" label="Code" length="4" style="--otp-cell-radius: var(--rounded-lg)"></ore-otp-input>',
+    );
+
+    await expect(page.locator('#default .cell').first()).toHaveCSS('border-radius', '12px');
+    await expect(page.locator('#custom .cell').first()).toHaveCSS('border-radius', '8px');
+  });
+
   // Regression coverage for a real bug: a focused cell's glow `box-shadow` lived in
   // `@layer refine.base` (`.cell:focus`), while every variant's rest-state `box-shadow`
   // (`fieldVariantMixin`'s solid/outline/ghost rules) lives in `@layer refine.variants` :

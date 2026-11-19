@@ -201,7 +201,7 @@ Cell and group labels are screen-reader-only and default to English. Override th
 | `--otp-cell-size`               | Width and height of each cell                         |
 | `--otp-cell-gap`                | Gap between cells                                     |
 | `--otp-cell-font-size`          | Font size inside each cell                            |
-| `--otp-cell-radius`             | Cell border radius                                    |
+| `--otp-cell-radius`             | Cell border radius (defaults to `var(--rounded-xl)`)    |
 | `--otp-cell-bg`                 | Cell background color                                 |
 | `--otp-cell-border-color`       | Default cell border color                             |
 | `--otp-cell-focus-border`       | Focused border/caret color                            |

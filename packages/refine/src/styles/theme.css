@@ -430,17 +430,17 @@
 
     /* ── theme-tokens:generated:begin: run `bun run sync:theme`, do not hand-edit ── */
     /* ── Contrast scale: Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline ── */
-    --color-contrast-50: light-dark(oklch(99% 0.001 70deg), oklch(17% 0.001 70deg)); /* Canvas, page background */
-    --color-contrast-100: light-dark(oklch(97% 0.001 70deg), oklch(21% 0.001 70deg)); /* Cards, elevated surfaces */
+    --color-contrast-50: light-dark(oklch(99% 0.001 70deg), oklch(17% 0.0005 70deg)); /* Canvas, page background */
+    --color-contrast-100: light-dark(oklch(97% 0.001 70deg), oklch(21% 0.0005 70deg)); /* Cards, elevated surfaces */
     --color-contrast-150: light-dark(
       oklch(95.5% 0.001 70deg),
-      oklch(23.5% 0.001 70deg)
+      oklch(23.5% 0.0005 70deg)
     ); /* Midpoint: chip base, subtle fills */
-    --color-contrast-200: light-dark(oklch(94% 0.001 70deg), oklch(26% 0.001 70deg)); /* Nested cards, hover states */
-    --color-contrast-300: light-dark(oklch(89% 0.002 70deg), oklch(32% 0.001 70deg)); /* Borders, dividers */
+    --color-contrast-200: light-dark(oklch(94% 0.001 70deg), oklch(26% 0.0005 70deg)); /* Nested cards, hover states */
+    --color-contrast-300: light-dark(oklch(89% 0.002 70deg), oklch(32% 0.0005 70deg)); /* Borders, dividers */
     --color-contrast-400: light-dark(
       oklch(81% 0.002 70deg),
-      oklch(40% 0.001 70deg)
+      oklch(40% 0.0005 70deg)
     ); /* Disabled backgrounds, subtle UI */
     --color-contrast-500: light-dark(
       oklch(49% 0.002 70deg),

@@ -3,7 +3,7 @@
     --_bg: var(--button-bg, var(--color-contrast-100));
     --_color: var(--button-color, var(--color-contrast-900));
     --_border-color: var(--button-border-color, var(--color-contrast-300));
-    --_radius: var(--button-radius, var(--rounded-lg));
+    --_radius: var(--button-radius, var(--rounded-xl));
 
     /* The md size tier (and the `:host` default block of sizeVariantMixin) does not emit
        --_padding/--_height/--_line-height/--_icon-size, and custom properties inherit:

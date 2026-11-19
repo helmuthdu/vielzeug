@@ -597,7 +597,7 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
         label-placement="inset"
         variant="${() => props.variant.value ?? 'bordered'}"
         size="${() => props.size.value ?? ''}"
-        rounded="${() => props.rounded.value ?? 'md'}"
+        rounded="${() => props.rounded.value}"
         helper="${() => props.helper.value ?? ''}"
         error="${() => props.error.value ?? ''}"
         ?disabled="${() => Boolean(props.disabled.value)}"
