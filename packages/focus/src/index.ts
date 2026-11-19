@@ -1,3 +1,7 @@
+export type { AnnounceOptions, AnnouncePoliteness } from './announce.js';
+export { announce } from './announce.js';
+export type { Dismissal, DismissalOptions, DismissalReason } from './dismissal.js';
+export { createDismissal } from './dismissal.js';
 export { FocusConfigError, FocusError } from './errors.js';
 export type {
   GridColumns,

@@ -1,6 +1,7 @@
+import { createDismissal } from '@vielzeug/focus';
 import { bind, createContext, define, getHost, html, onCleanup, prop, provide, useEmit } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
-import { createListControl, createOutsidePointerDismissal, lifecycleSignal } from '../../core';
+import { createListControl, lifecycleSignal } from '../../core';
 import { disablableBundle, LIST_SIZE_PRESET, sizableBundle } from '../../shared';
 import { sizeVariantMixin } from '../../styles';
 import type { ComponentSize } from '../../types';
@@ -170,15 +171,15 @@ define<OreListProps>(LIST_TAG, {
 
     // Closes any swipe-revealed item when the user interacts anywhere outside of it:
     // the same shared outside-pointerdown dismissal used by the popover components.
-    createOutsidePointerDismissal({
+    createDismissal({
       getTargets: () => [getAllItems().find((item) => item.hasAttribute('revealed'))],
-      host: el,
       isActive: () => getAllItems().some((item) => item.hasAttribute('revealed')),
       onDismiss: () => {
         for (const item of getAllItems()) {
           if (item.hasAttribute('revealed')) item.removeAttribute('revealed');
         }
       },
+      ownerDocument: el.ownerDocument,
       signal: lifecycleSignal(onCleanup),
     });
 

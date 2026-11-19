@@ -1,7 +1,6 @@
 import { matchesAccept } from '@vielzeug/dnd/drop';
+import { announce } from '@vielzeug/focus';
 import { type Readable, signal, watch } from '@vielzeug/ripple';
-
-import { announce } from '../../core';
 
 // ── Byte/speed formatting ────────────────────────────────────────────────────
 

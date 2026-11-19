@@ -1,14 +1,9 @@
+import { createDismissal } from '@vielzeug/focus';
 import type { Placement } from '@vielzeug/orbit';
 
 import { type Readable, type Signal, signal, watch } from '@vielzeug/ripple';
 
-import {
-  createDropdownPositioner,
-  createOutsidePointerDismissal,
-  type DialogCloseReason,
-  lifecycleSignal,
-  type OverlayOpenReason,
-} from '../../core';
+import { createDropdownPositioner, type DialogCloseReason, lifecycleSignal, type OverlayOpenReason } from '../../core';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -332,11 +327,11 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
     };
   };
 
-  const stopOutsidePointerDismissal = createOutsidePointerDismissal({
+  const dismissal = createDismissal({
     getTargets: () => [currentTrigger, getPanel(), options.getHost?.()],
-    host: options.getHost?.() ?? currentTrigger,
     isActive: () => visible.value && (options.outsidePointerDismissal?.value ?? triggers.value.includes('click')),
     onDismiss: () => close('outsideClick'),
+    ownerDocument: (options.getHost?.() ?? currentTrigger)?.ownerDocument,
     signal: abortSignal,
   });
 
@@ -404,7 +399,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
         }
       }
 
-      stopOutsidePointerDismissal();
+      dismissal.dispose();
     };
   };
 

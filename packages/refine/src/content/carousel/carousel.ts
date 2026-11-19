@@ -1,9 +1,10 @@
+import { announce } from '@vielzeug/focus';
 import { createPanGesture } from '@vielzeug/gesture';
 import { type SpringHandle, spring } from '@vielzeug/necromancer';
 import { bind, define, getHost, html, onMounted, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { createElementSize } from '@vielzeug/sentinel';
-import { announce, elementDirection } from '../../core';
+import { elementDirection } from '../../core';
 import { getMotionMode } from '../../motion';
 import { projectFling } from '../../shared/fling';
 import { SWIPE_EDITABLE_SELECTOR, SWIPE_SURFACES, swipePath } from '../../shared/swipe';

@@ -1,4 +1,4 @@
-import { createGridNavigation, restoreFocus } from '@vielzeug/focus';
+import { createDismissal, createGridNavigation, restoreFocus } from '@vielzeug/focus';
 import type { Placement, VirtualReference } from '@vielzeug/orbit';
 import {
   bind,
@@ -22,7 +22,6 @@ import {
   createDropdownPositioner,
   createInteraction,
   createListControl,
-  createOutsidePointerDismissal,
   type DropdownCloseReason,
   elementDirection,
   lifecycleSignal,
@@ -483,11 +482,11 @@ define<OreMenuProps>(MENU_TAG, {
       else open('click');
     };
 
-    createOutsidePointerDismissal({
+    createDismissal({
       getTargets: () => [el, panelEl],
-      host: el,
       isActive: () => isOpenSignal.value,
       onDismiss: () => close('outsideClick'),
+      ownerDocument: el.ownerDocument,
       signal: abortSignal,
     });
 

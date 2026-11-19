@@ -1,11 +1,22 @@
 ---
 title: 'Focus: Navigation and restoration'
-description: Framework-neutral list navigation and focus restoration primitives.
+description: Framework-neutral dismissal, announcement, list navigation and focus restoration primitives.
 package: focus
 category: input
-keywords: [focus, roving, keyboard, accessibility, list navigation, grid navigation, quick look]
-exports: [createListNavigation, createGridNavigation, createQuickLookGrid, captureFocus, restoreFocus, rescueFocus]
-related: [refine, keymap, ore]
+keywords:
+  [focus, roving, keyboard, accessibility, list navigation, grid navigation, quick look, dismissal, announcements]
+exports:
+  [
+    createDismissal,
+    announce,
+    createListNavigation,
+    createGridNavigation,
+    createQuickLookGrid,
+    captureFocus,
+    restoreFocus,
+    rescueFocus,
+  ]
+related: [refine, keymap, ore, orbit]
 environments: [browser]
 ---
 
@@ -30,15 +41,17 @@ list.addEventListener('keydown', (event) => {
 });
 ```
 
-| Feature           | Per-component navigation | Focus                                        |
-| ----------------- | ------------------------ | -------------------------------------------- |
-| Bundle size       | n/a                      | <PackageInfo package="focus" type="size" />  |
-| Zero dependencies | n/a                      | <ore-icon name="check" size="16"></ore-icon> |
-| RTL mirroring     | Manual                   | Built in                                     |
-| Grid navigation   | Flat only                | `createGridNavigation()`                     |
-| Quick Look grids  | Manual Space handling    | `createQuickLookGrid()`                      |
-| Typeahead         | Manual                   | Optional via `typeahead`                     |
-| Focus restoration | Manual capture           | `captureFocus()` / `restoreFocus()`          |
+| Feature           | Per-component navigation  | Focus                                       |
+| ----------------- | ------------------------- | ------------------------------------------- |
+| Dismissal         | Manual document listeners | `createDismissal()`                         |
+| Announcements     | Manual live-region markup | `announce()`                                |
+| Bundle size       | n/a                       | <PackageInfo package="focus" type="size" /> |
+| Dependencies      | n/a                       | `@vielzeug/keymap`                          |
+| RTL mirroring     | Manual                    | Built in                                    |
+| Grid navigation   | Flat only                 | `createGridNavigation()`                    |
+| Quick Look grids  | Manual Space handling     | `createQuickLookGrid()`                     |
+| Typeahead         | Manual                    | Optional via `typeahead`                    |
+| Focus restoration | Manual capture            | `captureFocus()` / `restoreFocus()`         |
 
 <div class="decision-callout">
 
@@ -89,6 +102,8 @@ container.removeEventListener('keydown', onKeydown);
 <div class="features-grid">
 
 - `createListNavigation()`: pure composite navigation with explicit handled/change results
+- `createDismissal()`: outside-pointer and Escape dismissal for floating surfaces
+- `announce()`: live-region screen-reader announcements with latest-value replacement
 - `createGridNavigation()`: two-dimensional arrow-key navigation with fixed or measured columns
 - `createQuickLookGrid()`: tile-grid arrow browsing with a Space preview key for card pickers
 - Orientation and direction support: vertical/horizontal/both with LTR/RTL defaults

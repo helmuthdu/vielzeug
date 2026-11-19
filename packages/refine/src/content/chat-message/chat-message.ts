@@ -1,7 +1,6 @@
+import { announce } from '@vielzeug/focus';
 import { define, getHost, html, onEvent, onMounted, prop, ref, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, watch } from '@vielzeug/ripple';
-
-import { announce } from '../../core';
 
 import componentStyles from './chat-message.css?inline';
 

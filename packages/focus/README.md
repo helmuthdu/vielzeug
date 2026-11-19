@@ -1,6 +1,6 @@
 # @vielzeug/focus
 
-> Framework-neutral list navigation and focus restoration primitives
+> Framework-neutral dismissal, live-region announcements, list navigation and focus restoration primitives
 
 ## Installation
 

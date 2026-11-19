@@ -1,6 +1,7 @@
+import { createDismissal } from '@vielzeug/focus';
 import { bind, define, getHost, html, onCleanup, onMounted, prop, ref, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-import { createDropdownPositioner, createOutsidePointerDismissal, lifecycleSignal } from '../../core';
+import { createDropdownPositioner, lifecycleSignal } from '../../core';
 import {
   disablableBundle,
   FIELD_VARIANTS,
@@ -406,11 +407,11 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
 
     // ── Outside click ─────────────────────────────────────────────────────────
 
-    createOutsidePointerDismissal({
+    createDismissal({
       getTargets: () => [el],
-      host: el,
       isActive: () => isOpen.value,
       onDismiss: () => closePicker(),
+      ownerDocument: el.ownerDocument,
       signal: lifecycleSignal(onCleanup),
     });
 

@@ -1,10 +1,10 @@
+import { createDismissal } from '@vielzeug/focus';
 import { bind, define, getHost, html, onCleanup, onMounted, prop, ref, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { format, Temporal } from '@vielzeug/tempo';
 import {
   createDatePickerControl,
   createDropdownPositioner,
-  createOutsidePointerDismissal,
   type DatePickerView,
   formatDisplayDate,
   handleCalendarGridKeydown,
@@ -416,11 +416,11 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
       }
     }
 
-    createOutsidePointerDismissal({
+    createDismissal({
       getTargets: () => [el],
-      host: el,
       isActive: () => isOpen.value,
       onDismiss: () => closePicker(),
+      ownerDocument: el.ownerDocument,
       signal: lifecycleSignal(onCleanup),
     });
 

@@ -20,7 +20,7 @@ Generated from `packages/*/package.json` by `bun run gen:ai-data`. Edit manifest
 | `@vielzeug/dnd` | Drag-and-drop: drop zones and sortable lists | `gesture`, `keymap` | N/A | N/A |
 | `@vielzeug/familiar` | Web Worker pool with tasks, timeouts, cancellation | `arsenal` | N/A | N/A |
 | `@vielzeug/flux` | Minimal push streams with explicit ownership, bounded buffering, and structural bridges | `arsenal` | N/A | N/A |
-| `@vielzeug/focus` | Framework-neutral list navigation and focus restoration primitives | `keymap` | N/A | N/A |
+| `@vielzeug/focus` | Framework-neutral dismissal, live-region announcements, list navigation and focus restoration primitives | `keymap` | N/A | N/A |
 | `@vielzeug/forge` | Typed form state, validation, submission | `arsenal` | N/A | N/A |
 | `@vielzeug/gesture` | Framework-neutral pointer drag, pan, pinch, and wheel recognition with lifecycle-owned handles | N/A | N/A | N/A |
 | `@vielzeug/herald` | Typed synchronous event bus with wildcard subscriptions, one-shot waits, and lifecycle tracing | N/A | N/A | N/A |

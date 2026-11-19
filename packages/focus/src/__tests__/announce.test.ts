@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { announce } from '../announcer';
+import { announce } from '../index';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
