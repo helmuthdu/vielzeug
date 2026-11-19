@@ -2,7 +2,7 @@
  * createMemoryHistory: in-memory history driver used by the router.
  */
 import { createBrowserHistory, createHashHistory, createHistoryForBase, createMemoryHistory, createRouter } from '../';
-import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
+import { boot, disposeRouter, mockHistory, mockLocation, resetMocks } from './setup';
 import { settle } from './test-utils';
 
 describe('createMemoryHistory', () => {

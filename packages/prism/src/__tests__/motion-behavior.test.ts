@@ -82,7 +82,7 @@ describe('motion is on by default', () => {
     '%s bars reserve the legend before growing from their stationary baseline',
     (variant) => {
       const frames = driveFrames();
-      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function () {
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
         return this.classList.contains('prism-legend') ? 30 : 0;
       });
       const chart = createBarChart(container, { legend: true, series: BARS, variant });
@@ -115,7 +115,7 @@ describe('motion is on by default', () => {
 
   it('lines with a legend trace at their final layout instead of moving upward', () => {
     const frames = driveFrames();
-    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function () {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
       return this.classList.contains('prism-legend') ? 30 : 0;
     });
     const chart = createLineChart(container, { legend: true, series: LINE_SERIES });
@@ -145,7 +145,7 @@ describe('motion is on by default', () => {
         unobserve() {}
       },
     );
-    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function () {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) {
       return this.classList.contains('prism-legend') ? 30 : 0;
     });
     const chart = createLineChart(container, { legend: true, series: LINE_SERIES });

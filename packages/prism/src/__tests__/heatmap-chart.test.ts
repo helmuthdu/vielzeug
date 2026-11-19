@@ -181,7 +181,7 @@ describe('createHeatmapChart', () => {
       );
 
       expect(texts).toHaveLength(1);
-      expect(texts[0]!.querySelector('.prism-heatmap-value')!.style.fill).toBe('rgb(0, 0, 0)');
+      expect(texts[0]!.querySelector<SVGTextElement>('.prism-heatmap-value')!.style.fill).toBe('rgb(0, 0, 0)');
       chart.dispose();
     });
 

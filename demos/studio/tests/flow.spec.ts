@@ -126,6 +126,7 @@ test('a cycle is detected, highlighted, and reported', async ({ page }) => {
 test('orthogonal routing toggles and keeps every edge visible', async ({ page }) => {
   const edges = page.locator('[data-testid="flow-edges"] .flow-edge:not(.flow-edge-temp)');
   const bezierD = await edges.first().getAttribute('d');
+  if (bezierD === null) throw new Error('Expected the curved edge to have a path.');
 
   await page.keyboard.press('o');
   await expect(page.locator('[data-testid="flow-routing"]')).toHaveAttribute('value', 'orthogonal');

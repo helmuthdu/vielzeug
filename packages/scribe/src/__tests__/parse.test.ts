@@ -89,12 +89,9 @@ describe('parseProse: blocks', () => {
   });
 
   it('parses a GFM table with alignments and escaped pipes', () => {
-    const table = first('| a | b |\n|:--|:-:|\n| 1 | \\| |') as {
-      alignments: string[];
-      header: readonly unknown[];
-      rows: readonly (readonly unknown[])[];
-    };
+    const table = first('| a | b |\n|:--|:-:|\n| 1 | \\| |');
     expect(table.type).toBe('table');
+    if (table.type !== 'table') throw new Error('Expected a table.');
     expect(table.alignments).toEqual(['left', 'center']);
     expect(table.header).toHaveLength(2);
     expect(table.rows[0][1]).toEqual([{ text: '|', type: 'text' }]);
@@ -118,13 +115,18 @@ describe('parseProse: blocks', () => {
   it('freezes the returned document deeply', () => {
     const doc: ProseDoc = parseProse('text');
     expect(Object.isFrozen(doc)).toBe(true);
-    const paragraph = doc.blocks[0] as { children: unknown[] };
+    const paragraph = doc.blocks[0];
+    if (paragraph?.type !== 'paragraph') throw new Error('Expected a paragraph.');
     expect(Object.isFrozen(paragraph.children)).toBe(true);
   });
 });
 
 describe('parseProse: inline', () => {
-  const inlineOf = (markdown: string): readonly unknown[] => (first(markdown) as { children: unknown[] }).children;
+  const inlineOf = (markdown: string): readonly unknown[] => {
+    const paragraph = first(markdown);
+    if (paragraph.type !== 'paragraph') throw new Error('Expected a paragraph.');
+    return paragraph.children;
+  };
 
   it('parses strong and emphasis from asterisks and underscores', () => {
     expect(inlineOf('**b** and _i_')).toEqual([

@@ -43,6 +43,7 @@ describe('tooltip placement inside the host box', () => {
     stubRect(container, 800, 260, 441);
 
     const tooltip = createTooltip(container, true);
+    if (!tooltip.el) throw new Error('Expected tooltip element.');
     // A comparison tooltip for many series: far taller than the chart itself.
     stubRect(tooltip.el, 260, 483, 0);
 
@@ -62,6 +63,7 @@ describe('tooltip placement inside the host box', () => {
     stubRect(container, 800, 260, 441);
 
     const tooltip = createTooltip(container, true);
+    if (!tooltip.el) throw new Error('Expected tooltip element.');
     stubRect(tooltip.el, 200, 60, 0);
 
     tooltip.show(400, 200, datum, series, 'Nov: 10');
@@ -75,6 +77,7 @@ describe('tooltip placement inside the host box', () => {
     stubRect(container, 800, 260, 441);
 
     const tooltip = createTooltip(container, { offset: 24 });
+    if (!tooltip.el) throw new Error('Expected tooltip element.');
     stubRect(tooltip.el, 200, 60, 0);
 
     tooltip.show(400, 200, datum, series, 'Nov: 10');

@@ -12,7 +12,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import ts from 'typescript';
 
-import type { BundledExample } from '../src/types.ts';
+import type { Example } from '../src/types.ts';
 
 function propertyKeyText(name: ts.PropertyName): string | undefined {
   return ts.isIdentifier(name) || ts.isStringLiteralLike(name) ? name.text : undefined;
@@ -116,7 +116,7 @@ function readExampleFields(filePath: string, exportedName: string): { code: stri
  * REPL examples directory (`docs/.vitepress/theme/components/repl/examples/<slug>/`), or absent
  * when a package has no REPL examples yet.
  */
-export function readReplExamples(repoRoot: string, slug: string): BundledExample[] {
+export function readReplExamples(repoRoot: string, slug: string): Example[] {
   const dir = resolve(repoRoot, `docs/.vitepress/theme/components/repl/examples/${slug}`);
   const indexPath = resolve(dir, 'index.ts');
 
@@ -128,7 +128,7 @@ export function readReplExamples(repoRoot: string, slug: string): BundledExample
   const importMap = readImportMap(indexSourceFile, dirname(indexPath));
   const idMap = readExportedIdMap(indexSourceFile);
 
-  const examples: BundledExample[] = [];
+  const examples: Example[] = [];
 
   for (const [id, identifier] of idMap) {
     const filePath = importMap.get(identifier);

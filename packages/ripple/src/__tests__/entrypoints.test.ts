@@ -81,7 +81,9 @@ describe('default graph exports', () => {
     const second = await import('../index');
     const seen: number[] = [];
 
-    const stop = second.effect(() => seen.push(value.value));
+    const stop = second.effect(() => {
+      seen.push(value.value);
+    });
     value.value = 1;
 
     expect(seen).toEqual([0]);

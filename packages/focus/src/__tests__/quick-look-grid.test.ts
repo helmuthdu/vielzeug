@@ -112,7 +112,9 @@ describe('createQuickLookGrid', () => {
   it('stops an inspected key from bubbling past the grid', () => {
     const { tiles: items } = createGrid();
     const reached: string[] = [];
-    const guard = (event: Event): void => reached.push(event.key);
+    const guard = (event: KeyboardEvent): void => {
+      reached.push(event.key);
+    };
     document.documentElement.addEventListener('keydown', guard);
 
     items[1]?.item.focus();

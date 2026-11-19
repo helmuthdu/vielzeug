@@ -174,7 +174,7 @@ describe('strokeOutline', () => {
           { x: 0, y: 0 },
           { x: 10, y: 0 },
         ],
-      ] as StrokePoint[]) {
+      ] satisfies StrokePoint[][]) {
         for (const cap of ['round', 'butt', 'square'] as const) {
           for (const join of ['round', 'bevel', 'miter'] as const) {
             const ring = strokeOutline(pts, 4, { cap, join });

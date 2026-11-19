@@ -331,7 +331,7 @@ export function extractApi(pkg: string, packagesDir = PACKAGES_DIR): ExtractedAp
     const visit = (node: ts.Node): void => {
       if (ts.isIdentifier(node)) {
         const symbol = checker.getSymbolAtLocation(node);
-        const resolved = symbol?.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+        const resolved = symbol && symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
 
         for (const dependency of resolved?.getDeclarations() ?? []) {
           if (belongsToPackage(dependency)) addDeclaration(dependency);

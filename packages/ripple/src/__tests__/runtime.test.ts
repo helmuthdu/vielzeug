@@ -43,7 +43,11 @@ describe('ripple graph', () => {
     const value = computedScope.run(() => computed(() => source.value * 2));
     const seen: number[] = [];
 
-    effectScope.run(() => effect(() => seen.push(value.value)));
+    effectScope.run(() =>
+      effect(() => {
+        seen.push(value.value);
+      }),
+    );
     source.value = 1;
 
     expect(seen).toEqual([0, 2]);
