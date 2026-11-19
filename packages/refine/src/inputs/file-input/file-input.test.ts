@@ -607,6 +607,29 @@ describe('ore-file-input accessibility', () => {
       expect(fixture.query('.file-progress-meta')).toBeTruthy();
     });
 
+    it.each([false, true])('keeps filename suffixes outside the truncated stem (gallery: %s)', async (gallery) => {
+      fixture = await mount('ore-file-input', { props: { gallery, multiple: true } });
+      const names = ['quarterly.report.pdf', '.env', 'README', 'report.', '.config.json'];
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+
+      dispatchFiles(
+        input,
+        names.map((name) => new File(['x'], name)),
+      );
+      await fixture.flush();
+
+      const labels = fixture.queryAll<HTMLElement>('.file-name, .file-card-name');
+      expect(labels.map((label) => label.textContent)).toEqual(names);
+      expect(labels.map((label) => label.querySelector('.file-name-extension')?.textContent ?? '')).toEqual([
+        '.pdf',
+        '',
+        '',
+        '',
+        '.json',
+      ]);
+      expect(labels.map((label) => label.getAttribute('title'))).toEqual(names);
+    });
+
     it('keeps the file and lets the user retry from the failure point instead of restarting (Signal 03)', async () => {
       let attempt = 0;
       let lastResumeFrom = -1;

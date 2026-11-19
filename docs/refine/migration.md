@@ -5,6 +5,27 @@ description: Migrate the viewport-only responsive breakpoints in Refine's sideba
 
 # Migration
 
+## Mobile editor and hover behavior
+
+- Hover-only decoration now requires `@media (hover: hover)`. Keyboard focus, selected states, and press feedback remain independent; do not rely on touch-generated hover for persistent selection.
+- Native input, textarea, composer, OTP, and command-palette text now has a 16 CSS pixel minimum on coarse pointers, even when root-relative theme fonts are smaller. Public input, textarea, and OTP font overrides take precedence over size presets before the mobile minimum is applied. Larger configured fonts are preserved and desktop typography is unchanged.
+- OTP code insertion and paste fill from the receiving cell and preserve all allowed characters that fit. Complete-code replacement no longer collapses to its final character, and one native edit no longer produces duplicate bubbling `input` events.
+- `ore-input`, `ore-textarea`, and `ore-message-composer` accept a typed [`enterkeyhint`](./api.md#enterkeyhint). The composer defaults its return-key label to match `send-shortcut`; explicit hints override only the label, not the shortcut.
+
+No public props or events were removed.
+
+## Interaction timing and filename captions
+
+No component props or events were removed. The following defaults have changed:
+
+- Filename captions preserve the final extension in list and gallery layouts. If you styled the caption's text directly through its internal shadow structure, use the documented component variables instead; the name is now split into a shrinking stem and a non-shrinking extension.
+- Tooltip hover warm-up is shared only inside the nearest `data-tooltip-group` or `role="toolbar"`. Wrap related tooltips to opt in; leave them ungrouped for independent dwell. Explicit `delay` values retain their priority.
+- `createThemeController` applies palettes without CSS transition interpolation through light DOM and open shadow roots. Direct class toggles still use ordinary CSS behavior.
+- Keyboard-driven row highlights and tab-panel reveals no longer animate. Tab pills still slide for pointer selection.
+- Default carousels track drags, resist non-looping edge pulls, and spring to rest. Horizontal navigation now follows RTL for every variant. Custom gesture surfaces should use `data-no-swipe`.
+
+See [tooltip grouping](./components/tooltip.md#shared-hover-warm-up), [carousel motion](./components/carousel.md#drag-motion), and the [theme-controller reference](./api.md#createthemecontrolleroptions) for the new behavior.
+
 ## Control corner radius
 
 Controls and their related panels now default to `--radius`, which is `var(--rounded-lg)` (8px at a 16px root), rather than `--rounded-xl` (12px). To retain the previous default across a theme:

@@ -59,6 +59,47 @@ describe('ore-carousel', () => {
     expect(fixture.element.getAttribute('slide-index')).toBe('0');
   });
 
+  it('cancels a tracked drag without browsing and clears transient styles when its layout changes', async () => {
+    fixture = await mount('ore-carousel', { html: slides });
+    const track = fixture.query<HTMLElement>('.track')!;
+    vi.spyOn(track, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 240));
+    const slide = getSlides(fixture)[0];
+    const pointer = { bubbles: true, composed: true, isPrimary: true, pointerId: 1, pointerType: 'touch' };
+    const begin = () => {
+      slide.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 200 }));
+      slide.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 100 }));
+    };
+    begin();
+    expect(slide.hasAttribute('data-dragging')).toBe(true);
+    slide.dispatchEvent(new PointerEvent('pointercancel', { ...pointer, clientX: 100 }));
+    expect(fixture.element.getAttribute('slide-index')).toBe('0');
+    expect(slide.hasAttribute('data-dragging')).toBe(false);
+    expect(slide.style.getPropertyValue('--_carousel-position')).toBe('');
+
+    begin();
+    fixture.element.setAttribute('orientation', 'vertical');
+    await fixture.flush();
+    slide.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 100 }));
+    expect(fixture.element.getAttribute('slide-index')).toBe('0');
+    expect(slide.hasAttribute('data-dragging')).toBe(false);
+  });
+
+  it('honors reentrant layout changes from a navigation listener instead of starting stale motion', async () => {
+    fixture = await mount('ore-carousel', { html: slides });
+    vi.spyOn(fixture.query<HTMLElement>('.track')!, 'getBoundingClientRect').mockReturnValue(
+      new DOMRect(0, 0, 400, 240),
+    );
+    fixture.element.addEventListener('change', () => fixture.element.setAttribute('orientation', 'vertical'));
+    const slide = getSlides(fixture)[0];
+    const pointer = { bubbles: true, composed: true, isPrimary: true, pointerId: 1, pointerType: 'touch' };
+    slide.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 200 }));
+    slide.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 100 }));
+    slide.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 100 }));
+    await fixture.flush();
+    expect(fixture.element.getAttribute('slide-index')).toBe('1');
+    expect(slide.hasAttribute('data-dragging')).toBe(false);
+  });
+
   // ── Core Functionality ───────────────────────────────────────────────────────
 
   describe('Core functionality', () => {
@@ -1036,7 +1077,8 @@ describe('ore-carousel', () => {
         await fixture.flush();
         fixture.dispose();
         await fixture.flush(); // teardown lands one microtask after disconnect
-        expect(disconnect).toHaveBeenCalledTimes(6);
+        // The shared drag-size observer lives until the carousel itself is disposed.
+        expect(disconnect).toHaveBeenCalledTimes(7);
       } finally {
         disconnect.mockRestore();
       }

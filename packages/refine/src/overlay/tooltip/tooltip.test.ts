@@ -246,6 +246,76 @@ describe('ore-tooltip', () => {
       expect(hidden(fixture.element)).toBe(false);
     });
 
+    it.each(['data-tooltip-group', 'role="toolbar"'])(
+      'scopes hover warm-up to %s and expires after closing',
+      async (scope) => {
+        fixture = await mount('div', {
+          html: `<div ${scope}>
+          <ore-tooltip content="First" trigger="hover"><button>First</button></ore-tooltip>
+          <ore-tooltip content="Second" trigger="hover"><button>Second</button></ore-tooltip>
+          <ore-tooltip content="Explicit" trigger="hover" delay="600"><button>Explicit</button></ore-tooltip>
+        </div><div role="toolbar" aria-label="Other">
+          <ore-tooltip content="Other" trigger="hover"><button>Other</button></ore-tooltip>
+        </div>`,
+        });
+        const [first, second, explicit, other] = fixture.element.querySelectorAll<HTMLElement>('ore-tooltip');
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+
+        hover(first);
+        vi.advanceTimersByTime(300);
+        await fixture.flush();
+        expect(hidden(first)).toBe(false);
+        leave(first);
+        hover(second);
+        hover(explicit);
+        hover(other);
+        await fixture.flush();
+        expect(hidden(second)).toBe(false);
+        expect(hidden(explicit)).toBe(true);
+        expect(hidden(other)).toBe(true);
+
+        leave(second);
+        leave(explicit);
+        leave(other);
+        vi.advanceTimersByTime(601);
+        hover(first);
+        await fixture.flush();
+        expect(hidden(first)).toBe(true);
+        vi.advanceTimersByTime(300);
+        await fixture.flush();
+        expect(hidden(first)).toBe(false);
+      },
+    );
+
+    it('does not warm canceled hovers or retain a detached tooltip as open', async () => {
+      fixture = await mount('div', {
+        html: `<div data-tooltip-group>
+          <ore-tooltip content="First" trigger="hover"><button>First</button></ore-tooltip>
+          <ore-tooltip content="Second" trigger="hover"><button>Second</button></ore-tooltip>
+        </div>`,
+      });
+      const [first, second] = fixture.element.querySelectorAll<HTMLElement>('ore-tooltip');
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+      hover(first);
+      leave(first);
+      vi.advanceTimersByTime(299);
+      hover(second);
+      await fixture.flush();
+      expect(hidden(second)).toBe(true);
+      vi.advanceTimersByTime(300);
+      await fixture.flush();
+      expect(hidden(second)).toBe(false);
+      second.remove();
+      await fixture.flush();
+      vi.advanceTimersByTime(501);
+      hover(first);
+      await fixture.flush();
+      expect(hidden(first)).toBe(true);
+      vi.advanceTimersByTime(300);
+      await fixture.flush();
+      expect(hidden(first)).toBe(false);
+    });
+
     it('opens immediately on focus without a dwell', async () => {
       fixture = await mount('ore-tooltip', {
         attrs: { content: 'tip', trigger: 'focus' },

@@ -45,6 +45,19 @@ document.documentElement.classList.toggle('dark'); // toggle
 
 Dark mode works automatically from the OS preference. The `.dark` class overrides it. No `@media (prefers-color-scheme)` blocks needed: every color token uses `light-dark()` and resolves based on the active `color-scheme`.
 
+For an instant palette change without staggered component color transitions, use [`createThemeController`](./api.md#createthemecontrolleroptions):
+
+```ts
+import { createThemeController } from '@vielzeug/refine/theme';
+
+const theme = createThemeController();
+theme.setPreference('dark');
+// Dispose when the application owner unmounts.
+theme.dispose();
+```
+
+The controller handles open shadow trees as well as light DOM. Direct class toggles do not suppress transitions.
+
 ## How Overrides Work
 
 All Refine tokens live inside `@layer refine.tokens { … }`. Any unlayered `:root` rule in your stylesheet takes precedence automatically:

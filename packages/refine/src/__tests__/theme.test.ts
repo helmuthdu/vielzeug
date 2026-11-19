@@ -115,4 +115,32 @@ describe('createThemeController', () => {
 
     expect(root.classList.contains('dark')).toBe(false);
   });
+
+  it('suppresses nested shadow transitions during application and restores owned DOM synchronously', () => {
+    root = document.createElement('section');
+    root.setAttribute('data-theme-switching', 'consumer');
+    root.style.transition = 'color 1s';
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const nested = document.createElement('div');
+    const inner = nested.attachShadow({ mode: 'open' });
+    shadow.append(nested);
+    root.append(host);
+    const flush = vi.spyOn(root, 'offsetHeight', 'get').mockImplementation(() => {
+      expect(root.querySelector('style')?.textContent).toContain('transition: none !important');
+      expect(shadow.querySelector('style')?.textContent).toContain('transition: none !important');
+      expect(inner.querySelector('style')?.textContent).toContain('transition: none !important');
+      return 0;
+    });
+
+    controller = createThemeController({ initial: 'light', root });
+    controller.setPreference('dark');
+
+    expect(flush).toHaveBeenCalledTimes(2);
+    expect(root.getAttribute('data-theme-switching')).toBe('consumer');
+    expect(root.style.transition).toBe('color 1s');
+    expect(root.querySelector('style')).toBeNull();
+    expect(shadow.querySelector('style')).toBeNull();
+    expect(inner.querySelector('style')).toBeNull();
+  });
 });

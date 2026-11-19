@@ -2,6 +2,10 @@
 
 A modern file upload component with drag-and-drop support, file list management, constraint filtering, and full form integration. Shares the same visual theme system as `ore-input`.
 
+## Filename Display
+
+List and gallery captions truncate the filename stem while retaining its final extension: `quarterly.report.pdf` becomes `quarterly…` followed by `.pdf` when space is limited. Multi-part suffixes preserve only the final segment (`archive.tar.gz` keeps `.gz`). Dotfiles such as `.env`, extensionless names, and names ending in a dot truncate as a single name. The complete filename remains in the caption's text and `title`, and in file-action accessible labels.
+
 ## Variants
 
 Six visual variants for different UI contexts and levels of emphasis.

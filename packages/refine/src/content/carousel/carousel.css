@@ -108,6 +108,11 @@
 
   /* ── Vertical orientation ──────────────────────────────────────────────── */
 
+  :host(:dir(rtl):not([orientation='vertical'])) {
+    --_slide-translate-before: translateX(100%);
+    --_slide-translate-after: translateX(-100%);
+  }
+
   :host([orientation='vertical']) {
     --_slide-translate-before: translateY(-100%);
     --_slide-translate-after: translateY(100%);

@@ -24,6 +24,20 @@
   transform: translate(0, 0);
 }
 
+:host([data-dragging]) {
+  transition: none;
+}
+
+:host([data-dragging='']) {
+  --_carousel-position: 0px;
+  opacity: 1;
+  transform: translateX(var(--_carousel-position));
+}
+
+:host([data-dragging=''][data-orientation='vertical']) {
+  transform: translateY(var(--_carousel-position));
+}
+
 /* ── Fade variant ────────────────────────────────────────────────────────── */
 :host([data-variant='fade']) {
   transform: none;

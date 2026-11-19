@@ -27,6 +27,14 @@ Give the carousel an explicit height and a descriptive `label`. The default vari
 
 </ComponentPreview>
 
+## Drag Motion
+
+The default translating variant follows the pointer directly, horizontally or vertically. Horizontal dragging and arrow navigation follow the inherited text direction. With `loop="false"`, pulling outward at either edge meets bounded resistance rather than a hard stop. On release, projected distance and velocity choose at most one neighboring slide; a velocity-seeded, critically damped spring settles at that slide or returns to the current one. Release momentum is bounded to prevent jumping beyond the destination or edge limit.
+
+You can grab an in-flight settle again. Deck, selection, loop, orientation, variant, or track-size changes cancel stale motion. Autoplay pauses during the drag and settle, then resumes subject to the normal pointer, focus, and manual-pause rules. Reduced motion keeps direct pointer tracking but settles immediately.
+
+Fade, filmstrip, gallery, and coverflow retain their existing visual transitions and velocity-aware swipe navigation; they do not translate a whole slide deck under the pointer. Embedded controls and `data-no-swipe` subtrees retain their own gestures.
+
 ## Autoplay
 
 Autoplay is **off by default**. Add the `autoplay` attribute to enable timed slide advances. When there are at least two slides, an accessible **Pause autoplay** control appears in the media-navigation bar and remains available to touch and keyboard users. Pausing is persistent until **Resume autoplay** is activated.

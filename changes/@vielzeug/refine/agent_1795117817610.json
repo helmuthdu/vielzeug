@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Keep hover, focus, and motion behavior correct on touch and keyboard",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

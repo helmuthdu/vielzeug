@@ -40,26 +40,23 @@ test.describe('Interaction', () => {
 
     await page.locator('ore-command-palette').locator('input').press('ArrowDown');
 
-    // The fill fades in, so poll until the transition lands on the final color.
-    await expect
-      .poll(() =>
-        page.locator('ore-command-palette').evaluate((palette) => {
-          const shadow = palette.shadowRoot!;
-          const focused = shadow.querySelector<HTMLElement>('.item[data-focused]')!;
-          const probe = document.createElement('div');
+    const feedback = await page.locator('ore-command-palette').evaluate((palette) => {
+      const shadow = palette.shadowRoot!;
+      const focused = shadow.querySelector<HTMLElement>('.item[data-focused]')!;
+      const probe = document.createElement('div');
 
-          // Same recipe the option lists (select/combobox/query-bar) focus with by default.
-          probe.style.background = 'color-mix(in oklch, var(--color-neutral) 12%, var(--color-contrast-100))';
-          shadow.append(probe);
+      // Same recipe the option lists (select/combobox/query-bar) focus with by default.
+      probe.style.background = 'color-mix(in oklch, var(--color-neutral) 12%, var(--color-contrast-100))';
+      shadow.append(probe);
 
-          const expected = getComputedStyle(probe).backgroundColor;
+      const expected = getComputedStyle(probe).backgroundColor;
 
-          probe.remove();
+      probe.remove();
 
-          return getComputedStyle(focused).backgroundColor === expected;
-        }),
-      )
-      .toBe(true);
+      const style = getComputedStyle(focused);
+      return { duration: style.transitionDuration, matches: style.backgroundColor === expected };
+    });
+    expect(feedback).toEqual({ duration: '0s', matches: true });
   });
 
   test('emits an empty active-change when the query matches nothing', async ({ page, refinePage }) => {

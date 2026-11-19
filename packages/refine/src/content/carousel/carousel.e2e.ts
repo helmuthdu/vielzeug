@@ -114,6 +114,81 @@ test.describe('Autoplay', () => {
 });
 
 test.describe('Touch navigation', () => {
+  test('wraps in both directions without animating offscreen slides across the settled slide', async ({
+    page,
+    refinePage,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await refinePage.mountComponent(covers);
+    for (const [distance, index] of [
+      [100, '2'],
+      [-100, '0'],
+    ] as const) {
+      await swipe(page, distance);
+      await expect(page.locator('ore-carousel')).toHaveAttribute('slide-index', index);
+      await expect(page.locator('[data-dragging]')).toHaveCount(0);
+      const transitions = await page
+        .locator('ore-carousel-slide')
+        .evaluateAll((slides) => slides.flatMap((slide) => slide.getAnimations()).length);
+      expect(transitions).toBe(0);
+    }
+  });
+
+  test('follows a drag before release and springs a bounded edge pull back to rest', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await refinePage.mountComponent(covers.replace('label="Cover selection"', 'label="Cover selection" loop="false"'));
+    const carousel = page.locator('ore-carousel');
+    const slide = page.locator('ore-carousel-slide').first();
+    const bounds = (await carousel.boundingBox())!;
+    const resting = (await slide.boundingBox())!;
+    const x = bounds.x + bounds.width / 2;
+    const y = bounds.y + bounds.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 200, y, { steps: 4 });
+    const pulled = (await slide.boundingBox())!.x - resting.x;
+    expect(pulled).toBeGreaterThan(12);
+    expect(pulled).toBeLessThan(76);
+    await page.mouse.up();
+    const releasePeak = await slide.evaluate(async (element, start) => {
+      let peak = 0;
+      for (let frame = 0; frame < 20; frame++) {
+        await new Promise(requestAnimationFrame);
+        peak = Math.max(peak, element.getBoundingClientRect().x - start);
+      }
+      return peak;
+    }, resting.x);
+    expect(releasePeak).toBeLessThan(76);
+    await expect(slide).not.toHaveAttribute('data-dragging');
+    await expect(carousel).toHaveAttribute('slide-index', '0');
+    expect(Math.abs((await slide.boundingBox())!.x - resting.x)).toBeLessThan(1);
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x - 80, y, { steps: 4 });
+    expect((await slide.boundingBox())!.x - resting.x).toBeCloseTo(-80, 0);
+    await page.mouse.up();
+    await expect(carousel).toHaveAttribute('slide-index', '1');
+    await expect(page.locator('ore-carousel-slide[data-dragging]')).toHaveCount(0);
+    const active = page.locator('ore-carousel-slide[data-active]');
+    expect(Math.abs((await active.boundingBox())!.x - resting.x)).toBeLessThan(1);
+  });
+
+  for (const layout of ['rtl', 'vertical'] as const) {
+    test(`settles ${layout} drags immediately under reduced motion`, async ({ page, refinePage }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await refinePage.mountComponent(
+        covers.replace(
+          'label="Cover selection"',
+          `label="Cover selection" ${layout === 'rtl' ? 'dir="rtl"' : 'orientation="vertical"'}`,
+        ),
+      );
+      await swipe(page, layout === 'rtl' ? 100 : 0, layout === 'vertical' ? -100 : 0);
+      await expect(page.locator('ore-carousel')).toHaveAttribute('slide-index', '1');
+      await expect(page.locator('[data-dragging]')).toHaveCount(0);
+    });
+  }
+
   test('swipes over cover buttons without firing a selection click, then permits a tap', async ({
     page,
     refinePage,
