@@ -4,6 +4,7 @@ import { table, VaultError } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
 
 import type { BoardShape } from './board.ts';
+import type { EncounterState, FogData, Unit } from './encounter.ts';
 import type { FlowEdge, FlowNode } from './flow.ts';
 
 /**
@@ -16,8 +17,12 @@ import type { FlowEdge, FlowNode } from './flow.ts';
 /** The user's light/dark/system choice, kept next to the scenes it decorates. */
 export type ThemeRow = { id: 'theme'; theme: ThemePreference };
 
+/** The encounter scene is a single row: whole state plus its fog twin. */
+export type EncounterRow = { fog: FogData; id: 'encounter'; state: EncounterState };
+
 const studioSchema = {
   boardShapes: table<BoardShape, 'id'>('id'),
+  encounter: table<EncounterRow, 'id'>('id'),
   flowEdges: table<FlowEdge, 'id'>('id'),
   flowNodes: table<FlowNode, 'id'>('id'),
   preferences: table<ThemeRow, 'id'>('id'),
@@ -114,6 +119,50 @@ function parseFlowEdge(value: unknown): FlowEdge {
   return { from: parseEndpoint(value.from), id: str(value.id, 'id'), to: parseEndpoint(value.to) };
 }
 
+function parseCell(value: unknown, field: string): { q: number; r: number } {
+  if (!isRecord(value)) throw new VaultError(`studio: ${field} must be an object`);
+  return { q: num(value.q, `${field}.q`), r: num(value.r, `${field}.r`) };
+}
+
+function parseEncounterRow(value: unknown): EncounterRow {
+  if (!isRecord(value)) throw new VaultError('studio: encounter row must be an object');
+  if (str(value.id, 'id') !== 'encounter') throw new VaultError('studio: encounter row id must be "encounter"');
+  const state = value.state;
+  if (!isRecord(state)) throw new VaultError('studio: encounter needs a state');
+  const grid = state.grid;
+  if (grid !== 'hex' && grid !== 'square') throw new VaultError('studio: encounter grid is invalid');
+  if (!Array.isArray(state.blocked) || !state.blocked.every((key) => typeof key === 'string')) {
+    throw new VaultError('studio: encounter blocked must be string keys');
+  }
+  if (!Array.isArray(state.units)) throw new VaultError('studio: encounter needs units');
+  const units: Unit[] = state.units.map((raw: unknown) => {
+    if (!isRecord(raw)) throw new VaultError('studio: encounter unit must be an object');
+    const team = raw.team;
+    if (team !== 'hero' && team !== 'enemy') throw new VaultError('studio: encounter unit team is invalid');
+    const cell = parseCell(raw, 'unit');
+    return {
+      ...(typeof raw.catalogId === 'string' && raw.catalogId.length > 0 ? { catalogId: raw.catalogId } : {}),
+      ...(typeof raw.modified === 'boolean' ? { modified: raw.modified } : {}),
+      id: str(raw.id, 'unit.id'),
+      move: num(raw.move, 'unit.move'),
+      name: str(raw.name, 'unit.name'),
+      q: cell.q,
+      r: cell.r,
+      range: num(raw.range, 'unit.range'),
+      team,
+    };
+  });
+  const fog = value.fog;
+  if (!isRecord(fog) || typeof fog.enabled !== 'boolean') throw new VaultError('studio: encounter needs fog');
+  const seen = Array.isArray(fog.seen) ? fog.seen.filter((key): key is string => typeof key === 'string') : [];
+  const visible = Array.isArray(fog.visible) ? fog.visible.filter((key): key is string => typeof key === 'string') : [];
+  return {
+    fog: { enabled: fog.enabled, seen, visible },
+    id: 'encounter',
+    state: { blocked: state.blocked as string[], grid, units },
+  };
+}
+
 const THEME_VALUES: readonly ThemePreference[] = ['dark', 'light', 'system'];
 
 function parseThemeRow(value: unknown): ThemeRow {
@@ -137,6 +186,7 @@ export function createStudioStore(): StudioStore {
     name: 'vielzeug-studio',
     parsers: {
       boardShapes: { parse: parseBoardShape },
+      encounter: { parse: parseEncounterRow },
       flowEdges: { parse: parseFlowEdge },
       flowNodes: { parse: parseFlowNode },
       preferences: { parse: parseThemeRow },
@@ -145,7 +195,12 @@ export function createStudioStore(): StudioStore {
   });
   return Object.assign(store, {
     async wipe(): Promise<void> {
-      await Promise.all([store.clear('boardShapes'), store.clear('flowEdges'), store.clear('flowNodes')]);
+      await Promise.all([
+        store.clear('boardShapes'),
+        store.clear('encounter'),
+        store.clear('flowEdges'),
+        store.clear('flowNodes'),
+      ]);
     },
   });
 }
@@ -241,6 +296,10 @@ export function studioStore(): StudioStore {
 
 export function createBoardPersistence(store: StudioStore): ScenePersistence<BoardShape> {
   return createScenePersistence<BoardShape>(store, 'boardShapes');
+}
+
+export function createEncounterPersistence(store: StudioStore): ScenePersistence<EncounterRow> {
+  return createScenePersistence<EncounterRow>(store, 'encounter');
 }
 
 export function createFlowPersistence(store: StudioStore): {

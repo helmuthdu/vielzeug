@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { advanceIdCounter, createBoardPersistence, createFlowPersistence, createStudioStore } from '../persist.ts';
+import type { EncounterRow } from '../persist.ts';
+import {
+  advanceIdCounter,
+  createBoardPersistence,
+  createEncounterPersistence,
+  createFlowPersistence,
+  createStudioStore,
+} from '../persist.ts';
 
 function rect(id: string, x = 0) {
   return { height: 40, id, kind: 'rect' as const, width: 60, x, y: 10 };
@@ -95,6 +102,63 @@ describe('scene persistence', () => {
       expect(await flow.nodes.load()).toEqual([node]);
       expect(await flow.edges.load()).toEqual([edge]);
     });
+  });
+});
+
+function encounterRow(): EncounterRow {
+  return {
+    fog: { enabled: false, seen: [], visible: [] },
+    id: 'encounter',
+    state: {
+      blocked: ['1:0'],
+      grid: 'hex',
+      units: [{ id: 'e1', move: 3, name: 'Brute', q: 2, r: 1, range: 1, team: 'enemy' }],
+    },
+  };
+}
+
+describe('encounter persistence', () => {
+  it('round-trips the encounter row', async () => {
+    const store = createStudioStore();
+    const persistence = createEncounterPersistence(store);
+    persistence.flush([encounterRow()]);
+    await vi.waitFor(async () => expect(await persistence.load()).toEqual([encounterRow()]));
+  });
+
+  it('keeps the class and modified flag on a unit across a reload', async () => {
+    const store = createStudioStore();
+    const persistence = createEncounterPersistence(store);
+    const base = encounterRow();
+    const row: EncounterRow = {
+      ...base,
+      state: { ...base.state, units: [{ ...base.state.units[0], catalogId: 'brute', modified: true }] },
+    };
+    persistence.flush([row]);
+    await vi.waitFor(async () => expect(await persistence.load()).toEqual([row]));
+  });
+
+  it('rejects a row whose unit team is invalid', async () => {
+    const store = createStudioStore();
+    await expect(
+      store.put('encounter', {
+        fog: { enabled: false, seen: [], visible: [] },
+        id: 'encounter',
+        state: {
+          blocked: [],
+          grid: 'square',
+          units: [{ id: 'x', move: 1, name: 'X', q: 0, r: 0, range: 1, team: 'neutral' }],
+        },
+      } as never),
+    ).rejects.toThrow();
+  });
+
+  it('wipe drops the encounter table too', async () => {
+    const store = createStudioStore();
+    const persistence = createEncounterPersistence(store);
+    persistence.flush([encounterRow()]);
+    await vi.waitFor(async () => expect((await persistence.load()).length).toBe(1));
+    await store.wipe();
+    expect(await persistence.load()).toEqual([]);
   });
 });
 
