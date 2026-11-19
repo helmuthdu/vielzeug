@@ -1,4 +1,4 @@
-import { restoreFocus } from '@vielzeug/focus';
+import { createDismissal, restoreFocus } from '@vielzeug/focus';
 import { computed, type Readable, signal } from '@vielzeug/ripple';
 
 import { RefineConfigError } from '../errors';
@@ -8,7 +8,7 @@ import {
   type ListNavigationChange,
   type ListNavigationTypeaheadOptions,
 } from './nav';
-import { createOutsidePointerDismissal, type DropdownCloseReason, type OverlayOpenReason } from './overlay';
+import type { DropdownCloseReason, OverlayOpenReason } from './overlay';
 import { createDropdownPositioner, type DropdownPositionerOptions } from './positioner';
 
 export type ListboxItem = object;
@@ -146,11 +146,11 @@ export const createListboxDropdown = <T extends ListboxItem>(
     else open(openReason);
   };
 
-  createOutsidePointerDismissal({
+  createDismissal({
     getTargets: () => [options.getBoundary(), options.getPanel()],
-    host: options.getBoundary(),
     isActive: () => isOpen.value,
     onDismiss: () => close('outsideClick'),
+    ownerDocument: options.getBoundary()?.ownerDocument,
     signal: options.signal,
   });
 

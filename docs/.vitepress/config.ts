@@ -996,6 +996,8 @@ export default defineConfig({
             { link: '/focus/usage#add-typeahead', text: 'Add Typeahead' },
             { link: '/focus/usage#navigate-grids', text: 'Navigate Grids' },
             { link: '/focus/usage#browse-card-grids-with-quick-look', text: 'Browse Card Grids with Quick Look' },
+            { link: '/focus/usage#dismiss-a-floating-surface', text: 'Dismiss a Floating Surface' },
+            { link: '/focus/usage#announce-to-screen-readers', text: 'Announce to Screen Readers' },
             { link: '/focus/usage#restore-focus', text: 'Restore Focus' },
             { link: '/focus/usage#framework-integration', text: 'Framework Integration' },
             { link: '/focus/usage#integrate-with-keymap', text: 'Integrate with Keymap' },
@@ -1019,6 +1021,7 @@ export default defineConfig({
           items: [
             { link: '/focus/examples/roving-tabs-keyboard-navigation', text: 'Roving Tabs Keyboard Navigation' },
             { link: '/focus/examples/dialog-return-focus-restoration', text: 'Dialog Return Focus Restoration' },
+            { link: '/focus/examples/custom-popup-list', text: 'Custom Popup List' },
           ],
           link: '/focus/examples',
           text: 'Examples',

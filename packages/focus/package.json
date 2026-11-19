@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/focus",
   "version": "26.11.26",
-  "description": "Framework-neutral list navigation and focus restoration primitives",
+  "description": "Framework-neutral dismissal, live-region announcements, list navigation and focus restoration primitives",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

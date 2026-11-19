@@ -1,6 +1,6 @@
+import { announce } from '@vielzeug/focus';
 import { define, getHost, html, prop } from '@vielzeug/ore';
 import { watch } from '@vielzeug/ripple';
-import { announce } from '../../core';
 import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
@@ -22,7 +22,7 @@ export type OreTypingIndicatorProps = {
  * use `ore-chat-message`'s `streaming` attribute (a blinking cursor) instead.
  *
  * The dots are decorative (`aria-hidden`): `label` is the entire accessibility contract,
- * announced through the shared singleton live region (`core/announcer.ts`) rather than a
+ * announced through the shared singleton live region (`@vielzeug/focus` `announce()`) rather than a
  * static `aria-live` element in the template. A live region populated in the same paint as
  * its own insertion is unreliable across browsers/screen readers; routing through the shared
  * announcer (pre-existing region, clear-then-set, document-scoped) is the same pattern

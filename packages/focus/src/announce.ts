@@ -11,16 +11,12 @@
 // consecutive calls to the same politeness cancel pending writes so only the
 // last message survives. JavaScript cannot know when assistive technology
 // finishes speaking, so a queue would be dishonest.
-//
-// Usage:
-// ```ts
-// import { announce } from './announcer';
-// announce(`${selectedCount} items selected`);
-// announce('Error: field is required', { politeness: 'assertive' });
-// announce('Saved', { document: getHost().ownerDocument });
-// ```
 
-import { SR_ONLY_INLINE_STYLE } from '../styles';
+// Visually-hidden-but-accessible clipping, equivalent to a `.sr-only` class.
+// Inlined here so the announcer carries no stylesheet dependency.
+const SR_ONLY_INLINE_STYLE =
+  'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;' +
+  'white-space:nowrap;border-width:0;clip-path:inset(50%);';
 
 // ── Per-document live regions (WeakMap for automatic GC + test isolation) ────
 
@@ -38,6 +34,7 @@ const createRegion = (politeness: 'assertive' | 'polite', doc: Document): HTMLEl
   el.setAttribute('aria-live', politeness);
   el.setAttribute('aria-atomic', 'true');
   el.setAttribute('data-block-announcer', politeness);
+
   el.style.cssText = SR_ONLY_INLINE_STYLE;
 
   doc.body.appendChild(el);
@@ -81,9 +78,9 @@ export type AnnouncePoliteness = 'assertive' | 'polite';
 export type AnnounceOptions = {
   /**
    * The document whose `<body>` will host the visually-hidden live region.
-   * Defaults to the global `document`. Pass `getHost().ownerDocument` from
-   * inside a component that may live in an iframe to announce through the
-   * correct accessibility tree.
+   * Defaults to the global `document`. Pass `host.ownerDocument` from inside a
+   * component that may live in an iframe to announce through the correct
+   * accessibility tree.
    */
   document?: Document;
   /**
@@ -108,7 +105,7 @@ export type AnnounceOptions = {
  * ```ts
  * announce('3 results found');
  * announce('Session expired', { politeness: 'assertive' });
- * announce('Saved', { document: getHost().ownerDocument });
+ * announce('Saved', { document: host.ownerDocument });
  * ```
  */
 export const announce = (message: string, options: AnnounceOptions = {}): void => {

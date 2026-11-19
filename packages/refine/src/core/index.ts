@@ -5,8 +5,6 @@
  * encode component-specific Ore and Ripple behavior, not a stable public API.
  */
 
-// ── Live-region announcer ─────────────────────────────────────────────────────
-export { type AnnounceOptions, type AnnouncePoliteness, announce } from './announcer';
 // ── Cross-shadow-root ARIA relationships ──────────────────────────────────────
 export { type AriaReflectionProperty, setAriaReflection } from './aria-reflection';
 // ── Auto-resize ───────────────────────────────────────────────────────────────
@@ -80,15 +78,13 @@ export { toFiniteNumber, toFiniteNumberOr, toPositiveStep } from './numbers';
 // ── Ore adapter ───────────────────────────────────────────────────────────────
 export { lifecycleSignal } from './ore';
 // ── Overlay ──────────────────────────────────────────────────────────────────
-export {
-  createOutsidePointerDismissal,
-  type DialogCloseReason,
-  type DropdownCloseReason,
-  type OutsidePointerDismissalOptions,
-  type OverlayCloseDetail,
-  type OverlayOpenChangeDetail,
-  type OverlayOpenDetail,
-  type OverlayOpenReason,
+export type {
+  DialogCloseReason,
+  DropdownCloseReason,
+  OverlayCloseDetail,
+  OverlayOpenChangeDetail,
+  OverlayOpenDetail,
+  OverlayOpenReason,
 } from './overlay';
 // ── Ref callback ──────────────────────────────────────────────────────────────
 export { bindRefCallback, type RefCallback } from './ref-callback';

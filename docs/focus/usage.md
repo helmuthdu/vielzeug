@@ -127,6 +127,56 @@ grid.addEventListener('keydown', (event) => quickLook.handleKeydown(event));
 
 Leave `columns` unset to measure the rendered row length at the focused tile, which follows the grid's own responsive wrapping without a media query. Supply `getActiveIndex` when focus may sit on a wrapper around the item rather than the item itself. Enter keeps activating the focused tile through its own handler: only the preview key is intercepted. A pointer long-press recognizer is the touch counterpart of `onInspect`; pair them at the call site.
 
+## Dismiss a Floating Surface
+
+A popover, menu, or picker should close when the pointer begins outside it. `createDismissal()` reports that dismissal; the caller owns the open state:
+
+```ts
+import { createDismissal } from '@vielzeug/focus';
+
+let open = false;
+
+const dismissal = createDismissal({
+  getTargets: () => [trigger, panel],
+  isActive: () => open,
+  onDismiss: (reason) => {
+    if (reason === 'outsidePointer') setOpen(false);
+  },
+  ownerDocument: host.ownerDocument,
+  signal: controller.signal,
+});
+```
+
+The pointer check runs in the capture phase and matches against `composedPath()`, so a click inside a shadow root of a boundary element keeps the surface open. Pass `ownerDocument: host.ownerDocument` from code that may live in an iframe.
+
+Escape is opt-in. Enable it when nothing else in the surface owns the key:
+
+```ts
+createDismissal({
+  getTargets: () => [trigger, panel],
+  isActive: () => open,
+  onDismiss: () => setOpen(false),
+  escape: true,
+});
+```
+
+Escape-enabled dismissals in the same document share one listener, and only the most recently created active one closes per keypress, so stacked surfaces unwind newest-first. Components that already own Escape handling (dialogs, drawers) should leave `escape` unset.
+
+Dispose the handle when the surface's owner goes away, or abort its signal; disposal is idempotent and `using` is supported.
+
+## Announce to Screen Readers
+
+State changes that have no visible DOM change (selection counts, async results, errors) need a live region. `announce()` manages one per document and politeness:
+
+```ts
+import { announce } from '@vielzeug/focus';
+
+announce(`${results.length} results found`);
+announce('Upload failed', { politeness: 'assertive' });
+```
+
+Announcements use latest-value replacement: rapid consecutive calls to the same politeness cancel pending writes so only the last message is spoken. Reserve `assertive` for errors. Inside a component that may live in an iframe, pass `document: host.ownerDocument`.
+
 ## Restore Focus
 
 Capture focus before opening a transient surface, then invoke the one-shot restorer when it closes:
@@ -274,3 +324,5 @@ map.mount(document);
 - Capture return focus before opening transient surfaces.
 - Rescue focus after swaps that can unmount the focused element.
 - Remove the owning event listener when a widget unmounts.
+- Keep `escape` unset in `createDismissal()` when the surface already owns Escape handling.
+- Announce state changes that produce no visible DOM change; prefer `polite` and reserve `assertive` for errors.

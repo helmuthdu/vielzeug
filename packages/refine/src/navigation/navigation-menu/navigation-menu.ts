@@ -1,8 +1,8 @@
+import { createDismissal } from '@vielzeug/focus';
 import { createId, define, getHost, html, inject, onCleanup, onMounted, prop, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
-
 import type { OverlayOpenChangeDetail } from '../../core';
-import { createDropdownPositioner, createOutsidePointerDismissal, lifecycleSignal } from '../../core';
+import { createDropdownPositioner, lifecycleSignal } from '../../core';
 import { elementDirection } from '../../core/direction';
 import { NAVBAR_CTX } from '../../layout/navbar/_navbar-context';
 import { disablableBundle } from '../../shared';
@@ -432,11 +432,11 @@ define<OreNavigationMenuProps>(NAVIGATION_MENU_TAG, {
       originalPanelColumns.clear();
     });
 
-    createOutsidePointerDismissal({
+    createDismissal({
       getTargets: () => [host, activePanel],
-      host,
       isActive: () => activeValue.value !== null,
       onDismiss: () => requestActive(null, 'outsideClick'),
+      ownerDocument: host.ownerDocument,
       signal: abortSignal,
     });
 

@@ -1,9 +1,9 @@
+import { announce } from '@vielzeug/focus';
 import { createKeymap } from '@vielzeug/keymap';
 import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
-
-import { announce, createListControl, lifecycleSignal, parseOptionalBool } from '../../core';
+import { createListControl, lifecycleSignal, parseOptionalBool } from '../../core';
 import { animateReflow } from '../../reflow';
 import { overlayMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';

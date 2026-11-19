@@ -7,3 +7,4 @@ description: Worked examples for @vielzeug/focus.
 
 - [Roving Tabs Keyboard Navigation](./examples/roving-tabs-keyboard-navigation.md)
 - [Dialog Return Focus Restoration](./examples/dialog-return-focus-restoration.md)
+- [Custom Popup List](./examples/custom-popup-list.md)

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add behavior-first composition rule and verification checklist to the vielzeug skill",
+      "packageName": "@vielzeug/codex",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

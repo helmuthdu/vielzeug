@@ -1,28 +1,93 @@
 ---
 title: 'Focus: API Reference'
-description: API reference for @vielzeug/focus navigation and restoration primitives.
+description: API reference for @vielzeug/focus dismissal, announcement, navigation and restoration primitives.
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol                   | Purpose                                                         | Execution mode | Common gotcha                                                      |
-| ------------------------ | --------------------------------------------------------------- | -------------- | ------------------------------------------------------------------ |
-| `createListNavigation()` | Build keyboard navigation for composite widgets                 | Sync           | Apply returned changes to DOM focus                                |
-| `createGridNavigation()` | Build two-dimensional arrow-key navigation for grids            | Sync           | Columns resolve per navigation: responsive grids need a getter     |
-| `createQuickLookGrid()`  | Build arrow-key tile browsing with a preview key for card grids | Sync           | The preview key consumes Space: the focused button never activates |
-| `restoreFocus()`         | Restore focus to a target or fallback                           | Sync           | Returns `false` when neither target can receive focus              |
-| `rescueFocus()`          | Re-home focus after the focused element unmounts                | Sync           | Returns `false` when focus is already on a real element            |
-| `captureFocus()`         | Capture active focus for one later restoration                  | Sync           | The returned function is one-shot                                  |
+| Symbol                   | Purpose                                                         | Execution mode | Common gotcha                                                        |
+| ------------------------ | --------------------------------------------------------------- | -------------- | -------------------------------------------------------------------- |
+| `createDismissal()`      | Dismiss a floating surface on outside pointer or Escape         | Sync           | Escape is opt-in; per document only the newest active surface closes |
+| `announce()`             | Announce a message to screen readers via a live region          | Debounced sync | Latest-value replacement: rapid calls keep only the last message     |
+| `createListNavigation()` | Build keyboard navigation for composite widgets                 | Sync           | Apply returned changes to DOM focus                                  |
+| `createGridNavigation()` | Build two-dimensional arrow-key navigation for grids            | Sync           | Columns resolve per navigation: responsive grids need a getter       |
+| `createQuickLookGrid()`  | Build arrow-key tile browsing with a preview key for card grids | Sync           | The preview key consumes Space: the focused button never activates   |
+| `restoreFocus()`         | Restore focus to a target or fallback                           | Sync           | Returns `false` when neither target can receive focus                |
+| `rescueFocus()`          | Re-home focus after the focused element unmounts                | Sync           | Returns `false` when focus is already on a real element              |
+| `captureFocus()`         | Capture active focus for one later restoration                  | Sync           | The returned function is one-shot                                    |
 
 ## Package Entry Point
 
-| Import            | Purpose                                           |
-| ----------------- | ------------------------------------------------- |
-| `@vielzeug/focus` | List navigation and focus restoration primitives. |
+| Import            | Purpose                                                          |
+| ----------------- | ---------------------------------------------------------------- |
+| `@vielzeug/focus` | Dismissal, announcements, list navigation and focus restoration. |
 
 ## Core Functions
+
+### `createDismissal()`
+
+```ts
+function createDismissal(options: DismissalOptions): Dismissal;
+```
+
+Dismisses an active floating surface when a pointer begins outside all of its boundary elements or, with `escape: true`, when `Escape` is pressed. The pointer check runs in the capture phase and matches against `composedPath()`, so clicks inside a shadow root of a boundary element keep the surface open. The factory reports that the surface should close; the caller owns the open state.
+
+| Parameter       | Type                    | Description                                                                             |
+| --------------- | ----------------------- | --------------------------------------------------------------------------------------- |
+| `getTargets`    | `() => Array<Element…>` | Boundary elements (trigger, panel, host), resolved per event; null entries are ignored. |
+| `isActive`      | `() => boolean`         | Whether the surface is open; dismissal is a no-op while inactive.                       |
+| `onDismiss`     | `(reason) => void`      | Called with `'outsidePointer'` or `'escape'` when the surface should close.             |
+| `escape`        | `boolean?`              | Also dismiss on `Escape` (default `false`).                                             |
+| `ownerDocument` | `Document?`             | Document whose listeners are used; pass `host.ownerDocument` for iframe-safe behavior.  |
+| `signal`        | `AbortSignal?`          | Aborting disposes the handle.                                                           |
+
+**Returns:** `Dismissal` with `dispose()`, `disposed`, and `[Symbol.dispose]`. Disposal is idempotent.
+
+**Example**
+
+```ts
+import { createDismissal } from '@vielzeug/focus';
+
+const dismissal = createDismissal({
+  getTargets: () => [trigger, panel],
+  isActive: () => open,
+  onDismiss: () => setOpen(false),
+  escape: true,
+  ownerDocument: host.ownerDocument,
+  signal: controller.signal,
+});
+```
+
+With `escape: true`, escape-enabled dismissals in the same document share one listener and only the most recently created active one closes per keypress, so stacked surfaces unwind newest-first. Components that own their Escape handling should leave `escape` unset.
+
+---
+
+### `announce()`
+
+```ts
+function announce(message: string, options?: AnnounceOptions): void;
+```
+
+Announces a message to screen readers through a lazily created, visually hidden live region in the target document's `<body>`. Uses latest-value replacement: rapid consecutive calls to the same politeness cancel pending writes so only the last message is spoken, and the clear-then-set pattern forces assistive technology to re-read even identical messages. No cleanup is needed.
+
+| Parameter            | Type                  | Description                                                             |
+| -------------------- | --------------------- | ----------------------------------------------------------------------- |
+| `message`            | `string`              | Text to announce.                                                       |
+| `options.document`   | `Document?`           | Document hosting the live region; pass `host.ownerDocument` in iframes. |
+| `options.politeness` | `AnnouncePoliteness?` | `'polite'` (default) or `'assertive'` for errors.                       |
+
+**Example**
+
+```ts
+import { announce } from '@vielzeug/focus';
+
+announce(`${results.length} results found`);
+announce('Upload failed', { politeness: 'assertive' });
+```
+
+---
 
 ### `createListNavigation()`
 
@@ -226,6 +291,30 @@ dialog.addEventListener('close', restore, { once: true });
 ## Types
 
 ```ts
+type DismissalReason = 'outsidePointer' | 'escape';
+
+type DismissalOptions = {
+  getTargets: () => Array<Element | null | undefined>;
+  isActive: () => boolean;
+  onDismiss: (reason: DismissalReason) => void;
+  escape?: boolean;
+  ownerDocument?: Document;
+  signal?: AbortSignal;
+};
+
+type Dismissal = {
+  dispose(): void;
+  readonly disposed: boolean;
+  [Symbol.dispose](): void;
+};
+
+type AnnouncePoliteness = 'assertive' | 'polite';
+
+type AnnounceOptions = {
+  document?: Document;
+  politeness?: AnnouncePoliteness;
+};
+
 type MaybeGetter<T> = T | (() => T);
 
 type ListNavigationAction = 'first' | 'last' | 'next' | 'prev';
@@ -336,7 +425,7 @@ type FocusRestorer = () => boolean;
 
 ## Errors
 
-| Error              | Trigger                                     | Notable properties                                                                                                                        |
-| ------------------ | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `FocusError`       | Base class for every focus-originated error | `instanceof FocusError` catches any focus error                                                                                           |
-| `FocusConfigError` | Invalid navigation configuration            | Extends `FocusError`. Thrown for a key assigned to two actions, a non-positive `typeahead.delayMs`, or grid `columns` resolving below `1` |
+| Error              | Trigger                                       | Notable properties                                                                                                                                                              |
+| ------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FocusError`       | Base class for every focus-originated error   | `instanceof FocusError` catches any focus error                                                                                                                                 |
+| `FocusConfigError` | Invalid navigation or dismissal configuration | Extends `FocusError`. Thrown for a key assigned to two actions, a non-positive `typeahead.delayMs`, grid `columns` resolving below `1`, or a missing `createDismissal()` option |
