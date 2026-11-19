@@ -116,12 +116,16 @@ describe('ore-button', () => {
   // text instead: a real browser is the correct place to verify the
   // resulting *rendering*, this only guards the source declaration itself.
   describe('Hover/active halo', () => {
-    it('hover/active rule declares both --_theme-shadow and --_theme-halo', () => {
-      const match = buttonCss.match(/\[part='button'\]:hover,\s*\[part='button'\]:active\s*{([^}]*)}/);
+    it('hover and active each declare both --_theme-shadow and --_theme-halo', () => {
+      const overrides = buttonCss.slice(buttonCss.lastIndexOf('@layer refine.overrides'));
 
-      expect(match).not.toBeNull();
-      expect(match?.[1]).toContain('--_theme-shadow');
-      expect(match?.[1]).toContain('--_theme-halo');
+      for (const state of ['hover', 'active']) {
+        const match = overrides.match(new RegExp(`\\[part='button'\\]:${state}\\s*{([^}]*)}`));
+
+        expect(match).not.toBeNull();
+        expect(match?.[1]).toContain('--_theme-shadow');
+        expect(match?.[1]).toContain('--_theme-halo');
+      }
     });
   });
 
@@ -166,13 +170,16 @@ describe('ore-button', () => {
       const focus = overrides.match(
         /\[part='button'\]:focus-visible,\s*\n\s*:host\(:focus-visible\) \[part='button'\]\s*{([^}]*)}/,
       );
-      const hover = overrides.match(/\[part='button'\]:hover,\s*\n\s*\[part='button'\]:active\s*{([^}]*)}/);
 
       // The ring is a token value, not an assigned box-shadow: see 'Focus ring'.
       expect(focus?.[1]).toContain('--_focus-shadow: var(--_theme-shadow), var(--_theme-halo)');
-      expect(hover?.[1]).toContain(
-        'var(--_resting-shadow), var(--_focus-shadow), var(--_theme-shadow), var(--_theme-halo)',
-      );
+      for (const state of ['hover', 'active']) {
+        const match = overrides.match(new RegExp(`\\[part='button'\\]:${state}\\s*{([^}]*)}`));
+
+        expect(match?.[1]).toContain(
+          'var(--_resting-shadow), var(--_focus-shadow), var(--_theme-shadow), var(--_theme-halo)',
+        );
+      }
     });
 
     it('the shared :active press keeps resting and focus shadows instead of replacing them', () => {

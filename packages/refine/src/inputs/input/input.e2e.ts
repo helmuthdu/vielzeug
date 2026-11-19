@@ -261,6 +261,82 @@ test.describe('Layout', () => {
 test.describe('Touch layout', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
 
+  test('preserves larger public font overrides while flooring smaller overrides', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-input size="sm" label="Input" style="--input-font-size: 24px"></ore-input>
+      <ore-textarea size="sm" label="Textarea" style="--textarea-font-size: 24px"></ore-textarea>
+      <ore-otp-input size="sm" label="Code" style="--otp-cell-font-size: 24px"></ore-otp-input>
+    `);
+    for (const selector of ['ore-input input', 'ore-textarea textarea', 'ore-otp-input input.cell']) {
+      await expect(page.locator(selector).first()).toHaveCSS('font-size', '24px');
+    }
+    await page.evaluate(() => {
+      for (const [tag, property] of [
+        ['ore-input', '--input-font-size'],
+        ['ore-textarea', '--textarea-font-size'],
+        ['ore-otp-input', '--otp-cell-font-size'],
+      ])
+        document.querySelector<HTMLElement>(tag)!.style.setProperty(property, '8px');
+    });
+    for (const selector of ['ore-input input', 'ore-textarea textarea', 'ore-otp-input input.cell']) {
+      await expect(page.locator(selector).first()).toHaveCSS('font-size', '16px');
+    }
+  });
+
+  for (const size of ['sm', 'md', 'lg'] as const) {
+    test(`floors native editors at 16 CSS pixels with smaller root and theme text, size=${size}`, async ({
+      page,
+      refinePage,
+    }) => {
+      await page.addStyleTag({ content: 'html { font-size: 14px; --text-base: 0.75rem; }' });
+      await refinePage.mountComponent(`
+      <ore-input label="Input" size="${size}"></ore-input>
+      <ore-textarea label="Textarea" size="${size}"></ore-textarea>
+      <ore-message-composer label="Message" size="${size}"></ore-message-composer>
+      <ore-otp-input label="Code" size="${size}"></ore-otp-input>
+      <ore-command-palette label="Commands"></ore-command-palette>
+    `);
+      const sizes = await page.evaluate(() => {
+        const targets = [
+          ['ore-input', 'input'],
+          ['ore-textarea', 'textarea'],
+          ['ore-message-composer', 'textarea'],
+          ['ore-otp-input', 'input.cell'],
+          ['ore-command-palette', 'input'],
+        ];
+        return targets.map(([tag, selector]) =>
+          Number.parseFloat(
+            getComputedStyle(document.querySelector(tag)!.shadowRoot!.querySelector(selector)!).fontSize,
+          ),
+        );
+      });
+      for (const size of sizes) expect(size).toBeGreaterThanOrEqual(16);
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = '32px';
+      });
+      await expect(page.locator('ore-input input')).toHaveCSS('font-size', '24px');
+      await expect(page.locator('ore-textarea textarea')).toHaveCSS('font-size', '24px');
+      await expect(page.locator('ore-message-composer textarea')).toHaveCSS('font-size', '24px');
+      await expect(page.locator('ore-otp-input input.cell').first()).toHaveCSS(
+        'font-size',
+        { lg: '48px', md: '40px', sm: '24px' }[size],
+      );
+      await expect(page.locator('ore-command-palette input')).toHaveCSS('font-size', '24px');
+    });
+  }
+
+  test('does not apply pointer-hover decoration on a non-hover device', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent('<ore-input label="Name"></ore-input>');
+    const field = page.locator('ore-input .field');
+    const resting = await field.evaluate((element) => getComputedStyle(element).borderTopColor);
+    await field.hover();
+    expect(await field.evaluate((element) => element.matches(':hover'))).toBe(true);
+    await expect(field).toHaveCSS('border-top-color', resting);
+    await page.locator('ore-input input').focus();
+    await expect.poll(() => field.evaluate((element) => getComputedStyle(element).borderTopColor)).not.toBe(resting);
+  });
+
   // iOS Safari zooms the whole page when a focused text control's computed font-size is
   // below 16 px (SC 1.4.4), so under a coarse pointer every size must render at the 16 px
   // floor. Regression coverage for the promotion being dead code: `touchTargetMixin` sat
