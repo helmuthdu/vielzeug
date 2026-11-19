@@ -262,15 +262,15 @@ Prevent interaction with specific items.
 
 ### CSS Custom Properties
 
-| Property                      | Description                                                                           | Default                    |
-| ----------------------------- | ------------------------------------------------------------------------------------- | -------------------------- |
-| `--accordion-item-bg`         | Item background color                                                                 | `transparent`              |
+| Property                      | Description                                                                                   | Default                    |
+| ----------------------------- | --------------------------------------------------------------------------------------------- | -------------------------- |
+| `--accordion-item-bg`         | Item background color                                                                         | `transparent`              |
 | `--accordion-item-radius`     | Item border radius; contained parents subtract their padding and border from the group radius | `var(--rounded-lg)`        |
-| `--accordion-item-padding`    | Item inner padding                                                                    | Size-dependent             |
-| `--accordion-item-transition` | Transition duration for expand/collapse animation                                     | `var(--transition-normal)` |
-| `--accordion-border-color`    | Container border color (solid/flat variants)                                          | Theme-dependent            |
-| `--accordion-divider-color`   | Divider color between items (text variant)                                            | Theme-dependent            |
-| `--accordion-shadow`          | Container box shadow                                                                  | Theme-dependent            |
+| `--accordion-item-padding`    | Item inner padding                                                                            | Size-dependent             |
+| `--accordion-item-transition` | Transition duration for expand/collapse animation                                             | `var(--transition-normal)` |
+| `--accordion-border-color`    | Container border color (solid/flat variants)                                                  | Theme-dependent            |
+| `--accordion-divider-color`   | Divider color between items (text variant)                                                    | Theme-dependent            |
+| `--accordion-shadow`          | Container box shadow                                                                          | Theme-dependent            |
 
 ## Accessibility
 

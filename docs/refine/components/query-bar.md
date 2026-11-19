@@ -240,7 +240,7 @@ These helpers return state without mutating the supplied object. `commitToken` r
 
 ## Field Variants
 
-The bar passes `variant`, `size`, and `rounded` through to its internal field. Without `rounded`, it shares the input's `--rounded-xl` default (12px at a 16px root); use `rounded="md"` to retain the previous 6px query-field shape. It supports `error`, `helper`, and `hide-label` like other inputs. The keyboard-accessible clear button appears only when `clearable` is set; it clears free text, never filters.
+The bar passes `variant`, `size`, and `rounded` through to its internal field. Without `rounded`, it shares the input's `--radius` default (8px at a 16px root); use `rounded="xl"` for the previous 12px shape. It supports `error`, `helper`, and `hide-label` like other inputs. The keyboard-accessible clear button appears only when `clearable` is set; it clears free text, never filters.
 
 Suggestion rows have a minimum height of `--query-bar-option-height` (`var(--size-11)` by default), and grow for long labels rather than using fixed-height positioning. The dropdown sizes to its content between `--query-bar-dropdown-min-width` (16rem, viewport-capped) and `--query-bar-dropdown-max-width` (28rem, viewport-capped). The secondary row and inline pills wrap with the available container width. On phones (coarse pointers below `40rem`), quick filters are hidden to keep the row compact — every quick filter duplicates its drawer control, so they stay reachable through **Filters**. `disabled` disables the field, clear action, filter entry, quick filters, and removals, and closes pending drawer edits.
 

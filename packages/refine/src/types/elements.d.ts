@@ -109,6 +109,7 @@ import type {
   OreNavigationMenuItemProps,
   OreNavigationMenuProps,
 } from '../navigation/navigation-menu/navigation-menu';
+import type { OreNavigationMenuLinkProps } from '../navigation/navigation-menu/navigation-menu-link';
 import type { OrePaginationEvents, OrePaginationProps } from '../navigation/pagination/pagination';
 import type { OreStepProps } from '../navigation/stepper/step';
 import type { OreStepperEvents, OreStepperProps } from '../navigation/stepper/stepper';
@@ -200,6 +201,7 @@ export interface RefineElementMap {
   'ore-navbar-item': HTMLElement & OreNavbarItemProps;
   'ore-navigation-menu': HTMLElement & OreNavigationMenuProps & AddEventListeners<OreNavigationMenuEvents>;
   'ore-navigation-menu-item': HTMLElement & OreNavigationMenuItemProps;
+  'ore-navigation-menu-link': HTMLElement & OreNavigationMenuLinkProps;
   'ore-navigation-menu-panel': HTMLElement;
   'ore-number-input': HTMLElement & OreNumberInputProps & FormValidityMethods & AddEventListeners<OreNumberInputEvents>;
   'ore-otp-input': HTMLElement & OreOtpInputProps & AddEventListeners<OreOtpInputEvents>;

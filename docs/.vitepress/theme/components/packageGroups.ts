@@ -114,23 +114,4 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
       { id: 'rune', tagline: 'Structured logging' },
     ],
   },
-];
-
-const packageGroupsById = new Map(PACKAGE_GROUPS.map((group) => [group.id, group] as const));
-
-const requirePackageGroup = (id: string): PackageGroup => {
-  const group = packageGroupsById.get(id);
-  if (!group) {
-    throw new Error(`Unknown package group: ${id}`);
-  }
-  return group;
-};
-
-// Explicit navbar column layout: keeps each column balanced as packages are added.
-// Columns render left-to-right; the menu's CSS grid places them in order.
-export const NAVBAR_COLUMNS: PackageGroup[][] = [
-  [requirePackageGroup('foundations'), requirePackageGroup('data')], // Foundations · Data & Formats
-  [requirePackageGroup('connectivity'), requirePackageGroup('domain')], // Network & Sync · Forms & Domain Logic
-  [requirePackageGroup('runtime'), requirePackageGroup('interaction')], // Runtime & Architecture · Interaction
-  [requirePackageGroup('ui'), requirePackageGroup('devtools')], // UI Components · Developer Tools
-];
+].sort((groupA, groupB) => groupB.packages.length - groupA.packages.length);

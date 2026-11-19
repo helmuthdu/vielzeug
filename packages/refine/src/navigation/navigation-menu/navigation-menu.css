@@ -13,4 +13,20 @@
     gap: var(--navigation-menu-trigger-gap, var(--size-1));
     align-items: center;
   }
+
+  :host([data-inline]) {
+    display: block;
+    width: 100%;
+  }
+
+  :host([data-inline]) .triggers {
+    flex-direction: column;
+    gap: var(--size-0);
+    align-items: stretch;
+  }
+
+  :host([data-inline]) ::slotted(ore-navigation-menu-item),
+  :host([data-inline]) ::slotted(ore-navigation-menu-panel) {
+    width: 100%;
+  }
 }

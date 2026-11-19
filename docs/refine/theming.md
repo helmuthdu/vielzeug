@@ -244,8 +244,8 @@ Choose corner shapes by the control's role and its relationship to nearby surfac
 
 ### Choosing a Shape
 
-- Keep related standalone controls consistent. Buttons, input fields, textareas, OTP cells, file dropzones, and attached button-group exteriors use `--rounded-xl` by default (12px at a 16px root). Selects, comboboxes, number inputs, query bars, and date/time pickers inherit the input default. Enclosed variants share this shape; the underline-style `text` input retains square edges. Density does not select a different radius.
-- Keep the radius scale stable: `--rounded-lg` remains 8px and `--rounded-xl` remains 12px at a 16px root. Use `rounded="lg"` where supported, or the documented component radius property, to retain the previous 8px control shape. This control default does not change cards, tabs, accordions, small affordances, or branded app-store badges.
+- Keep related standalone controls consistent. Buttons, input fields, textareas, OTP cells, file dropzones, attached button-group exteriors, calendars, and select and date/time picker panels use `--radius` by default, which resolves to `--rounded-lg` (8px at a 16px root). Comboboxes, number inputs, and query bars inherit the input default. Enclosed variants share this shape; the underline-style `text` input retains square edges. Density does not select a different radius.
+- Keep the radius scale stable: `--rounded-lg` remains 8px and `--rounded-xl` remains 12px at a 16px root. Set `--radius: var(--rounded-xl)` to restore the previous control shape across a theme, or use `rounded="xl"` where supported for one control. This does not change cards, tabs, accordions, small affordances, or branded app-store badges.
 - Choose container radii for the surrounding composition. A larger surface may use a larger radius, but size alone does not require it.
 - Use `rounded="full"` on components that support it when a capsule is intentional, such as a filter or a prominent standalone action. Use `--rounded-full` for CSS customizations. Equal width and height produce a circle; non-square controls produce a capsule.
 - Keep joined edges square. Round only the exposed outside corners of a segmented control or a grouped accordion. Respect writing direction when identifying the outside edges.
@@ -260,7 +260,7 @@ On components that expose `rounded`, the attribute selects a theme token through
 <ore-copy-command rounded="lg" style="--copy-command-radius: var(--rounded-xl)" value="bun install"></ore-copy-command>
 ```
 
-Changing the scale changes every component that uses those tokens. Prefer a component-specific property when only one control needs a different shape.
+Changing the scale changes every component that uses those tokens. Override `--radius` on `:root` or a shared ancestor to change the control family without changing the scale. Prefer a component-specific property when only one control needs a different shape.
 
 ### Nested and Joined Surfaces
 
@@ -407,20 +407,21 @@ One shared, monotonic stacking scale for an entire page: sticky headers, dropdow
 
 The scale is rem-based except for the full-round sentinel. Pixel equivalents assume a 16px root font size; they scale with the user's root font size.
 
-| Token            | Value      | Equivalent     |
-| ---------------- | ---------- | -------------- |
-| `--rounded-none` | `0`        | 0px            |
-| `--rounded-xs`   | `0.125rem` | 2px            |
-| `--rounded-sm`   | `0.25rem`  | 4px            |
-| `--rounded`      | `0.25rem`  | 4px            |
-| `--rounded-md`   | `0.375rem` | 6px            |
-| `--rounded-lg`   | `0.5rem`   | 8px            |
-| `--rounded-xl`   | `0.75rem`  | 12px           |
-| `--rounded-2xl`  | `1rem`     | 16px           |
-| `--rounded-3xl`  | `1.5rem`   | 24px           |
-| `--rounded-full` | `9999px`   | Pill or circle |
+| Token            | Value               | Equivalent                           |
+| ---------------- | ------------------- | ------------------------------------ |
+| `--rounded-none` | `0`                 | 0px                                  |
+| `--rounded-xs`   | `0.125rem`          | 2px                                  |
+| `--rounded-sm`   | `0.25rem`           | 4px                                  |
+| `--rounded`      | `0.25rem`           | 4px (same default as `--rounded-sm`) |
+| `--rounded-md`   | `0.375rem`          | 6px                                  |
+| `--rounded-lg`   | `0.5rem`            | 8px                                  |
+| `--rounded-xl`   | `0.75rem`           | 12px                                 |
+| `--rounded-2xl`  | `1rem`              | 16px                                 |
+| `--rounded-3xl`  | `1.5rem`            | 24px                                 |
+| `--rounded-full` | `9999px`            | Pill or circle                       |
+| `--radius`       | `var(--rounded-lg)` | 8px control default                  |
 
-`--rounded-xs` is available as a CSS token, but is not a shared `rounded` attribute value. Check each component's reference for its supported attributes.
+`--rounded` is a legacy alias by value, not a live reference: overriding `--rounded-sm` does not change it. `--rounded-xs` is available as a CSS token, but is not a shared `rounded` attribute value. Check each component's reference for its supported attributes.
 
 ### Typography
 

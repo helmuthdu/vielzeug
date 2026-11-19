@@ -5,7 +5,7 @@
 
   :host {
     --group-gap: var(--target-gap-bezel);
-    --_radius: var(--rounded-xl);
+    --_radius: var(--radius);
     --group-radius: var(--_radius);
     display: inline-flex;
   }

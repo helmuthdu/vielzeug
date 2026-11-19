@@ -313,7 +313,7 @@ The calendar panel maintains a stable size across all three views: day view rese
 | --------------------------------- | ---------------------- | ------------------------------------------------------ |
 | `--calendar-bg`                   | `--color-canvas`       | Calendar background colour                             |
 | `--calendar-border-color`         | `--color-contrast-200` | Calendar border colour                                 |
-| `--calendar-radius`               | `--rounded-xl`         | Calendar border radius                                 |
+| `--calendar-radius`               | `--radius`             | Calendar border radius                                 |
 | `--calendar-shadow`               | `--shadow-md`          | Calendar drop shadow                                   |
 | `--calendar-day-selected-bg`      | theme base color       | Background of the selected day cell                    |
 | `--calendar-day-today-color`      | theme base color       | Color of today's date number                           |

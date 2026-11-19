@@ -37,17 +37,18 @@ test.describe('Accessibility', () => {
 });
 
 test.describe('Layout', () => {
-  test('uses softer corners independently of size and variant', async ({ page, refinePage }) => {
+  test('uses the control radius independently of size and variant', async ({ page, refinePage }) => {
     const cases = [
-      { attrs: '', radius: '12px' },
-      { attrs: 'size="sm" variant="flat"', radius: '12px' },
-      { attrs: 'size="lg" variant="frost"', radius: '12px' },
+      { attrs: '', radius: '8px' },
+      { attrs: 'size="sm" variant="flat"', radius: '8px' },
+      { attrs: 'size="lg" variant="frost"', radius: '8px' },
       { attrs: 'variant="text"', radius: '0px' },
-      { attrs: 'rounded="lg"', radius: '8px' },
+      { attrs: 'rounded="xl"', radius: '12px' },
       { attrs: 'rounded="none"', radius: '0px' },
       { attrs: 'rounded="full"', radius: '9999px' },
       { attrs: 'style="--input-radius: var(--rounded-2xl)"', radius: '16px' },
-      { attrs: 'style="--rounded-xl: 1rem"', radius: '16px' },
+      { attrs: 'style="--radius: var(--rounded-xl)"', radius: '12px' },
+      { attrs: 'style="--rounded-xl: 1rem"', radius: '8px' },
     ];
 
     await refinePage.mountComponent(
@@ -73,15 +74,38 @@ test.describe('Layout', () => {
       tags
         .flatMap((tag) => [
           `<${tag} id="${tag}-default" label="Value"></${tag}>`,
-          `<${tag} id="${tag}-explicit" label="Value" rounded="lg"></${tag}>`,
+          `<${tag} id="${tag}-explicit" label="Value" rounded="xl"></${tag}>`,
         ])
         .join(''),
     );
 
     for (const tag of tags) {
-      await expect(page.locator(`#${tag}-default ore-input [part="field"]`).first()).toHaveCSS('border-radius', '12px');
-      await expect(page.locator(`#${tag}-explicit ore-input [part="field"]`).first()).toHaveCSS('border-radius', '8px');
+      await expect(page.locator(`#${tag}-default ore-input [part="field"]`).first()).toHaveCSS('border-radius', '8px');
+      await expect(page.locator(`#${tag}-explicit ore-input [part="field"]`).first()).toHaveCSS(
+        'border-radius',
+        '12px',
+      );
     }
+  });
+
+  test('a scoped control radius changes fields and panels without reshaping cards', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<div style="--radius: var(--rounded-xl)">' +
+        '<ore-card id="surface">Surface</ore-card>' +
+        '<ore-input id="field" label="Name"></ore-input>' +
+        '<ore-calendar id="calendar"></ore-calendar>' +
+        '<ore-select id="select" label="Choice"></ore-select>' +
+        '<ore-date-picker id="date" label="Date"></ore-date-picker>' +
+        '<ore-time-picker id="time" label="Time"></ore-time-picker>' +
+        '</div>',
+    );
+
+    await expect(page.locator('#field [part="field"]')).toHaveCSS('border-radius', '12px');
+    await expect(page.locator('#calendar .calendar')).toHaveCSS('border-radius', '12px');
+    await expect(page.locator('#select .dropdown')).toHaveCSS('border-radius', '12px');
+    await expect(page.locator('#date .calendar')).toHaveCSS('border-radius', '12px');
+    await expect(page.locator('#time .dropdown')).toHaveCSS('border-radius', '12px');
+    await expect(page.locator('#surface [part="card"]')).toHaveCSS('border-radius', '8px');
   });
 
   test('honors the documented input color override', async ({ page, refinePage }) => {

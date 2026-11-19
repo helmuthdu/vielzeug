@@ -57,7 +57,9 @@ describe('ore-media-navigation', () => {
 
     expect(fixture.element.hasAttribute('hidden')).toBe(false);
     expect(fixture.element.shadowRoot?.querySelector('.controls')?.hasAttribute('hidden')).toBe(false);
-    expect(fixture.element.shadowRoot?.querySelector('slot[name="actions"]')?.assignedElements()).toHaveLength(1);
+    expect(
+      fixture.element.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="actions"]')?.assignedElements(),
+    ).toHaveLength(1);
     expect(fixture.element.shadowRoot?.querySelector('.nav-buttons')?.hasAttribute('hidden')).toBe(true);
   });
 

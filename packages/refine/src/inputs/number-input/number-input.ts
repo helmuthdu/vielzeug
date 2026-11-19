@@ -1,6 +1,6 @@
 import { clamp } from '@vielzeug/arsenal';
-import { bind, define, getHost, html, onElement, prop, ref, watchEffect } from '@vielzeug/ore';
-import { computed, watch as rippleWatch, signal } from '@vielzeug/ripple';
+import { bind, define, getHost, html, onElement, prop, ref } from '@vielzeug/ore';
+import { computed, effect, watch as rippleWatch, signal } from '@vielzeug/ripple';
 import { createSpinnerControl } from '../../core';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { disabledLoadingMixin } from '../../styles';
@@ -146,7 +146,6 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
   },
   setup(props) {
     const el = getHost();
-    const watch = watchEffect;
 
     // `loading` behaves like a temporary `disabled`: see ore-input's identical computation.
     const isDisabled = computed(() => props.disabled.value || props.loading.value);
@@ -254,7 +253,7 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
         rawInput.removeEventListener('input', handleInput);
       };
 
-      stopAriaWatch = watch(() => {
+      const ariaEffect = effect(() => {
         const now = parseValue();
 
         if (now == null) rawInput.removeAttribute('aria-valuenow');
@@ -269,6 +268,7 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
         if (isReadonly.value) rawInput.setAttribute('aria-readonly', 'true');
         else rawInput.removeAttribute('aria-readonly');
       });
+      stopAriaWatch = () => ariaEffect.dispose();
 
       // Fire user ref callback
       props.ref.value?.(rawInput);

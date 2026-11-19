@@ -14,7 +14,7 @@ export type OverlayOpenReason = 'click' | 'contextmenu' | 'focus' | 'hover' | 'k
 /** Close reasons valid for modal dialogs (includes 'swipe' for drawer). */
 export type DialogCloseReason = 'escape' | 'outsideClick' | 'programmatic' | 'swipe' | 'trigger';
 /** Close reasons valid for dropdown overlays (no swipe). */
-export type DropdownCloseReason = Exclude<DialogCloseReason, 'swipe'> | 'select';
+export type DropdownCloseReason = Exclude<DialogCloseReason, 'swipe'> | 'focusout' | 'select';
 
 /** Detail shape for overlay open events emitted by components. */
 export type OverlayOpenDetail = { reason: OverlayOpenReason };

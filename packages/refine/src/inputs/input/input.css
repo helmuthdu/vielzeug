@@ -10,7 +10,7 @@
     --_padding: var(--input-padding, var(--size-1-5) var(--size-3));
     --_label-block-inset: var(--input-label-block-inset, var(--size-2));
     --_label-inset: var(--input-label-inset, var(--size-3));
-    --_radius: var(--input-radius, var(--rounded-xl));
+    --_radius: var(--input-radius, var(--radius));
     --_placeholder: var(--input-placeholder-color, var(--color-contrast-500));
     --_bg: var(--input-bg, var(--color-contrast-100));
     --_border-color: var(--input-border-color, var(--color-contrast-300));

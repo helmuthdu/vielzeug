@@ -3,7 +3,7 @@
     --_cell-size: var(--otp-cell-size, var(--size-12));
     --_cell-gap: var(--otp-cell-gap, var(--size-2));
     --_cell-font-size: var(--otp-cell-font-size, var(--text-xl));
-    --_cell-radius: var(--otp-cell-radius, var(--rounded-xl));
+    --_cell-radius: var(--otp-cell-radius, var(--radius));
     --_cell-border: var(--otp-cell-border, var(--border));
 
     /* --_bg/--_border-color are shared names used by `fieldVariantMixin`, unlike this

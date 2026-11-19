@@ -5,7 +5,7 @@
     --_day-outside-color: var(--date-picker-day-outside-color, var(--color-contrast-500));
     --_bg: var(--date-picker-bg, var(--color-canvas));
     --_border-color: var(--date-picker-border-color, var(--color-contrast-200));
-    --_radius: var(--date-picker-radius, var(--rounded-xl));
+    --_radius: var(--date-picker-radius, var(--radius));
 
     display: inline-block;
     min-width: var(--date-picker-min-width, 12rem);

@@ -171,14 +171,14 @@ test.describe('Layout', () => {
       const dropdown = select.shadowRoot.querySelector('.dropdown') as HTMLElement;
       // A probe resolves the token to the same computed unit the panel reports.
       const probe = document.createElement('div');
-      probe.style.borderRadius = 'var(--rounded-xl)';
+      probe.style.borderRadius = 'var(--radius)';
       document.body.append(probe);
       const token = getComputedStyle(probe).borderRadius;
       probe.remove();
       return { radius: getComputedStyle(dropdown).borderRadius, token };
     }, id);
 
-  test('dropdown panel defaults to the rounded-xl token', async ({ page, refinePage }) => {
+  test('dropdown panel defaults to the control radius token', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-select id="plain" label="Stance"><option value="1">Stance 1</option><option value="2">Stance 2</option></ore-select>',
     );

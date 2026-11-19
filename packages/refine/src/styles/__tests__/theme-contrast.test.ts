@@ -58,7 +58,7 @@ function expectInGamut(spec: string, label: string) {
 
 function expectResolvedInGamut(color: Oklch, label: string) {
   expect(
-    isDisplayable(color),
+    isDisplayable(oklchToSrgb(color)),
     `${label}: oklch(${color.l * 100}% ${color.c} ${color.h}deg) is outside the sRGB gamut`,
   ).toBe(true);
 }

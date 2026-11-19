@@ -343,6 +343,23 @@ describe('ore-number-input', () => {
       expect(input?.getAttribute('aria-valuemin')).toBe('5');
       expect(input?.getAttribute('aria-valuemax')).toBe('20');
     });
+
+    it('reattaches the ARIA watcher when the inner input ref fires after setup', async () => {
+      fixture = await mount('ore-number-input', { attrs: { max: '10', min: '0', value: '5' } });
+      await fixture.flush();
+
+      const field = fixture.query<HTMLElement & { ref?: (input: HTMLInputElement | null) => void }>('ore-input.field');
+      const input = getInput(fixture);
+
+      if (!field?.ref || !input) throw new Error('Expected the inner input ref and native input.');
+
+      const handleRef = field.ref;
+      handleRef(null);
+
+      expect(() => handleRef(input)).not.toThrow();
+      expect(input.getAttribute('aria-valuemin')).toBe('0');
+      expect(input.getAttribute('aria-valuemax')).toBe('10');
+    });
   });
 });
 

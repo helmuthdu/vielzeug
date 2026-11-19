@@ -130,10 +130,12 @@ describe('ore-carousel', () => {
       await fixture.flush();
 
       let callback: TimerHandler | undefined;
+      const timerHandle = setInterval(() => {}, 0);
+      clearInterval(timerHandle);
       const timer = vi.spyOn(window, 'setInterval').mockImplementation((handler) => {
         callback = handler;
 
-        return 1;
+        return timerHandle;
       });
       try {
         fixture.element.setAttribute('autoplay', '');

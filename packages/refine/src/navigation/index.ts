@@ -21,9 +21,11 @@ export type {
 } from './navigation-menu/navigation-menu';
 export {
   NAVIGATION_MENU_ITEM_TAG,
+  NAVIGATION_MENU_LINK_TAG,
   NAVIGATION_MENU_PANEL_TAG,
   NAVIGATION_MENU_TAG,
 } from './navigation-menu/navigation-menu';
+export type { OreNavigationMenuLinkProps } from './navigation-menu/navigation-menu-link';
 export type { OrePaginationEvents, OrePaginationProps, PaginationLabels } from './pagination/pagination';
 export { PAGINATION_TAG } from './pagination/pagination';
 export type { OreStepProps } from './stepper/step';

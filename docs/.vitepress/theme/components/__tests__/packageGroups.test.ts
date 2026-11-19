@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { NAVBAR_COLUMNS, PACKAGE_GROUPS } from '../packageGroups';
+import { PACKAGE_GROUPS } from '../packageGroups';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKAGES_DIR = resolve(__dirname, '../../../../../packages');
@@ -30,16 +30,10 @@ describe('PACKAGE_GROUPS', () => {
       expect(packageIds).toContain(slug);
     }
   });
-});
 
-describe('NAVBAR_COLUMNS', () => {
-  it('places every package group in exactly one column', () => {
-    const groupsInColumns = NAVBAR_COLUMNS.flat();
-    expect(groupsInColumns).toHaveLength(PACKAGE_GROUPS.length);
-    expect(new Set(groupsInColumns)).toHaveLength(PACKAGE_GROUPS.length);
-  });
-
-  it('renders four columns', () => {
-    expect(NAVBAR_COLUMNS).toHaveLength(4);
+  it('orders groups from the most packages to the fewest', () => {
+    for (let index = 1; index < PACKAGE_GROUPS.length; index++) {
+      expect(PACKAGE_GROUPS[index - 1]!.packages.length).toBeGreaterThanOrEqual(PACKAGE_GROUPS[index]!.packages.length);
+    }
   });
 });

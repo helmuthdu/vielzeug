@@ -1,6 +1,5 @@
 import {
   bind,
-  createContext,
   define,
   getHost,
   html,
@@ -12,7 +11,8 @@ import {
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
+import { computed, signal, watch } from '@vielzeug/ripple';
 import {
   colorThemeMixin,
   elevationMixin,
@@ -37,9 +37,12 @@ import {
   type ResizeTracker,
   type ResponsiveMode,
 } from '../shared';
+import { NAVBAR_CTX } from './_navbar-context';
 import navbarStyles from './navbar.css?inline';
 
 export { ICON_TAG } from '../../content/icon/icon';
+export type { NavbarContext } from './_navbar-context';
+export { NAVBAR_CTX } from './_navbar-context';
 
 /** One animation frame beyond the CSS mode-transition duration. */
 const MODE_TRANSITION_MS = 220;
@@ -59,15 +62,6 @@ const hasElementContent = (el: Element): boolean => {
   return (el.textContent ?? '').trim().length > 0;
 };
 
-/** Context provided by `ore-navbar` to `ore-navbar-item` children. */
-export type NavbarContext = {
-  /** Current `active-url` of the navbar; items derive their own active state from it. */
-  activeUrl: Readable<string | undefined>;
-  closeMobileMenu: () => void;
-  isMobile: Readable<boolean>;
-  mobileMenuOpen: Readable<boolean>;
-};
-
 /**
  * Does `href` name the page at `activeUrl`? Exact match always wins; a non-root `href`
  * also matches when `activeUrl` nests under it (`/docs` owns `/docs/intro`), so a section
@@ -83,9 +77,6 @@ export const matchesActiveUrl = (href: string | undefined, activeUrl: string | u
 
   return activeUrl.startsWith(`${href}/`);
 };
-
-/** Injection key for navbar context. */
-export const NAVBAR_CTX = createContext<NavbarContext>('NavbarContext');
 
 /** Navbar component events */
 export type OreNavbarEvents = {

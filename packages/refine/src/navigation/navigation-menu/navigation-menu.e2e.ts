@@ -1,6 +1,84 @@
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Interaction', () => {
+  test('moves keyboard focus into the panel and restores it on Escape', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-navigation-menu>
+        <ore-navigation-menu-item value="products">Products</ore-navigation-menu-item>
+        <ore-navigation-menu-panel for="products"><ore-navigation-menu-link href="/products">Products link</ore-navigation-menu-link></ore-navigation-menu-panel>
+      </ore-navigation-menu>
+    `);
+
+    const trigger = page.getByRole('button', { name: 'Products' });
+    const link = page.getByRole('link', { name: 'Products link' });
+
+    await trigger.click();
+    await trigger.press('Tab');
+    await expect(link).toBeFocused();
+    await page.keyboard.press('Escape');
+
+    await expect(page.locator('ore-navigation-menu-panel')).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+
+  test('activates a panel link before dismissing the menu on pointer interaction', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-navigation-menu>
+        <ore-navigation-menu-item value="products">Products</ore-navigation-menu-item>
+        <ore-navigation-menu-panel for="products"><a href="#products">Products link</a></ore-navigation-menu-panel>
+      </ore-navigation-menu>
+    `);
+
+    const menu = page.locator('ore-navigation-menu');
+    await menu.evaluate((element) => {
+      element.addEventListener('select', () => element.setAttribute('data-selected', ''), { once: true });
+    });
+    await page.getByRole('button', { name: 'Products' }).click();
+    await page.getByRole('link', { name: 'Products link' }).click();
+
+    await expect(menu).toHaveAttribute('data-selected', '');
+    await expect(page.locator('ore-navigation-menu-panel')).toBeHidden();
+  });
+
+  test('switches the open panel after hovering another trigger', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-navigation-menu>
+        <ore-navigation-menu-item value="products">Products</ore-navigation-menu-item>
+        <ore-navigation-menu-item value="resources">Resources</ore-navigation-menu-item>
+        <ore-navigation-menu-panel for="products"><a href="/products">Products</a></ore-navigation-menu-panel>
+        <ore-navigation-menu-panel for="resources"><a href="/resources">Resources</a></ore-navigation-menu-panel>
+      </ore-navigation-menu>
+    `);
+
+    await page.locator('ore-navigation-menu-item').nth(0).click();
+    await page.locator('ore-navigation-menu-item').nth(1).hover();
+
+    await expect(page.locator('ore-navigation-menu-panel[for="resources"]')).toBeVisible();
+    await expect(page.locator('ore-navigation-menu-panel[for="products"]')).toBeHidden();
+  });
+
+  test('uses the navbar mobile context to render its panel inline', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await refinePage.mountComponent(`
+      <ore-navbar id="nav" breakpoint="(max-width: 640px)" label="Primary navigation">
+        <ore-navigation-menu slot="mobile-menu">
+          <ore-navigation-menu-item value="products">Products</ore-navigation-menu-item>
+          <ore-navigation-menu-panel for="products"><a href="/products">Products</a></ore-navigation-menu-panel>
+        </ore-navigation-menu>
+      </ore-navbar>
+    `);
+
+    await page.locator('#nav [part="mobile-toggle"]').click();
+    await page.locator('ore-navigation-menu-item').click();
+
+    const state = await page.locator('ore-navigation-menu-panel').evaluate((panel) => ({
+      inline: panel.hasAttribute('data-inline'),
+      position: getComputedStyle(panel).position,
+    }));
+
+    expect(state).toEqual({ inline: true, position: 'static' });
+  });
+
   test('anchors matching panel to selected trigger', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`
       <ore-navigation-menu>
@@ -67,6 +145,26 @@ test.describe('Interaction', () => {
 });
 
 test.describe('Layout', () => {
+  test('keeps inline panels in document flow instead of the popover layer', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-navigation-menu inline>
+        <ore-navigation-menu-item value="products">Products</ore-navigation-menu-item>
+        <ore-navigation-menu-panel for="products"><a href="/products">Products</a></ore-navigation-menu-panel>
+      </ore-navigation-menu>
+    `);
+
+    await page.locator('ore-navigation-menu-item').click();
+
+    const state = await page.locator('ore-navigation-menu-panel').evaluate((panel) => ({
+      inline: panel.hasAttribute('data-inline'),
+      open: !panel.hasAttribute('hidden'),
+      popover: panel.matches(':popover-open'),
+      position: getComputedStyle(panel).position,
+    }));
+
+    expect(state).toEqual({ inline: true, open: true, popover: false, position: 'static' });
+  });
+
   test('uses content-sized grid tracks for grouped panel content', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`
       <ore-navigation-menu>
@@ -129,9 +227,10 @@ test.describe('Layout', () => {
 test.describe('Accessibility', () => {
   test('passes axe checks', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
-      '<ore-navigation-menu><ore-navigation-menu-item value="products">Products</ore-navigation-menu-item></ore-navigation-menu>',
+      '<ore-navigation-menu><ore-navigation-menu-item value="products">Products</ore-navigation-menu-item><ore-navigation-menu-panel for="products"><ore-navigation-menu-link href="/products">Products link</ore-navigation-menu-link></ore-navigation-menu-panel></ore-navigation-menu>',
     );
 
+    await page.locator('ore-navigation-menu-item').click();
     const results = await axeCheck(page);
 
     expect(results.violations).toEqual([]);

@@ -45,18 +45,19 @@ test.describe('Accessibility', () => {
 });
 
 test.describe('Layout', () => {
-  test('uses softer tokenized corners while preserving explicit shapes', async ({ page, refinePage }) => {
+  test('uses the control radius while preserving explicit shapes', async ({ page, refinePage }) => {
     const cases = [
-      { attrs: '', radius: '12px' },
-      { attrs: 'size="sm" variant="flat"', radius: '12px' },
-      { attrs: 'size="lg" variant="frost"', radius: '12px' },
-      { attrs: 'href="/docs"', radius: '12px' },
-      { attrs: 'icon-only label="Save"', radius: '12px' },
-      { attrs: 'rounded="lg"', radius: '8px' },
+      { attrs: '', radius: '8px' },
+      { attrs: 'size="sm" variant="flat"', radius: '8px' },
+      { attrs: 'size="lg" variant="frost"', radius: '8px' },
+      { attrs: 'href="/docs"', radius: '8px' },
+      { attrs: 'icon-only label="Save"', radius: '8px' },
+      { attrs: 'rounded="xl"', radius: '12px' },
       { attrs: 'rounded="none"', radius: '0px' },
       { attrs: 'rounded="full"', radius: '9999px' },
       { attrs: 'style="--button-radius: var(--rounded-2xl)"', radius: '16px' },
-      { attrs: 'style="--rounded-xl: 1rem"', radius: '16px' },
+      { attrs: 'style="--radius: var(--rounded-xl)"', radius: '12px' },
+      { attrs: 'style="--rounded-xl: 1rem"', radius: '8px' },
     ];
 
     await refinePage.mountComponent(

@@ -27,7 +27,7 @@ test.describe('Shape', () => {
       const buttons = page.locator('ore-button [part="button"]');
       const horizontal = orientation === 'horizontal';
 
-      for (const radius of ['12px', '8px']) {
+      for (const radius of ['8px', '12px']) {
         await expect(buttons.nth(0)).toHaveCSS(
           'border-radius',
           horizontal ? `${radius} 0px 0px ${radius}` : `${radius} ${radius} 0px 0px`,
@@ -37,10 +37,28 @@ test.describe('Shape', () => {
           'border-radius',
           horizontal ? `0px ${radius} ${radius} 0px` : `0px 0px ${radius} ${radius}`,
         );
-        await page.locator('ore-button-group').evaluate((group) => group.setAttribute('rounded', 'lg'));
+        await page.locator('ore-button-group').evaluate((group) => group.setAttribute('rounded', 'xl'));
       }
     });
   }
+
+  test('respects the scoped control radius and the group override', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<div style="--radius: var(--rounded-xl)">' +
+        '<ore-button-group id="scoped" attached><ore-button>First</ore-button><ore-button>Last</ore-button></ore-button-group>' +
+        '<ore-button-group id="custom" attached style="--group-radius: 4px"><ore-button>First</ore-button><ore-button>Last</ore-button></ore-button-group>' +
+        '</div>',
+    );
+
+    await expect(page.locator('#scoped ore-button [part="button"]').first()).toHaveCSS(
+      'border-radius',
+      '12px 0px 0px 12px',
+    );
+    await expect(page.locator('#custom ore-button [part="button"]').first()).toHaveCSS(
+      'border-radius',
+      '4px 0px 0px 4px',
+    );
+  });
 });
 
 test.describe('Segmented control', () => {
