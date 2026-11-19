@@ -142,11 +142,11 @@ export const COLOR_FAMILIES = [
     // fully opaque solid fill: contrast stays closer to the true extreme.
     content: { dark: { c: 0.3, l: '22%' }, light: { c: 0.05, l: '97%' } },
     contrast: { dark: { c: 0.3, l: '14%' }, light: { c: 0.045, l: '98%' } },
-    description: 'Deep petrol: primary brand color',
-    hueKnob: { name: '--color-primary-hue', value: '190deg' },
+    description: 'Violet: primary brand color',
+    hueKnob: { name: '--color-primary-hue', value: '300deg' },
     name: 'primary',
-    // These chroma values stay below 90% of the sRGB ceilings at L63%/L38%.
-    base: { dark: '63% 0.098 var(--color-primary-hue)', light: '38% 0.059 var(--color-primary-hue)' },
+    // Chroma stays below 90% of the sRGB ceiling for the default hue at each lightness.
+    base: { dark: '63% 0.17 var(--color-primary-hue)', light: '38% 0.14 var(--color-primary-hue)' },
   },
   {
     // Same content-vs-contrast softening as every other family. Secondary's

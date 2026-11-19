@@ -13,7 +13,7 @@ interface ColorGroup {
 
 const brandGroups: ColorGroup[] = [
   {
-    description: 'Deep petrol: primary brand color',
+    description: 'Violet: primary brand color',
     name: 'Primary',
     swatches: [
       { label: 'Base', textVariable: '--color-primary-content', variable: '--color-primary' },

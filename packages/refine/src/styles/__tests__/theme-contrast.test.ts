@@ -113,7 +113,7 @@ function expectedRatio(note: string): number {
 }
 
 /**
- * Parses a theme-tokens.mjs "L C H" string (e.g. "46% 0.0795 190deg") into an
+ * Parses a theme-tokens.mjs "L C H" string (e.g. "38% 0.14 300deg") into an
  * Oklch. The triple is kept raw because callers compose Oklch values directly
  * (ink derived from a base's hue/chroma); `parseColor` still runs to validate
  * the syntax and throws on anything malformed.

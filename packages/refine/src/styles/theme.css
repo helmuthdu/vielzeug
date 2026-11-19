@@ -568,10 +568,10 @@
       0 0 0 4px color-mix(in oklch, var(--color-neutral) var(--shade-focus-ring-strength), transparent),
       var(--shadow-sm);
 
-    /* ── Primary: Deep petrol: primary brand color ── */
-    --color-primary-hue: 190deg;
+    /* ── Primary: Violet: primary brand color ── */
+    --color-primary-hue: 300deg;
 
-    --color-primary: light-dark(oklch(38% 0.059 var(--color-primary-hue)), oklch(63% 0.098 var(--color-primary-hue)));
+    --color-primary: light-dark(oklch(38% 0.14 var(--color-primary-hue)), oklch(63% 0.17 var(--color-primary-hue)));
     --color-primary-backdrop: light-dark(
       oklch(
         from var(--color-primary) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
