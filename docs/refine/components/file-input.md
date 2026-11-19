@@ -54,7 +54,7 @@ Three sizes for different contexts.
 
 ## Rounded (Custom Border Radius)
 
-Use the `rounded` attribute to apply a border radius from the theme.
+Dropzones default to `--radius` (8px at a 16px root). Use the `rounded` attribute to select another theme radius, including `rounded="xl"` for the previous 12px shape.
 
 <ComponentPreview center>
 
@@ -297,18 +297,18 @@ fileInput.addEventListener('remove', ({ detail }) => {
 
 ### CSS Custom Properties
 
-| Property                          | Description                                        | Default             |
-| --------------------------------- | -------------------------------------------------- | ------------------- |
-| `--file-input-bg`                 | Dropzone background color                          | Variant-dependent   |
-| `--file-input-border-color`       | Dropzone border color                              | Variant-dependent   |
-| `--file-input-radius`             | Border radius                                      | `var(--rounded-lg)` |
-| `--file-input-min-height`         | Minimum dropzone height                            | `var(--size-40)`    |
-| `--file-input-font-size`          | Font size                                          | `var(--text-sm)`    |
-| `--file-input-hover-bg`           | Dropzone background on hover (flat/ghost variants) | Variant-dependent   |
-| `--file-input-hover-border-color` | Dropzone border on hover (flat/bordered variants)  | Variant-dependent   |
-| `--file-input-focus-bg`           | Dropzone background when focused/drag-over (flat)  | Variant-dependent   |
-| `--file-input-focus-border-color` | Dropzone border when focused/drag-over (flat)      | Variant-dependent   |
-| `--file-input-thumb-size`         | Gallery thumbnail width/height (min column size)   | `var(--size-24)`    |
+| Property                          | Description                                        | Default           |
+| --------------------------------- | -------------------------------------------------- | ----------------- |
+| `--file-input-bg`                 | Dropzone background color                          | Variant-dependent |
+| `--file-input-border-color`       | Dropzone border color                              | Variant-dependent |
+| `--file-input-radius`             | Border radius                                      | `var(--radius)`   |
+| `--file-input-min-height`         | Minimum dropzone height                            | `var(--size-40)`  |
+| `--file-input-font-size`          | Font size                                          | `var(--text-sm)`  |
+| `--file-input-hover-bg`           | Dropzone background on hover (flat/ghost variants) | Variant-dependent |
+| `--file-input-hover-border-color` | Dropzone border on hover (flat/bordered variants)  | Variant-dependent |
+| `--file-input-focus-bg`           | Dropzone background when focused/drag-over (flat)  | Variant-dependent |
+| `--file-input-focus-border-color` | Dropzone border when focused/drag-over (flat)      | Variant-dependent |
+| `--file-input-thumb-size`         | Gallery thumbnail width/height (min column size)   | `var(--size-24)`  |
 
 ## Accessibility
 

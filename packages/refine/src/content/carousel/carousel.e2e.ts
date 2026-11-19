@@ -36,6 +36,83 @@ const covers = `
   </ore-carousel>
 `;
 
+test.describe('Autoplay', () => {
+  test('can be paused and resumed with the keyboard', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-carousel label="Featured items" autoplay style="height:240px">
+        <ore-carousel-slide>First item</ore-carousel-slide>
+        <ore-carousel-slide>Second item</ore-carousel-slide>
+      </ore-carousel>
+    `);
+
+    const toggle = page.getByRole('button', { name: 'Pause autoplay' });
+    const navigation = page.locator('ore-carousel ore-media-navigation');
+    const toggleBounds = await toggle.boundingBox();
+    const navigationBounds = await navigation.boundingBox();
+    const restingShadow = await toggle.evaluate((element) => {
+      const button = element.shadowRoot?.querySelector<HTMLElement>('[part="button"]');
+
+      if (!button) throw new Error('Autoplay button must expose its button part');
+
+      return getComputedStyle(button).boxShadow;
+    });
+
+    expect(toggleBounds).not.toBeNull();
+    expect(navigationBounds).not.toBeNull();
+    await expect(toggle).toHaveAttribute('elevation', '0');
+    expect(restingShadow).toBe('none');
+    expect(toggleBounds!.x).toBeGreaterThanOrEqual(navigationBounds!.x);
+    expect(toggleBounds!.y).toBeGreaterThanOrEqual(navigationBounds!.y);
+    expect(toggleBounds!.x + toggleBounds!.width).toBeLessThanOrEqual(navigationBounds!.x + navigationBounds!.width);
+    expect(toggleBounds!.y + toggleBounds!.height).toBeLessThanOrEqual(navigationBounds!.y + navigationBounds!.height);
+    await toggle.focus();
+    await page.keyboard.press('Space');
+    await expect(page.getByRole('button', { name: 'Resume autoplay' })).toBeVisible();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('button', { name: 'Pause autoplay' })).toBeVisible();
+  });
+
+  test('can be persistently paused and resumed with touch controls', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-carousel label="Featured items" autoplay-interval="1000" style="height:240px">
+        <ore-carousel-slide>First item</ore-carousel-slide>
+        <ore-carousel-slide>Second item</ore-carousel-slide>
+        <ore-carousel-slide>Third item</ore-carousel-slide>
+      </ore-carousel>
+    `);
+
+    const timer = await page.evaluateHandle(() => {
+      let callback: (() => void) | undefined;
+
+      window.setInterval = ((handler: TimerHandler) => {
+        if (typeof handler === 'function') callback = () => handler();
+
+        return 1;
+      }) as typeof window.setInterval;
+      window.clearInterval = (() => {
+        callback = undefined;
+      }) as typeof window.clearInterval;
+
+      return { tick: () => callback?.() };
+    });
+    const carousel = page.locator('ore-carousel');
+    await carousel.evaluate((element) => element.setAttribute('autoplay', ''));
+    await expect(page.getByRole('button', { name: 'Pause autoplay' })).toBeVisible();
+    expect((await axeCheck(page)).violations).toEqual([]);
+    await timer.evaluate((driver) => driver.tick());
+    await expect(carousel).toHaveAttribute('slide-index', '1');
+
+    await page.getByRole('button', { name: 'Pause autoplay' }).tap();
+    await expect(page.getByRole('button', { name: 'Resume autoplay' })).toBeVisible();
+    await timer.evaluate((driver) => driver.tick());
+    await expect(carousel).toHaveAttribute('slide-index', '1');
+
+    await page.getByRole('button', { name: 'Resume autoplay' }).tap();
+    await timer.evaluate((driver) => driver.tick());
+    await expect(carousel).toHaveAttribute('slide-index', '2');
+  });
+});
+
 test.describe('Touch navigation', () => {
   test('swipes over cover buttons without firing a selection click, then permits a tap', async ({
     page,

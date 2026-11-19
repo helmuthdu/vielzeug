@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Allow direct Bun SQLite connections in the SQLite protocol; see the migration guide for the SQLiteStatement.all() type change",
+      "packageName": "@vielzeug/vault",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/vault"
+}

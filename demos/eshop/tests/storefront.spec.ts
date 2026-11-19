@@ -21,16 +21,24 @@ test('catalog exposes accessible actions, navigation, and route titles', async (
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
 });
 
-test('command search reopens after being dismissed', async ({ page }) => {
+test('command search reopens after being dismissed', async ({ page }, testInfo) => {
   await page.goto('/catalog');
   const palette = page.locator('ore-command-palette');
-  const search = page.getByRole('button', { name: 'Search' });
 
-  await search.click();
+  const search = page.locator('ore-navbar').getByRole('button', { name: 'Search' });
+  const openPalette = async () => {
+    if (testInfo.project.name === 'mobile') {
+      await page.getByRole('button', { name: 'Open navigation menu' }).click();
+    }
+
+    await search.click();
+  };
+
+  await openPalette();
   await expect(palette).toHaveAttribute('open', '');
   await page.keyboard.press('Escape');
   await expect(palette).not.toHaveAttribute('open');
-  await search.click();
+  await openPalette();
   await expect(palette).toHaveAttribute('open', '');
 });
 
@@ -155,11 +163,13 @@ test('model landing supports discovery and intent-driven trim selection', async 
   await expect(page.locator('.model-landing-related__reason').first()).toHaveText(/alternative|character/i);
   expect(
     await page.evaluate(() =>
-      Boolean(
-        document
-          .querySelector('#model-specifications')
-          ?.compareDocumentPosition(document.querySelector('#model-trims')!) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ),
+      (() => {
+        const specifications = document.querySelector('#model-specifications');
+        const trims = document.querySelector('#model-trims');
+        return Boolean(
+          specifications && trims && specifications.compareDocumentPosition(trims) & Node.DOCUMENT_POSITION_FOLLOWING,
+        );
+      })(),
     ),
   ).toBe(true);
   await page.getByRole('tab', { name: /Sovereign/ }).click();
@@ -263,7 +273,7 @@ test('comparison route preserves selection and exposes an aligned matrix', async
 
 test('mobile comparison preserves horizontal row alignment', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'Mobile comparison regression.');
-  await page.goto('/compare?models=v500,a200,x300');
+  await page.goto('/compare?models=v500&models=a200&models=x300');
   const overflow = await page.locator('.compare-matrix').evaluate((matrix) => matrix.scrollWidth - matrix.clientWidth);
   expect(overflow).toBeGreaterThan(0);
   await expect(page.getByRole('rowheader', { name: 'Starting price' })).toBeVisible();

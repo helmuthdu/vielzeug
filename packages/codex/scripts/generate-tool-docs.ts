@@ -5,36 +5,27 @@
  * hand-maintained table: the two used to drift (a removed tool stayed listed, a renamed one
  * kept its old name) with nothing catching it.
  *
- * Run explicitly (`bun run gen:tool-docs`) after a build, not as part of `build` or `prepare:data`: `src/tools/*.ts`
- * import their siblings with `.js` specifiers (required for the real NodeNext build), and
- * resolving those against `src/` would read the wrong files, so this imports the compiled
- * `dist/` output instead, which only exists after a build.
+ * Run explicitly (`bun run gen:tool-docs`) after a tool change, not as part of `build` or
+ * `prepare:data`. A unit test fails when the tables drift, so this script is the fix command.
+ * The registries are imported from `src/` directly: Bun resolves the sources' NodeNext-style
+ * `./x.js` specifiers to their `./x.ts` files, so no build is required first.
  *
  * Tool tables live in docs/codex/tools.md (not README.md) so the README stays uniform with the
  * rest of the monorepo's standard README shape.
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { packageTools } from '../src/tools/packages.js';
+import { refineTools } from '../src/tools/refine.js';
 import type { ToolDefinition } from '../src/tools/shared.ts';
 
 import { log } from './_log.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const toolsDocPath = resolve(__dirname, '../../../docs/codex/tools.md');
-const packageToolsEntry = resolve(__dirname, '../dist/tools/packages.js');
-const refineToolsEntry = resolve(__dirname, '../dist/tools/refine.js');
-
-for (const entry of [packageToolsEntry, refineToolsEntry]) {
-  if (!existsSync(entry)) {
-    throw new Error(`generate-tool-docs: ${entry} not found. Run \`bun run build\` first: this reads compiled output.`);
-  }
-}
-
-const { packageTools } = (await import(packageToolsEntry)) as { packageTools: readonly ToolDefinition[] };
-const { refineTools } = (await import(refineToolsEntry)) as { refineTools: readonly ToolDefinition[] };
-const ALL_TOOLS = [...packageTools, ...refineTools];
+const ALL_TOOLS: readonly ToolDefinition[] = [...packageTools, ...refineTools];
 
 function formatInputs(tool: ToolDefinition): string {
   const names = Object.keys(tool.inputSchema.properties);
@@ -55,10 +46,22 @@ function summarise(tool: ToolDefinition): string {
   return tool.description.split(/(?<=\.)\s(?=[A-Z])/)[0] ?? tool.description;
 }
 
-function renderTable(tools: ToolDefinition[]): string {
-  const rows = tools.map((t) => `| \`${t.name}\` | ${formatInputs(t)} | ${summarise(t)} |`);
+/** Pad cells to the column width so the table matches Biome's markdown formatting. */
+function padTable(header: readonly string[], rows: readonly (readonly string[])[]): string {
+  const widths = header.map((cell, column) =>
+    Math.max(cell.length, ...rows.map((row) => (row[column] ?? '').length)),
+  );
+  const line = (cells: readonly string[]) =>
+    `| ${cells.map((cell, column) => cell.padEnd(widths[column])).join(' | ')} |`;
+  const divider = `| ${widths.map((width) => '-'.repeat(width)).join(' | ')} |`;
 
-  return ['| Tool | Input | Description |', '| --- | --- | --- |', ...rows].join('\n');
+  return [line(header), divider, ...rows.map(line)].join('\n');
+}
+
+function renderTable(tools: ToolDefinition[]): string {
+  const rows = tools.map((t) => [`\`${t.name}\``, formatInputs(t), summarise(t)]);
+
+  return padTable(['Tool', 'Input', 'Description'], rows);
 }
 
 function replaceBetweenMarkers(content: string, marker: string, replacement: string): string {

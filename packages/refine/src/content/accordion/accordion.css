@@ -42,26 +42,53 @@
   :host([variant='solid']),
   :host([variant='flat']),
   :host([variant='frost']) {
+    --_contained-radius: var(--rounded-xl);
+    --_contained-inset: var(--size-2);
+    --_contained-border-width: 0px;
+    --accordion-item-radius: max(
+      0px,
+      calc(var(--_contained-radius) - var(--_contained-inset) - var(--_contained-border-width))
+    );
+
     gap: 0;
-    padding: var(--size-2);
-    border-radius: var(--rounded-lg);
+    padding: var(--_contained-inset);
+    border-radius: var(--_contained-radius);
+  }
+
+  :host([variant='solid']) ::slotted(ore-accordion-item),
+  :host([variant='flat']) ::slotted(ore-accordion-item),
+  :host([variant='frost']) ::slotted(ore-accordion-item) {
+    --_accordion-top-radius: 0px;
+    --_accordion-bottom-radius: 0px;
+    border-radius: var(--_accordion-top-radius) var(--_accordion-top-radius) var(--_accordion-bottom-radius)
+      var(--_accordion-bottom-radius);
+  }
+
+  :host(:is([variant='solid'], [variant='flat'], [variant='frost'])) ::slotted(ore-accordion-item:first-of-type) {
+    --_accordion-top-radius: var(--accordion-item-radius);
+  }
+
+  :host(:is([variant='solid'], [variant='flat'], [variant='frost'])) ::slotted(ore-accordion-item:last-of-type) {
+    --_accordion-bottom-radius: var(--accordion-item-radius);
   }
 
   /* Solid variant (default) */
   :host([variant='solid']) {
+    --_contained-border-width: var(--border);
     --_bg: var(--accordion-bg, var(--color-contrast-50));
     --_border-color: var(--accordion-border-color, var(--color-contrast-200));
 
-    border: var(--border) solid var(--_border-color);
+    border: var(--_contained-border-width) solid var(--_border-color);
     box-shadow: var(--accordion-shadow, var(--shadow-xs));
   }
 
   /* Flat variant */
   :host([variant='flat']) {
+    --_contained-border-width: var(--border);
     --_bg: var(--accordion-bg, var(--color-contrast-100));
     --_border-color: var(--accordion-border-color, var(--color-contrast-200));
 
-    border: var(--border) solid var(--_border-color);
+    border: var(--_contained-border-width) solid var(--_border-color);
     box-shadow: var(--accordion-shadow, var(--inset-shadow-xs));
   }
 
@@ -82,22 +109,5 @@
       --_bg: var(--accordion-bg, var(--color-canvas));
       backdrop-filter: none;
     }
-  }
-
-  /* Nested item border radius for the frost variant */
-  :host([variant='frost']) ::slotted(ore-accordion-item) {
-    border-radius: 0;
-  }
-
-  :host([variant='frost']) ::slotted(ore-accordion-item:first-child) {
-    border-radius: var(--rounded-lg) var(--rounded-lg) 0 0;
-  }
-
-  :host([variant='frost']) ::slotted(ore-accordion-item:last-child) {
-    border-radius: 0 0 var(--rounded-lg) var(--rounded-lg);
-  }
-
-  :host([variant='frost']) ::slotted(ore-accordion-item:only-child) {
-    border-radius: var(--rounded-lg);
   }
 }

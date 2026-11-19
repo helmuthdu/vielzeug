@@ -45,6 +45,30 @@ test.describe('Accessibility', () => {
 });
 
 test.describe('Layout', () => {
+  test('uses the control radius while preserving explicit shapes', async ({ page, refinePage }) => {
+    const cases = [
+      { attrs: '', radius: '8px' },
+      { attrs: 'size="sm" variant="flat"', radius: '8px' },
+      { attrs: 'size="lg" variant="frost"', radius: '8px' },
+      { attrs: 'href="/docs"', radius: '8px' },
+      { attrs: 'icon-only label="Save"', radius: '8px' },
+      { attrs: 'rounded="xl"', radius: '12px' },
+      { attrs: 'rounded="none"', radius: '0px' },
+      { attrs: 'rounded="full"', radius: '9999px' },
+      { attrs: 'style="--button-radius: var(--rounded-2xl)"', radius: '16px' },
+      { attrs: 'style="--radius: var(--rounded-xl)"', radius: '12px' },
+      { attrs: 'style="--rounded-xl: 1rem"', radius: '8px' },
+    ];
+
+    await refinePage.mountComponent(
+      cases.map(({ attrs }, index) => `<ore-button id="shape-${index}" ${attrs}>Save</ore-button>`).join(''),
+    );
+
+    for (const [index, { radius }] of cases.entries()) {
+      await expect(page.locator(`#shape-${index} [part="button"]`)).toHaveCSS('border-radius', radius);
+    }
+  });
+
   test('horizontal padding is at least 2x vertical padding (2:1 ratio)', async ({ page, refinePage }) => {
     await refinePage.mountComponent('<ore-button id="btn">Save</ore-button>');
     await page.waitForSelector('ore-button');

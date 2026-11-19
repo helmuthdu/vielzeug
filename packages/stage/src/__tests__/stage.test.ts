@@ -13,7 +13,11 @@ type RecordedCall = { args: unknown[]; name: string };
 
 type FakeContext = { calls: RecordedCall[] } & CanvasRenderingContext2D;
 
-type FakeSurface = StageSurface & { calls: RecordedCall[]; ctx: FakeContext };
+type FakeSurface = StageSurface & {
+  calls: RecordedCall[];
+  ctx: FakeContext;
+  toBlob: (callback: (blob: Blob | null) => void) => void;
+};
 
 function makeContext(): FakeContext {
   const calls: RecordedCall[] = [];
@@ -374,11 +378,11 @@ describe('createStage', () => {
 
   describe('region/scale export', () => {
     it('re-paints layers into scratch surfaces at the requested pixel size', async () => {
-      const { created, stage, surfaces } = setup({ dpr: 2, layers: [{ id: 'a', paint: () => {} }] });
+      const { canvas, created, stage, surfaces } = setup({ dpr: 2, layers: [{ id: 'a', paint: () => {} }] });
       stage.render();
       created.length = 0;
       const liveSurfaces = [...surfaces];
-      stage.canvas.toBlob = (cb) => cb(new Blob(['png']));
+      canvas.toBlob = (cb) => cb(new Blob(['png']));
       await stage.toBlob({ region: { height: 50, width: 80, x: 5, y: 7 }, scale: 3 });
       // Output surface plus one scratch per layer, sized round(region * scale).
       const scratch = surfaces.filter((s) => !liveSurfaces.includes(s));
@@ -396,7 +400,7 @@ describe('createStage', () => {
 
     it('paints layers with scale × translate(-region) and keeps live state untouched', async () => {
       const seen: unknown[][] = [];
-      const { frames, stage, surfaces } = setup({
+      const { canvas, frames, stage, surfaces } = setup({
         dpr: 2,
         layers: [
           {
@@ -413,7 +417,7 @@ describe('createStage', () => {
       stage.render();
       seen.length = 0;
       const liveSurface = surfaces[0];
-      stage.canvas.toBlob = (cb) => cb(new Blob(['png']));
+      canvas.toBlob = (cb) => cb(new Blob(['png']));
       await stage.toBlob({ region: { height: 100, width: 200, x: 10, y: 20 }, scale: 4 });
       // exportMatrix = translate(-10, -20) × scale(4) → [4, 0, 0, 4, -40, -80].
       expect(seen).toEqual([[4, 0, 0, 4, -40, -80]]);
@@ -427,14 +431,14 @@ describe('createStage', () => {
     });
 
     it('composites scratch layers in registration order over the background', async () => {
-      const { stage, surfaces } = setup({
+      const { canvas, stage, surfaces } = setup({
         background: '#abcdef',
         layers: [
           { id: 'a', paint: () => {} },
           { id: 'b', paint: () => {} },
         ],
       });
-      stage.canvas.toBlob = (cb) => cb(new Blob(['png']));
+      canvas.toBlob = (cb) => cb(new Blob(['png']));
       await stage.toBlob({ region: { height: 10, width: 10, x: 0, y: 0 }, scale: 1 });
       // Scratch order: [output, layer a, layer b]; the output surface receives
       // the background fill and both layer drawImage calls in order.
@@ -449,7 +453,7 @@ describe('createStage', () => {
     it('defaults the region to the visible rect and scale to device pixels per world unit', async () => {
       const seen: unknown[][] = [];
       let frameDpr = 0;
-      const { created, stage, surfaces } = setup({
+      const { canvas, created, stage, surfaces } = setup({
         dpr: 2,
         layers: [
           {
@@ -467,7 +471,7 @@ describe('createStage', () => {
       stage.render();
       seen.length = 0;
       created.length = 0;
-      stage.canvas.toBlob = (cb) => cb(new Blob(['png']));
+      canvas.toBlob = (cb) => cb(new Blob(['png']));
       // scale omitted → dpr × matrix scale = 4; region 200×100 world units →
       // 800×400 export pixels.
       await stage.toBlob({ region: { height: 100, width: 200, x: 0, y: 0 } });

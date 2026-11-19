@@ -1,10 +1,12 @@
-import { copyFileSync, existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import browserslist from 'browserslist';
 import { browserslistToTargets } from 'lightningcss';
 import { type DefaultTheme, defineConfig, type UserConfig } from 'vitepress';
-import { buildVielzeugSrcAliases } from '../../scripts/vielzeug-packages.ts';
+import { stripDocMarkup, walkMarkdown } from '../../scripts/lib/codex-markdown.ts';
+import { parseFrontmatter } from '../../scripts/lib/markdown.ts';
+import { buildVielzeugSrcAliases, listPackageDirs } from '../../scripts/vielzeug-packages.ts';
 import { componentPreviewPlugin } from './plugins/component-preview/index.ts';
 import { REFINE_CATEGORIES, refineComponentLabel } from './theme/components/refineCategories.ts';
 import type { ThemeConfig } from './theme/types.ts';
@@ -50,19 +52,65 @@ const makePackageSidebarsCollapsible = (sidebar: DefaultTheme.SidebarMulti): Def
 };
 
 // ---------------------------------------------------------------------------
-// llms.txt + llms-full.txt: copy pre-generated files from codex data/
+// llms.txt + llms-full.txt: generated here, from docs/, during the docs build.
+// They describe the documentation site, so the docs build owns them; codex
+// serves the same pages through MCP instead of shipping text copies.
 // ---------------------------------------------------------------------------
 
-function copyLlmsTxt(siteConfig: { outDir: string }): void {
-  const codexData = resolve(__dirname, '../../packages/codex/data');
+function generateLlmsTxt(outDir: string): void {
+  const docsRoot = resolve(__dirname, '..');
+  const slugs = listPackageDirs(PACKAGES_DIR);
+  const packageInfo = slugs
+    .map((slug) => {
+      const indexFile = resolve(docsRoot, slug, 'index.md');
 
-  for (const name of ['llms.txt', 'llms-full.txt'] as const) {
-    const src = resolve(codexData, name);
+      if (!existsSync(indexFile)) return null;
+      const frontmatter = parseFrontmatter(readFileSync(indexFile, 'utf8'));
+      const name = `@vielzeug/${slug}`;
+      const description = typeof frontmatter.description === 'string' ? frontmatter.description : '';
 
-    if (existsSync(src)) {
-      copyFileSync(src, resolve(siteConfig.outDir, name));
+      return { description, name, slug };
+    })
+    .filter((entry): entry is { description: string; name: string; slug: string } => entry !== null)
+    .sort((left, right) => left.slug.localeCompare(right.slug));
+
+  const overview = [
+    '# Vielzeug',
+    '',
+    `> ${packageInfo.length} focused TypeScript packages.`,
+    '',
+    'Install any package independently: `pnpm add @vielzeug/<name>`',
+    '',
+    '## Packages',
+    '',
+    ...packageInfo.map((entry) => `- [${entry.name}](https://vielzeug.dev/${entry.slug}/): ${entry.description}`),
+    '',
+  ].join('\n');
+
+  const full: string[] = [
+    '# Vielzeug: Full Documentation',
+    '',
+    `> Complete documentation for ${packageInfo.length} packages.`,
+  ];
+
+  for (const entry of packageInfo) {
+    const packageDocsRoot = resolve(docsRoot, entry.slug);
+    const pages = walkMarkdown(packageDocsRoot).sort();
+
+    full.push('', '---', '', `## ${entry.name}`, '', `**Docs:** https://vielzeug.dev/${entry.slug}/`);
+
+    for (const page of pages) {
+      const markdown = stripDocMarkup(
+        readFileSync(resolve(packageDocsRoot, `${page}.md`), 'utf8'),
+        `${entry.slug}/${page}.md`,
+      );
+
+      full.push('', `### ${entry.slug}/${page}`, '', markdown.trim());
     }
   }
+
+  writeFileSync(resolve(outDir, 'llms.txt'), overview, 'utf8');
+  writeFileSync(resolve(outDir, 'llms-full.txt'), `${full.join('\n').trimEnd()}\n`, 'utf8');
 }
 
 // ---------------------------------------------------------------------------
@@ -70,7 +118,7 @@ function copyLlmsTxt(siteConfig: { outDir: string }): void {
 export default defineConfig({
   base: '/',
   buildEnd(siteConfig) {
-    copyLlmsTxt(siteConfig);
+    generateLlmsTxt(siteConfig.outDir);
   },
   description: 'Documentation for the Vielzeug monorepo',
   head: [
@@ -616,24 +664,21 @@ export default defineConfig({
         {
           items: [
             { link: '/codex/api#api-overview', text: 'Overview' },
-            { link: '/codex/api#package-entry-point', text: 'Entry Point' },
-            { link: '/codex/api#snapshot', text: 'Snapshot' },
-            { link: '/codex/api#mcp', text: 'MCP' },
-            { link: '/codex/api#http', text: 'HTTP' },
-            { link: '/codex/api#types', text: 'Types' },
+            { link: '/codex/api#createcodexserver', text: 'createCodexServer' },
+            { link: '/codex/api#starthttphost', text: 'startHttpHost' },
             { link: '/codex/api#errors', text: 'Errors' },
+            { link: '/codex/api#snapshot-contract', text: 'Snapshot Contract' },
           ],
           link: '/codex/api',
           text: 'API Reference',
         },
         {
           items: [
-            { link: '/codex/examples/listing-packages', text: 'Listing Packages' },
-            { link: '/codex/examples/searching-packages', text: 'Searching Packages' },
-            { link: '/codex/examples/package-metadata', text: 'Package Metadata' },
+            { link: '/codex/examples/discovering-packages', text: 'Discovering Packages' },
+            { link: '/codex/examples/searching', text: 'Searching Docs' },
             { link: '/codex/examples/reading-docs', text: 'Reading Docs' },
             { link: '/codex/examples/running-repl-examples', text: 'Running REPL Examples' },
-            { link: '/codex/examples/looking-up-components', text: 'Looking Up Components' },
+            { link: '/codex/examples/refine-components', text: 'Refine Components' },
             { link: '/codex/examples/inspector', text: 'Inspector' },
           ],
           link: '/codex/examples',
@@ -1822,7 +1867,7 @@ export default defineConfig({
         {
           items: [
             { link: '/ripple/usage#basic-usage', text: 'Basic Usage' },
-            { link: '/ripple/usage#isolated-graphs', text: 'Isolated Graphs' },
+            { link: '/ripple/usage#scope-lifetimes', text: 'Scope Lifetimes' },
             { link: '/ripple/usage#derived-values-and-batches', text: 'Derived Values' },
             { link: '/ripple/usage#ownership-with-scopes', text: 'Scopes' },
             { link: '/ripple/usage#watch-selected-values', text: 'watch' },
@@ -1837,8 +1882,8 @@ export default defineConfig({
           items: [
             { link: '/ripple/api#api-overview', text: 'Overview' },
             { link: '/ripple/api#package-entry-point', text: 'Entry Point' },
-            { link: '/ripple/api#graph-creation', text: 'Graph Creation' },
-            { link: '/ripple/api#default-graph-functions', text: 'Default Graph Functions' },
+            { link: '/ripple/api#runtime-and-scope-errors', text: 'Runtime and Scope Errors' },
+            { link: '/ripple/api#core-functions', text: 'Core Functions' },
             { link: '/ripple/api#watch', text: 'Watch and Observability' },
             { link: '/ripple/api#types', text: 'Types' },
             { link: '/ripple/api#errors', text: 'Errors' },
@@ -1854,7 +1899,6 @@ export default defineConfig({
             { link: '/ripple/examples/scope-ownership', text: 'Scope Ownership' },
             { link: '/ripple/examples/watch-selected-value', text: 'Watch Selected Value' },
             { link: '/ripple/examples/immutable-store', text: 'Immutable State' },
-            { link: '/ripple/examples/isolated-runtime', text: 'Isolated Graph' },
           ],
           link: '/ripple/examples',
           text: 'Examples',

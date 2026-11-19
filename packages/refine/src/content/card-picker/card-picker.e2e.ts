@@ -380,6 +380,20 @@ test.describe('Swipe motion', () => {
     expect(settled!.x).toBeCloseTo(before!.x, 1);
   });
 
+  test('uses Full motion for a new spring when opted in under OS reduction', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(cards);
+    const picker = page.locator('ore-card-picker');
+
+    await swipe(page, -90, 0, '[part="stage"]', async () => {
+      await page.locator('html').evaluate((root) => root.setAttribute('data-motion', 'full'));
+    });
+
+    await expect(picker).toHaveAttribute('active-index', '1');
+    await expect(picker).toHaveAttribute('data-dragging', '');
+    await expect(picker).not.toHaveAttribute('data-dragging', { timeout: 5000 });
+  });
+
   test('springs to the next card in the RTL swipe direction', async ({ page, refinePage }) => {
     await refinePage.mountComponent(cards.replace('<ore-card-picker label=', '<ore-card-picker dir="rtl" label='));
     const picker = page.locator('ore-card-picker');

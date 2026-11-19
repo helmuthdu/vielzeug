@@ -63,7 +63,7 @@ describe('createLocalSource', () => {
   });
 
   it('keeps position for structurally equal params and equal replacement items', () => {
-    const source = createLocalSource<{ id: number }[], { tag: string }>([{ id: 1 }, { id: 2 }], {
+    const source = createLocalSource<{ id: number }, { tag: string }>([{ id: 1 }, { id: 2 }], {
       pageSize: 1,
       params: { tag: 'a' },
     });

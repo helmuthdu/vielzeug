@@ -3,6 +3,11 @@
     display: inline-flex;
   }
 
+  :host([data-inline]) {
+    display: flex;
+    width: 100%;
+  }
+
   .trigger {
     all: unset;
     box-sizing: border-box;
@@ -18,8 +23,14 @@
     border-radius: var(--rounded-md);
   }
 
+  :host([data-inline]) .trigger {
+    justify-content: space-between;
+    width: 100%;
+  }
+
   .trigger:hover,
-  .trigger[aria-expanded='true'] {
+  .trigger[aria-expanded='true'],
+  :host([active]) .trigger {
     color: var(--color-primary);
     background: var(--color-contrast-100);
   }
@@ -34,12 +45,12 @@
     opacity: 0.6;
   }
 
-  ::slotted(ore-icon) {
+  .chevron {
     flex: none;
     transition: transform var(--transition-fast);
   }
 
-  :host([aria-expanded='true']) ::slotted(ore-icon) {
+  .trigger[aria-expanded='true'] .chevron {
     transform: rotate(180deg);
   }
 }

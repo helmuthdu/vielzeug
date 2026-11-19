@@ -84,11 +84,14 @@
     "preview": "vite preview",
     "test": "bun run test:types && vitest",
     "test:types": "tsc -p tsconfig.types.json",
+    "test:types:bun": "tsc -p tsconfig.bun-smoke.json",
+    "test:types:deno": "deno check --no-config --unstable-sloppy-imports runtime-smoke/deno-sqlite.ts",
     "test:sqlite:bun": "bun test ./runtime-smoke/bun-sqlite.ts",
-    "test:sqlite:deno": "deno test --allow-read --allow-env --allow-ffi runtime-smoke/deno-sqlite.ts",
+    "test:sqlite:deno": "deno test --no-config --unstable-sloppy-imports --allow-read --allow-env --allow-ffi runtime-smoke/deno-sqlite.ts",
     "verify:exports": "bun verify-exports.mjs"
   },
   "devDependencies": {
+    "@types/bun": "^1.4.4",
     "@types/node": "^26.6.6",
     "@vielzeug/spell": "workspace:*",
     "fake-indexeddb": "^6.2.8",

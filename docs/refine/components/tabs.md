@@ -234,7 +234,7 @@ Use `density="compact"` for dense toolbars, filters, table controls, and seconda
 
 ## Rounded
 
-`rounded` sets the corner radius of the tablist container and every tab item from the theme scale. Use `rounded="full"` (or a bare `rounded`) for a pill shape. Density deliberately does not touch radius, so a compact tab bar can still be square-cornered or fully round.
+`rounded` sets the outer corner radius from the theme scale. On inset variants (`solid`, `flat`, `bordered`, and `frost`), the sliding active indicator and tab buttons share an inner radius: `max(0px, outer radius − padding − enclosing border width)`, following [Cloud Four's nested-corner geometry](https://cloudfour.com/thinks/the-math-behind-nesting-rounded-corners/). This also keeps hover fills aligned with the indicator. `ghost` has no enclosing border or padding, so its surfaces keep the full radius. Use `rounded="full"` (or a bare `rounded`) for a pill shape. Density deliberately does not touch radius.
 
 <ComponentPreview vertical>
 
@@ -414,7 +414,7 @@ Disabled tabs are skipped during keyboard navigation.
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Size applied to all tab items                                                            |
 | `density`     | `'default' \| 'compact'`                                                  | `'default'`    | Spatial density; compact tightens padding (24px minimum height, 44px on coarse pointers) |
 | `fullwidth`   | `boolean`                                                                 | `false`        | Fill the container width and distribute horizontal tabs evenly                           |
-| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'lg'`         | Corner radius of the tablist and every tab item                                          |
+| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'lg'`         | Outer corner radius; inset tab surfaces derive a smaller radius                          |
 | `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A            | Theme color propagated to all tab items                                                  |
 | `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Tab list layout direction                                                                |
 | `activation`  | `'auto' \| 'manual'`                                                      | `'auto'`       | `auto`: arrow keys select immediately; `manual`: Enter/Space confirms                    |
@@ -463,23 +463,23 @@ Disabled tabs are skipped during keyboard navigation.
 
 **CSS Custom Properties**
 
-| Property                      | Default                    | Description                                                         |
-| ----------------------------- | -------------------------- | ------------------------------------------------------------------- |
-| `--tabs-radius`               | `var(--rounded-lg)`        | Border radius of the tablist container and panels                   |
-| `--tabs-transition`           | `var(--transition-normal)` | Transition duration/easing for the sliding active pill              |
-| `--tabs-indicator-color`      | Variant-dependent          | Background of the sliding active pill                               |
-| `--tabs-bg`                   | Theme-dependent            | Background of the host element (flat variant)                       |
-| `--tabs-tablist-bg`           | Theme-dependent            | Tablist container background (solid/frost variants)                 |
-| `--tabs-tablist-border-color` | Theme-dependent            | Tablist container border color                                      |
-| `--tab-panel-padding`         | `var(--size-4)`            | Padding inside each tab panel                                       |
-| `--tab-item-radius`           | `var(--rounded-lg)`        | Tab button border radius (follows `rounded`)                        |
-| `--tab-item-padding`          | size-dependent             | Tab button padding                                                  |
-| `--tab-item-font-size`        | size-dependent             | Tab button font size (owned by `size`, never by density)            |
-| `--tab-item-color`            | Theme-dependent            | Default tab text color                                              |
-| `--tab-item-hover-bg`         | Theme-dependent            | Tab background on hover                                             |
-| `--tab-item-active-bg`        | Unset (pill paints it)     | Opt-in item fill when active; unset lets the sliding pill show      |
-| `--tab-item-active-color`     | Theme-dependent            | Tab text color when active/selected                                 |
-| `--tab-item-active-shadow`    | Unset (pill paints it)     | Opt-in item shadow when active; unset lets the pill carry elevation |
+| Property                      | Default                    | Description                                                                         |
+| ----------------------------- | -------------------------- | ----------------------------------------------------------------------------------- |
+| `--tabs-radius`               | `var(--rounded-lg)`        | Outer radius; indicator and tab buttons subtract enclosing padding and border width |
+| `--tabs-transition`           | `var(--transition-normal)` | Transition duration/easing for the sliding active pill                              |
+| `--tabs-indicator-color`      | Variant-dependent          | Background of the sliding active pill                                               |
+| `--tabs-bg`                   | Theme-dependent            | Background of the host element (flat variant)                                       |
+| `--tabs-tablist-bg`           | Theme-dependent            | Tablist container background (solid/frost variants)                                 |
+| `--tabs-tablist-border-color` | Theme-dependent            | Tablist container border color                                                      |
+| `--tab-panel-padding`         | `var(--size-4)`            | Padding inside each tab panel                                                       |
+| `--tab-item-radius`           | Parent's inner radius      | Tab button radius; standalone items fall back to `var(--rounded-lg)`                |
+| `--tab-item-padding`          | size-dependent             | Tab button padding                                                                  |
+| `--tab-item-font-size`        | size-dependent             | Tab button font size (owned by `size`, never by density)                            |
+| `--tab-item-color`            | Theme-dependent            | Default tab text color                                                              |
+| `--tab-item-hover-bg`         | Theme-dependent            | Tab background on hover                                                             |
+| `--tab-item-active-bg`        | Unset (pill paints it)     | Opt-in item fill when active; unset lets the sliding pill show                      |
+| `--tab-item-active-color`     | Theme-dependent            | Tab text color when active/selected                                                 |
+| `--tab-item-active-shadow`    | Unset (pill paints it)     | Opt-in item shadow when active; unset lets the pill carry elevation                 |
 
 ## Accessibility
 

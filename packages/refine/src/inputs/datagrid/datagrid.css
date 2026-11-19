@@ -245,6 +245,8 @@
   }
 
   .dg-empty-actions {
+    --button-color: var(--color-contrast-600);
+
     margin-top: var(--size-2);
   }
 

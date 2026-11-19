@@ -84,11 +84,11 @@ export function applyRenames(
   const visit = (node: ts.Node): void => {
     if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) {
       const moduleName = ts.isStringLiteral(node.moduleSpecifier) ? node.moduleSpecifier.text : undefined;
-      const bindings = node.importClause?.namedBindings;
+      const bindings = ts.isImportDeclaration(node) ? node.importClause?.namedBindings : undefined;
       const specifiers =
         bindings && ts.isNamedImports(bindings)
           ? [...bindings.elements]
-          : node.exportClause && ts.isNamedExports(node.exportClause)
+          : ts.isExportDeclaration(node) && node.exportClause && ts.isNamedExports(node.exportClause)
             ? [...node.exportClause.elements]
             : [];
 

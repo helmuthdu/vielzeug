@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Align grouped accordion row height",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

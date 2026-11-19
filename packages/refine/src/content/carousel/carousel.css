@@ -144,6 +144,10 @@
     transform: translateX(-50%);
   }
 
+  .autoplay-toggle[hidden] {
+    display: none;
+  }
+
   :host([variant='coverflow']) .navigation {
     position: static;
     grid-area: 2 / 1;

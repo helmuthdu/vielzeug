@@ -93,13 +93,13 @@ Conventions for package source: `.agents/conventions.md`, loaded before editing 
 
 ### Repository
 
-| Key                         | Value                                                                                                               |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Runtime and package manager | Bun 1.4.4 (`packageManager`); Node 22 for tests and docs                                                            |
-| Plan file                   | `<scope>/.plan.md` (typical: `packages/<name>/`, also `docs/`, `demos/`, `scripts/`); gitignored: no; committed: no |
-| Protected branches          | `main` (CI and docs deploy trigger on `main`)                                                                       |
-| Protected paths             | see **Protected paths** below                                                                                       |
-| Public API entry points     | `packages/<name>/src/index.ts`; errors in `src/errors.ts`; `_dev.ts` is internal                                    |
+| Key                         | Value                                                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Runtime and package manager | Bun 1.4.4 (`packageManager`); Node 22 for tests and docs                                                             |
+| Plan file                   | `<scope>/.plan.md` (typical: `packages/<name>/`, also `docs/`, `demos/`, `scripts/`); gitignored: yes; committed: no |
+| Protected branches          | `main` (CI and docs deploy trigger on `main`)                                                                        |
+| Protected paths             | see **Protected paths** below                                                                                        |
+| Public API entry points     | `packages/<name>/src/index.ts`; errors in `src/errors.ts`; `_dev.ts` is internal                                     |
 
 Repo-layout index: `.agents/README.md`. Demo UI and `@vielzeug/*` usage: load `.agents/skills/vielzeug/SKILL.md` alongside `build` (see Start work).
 

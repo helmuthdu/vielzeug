@@ -4,20 +4,21 @@ const require = createRequire(import.meta.url);
 const modules = [await import('./dist/index.js'), require('./dist/index.cjs')];
 
 for (const rippleModule of modules) {
-  const ripple = rippleModule.createRipple();
   let unsubscribed = 0;
-  const readable = ripple.fromSubscribable({
-    getSnapshot: () => 1,
-    subscribe: () => () => unsubscribed++,
-  });
+  const scope = rippleModule.createScope();
+  scope.run(() =>
+    rippleModule.fromSubscribable({
+      getSnapshot: () => 1,
+      subscribe: () => () => unsubscribed++,
+    }),
+  );
 
-  readable.dispose();
+  scope.dispose();
   if (unsubscribed !== 1) throw new Error('bridge disposal mismatch');
 
-  ripple.dispose();
   try {
-    ripple.signal(0);
-    throw new Error('expected disposed runtime failure');
+    scope.run(() => undefined);
+    throw new Error('expected disposed scope failure');
   } catch (error) {
     if (!(error instanceof rippleModule.RippleError)) throw new Error('RippleError identity mismatch');
     if (!(error instanceof rippleModule.RippleDisposedError)) {

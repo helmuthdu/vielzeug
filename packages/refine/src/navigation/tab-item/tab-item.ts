@@ -51,7 +51,7 @@ export type OreTabItemProps = {
  * @slot - Tab label
  * @slot suffix - Badge or count after the label
  *
- * @cssprop --tab-item-radius - Button border radius
+ * @cssprop --tab-item-radius - Button border radius; defaults to the parent's derived inner radius when grouped
  * @cssprop --tab-item-transition - Transition duration/easing
  * @cssprop --tab-item-padding - Button padding
  * @cssprop --tab-item-font-size - Button font size

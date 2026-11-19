@@ -238,6 +238,44 @@ function applyTheme(name: keyof typeof THEMES) {
 
 The browser recomputes every `var(--color-primary-hue)` reference: including the derived `secondary` tokens: in a single style recalc.
 
+## Shape and Rounded Corners
+
+Choose corner shapes by the control's role and its relationship to nearby surfaces, not by whether its fill is solid, flat, or translucent. Refine keeps its existing radius scale; a primary action does not automatically become pill-shaped.
+
+### Choosing a Shape
+
+- Keep related standalone controls consistent. Buttons, input fields, textareas, OTP cells, file dropzones, attached button-group exteriors, calendars, and select and date/time picker panels use `--radius` by default, which resolves to `--rounded-lg` (8px at a 16px root). Comboboxes, number inputs, and query bars inherit the input default. Enclosed variants share this shape; the underline-style `text` input retains square edges. Density does not select a different radius.
+- Keep the radius scale stable: `--rounded-lg` remains 8px and `--rounded-xl` remains 12px at a 16px root. Set `--radius: var(--rounded-xl)` to restore the previous control shape across a theme, or use `rounded="xl"` where supported for one control. This does not change cards, tabs, accordions, small affordances, or branded app-store badges.
+- Choose container radii for the surrounding composition. A larger surface may use a larger radius, but size alone does not require it.
+- Use `rounded="full"` on components that support it when a capsule is intentional, such as a filter or a prominent standalone action. Use `--rounded-full` for CSS customizations. Equal width and height produce a circle; non-square controls produce a capsule.
+- Keep joined edges square. Round only the exposed outside corners of a segmented control or a grouped accordion. Respect writing direction when identifying the outside edges.
+- Preserve the same corner geometry across hover, selection, press, and keyboard focus. A focus outline may extend beyond the control, but should follow its shape and remain visible.
+- Do not rely on roundness alone to communicate interactivity, selection, or danger. Keep labels, contrast, focus indicators, and accessible names.
+
+On components that expose `rounded`, the attribute selects a theme token through shared rounding styles. Component-specific radius properties provide finer control where documented:
+
+```html
+<ore-button rounded="lg">Save changes</ore-button>
+<ore-button rounded="full">Start a project</ore-button>
+<ore-copy-command rounded="lg" style="--copy-command-radius: var(--rounded-xl)" value="bun install"></ore-copy-command>
+```
+
+Changing the scale changes every component that uses those tokens. Override `--radius` on `:root` or a shared ancestor to change the control family without changing the scale. Prefer a component-specific property when only one control needs a different shape.
+
+### Nested and Joined Surfaces
+
+When an inner surface follows the same rounded perimeter as its container, derive its radius from the actual edge-to-edge inset. For symmetric borders and padding use:
+
+```text
+inner radius = max(0, outer radius - border width - padding)
+```
+
+For example, a 12px outer radius, 1px border, and 8px padding produce a 3px inner radius. Borderless surfaces with the same radius and padding produce a 4px inner radius.
+
+This rule describes concentric surfaces, not every descendant. An independent button well inside a card retains its own shape. With asymmetric insets, calculate each corner's horizontal and vertical radii separately; do not subtract a multi-value padding shorthand in a scalar CSS calculation.
+
+Grouped [accordions](./components/accordion.md#variants), [tab indicators and hover fills](./components/tabs.md#rounded), and [copy-command focus surfaces](./components/copy-command.md#border-radius) apply these rules to their own perimeter. When overriding their borders or padding through CSS parts or document styles, keep the radius calculation consistent with the new rendered inset.
+
 ## Component-Level Overrides
 
 Each component exposes CSS custom properties for fine-tuned control. Set them inline or in a stylesheet:
@@ -364,6 +402,26 @@ One shared, monotonic stacking scale for an entire page: sticky headers, dropdow
   z-index: var(--z-sticky);
 }
 ```
+
+### Border Radius
+
+The scale is rem-based except for the full-round sentinel. Pixel equivalents assume a 16px root font size; they scale with the user's root font size.
+
+| Token            | Value               | Equivalent                           |
+| ---------------- | ------------------- | ------------------------------------ |
+| `--rounded-none` | `0`                 | 0px                                  |
+| `--rounded-xs`   | `0.125rem`          | 2px                                  |
+| `--rounded-sm`   | `0.25rem`           | 4px                                  |
+| `--rounded`      | `0.25rem`           | 4px (same default as `--rounded-sm`) |
+| `--rounded-md`   | `0.375rem`          | 6px                                  |
+| `--rounded-lg`   | `0.5rem`            | 8px                                  |
+| `--rounded-xl`   | `0.75rem`           | 12px                                 |
+| `--rounded-2xl`  | `1rem`              | 16px                                 |
+| `--rounded-3xl`  | `1.5rem`            | 24px                                 |
+| `--rounded-full` | `9999px`            | Pill or circle                       |
+| `--radius`       | `var(--rounded-lg)` | 8px control default                  |
+
+`--rounded` is a legacy alias by value, not a live reference: overriding `--rounded-sm` does not change it. `--rounded-xs` is available as a CSS token, but is not a shared `rounded` attribute value. Check each component's reference for its supported attributes.
 
 ### Typography
 

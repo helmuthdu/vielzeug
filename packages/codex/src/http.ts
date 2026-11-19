@@ -73,7 +73,7 @@ async function sendWebResponse(webResponse: Response, response: ServerResponse):
     return;
   }
 
-  await pipeline(Readable.fromWeb(webResponse.body), response);
+  await pipeline(Readable.from(webResponse.body), response);
 }
 
 /** Streamable HTTP host owns every transport and only listens on loopback addresses. */

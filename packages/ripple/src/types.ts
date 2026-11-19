@@ -57,13 +57,8 @@ export type RippleErrorContext = {
   readonly name?: string;
 };
 
-export type RippleOptions = {
-  /**
-   * Handles failures in runtime callbacks, cleanups, and listeners. Defaults to
-   * rethrowing asynchronously via `queueMicrotask`, so failures surface as
-   * unhandled errors instead of being swallowed. Provide a no-op function to
-   * silence rethrow. Failures inside one node never interrupt sibling
-   * propagation either way.
-   */
+/** Options for a scope, including its name and error boundary. */
+export type ScopeOptions = {
+  name?: string;
   onError?: (error: unknown, context: RippleErrorContext) => void;
 };

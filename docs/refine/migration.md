@@ -5,6 +5,18 @@ description: Migrate the viewport-only responsive breakpoints in Refine's sideba
 
 # Migration
 
+## Control corner radius
+
+Controls and their related panels now default to `--radius`, which is `var(--rounded-lg)` (8px at a 16px root), rather than `--rounded-xl` (12px). To retain the previous default across a theme:
+
+```css
+:root {
+  --radius: var(--rounded-xl);
+}
+```
+
+For a single control, use `rounded="xl"` where supported or its documented radius property. Overrides of `--rounded-xl` no longer change the default control shape unless `--radius` references it. The radius scale and the 4px `--rounded` token are unchanged.
+
 ## Swipe ownership and cancellation
 
 List rows, carousels, and pull-to-refresh no longer consume gestures from independently interactive controls or editable content. Carousels still browse when you swipe over an ordinary clickable cover. A second touch cancels pending and active gestures instead of allowing an accidental browse, dismissal, or refresh.
@@ -391,6 +403,20 @@ All four honor reduced motion automatically: the tokens zero out, so the navigat
 Four components that animated unconditionally now honor the motion mode: the DataGrid, command-palette, and input-style loading spinners and the navbar's mode/mobile-menu animations previously ignored `prefers-reduced-motion` and kept moving; the marquee ticker previously read the OS preference through its own media query and ignored `data-motion`. If you relied on any of them animating under a reduced-motion setting, opt back in with `setMotionMode('full')`.
 
 Internally, the per-component reduced-motion mixin was removed; reduced motion is now declared once at `:root` (honoring the three-state mode) rather than mixed into every component's styles. That mixin was never exported from the package's public subpaths, so this is not a public API break.
+
+## Navigation menu disclosure and responsive behavior
+
+`ore-navigation-menu` no longer accepts `label`; it is a disclosure group, not a nested navigation landmark. This is a breaking change for markup that supplied that attribute. Keep the menu inside an existing labelled navigation landmark, such as `ore-navbar`, or provide one around it:
+
+```html
+<nav aria-label="Primary navigation">
+  <ore-navigation-menu>
+    <!-- menu items and panels -->
+  </ore-navigation-menu>
+</nav>
+```
+
+Triggers now expose disclosure state with `aria-expanded`, and their panels are labelled regions. The trigger does not use `aria-controls`: the trigger button and panel are in separate shadow trees, so that ID reference would not resolve accessibly. Keyboard interaction now supports writing-direction-aware arrow navigation, `Home`/`End`, `Escape`, and focus handoff between a trigger and its panel. A menu inside `ore-navbar` automatically renders panels inline in the navbar's mobile layout; set `inline` to opt into this layout elsewhere. `ore-navigation-menu-link` is available for styled panel links and current-page state; native anchors remain supported.
 
 ## Rank-item bar visibility, RTL, and contrast
 

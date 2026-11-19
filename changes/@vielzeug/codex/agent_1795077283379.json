@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "rebuild the snapshot pipeline: one snapshot.json, checker-resolved signatures, section search, 10 consolidated tools",
+      "packageName": "@vielzeug/codex",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

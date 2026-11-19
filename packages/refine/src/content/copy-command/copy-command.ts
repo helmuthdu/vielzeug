@@ -1,6 +1,6 @@
 import { define, html, onCleanup, prop, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-import { srOnlyMixin } from '../../styles';
+import { roundedVariantMixin, srOnlyMixin } from '../../styles';
 import { COMPONENT_SIZES, type ComponentSize, ROUNDED_SIZES, type RoundedSize } from '../../types';
 
 const COPY_COMMAND_VARIANTS = ['flat', 'bordered', 'ghost'] as const;
@@ -164,5 +164,5 @@ define<OreCopyCommandProps>(COPY_COMMAND_TAG, {
     `;
   },
 
-  styles: [srOnlyMixin, componentStyles],
+  styles: [srOnlyMixin, roundedVariantMixin, componentStyles],
 });

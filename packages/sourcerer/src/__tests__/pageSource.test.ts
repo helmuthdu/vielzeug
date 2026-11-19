@@ -1,4 +1,5 @@
 import { createPageSource } from '../pageSource';
+import type { PageSourceConfig } from '../types';
 
 describe('createPageSource', () => {
   it('is inert until a load command runs', async () => {
@@ -205,8 +206,8 @@ describe('createPageSource', () => {
   });
 
   describe('apply', () => {
-    const makeSource = (load: ReturnType<typeof vi.fn>) =>
-      createPageSource<string, { search: string }>({ load, pageSize: 2, params: { search: '' } });
+    const makeSource = <T>(load: PageSourceConfig<T, { search: string }>['load']) =>
+      createPageSource<T, { search: string }>({ load, pageSize: 2, params: { search: '' } });
 
     it('is a no-op for a structurally equal params object and the current page', async () => {
       const load = vi.fn(async () => ({ items: ['a'], totalItems: 5 }));

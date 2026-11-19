@@ -5,7 +5,11 @@
     z-index: var(--z-popover);
     box-sizing: border-box;
     display: none;
-    width: min(var(--navigation-menu-panel-width, 48rem), calc(100vw - var(--size-8)));
+    width: min(
+      var(--_navigation-menu-auto-width, var(--navigation-menu-panel-width, 48rem)),
+      var(--navigation-menu-panel-width, 48rem),
+      calc(100vw - var(--size-8))
+    );
     max-height: min(var(--navigation-menu-panel-max-height, 42rem), calc(100dvh - var(--size-12)));
     margin: 0;
     overflow: auto;
@@ -41,9 +45,47 @@
     }
   }
 
+  :host([data-inline]) {
+    position: static;
+    inset: auto;
+    z-index: auto;
+    display: none;
+    width: 100%;
+    max-height: none;
+    margin: 0;
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    opacity: 1;
+    backdrop-filter: none;
+    transform: none;
+    transition: none;
+  }
+
+  :host([data-inline][data-open]) {
+    display: block;
+  }
+
+  :host([data-inline]) .content {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--size-1);
+    padding: var(--size-2) 0;
+  }
+
+  .column-measure {
+    position: absolute;
+    visibility: hidden;
+    width: var(--navigation-menu-column-min, var(--size-48));
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
   .content {
     display: grid;
-    grid-template-columns: repeat(var(--navigation-menu-panel-columns, 2), minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(var(--navigation-menu-column-min, var(--size-48)), 100%), 1fr));
     grid-auto-rows: max-content;
     gap: var(--size-3);
     align-content: start;

@@ -1,237 +1,103 @@
 ---
 title: Codex API
-description: Snapshot, catalog, MCP server, and local HTTP host APIs.
+description: MCP server factory, local HTTP host, and error APIs.
 ---
 
 [[toc]]
 
-## API Overview
-
-| Symbol             | Purpose                                    | Execution mode | Common gotcha                         |
-| ------------------ | ------------------------------------------ | -------------- | ------------------------------------- |
-| `loadSnapshot`     | Read validated snapshot metadata           | Sync           | Content chunks load lazily            |
-| `validateSnapshot` | Full artifact verification (all chunks)    | Sync           | Generation/CI use, not normal startup |
-| `SnapshotCatalog`  | Query package corpus and Refine components | Sync           | Construct from loaded snapshot        |
-| `createMcpServer`  | MCP adapter factory                        | Sync           | Requires catalog and version          |
-| `startHttpHost`    | Loopback Streamable HTTP host              | Async          | HTTP remains local-only               |
-
 ## Package Entry Point
 
-`@vielzeug/codex` is the single entry point: catalog (package docs plus bundled Refine component
-metadata), snapshot loader, errors, the MCP server factory, the loopback HTTP host, and a
-re-export of `StdioServerTransport`. There is one `Catalog` surface and one server factory.
+`@vielzeug/codex` is an executable tool first: the CLI and the MCP server are the product. The
+library surface is intentionally minimal — the server factory, the HTTP host, and the error type,
+all from the single root entry point. The catalog, the snapshot loader, and the tool tables are
+internal and may change without notice (`verify-exports.mjs` fails the build if they leak out).
 
-## Snapshot
+## API Overview
 
-### `loadSnapshot`
+| Symbol              | Purpose                                     | Execution mode | Common gotcha                            |
+| ------------------- | ------------------------------------------- | -------------- | ---------------------------------------- |
+| `createCodexServer` | MCP server factory over a snapshot          | Sync           | Loads the bundled snapshot by default    |
+| `startHttpHost`     | Loopback Streamable HTTP host               | Async          | HTTP remains local-only                  |
+| `CodexError`        | Base class for every codex-originated error | —              | Snapshot and host failures both subclass |
+
+## `createCodexServer`
 
 ```ts
-loadSnapshot(directory?: string, options?: { validateContents?: boolean }): LoadedSnapshot;
+createCodexServer(options?: {
+  debug?: boolean;
+  snapshot?: string | Snapshot;
+}): Server;
 ```
 
-Loads one snapshot directory: `manifest.json` plus `catalog.json` (eager metadata), an optional
-`refine.json`, and lazily read `packages/<slug>.json` content chunks. `directory` defaults to the
-bundled `data/`. The snapshot layout is fixed by code; the manifest carries `{ schemaVersion, version }`
-only. `validateContents: true` turns the lazy chunks into an eager cross-checked read.
+Creates a connected-ready MCP `Server` (from `@modelcontextprotocol/server`) for the given
+snapshot. `snapshot` accepts a path to a `snapshot.json` (or a directory containing one) or an
+already-loaded `Snapshot` object; it defaults to the snapshot bundled in the package. Pass the
+loaded object when creating a server per request — parsing the snapshot is the expensive step and
+the CLI loads it exactly once for this reason.
 
-### `validateSnapshot`
+The server registers the six generic tools plus the four `refine-*` tools when the snapshot
+actually carries Refine components; tools that could only answer "unavailable" are never offered.
+The snapshot version travels in the server `instructions`, so a client can compare the version its
+answers describe against the `@vielzeug/*` versions installed in its project without a tool call.
 
 ```ts
-validateSnapshot(snapshotRoot?: string): void;
+import { createCodexServer } from '@vielzeug/codex';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
+
+const server = createCodexServer();
+await server.connect(new StdioServerTransport());
 ```
 
-Runs `loadSnapshot` with `validateContents: true`. Used by snapshot generation, integration tests,
-and artifact verification; normal startup keeps package chunks lazy.
-
-### `SnapshotCatalog`
+## `startHttpHost`
 
 ```ts
-new SnapshotCatalog(snapshot: LoadedSnapshot)
-```
-
-Provides package lookup, docs/source/example/signature access, deterministic search, and the
-Refine component lookup (`listComponents()`, `getComponent(tagName)`). Component methods return an
-empty list (and `NOT_FOUND` per tag) when the snapshot carries no Refine metadata. `search()`
-reads content chunks through the same lazy cache as the content getters; there is no separate
-search index.
-
----
-
-## MCP
-
-### `createMcpServer`
-
-```ts
-createMcpServer(catalog: Catalog, options: { version: string; debug?: boolean }): Server;
-```
-
-Registers the generic package tools over `Catalog`, plus the `refine-*` component tools when the
-catalog actually carries Refine metadata; tools that could only answer "unavailable" are never
-offered. The root also re-exports `StdioServerTransport` for connecting the server without a
-second package import.
-
-## HTTP
-
-### `startHttpHost`
-
-```ts
-startHttpHost(options: HttpHostOptions): Promise<HttpHost>;
-```
-
-Starts Streamable HTTP on `127.0.0.1` by default. Runtime validation accepts only `127.0.0.1` or
-`::1`; every request must also pass localhost Host and Origin checks. `createServer` must return a
-fresh, unconnected server with its request handlers registered.
-
-## Types
-
-```ts
-interface SnapshotManifest {
-  readonly schemaVersion: typeof SNAPSHOT_SCHEMA_VERSION;
-  readonly version: string;
-}
-
-interface LoadedSnapshot {
-  readonly catalog: CatalogFile;
-  readonly contentDirectory: string;
-  readonly manifest: SnapshotManifest;
-  readonly refineComponents: readonly CemDeclaration[];
-}
-```
-
-```ts
-interface CatalogFile {
-  readonly packages: readonly PackageMeta[];
-  readonly version: string;
-}
-
-interface PackageMeta {
-  readonly availableDocPages: readonly DocPage[];
-  readonly category: string;
-  readonly description: string;
-  readonly exampleIds: readonly string[];
-  readonly exports: readonly string[];
-  readonly hasSource: boolean;
-  readonly keywords: readonly string[];
-  readonly name: string;
-  readonly related: readonly string[];
-  readonly slug: string;
-  readonly version: string;
-}
-
-interface Example {
-  readonly code: string;
-  readonly id: string;
-  readonly name: string;
-}
-```
-
-```ts
-interface Catalog {
-  getComponent(tagName: string): CemDeclaration;
-  getDocs(slug: string, page: DocPage): string;
-  getExample(slug: string, exampleId: string): Example;
-  getPackage(slug: string): PackageMeta;
-  getSource(slug: string): string;
-  getTypeSignature(slug: string, symbol: string): string;
-  listComponents(): readonly CemDeclaration[];
-  listExamples(slug: string): readonly Pick<Example, 'id' | 'name'>[];
-  listPackages(): readonly PackageMeta[];
-  search(query: string): readonly SearchHit[];
-}
-
-interface SearchHit {
-  readonly matchedExamples?: readonly string[];
-  readonly matchedIn: readonly ('docs' | 'examples' | 'exports' | 'keywords' | 'metadata' | 'related' | 'source')[];
-  readonly matchedPages?: readonly DocPage[];
-  readonly name: string;
-  readonly slug: string;
-}
-```
-
-Catalog exposes semantic reads. It does not expose its cached content chunks.
-
-```ts
-interface HttpHost {
-  dispose(): Promise<void>;
-  readonly disposed: boolean;
-  readonly host: string;
-  readonly port: number;
-  [Symbol.asyncDispose](): Promise<void>;
-}
-
-interface HttpHostOptions {
+startHttpHost(options: {
   createServer: () => Server;
   host?: '127.0.0.1' | '::1';
   port: number;
   version: string;
-}
+}): Promise<HttpHost>;
 ```
+
+Starts Streamable HTTP on `127.0.0.1` by default. Runtime validation accepts only `127.0.0.1` or
+`::1`; every request must also pass localhost Host and Origin checks. `createServer` must return a
+fresh, unconnected server with its request handlers registered — one server per request keeps the
+stateless transport honest. Parsing the snapshot is the expensive step, so load it once (read the
+JSON file yourself, or hold one `Snapshot` object) and hand the same object to every server, as
+the CLI does:
 
 ```ts
-const DOC_PAGES = ['index', 'api', 'usage', 'examples'] as const;
-type DocPage = (typeof DOC_PAGES)[number];
+import { readFileSync } from 'node:fs';
 
-const SNAPSHOT_SCHEMA_VERSION = 2 as const;
+const snapshot = JSON.parse(readFileSync('data/snapshot.json', 'utf8'));
+const host = await startHttpHost({
+  createServer: () => createCodexServer({ snapshot }),
+  port: 3939,
+  version,
+});
 ```
 
-```ts
-interface CemDeclaration {
-  readonly attributes?: readonly CemAttribute[];
-  readonly cssParts?: readonly CemCssPart[];
-  readonly cssProperties?: readonly CemCssProperty[];
-  readonly description?: string;
-  readonly events?: readonly CemEvent[];
-  readonly members?: readonly CemMember[];
-  readonly name?: string;
-  readonly slots?: readonly CemSlot[];
-  readonly superclass?: { readonly name: string; readonly package?: string };
-  readonly tagName?: string;
-  readonly [key: string]: unknown;
-}
-
-interface CemAttribute {
-  readonly default?: string;
-  readonly description?: string;
-  readonly fieldName?: string;
-  readonly name: string;
-  readonly type?: { readonly text: string };
-}
-
-interface CemCssPart {
-  readonly description?: string;
-  readonly name: string;
-}
-
-interface CemCssProperty {
-  readonly default?: string;
-  readonly description?: string;
-  readonly name: string;
-}
-
-interface CemEvent {
-  readonly description?: string;
-  readonly name: string;
-  readonly type?: { readonly text: string };
-}
-
-interface CemMember {
-  readonly description?: string;
-  readonly kind?: 'field' | 'method';
-  readonly name: string;
-  readonly type?: { readonly text: string };
-}
-
-interface CemSlot {
-  readonly description?: string;
-  readonly name: string;
-}
-```
-
-Component declarations and their nested data use readonly TypeScript types. The loader pins only
-the contract its consumers depend on: declarations form an array with valid, unique custom-element
-`tagName`s.
+`HttpHost` exposes `host`, `port`, `disposed`, `dispose()`, and `Symbol.asyncDispose`.
 
 ## Errors
 
-`CodexError` signals malformed snapshots or host failures. `CatalogError` adds `INVALID_ARG`,
-`NOT_FOUND`, or `UNAVAILABLE` for expected tool failures.
+`CodexError` is the base class for every codex-originated error: a malformed or version-mismatched
+snapshot, or an HTTP host failure. Catch it with `instanceof CodexError`. Expected tool failures
+(bad arguments, unknown package) never throw to the transport — the tool layer maps them to MCP
+`{ isError: true }` results internally.
+
+## Snapshot contract
+
+The one generated artifact is `data/snapshot.json` (gitignored in the repo, published in the npm
+package). Its shape is declared in `src/types.ts` and enforced by the writer at generate time, so
+the runtime reads it without re-validating. A snapshot carries:
+
+- `version` — the codex version it was generated from; the loader refuses a mismatch.
+- `packages` — per package: metadata, docs pages as markdown keyed by page path, heading sections
+  with offsets into the stored page text, REPL examples, and checker-resolved exports with their
+  real declaration text and JSDoc.
+- `components` — Refine custom elements projected from the Custom Elements Manifest.
+- `tokens` — theme custom properties from `theme.css` with values and notes.
+
+`llms.txt` and `llms-full.txt` are **not** part of the snapshot: the VitePress docs build generates
+them from `docs/` directly.

@@ -123,17 +123,33 @@
   background-color: var(--color-warning);
 }
 .studio-guide.is-grid {
-  background: repeating-linear-gradient(to right, var(--color-warning) 0 4px, transparent 4px 8px);
+  background: repeating-linear-gradient(
+    to right,
+    var(--color-warning) 0 var(--size-1),
+    transparent var(--size-1) var(--size-2)
+  );
 }
 .studio-guide.is-grid.is-vertical {
-  background: repeating-linear-gradient(to bottom, var(--color-warning) 0 4px, transparent 4px 8px);
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-warning) 0 var(--size-1),
+    transparent var(--size-1) var(--size-2)
+  );
 }
-/* Spacing guides read as a separate concern: dashed and in the error hue. */
+/* Spacing guides use longer dashes; color remains a secondary cue. */
 .studio-guide.is-spacing {
-  background: repeating-linear-gradient(to right, var(--color-error) 0 4px, transparent 4px 8px);
+  background: repeating-linear-gradient(
+    to right,
+    var(--color-error) 0 var(--size-2),
+    transparent var(--size-2) calc(var(--size-2) + var(--size-1))
+  );
 }
 .studio-guide.is-spacing.is-vertical {
-  background: repeating-linear-gradient(to bottom, var(--color-error) 0 4px, transparent 4px 8px);
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-error) 0 var(--size-2),
+    transparent var(--size-2) calc(var(--size-2) + var(--size-1))
+  );
 }
 .studio-guide-cap {
   position: absolute;

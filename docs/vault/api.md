@@ -407,7 +407,7 @@ Import `MigrationContext` and `MigrationFn` from `@vielzeug/vault/indexeddb`.
 type SQLiteParameter = null | number | string;
 
 interface SQLiteStatement {
-  all(...parameters: SQLiteParameter[]): readonly Record<string, unknown>[];
+  all(...parameters: SQLiteParameter[]): readonly (Record<string, unknown> | undefined)[];
   finalize?(): void;
   get(...parameters: SQLiteParameter[]): Record<string, unknown> | null | undefined;
   run(...parameters: SQLiteParameter[]): unknown;

@@ -1,34 +1,22 @@
-// useComponentPreview.ts
-//
-// Encapsulates all state, derived values, actions, and lifecycle logic for
-// ComponentPreview. The Vue component becomes a thin template shell that owns
-// only props/slots and delegates everything else here.
-
 import type { SandboxHandle, SandboxMessage } from '@vielzeug/sandbox';
 import { createSandbox } from '@vielzeug/sandbox';
 import { useData } from 'vitepress';
-import type { VNode } from 'vue';
-import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
+import type { Ref, VNode } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from 'vue';
 
 import { buildSandboxDoc, REFINE_CSS_ID, refineCss } from './sandboxDoc';
 import { useRefineHmr } from './useRefineHmr';
 import { extractCodeFromSlot } from './vnode';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 export type ViewportSize = 'mobile' | 'tablet' | 'desktop' | 'full';
 
 export interface ComponentPreviewProps {
   align?: 'center' | 'end' | 'start' | 'stretch';
   background?: string;
-  colorful?: boolean;
   height?: string;
   justify?: 'center' | 'end' | 'start';
-  title?: string;
   vertical?: boolean;
 }
-
-// ── Constants ─────────────────────────────────────────────────────────────────
 
 export const VIEWPORT_WIDTHS: Record<ViewportSize, string> = {
   desktop: '1280px',
@@ -37,35 +25,70 @@ export const VIEWPORT_WIDTHS: Record<ViewportSize, string> = {
   tablet: '768px',
 };
 
-// ── Composable ────────────────────────────────────────────────────────────────
+export const SHOW_CODE_STORAGE_KEY = 'vielzeug:component-preview:show-code';
+
+const sharedShowCode = ref(false);
+let showCodePreferenceLoaded = false;
+
+function loadShowCodePreference(): void {
+  if (showCodePreferenceLoaded || typeof window === 'undefined') return;
+
+  sharedShowCode.value = window.sessionStorage.getItem(SHOW_CODE_STORAGE_KEY) === 'true';
+  showCodePreferenceLoaded = true;
+}
+
+function persistShowCodePreference(value: boolean): void {
+  if (typeof window !== 'undefined') window.sessionStorage.setItem(SHOW_CODE_STORAGE_KEY, String(value));
+
+  sharedShowCode.value = value;
+}
+
+interface PreviewSurface {
+  containerRef: Ref<HTMLDivElement | null>;
+  error: Ref<string | null>;
+  isReady: Ref<boolean>;
+  sandbox: SandboxHandle | null;
+}
+
+function createPreviewSurface(): PreviewSurface {
+  return {
+    containerRef: ref(null),
+    error: ref(null),
+    isReady: ref(false),
+    sandbox: null,
+  };
+}
 
 export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VNode[] | undefined) {
   const { isDark } = useData();
 
-  // ── UI state ────────────────────────────────────────────────────────────────
-
-  const isMaximized = ref(false);
+  const isExpanded = ref(false);
   const viewportSize = ref<ViewportSize>('full');
+  const expandedAvailableWidth = ref(0);
   const isCopied = ref(false);
+  const copyStatus = ref('');
   const isRtl = ref(false);
-
-  let savedBodyOverflow = '';
-  let copyTimer: ReturnType<typeof setTimeout> | null = null;
-
-  // ── Code extraction ─────────────────────────────────────────────────────────
-
+  const showCode = sharedShowCode;
   const codeBlock = ref<{ html: string; vnode: VNode } | null>(null);
 
-  // ── Sandbox ─────────────────────────────────────────────────────────────────
+  const inlineCanvasRef = ref<HTMLDivElement | null>(null);
+  const expandedStageRef = ref<HTMLDivElement | null>(null);
+  const inlineSurface = createPreviewSurface();
+  const expandedSurface = createPreviewSurface();
 
-  const sandboxContainerRef = ref<HTMLDivElement | null>(null);
-  /** The sized wrapper around the sandbox: the sandbox div itself is 0x0 until the iframe mounts. */
-  const previewContainerRef = ref<HTMLDivElement | null>(null);
-  let sandbox: SandboxHandle | null = null;
-
-  // ── Derived values ──────────────────────────────────────────────────────────
+  let latestFragment: string | null = null;
+  let inlineVisible = false;
+  let copyTimer: ReturnType<typeof setTimeout> | null = null;
+  let visibilityObserver: IntersectionObserver | null = null;
+  let widthObserver: ResizeObserver | null = null;
 
   const viewportWidth = computed(() => VIEWPORT_WIDTHS[viewportSize.value]);
+  const expandedWidthLabel = computed(() => {
+    if (viewportSize.value !== 'full') return viewportWidth.value;
+    if (expandedAvailableWidth.value > 0) return `${Math.round(expandedAvailableWidth.value)}px`;
+
+    return 'Full width';
+  });
 
   const backgroundStyle = computed(() =>
     props.background
@@ -73,178 +96,240 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
       : {},
   );
 
-  // ── Actions ─────────────────────────────────────────────────────────────────
-
-  const copyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(codeBlock.value?.html.trim() ?? '');
-      isCopied.value = true;
-      copyTimer = setTimeout(() => {
-        isCopied.value = false;
-      }, 2000);
-    } catch (e) {
-      console.warn('[ComponentPreview] Copy failed:', e);
-    }
+  const updateExpandedWidth = (width: number): void => {
+    expandedAvailableWidth.value = Number.isFinite(width) ? Math.max(0, width) : 0;
   };
 
-  const toggleDirection = () => {
+  const copyCode = async (): Promise<void> => {
+    if (!codeBlock.value) return;
+
+    try {
+      await navigator.clipboard.writeText(codeBlock.value.html.trim());
+      isCopied.value = true;
+      copyStatus.value = 'Copied';
+    } catch {
+      isCopied.value = false;
+      copyStatus.value = 'Copy failed';
+    }
+
+    if (copyTimer) clearTimeout(copyTimer);
+
+    copyTimer = setTimeout(() => {
+      isCopied.value = false;
+      copyStatus.value = '';
+      copyTimer = null;
+    }, 2000);
+  };
+
+  const toggleShowCode = (): void => {
+    persistShowCodePreference(!showCode.value);
+  };
+
+  const toggleDirection = (): void => {
     isRtl.value = !isRtl.value;
   };
 
-  const handleKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') toggleMaximize();
-  };
+  const handleExpandedOpenChange = (event: Event): void => {
+    if (event.target !== event.currentTarget) return;
 
-  const toggleMaximize = () => {
-    if (!isMaximized.value) {
-      savedBodyOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      isMaximized.value = true;
-      document.addEventListener('keydown', handleKeydown);
-    } else {
-      document.body.style.overflow = savedBodyOverflow;
-      isMaximized.value = false;
+    const { open } = (event as CustomEvent<{ open: boolean }>).detail;
 
-      if (viewportSize.value === 'desktop') viewportSize.value = 'full';
+    isExpanded.value = open;
 
-      document.removeEventListener('keydown', handleKeydown);
+    if (open) {
+      void nextTick().then(() => {
+        updateExpandedWidth(expandedStageRef.value?.getBoundingClientRect().width ?? 0);
+      });
     }
   };
 
-  const setViewportSize = (size: ViewportSize) => {
-    viewportSize.value = viewportSize.value === size ? 'full' : size;
+  const handleViewportChange = (event: Event): void => {
+    const { values } = (event as CustomEvent<{ values?: string[] }>).detail ?? {};
+    const selected = values?.[0];
+
+    if (selected === 'full' || selected === 'mobile' || selected === 'tablet' || selected === 'desktop') {
+      viewportSize.value = selected;
+    }
   };
 
-  // ── Sandbox helpers ─────────────────────────────────────────────────────────
+  function ensureSandbox(surface: PreviewSurface): SandboxHandle {
+    if (surface.sandbox) return surface.sandbox;
 
-  function ensureSandbox(container: HTMLDivElement): SandboxHandle {
-    if (sandbox) return sandbox;
+    const container = surface.containerRef.value;
 
-    sandbox = createSandbox(container, { styles: { [REFINE_CSS_ID]: refineCss } });
+    if (!container) throw new Error('The preview sandbox container is unavailable.');
 
-    sandbox.onMessage((msg: SandboxMessage) => {
-      if (msg.type === 'resize') {
-        const iframe = container.querySelector('iframe') as HTMLIFrameElement | null;
+    const sandbox = createSandbox(container, { styles: { [REFINE_CSS_ID]: refineCss } });
+
+    surface.sandbox = sandbox;
+    sandbox.onMessage((message: SandboxMessage) => {
+      if (surface.sandbox !== sandbox) return;
+
+      if (message.type === 'error') {
+        surface.error.value = message.message || 'The sandbox reported an error.';
+        return;
+      }
+
+      if (message.type === 'resize') {
+        const iframe = container.querySelector<HTMLIFrameElement>('iframe');
         const bleed = props.height ? 0 : 32;
 
-        if (iframe) iframe.style.height = `${msg.height + bleed}px`;
+        surface.error.value = null;
+        surface.isReady.value = true;
+        if (iframe) iframe.style.height = `${message.height + bleed}px`;
       }
     });
 
     return sandbox;
   }
 
-  // Building a sandbox means the iframe parses a full embedded copy of the
-  // refine bundle (~2 MB of srcdoc). A component page mounts many previews,
-  // so rendering is deferred until the container nears the viewport: pages
-  // with 20+ previews hydrate fast and off-screen sandboxes only pay when
-  // scrolled to.
-  let sandboxVisible = false;
-  let pendingFragment: string | null = null;
+  function renderSurface(surface: PreviewSurface, fragment: string): void {
+    if (!surface.containerRef.value) return;
 
-  function render(fragment: string): void {
-    if (!sandboxVisible) {
-      pendingFragment = fragment;
-      return;
-    }
+    surface.error.value = null;
+    surface.isReady.value = false;
 
-    if (!sandboxContainerRef.value) return;
+    const sandbox = ensureSandbox(surface);
 
-    void ensureSandbox(sandboxContainerRef.value)
-      .render(fragment)
-      .catch((error) => console.warn('[ComponentPreview] Sandbox render failed:', error));
+    void sandbox.render(fragment).catch((error: unknown) => {
+      if (surface.sandbox !== sandbox) return;
+
+      const message = error instanceof Error ? error.message : String(error);
+
+      surface.error.value = message || 'The sandbox could not render this preview.';
+    });
   }
 
-  function patchCss(css: string): void {
-    sandbox?.updateStyle(REFINE_CSS_ID, css);
+  function disposeSurface(surface: PreviewSurface): void {
+    surface.sandbox?.dispose();
+    surface.sandbox = null;
+    surface.isReady.value = false;
+    surface.error.value = null;
   }
 
-  // ── Lifecycle ───────────────────────────────────────────────────────────────
+  // biome-ignore lint/correctness/noUnusedVariables: bound through the template retry event
+  const retryInlinePreview = (): void => {
+    if (latestFragment) renderSurface(inlineSurface, latestFragment);
+  };
+
+  // biome-ignore lint/correctness/noUnusedVariables: bound through the template retry event
+  const retryExpandedPreview = (): void => {
+    if (latestFragment) renderSurface(expandedSurface, latestFragment);
+  };
+
+  const patchCss = (css: string): void => {
+    inlineSurface.sandbox?.updateStyle(REFINE_CSS_ID, css);
+    expandedSurface.sandbox?.updateStyle(REFINE_CSS_ID, css);
+  };
 
   if (slotVNodes?.length) {
     const found = extractCodeFromSlot(slotVNodes);
 
     if (found) {
-      // Inline <script type="module"> blocks are kept: the sandbox iframe navigates via
-      // `srcdoc` (a real document parse, see `createSandbox().render()`), so module scripts
-      // execute normally there. Stripping them used to silently break every example that
-      // wires interactivity between two elements (e.g. password-strength's registration-flow
-      // demo never updating while typing) while still showing the script in the code block.
-      const html = found.text.trim();
-
-      codeBlock.value = { html, vnode: found.vnode };
+      codeBlock.value = { html: found.text.trim(), vnode: found.vnode };
     }
   }
 
+  watchEffect(
+    () => {
+      const block = codeBlock.value;
+
+      if (!block) {
+        latestFragment = null;
+        return;
+      }
+
+      const { fragment } = buildSandboxDoc({
+        align: props.align,
+        background: props.background,
+        dark: isDark.value,
+        dir: isRtl.value ? 'rtl' : 'ltr',
+        height: props.height,
+        html: block.html,
+        justify: props.justify,
+        vertical: !!props.vertical,
+      });
+
+      latestFragment = fragment;
+
+      if (inlineVisible) renderSurface(inlineSurface, fragment);
+      if (isExpanded.value) renderSurface(expandedSurface, fragment);
+    },
+    { flush: 'post' },
+  );
+
+  watch(isExpanded, (open) => {
+    if (open) return;
+
+    disposeSurface(expandedSurface);
+    expandedAvailableWidth.value = 0;
+  });
+
   onMounted(() => {
+    loadShowCodePreference();
     useRefineHmr(patchCss);
 
-    const container = previewContainerRef.value ?? sandboxContainerRef.value;
-    const reveal = () => {
-      sandboxVisible = true;
-      if (pendingFragment !== null) render(pendingFragment);
+    if (expandedStageRef.value && typeof ResizeObserver !== 'undefined') {
+      widthObserver = new ResizeObserver(([entry]) => {
+        if (entry) updateExpandedWidth(entry.contentRect.width);
+      });
+      widthObserver.observe(expandedStageRef.value);
+    } else {
+      updateExpandedWidth(expandedStageRef.value?.getBoundingClientRect().width ?? 0);
+    }
+
+    const revealInlinePreview = (): void => {
+      inlineVisible = true;
+      visibilityObserver?.disconnect();
+      if (latestFragment) renderSurface(inlineSurface, latestFragment);
     };
 
-    // Environments without IntersectionObserver render eagerly.
-    if (!container || typeof IntersectionObserver === 'undefined') reveal();
-    else {
-      const observer = new IntersectionObserver(
+    if (!inlineCanvasRef.value || typeof IntersectionObserver === 'undefined') {
+      revealInlinePreview();
+    } else {
+      visibilityObserver = new IntersectionObserver(
         ([entry]) => {
-          if (!entry?.isIntersecting) return;
-          observer.disconnect();
-          reveal();
+          if (entry?.isIntersecting) revealInlinePreview();
         },
         { rootMargin: '600px 0px' },
       );
-      observer.observe(container);
-      onUnmounted(() => observer.disconnect());
+      visibilityObserver.observe(inlineCanvasRef.value);
     }
-
-    watchEffect(
-      () => {
-        if (!sandboxContainerRef.value || !codeBlock.value) return;
-
-        const { fragment } = buildSandboxDoc({
-          align: props.align,
-          background: props.background,
-          dark: isDark.value,
-          dir: isRtl.value ? 'rtl' : 'ltr',
-          height: props.height,
-          html: codeBlock.value.html,
-          justify: props.justify,
-          vertical: !!props.vertical,
-        });
-
-        render(fragment);
-      },
-      { flush: 'post' },
-    );
   });
 
   onUnmounted(() => {
     if (copyTimer) clearTimeout(copyTimer);
 
-    if (isMaximized.value) {
-      document.body.style.overflow = savedBodyOverflow;
-      document.removeEventListener('keydown', handleKeydown);
-    }
-
-    sandbox?.dispose();
-    sandbox = null;
+    visibilityObserver?.disconnect();
+    widthObserver?.disconnect();
+    disposeSurface(inlineSurface);
+    disposeSurface(expandedSurface);
   });
 
   return {
     backgroundStyle,
     codeBlock,
     copyCode,
+    copyStatus,
+    expandedAvailableWidth,
+    expandedPreviewError: expandedSurface.error,
+    expandedPreviewReady: expandedSurface.isReady,
+    expandedStageRef,
+    expandedSurfaceContainerRef: expandedSurface.containerRef,
+    expandedWidthLabel,
+    handleExpandedOpenChange,
+    handleViewportChange,
+    inlineCanvasRef,
+    inlinePreviewError: inlineSurface.error,
+    inlinePreviewReady: inlineSurface.isReady,
+    inlineSandboxContainerRef: inlineSurface.containerRef,
     isCopied,
-    isMaximized,
+    isExpanded,
     isRtl,
-    previewContainerRef,
-    sandboxContainerRef,
-    setViewportSize,
+    showCode,
     toggleDirection,
-    toggleMaximize,
+    toggleShowCode,
+    updateExpandedWidth,
     viewportSize,
     viewportWidth,
   };

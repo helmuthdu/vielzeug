@@ -367,6 +367,7 @@ describe('tooltip container clamping', () => {
     document.body.appendChild(wrapper);
 
     const tooltipState = createTooltip(container, true);
+    if (!tooltipState.el) throw new Error('Expected tooltip element.');
 
     Object.defineProperty(tooltipState.el, 'getBoundingClientRect', { value: () => rect(60, 30) });
     tooltipState.show(380, 50, { key: 1, value: 10 }, { data: [], name: 'S' }, 'content');

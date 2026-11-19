@@ -3,10 +3,22 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { expect, it } from 'vitest';
 
+import { depPaths } from '../../../plugins/component-preview/plugin';
+
 const iconEntry = fileURLToPath(new URL('../../../../../packages/refine/src/icons/lucide/all.ts', import.meta.url));
 const componentEntry = fileURLToPath(
   new URL('../../../../../packages/refine/src/content/icon/icon.ts', import.meta.url),
 );
+
+it('loads chart dependencies before charts so preview icon registration can run', () => {
+  const palette = depPaths.findIndex((path) => path.endsWith('/palette/dist/palette.iife.js'));
+  const prism = depPaths.findIndex((path) => path.endsWith('/prism/dist/prism.iife.js'));
+  const lucide = depPaths.findIndex((path) => path.endsWith('/umd/lucide.js'));
+
+  expect(palette).toBeGreaterThanOrEqual(0);
+  expect(prism).toBeGreaterThan(palette);
+  expect(lucide).toBeGreaterThan(prism);
+});
 
 it('retains Lucide registration in production builds using source aliases', async () => {
   const result = await build({

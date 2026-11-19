@@ -52,9 +52,8 @@ const lucideUmd = resolve(dirname(req.resolve('lucide')), '../../dist/umd/lucide
 // takes `Scribe` as a bare global — then died at evaluation with a ReferenceError inside the
 // sandbox, leaving every preview on the site unregistered and unstyled.
 //
-// The list is therefore DERIVED, the same way refine's own vite config derives its externals
-// from package.json: the closure of refine's workspace dependencies is topologically sorted by
-// manifest edges, so a new dependency joins the preview runtime the moment it joins refine.
+// Derive the dependency closure for both preview libraries from their manifests so
+// their dependencies load before either library and before Lucide registration.
 function workspaceDepNames(pkg: string): string[] {
   const manifest = JSON.parse(readFileSync(resolve(pkgDir, pkg, 'package.json'), 'utf-8')) as {
     dependencies?: Record<string, string>;
@@ -81,10 +80,10 @@ function workspaceDepNames(pkg: string): string[] {
 }
 
 // Kahn topological sort over the @vielzeug/* dependency closure, alphabetical for determinism.
-function topoSortedWorkspaceClosure(root: string): string[] {
-  const names = new Set<string>([root]);
+function topoSortedWorkspaceClosure(roots: string[]): string[] {
+  const names = new Set<string>(roots);
 
-  for (const queue = [root]; queue.length > 0; ) {
+  for (const queue = [...roots]; queue.length > 0; ) {
     for (const dep of workspaceDepNames(queue.shift() as string)) {
       if (!names.has(dep)) {
         names.add(dep);
@@ -92,8 +91,6 @@ function topoSortedWorkspaceClosure(root: string): string[] {
       }
     }
   }
-  names.delete(root);
-
   const pending = new Map<string, Set<string>>(
     [...names].sort().map((name) => [name, new Set(workspaceDepNames(name).filter((dep) => names.has(dep)))]),
   );
@@ -120,10 +117,9 @@ function topoSortedWorkspaceClosure(root: string): string[] {
 
 export const depPaths: string[] = [
   temporalUmd,
-  ...topoSortedWorkspaceClosure('refine').map((name) => resolve(pkgDir, `${name}/dist/${name}.iife.js`)),
-  // Prism backs the chart previews but is not a refine dependency; its own dependency (Orbit)
-  // is already loaded above by the closure.
-  resolve(pkgDir, 'prism/dist/prism.iife.js'),
+  ...topoSortedWorkspaceClosure(['refine', 'prism'])
+    .filter((name) => name !== 'refine')
+    .map((name) => resolve(pkgDir, `${name}/dist/${name}.iife.js`)),
   lucideUmd,
 ];
 

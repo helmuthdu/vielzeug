@@ -1,0 +1,35 @@
+@layer refine.base {
+  :host {
+    display: block;
+    min-width: 0;
+  }
+
+  .link {
+    box-sizing: border-box;
+    display: flex;
+    gap: var(--size-2);
+    align-items: flex-start;
+    min-width: 0;
+    padding: var(--size-3);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--color-contrast-700);
+    text-decoration: none;
+    border-radius: var(--rounded-md);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  .link:hover,
+  .link:focus-visible,
+  .link[aria-current='page'] {
+    color: var(--color-primary);
+    background: var(--color-contrast-100);
+  }
+
+  .link:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--size-0-5);
+  }
+}

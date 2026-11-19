@@ -14,17 +14,17 @@ A feature needs one object value with explicit replacement operations while deri
 Create a signal, return replacement objects from `update()`, and derive the selected property through `computed()`.
 
 ```ts
-import { createRipple } from '@vielzeug/ripple';
+import { computed, createScope, signal } from '@vielzeug/ripple';
 
-const ripple = createRipple();
-const user = ripple.signal({ name: 'Ada', visits: 0 });
-const visits = ripple.computed(() => user.value.visits);
+const scope = createScope();
+const user = signal({ name: 'Ada', visits: 0 });
+const visits = scope.run(() => computed(() => user.value.visits));
 
 user.update((value) => ({ ...value, visits: value.visits + 1 }));
 user.value = { name: 'Grace', visits: 5 };
 
 console.log(visits.value);
-ripple.dispose();
+scope.dispose();
 ```
 
 ### Pitfalls

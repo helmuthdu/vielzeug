@@ -26,7 +26,15 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { contrastRatio, isDisplayable, type Oklch, oklchToSrgb, parseColor } from '@vielzeug/palette';
+import {
+  contrastRatio,
+  isDisplayable,
+  type Oklch,
+  oklchToSrgb,
+  parseColor,
+  type Rgba,
+  srgbToOklch,
+} from '@vielzeug/palette';
 import { describe, expect, it } from 'vitest';
 
 import { COLOR_FAMILIES, CONTRAST_SCALE } from '../../../scripts/theme-tokens.mjs';
@@ -50,7 +58,7 @@ function expectInGamut(spec: string, label: string) {
 
 function expectResolvedInGamut(color: Oklch, label: string) {
   expect(
-    isDisplayable(color),
+    isDisplayable(oklchToSrgb(color)),
     `${label}: oklch(${color.l * 100}% ${color.c} ${color.h}deg) is outside the sRGB gamut`,
   ).toBe(true);
 }
@@ -63,6 +71,37 @@ function wcagContrast(a: Oklch, b: Oklch): number {
 const AA_LARGE_TEXT = 3;
 const AA_NORMAL_TEXT = 4.5;
 const AAA_NORMAL_TEXT = 7;
+const CHROMATIC_ROLE_NAMES = new Set(['primary', 'info', 'success', 'warning', 'error']);
+const VISION_LIGHTNESS_PAIRS = [
+  ['primary', 'info'],
+  ['error', 'success'],
+  ['primary', 'success'],
+] as const;
+
+type MachadoMatrix = readonly [
+  readonly [number, number, number],
+  readonly [number, number, number],
+  readonly [number, number, number],
+];
+
+const MACHADO_SEVERITY_1: readonly { matrix: MachadoMatrix; name: string }[] = [
+  {
+    matrix: [
+      [0.152286, 1.052583, -0.204868],
+      [0.114503, 0.786281, 0.099216],
+      [-0.003882, -0.048116, 1.051998],
+    ],
+    name: 'protan',
+  },
+  {
+    matrix: [
+      [0.367322, 0.860646, -0.227968],
+      [0.280085, 0.672501, 0.047413],
+      [-0.01182, 0.04294, 0.968881],
+    ],
+    name: 'deutan',
+  },
+];
 
 /** Matches theming.md's WCAG column: "AAA" needs 7:1, "large-text" needs 3:1, plain "AA" needs 4.5:1. */
 function expectedRatio(note: string): number {
@@ -74,7 +113,7 @@ function expectedRatio(note: string): number {
 }
 
 /**
- * Parses a theme-tokens.mjs "L C H" string (e.g. "56% 0.22 293deg") into an
+ * Parses a theme-tokens.mjs "L C H" string (e.g. "38% 0.14 300deg") into an
  * Oklch. The triple is kept raw because callers compose Oklch values directly
  * (ink derived from a base's hue/chroma); `parseColor` still runs to validate
  * the syntax and throws on anything malformed.
@@ -102,6 +141,47 @@ function resolveBase(family: (typeof COLOR_FAMILIES)[number]): { dark: Oklch; li
 /** Resolves a `content`/`contrast` ink entry (relative to its family's resolved base) to a concrete oklch color. */
 function resolveInk(base: Oklch, ink: { c?: number; cAbs?: number; l: string }): Oklch {
   return { a: 1, c: ink.cAbs ?? ink.c! * base.c, h: base.h, l: Number.parseFloat(ink.l) / 100 };
+}
+
+function linearizeChannel(channel: number): number {
+  const value = channel / 255;
+
+  return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+}
+
+function encodeChannel(channel: number): number {
+  const value = Math.max(0, Math.min(1, channel));
+  const encoded = value <= 0.0031308 ? value * 12.92 : 1.055 * value ** (1 / 2.4) - 0.055;
+
+  return encoded * 255;
+}
+
+function simulateMachado(color: Rgba, matrix: MachadoMatrix): Rgba {
+  const r = linearizeChannel(color.r);
+  const g = linearizeChannel(color.g);
+  const b = linearizeChannel(color.b);
+
+  const transform = (row: MachadoMatrix[number]) => row[0] * r + row[1] * g + row[2] * b;
+
+  return {
+    a: color.a,
+    b: encodeChannel(transform(matrix[2])),
+    g: encodeChannel(transform(matrix[1])),
+    r: encodeChannel(transform(matrix[0])),
+  };
+}
+
+function oklabDeltaE(a: Rgba, b: Rgba): number {
+  const first = srgbToOklch(a);
+  const second = srgbToOklch(b);
+  const firstAngle = (first.h * Math.PI) / 180;
+  const secondAngle = (second.h * Math.PI) / 180;
+
+  return Math.hypot(
+    first.l - second.l,
+    first.c * Math.cos(firstAngle) - second.c * Math.cos(secondAngle),
+    first.c * Math.sin(firstAngle) - second.c * Math.sin(secondAngle),
+  );
 }
 
 describe('contrast scale (--color-contrast-*)', () => {
@@ -222,6 +302,58 @@ describe('base as standalone text/border color (--color-{family}, bordered/outli
     expect(wcagContrast(canvas.dark, base.dark), `${family.name} base vs canvas, dark mode`).toBeGreaterThanOrEqual(
       AA_NORMAL_TEXT,
     );
+  });
+});
+
+describe('chromatic role separation under color-vision simulation', () => {
+  const families = COLOR_FAMILIES.filter((family) => CHROMATIC_ROLE_NAMES.has(family.name));
+
+  it('covers every chromatic role', () => {
+    expect(families.map((family) => family.name).sort()).toEqual(['error', 'info', 'primary', 'success', 'warning']);
+  });
+
+  it.each(['light', 'dark'] as const)('%s mode separates every chromatic role pair', (mode) => {
+    const bases = families.map((family) => {
+      const base = resolveBase(family);
+
+      if (!base) throw new Error(`${family.name} must have a resolvable base`);
+
+      return { color: oklchToSrgb(base[mode]), lightness: base[mode].l, name: family.name };
+    });
+
+    for (const { matrix, name: vision } of MACHADO_SEVERITY_1) {
+      const simulated = bases.map(({ color }) => simulateMachado(color, matrix));
+
+      for (let first = 0; first < bases.length; first++) {
+        for (let second = first + 1; second < bases.length; second++) {
+          const firstBase = bases[first];
+          const secondBase = bases[second];
+          const firstSimulated = simulated[first];
+          const secondSimulated = simulated[second];
+
+          if (!firstBase || !secondBase || !firstSimulated || !secondSimulated) {
+            throw new Error('Expected every color-vision role pair to have source and simulated colors');
+          }
+
+          expect(
+            oklabDeltaE(firstSimulated, secondSimulated),
+            `${firstBase.name} vs ${secondBase.name}, ${mode} mode, ${vision}`,
+          ).toBeGreaterThanOrEqual(0.08);
+        }
+      }
+    }
+
+    for (const [firstName, secondName] of VISION_LIGHTNESS_PAIRS) {
+      const first = bases.find((base) => base.name === firstName);
+      const second = bases.find((base) => base.name === secondName);
+
+      if (!first || !second) throw new Error(`Missing color-vision role pair: ${firstName}/${secondName}`);
+
+      expect(
+        Math.abs(first.lightness - second.lightness),
+        `${firstName} vs ${secondName}, ${mode} mode`,
+      ).toBeGreaterThanOrEqual(0.15);
+    }
   });
 });
 

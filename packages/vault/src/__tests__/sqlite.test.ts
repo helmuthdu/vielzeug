@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { type KeyValueVaultStore, table, ttl, VaultError } from '../index';
-import { createSQLite } from '../sqlite';
+import { createSQLite, type SQLiteDatabase } from '../sqlite';
 
 type User = { id: number | string; name: string; role?: string };
 
@@ -33,6 +33,25 @@ afterEach(() => {
 });
 
 describe('SQLite DocumentVaultStore', () => {
+  test('rejects undefined rows returned by a SQLite driver', async () => {
+    const connection = createDatabase();
+    const database: SQLiteDatabase = {
+      exec: (sql) => connection.exec(sql),
+      prepare: (sql) => {
+        const statement = connection.prepare(sql);
+
+        return {
+          all: () => [undefined],
+          get: (...parameters) => statement.get(...parameters),
+          run: (...parameters) => statement.run(...parameters),
+        };
+      },
+    };
+    const store = createSQLite({ database, name: 'app', parsers, schema });
+
+    await expect(store.getAll('users')).rejects.toThrow('SQLite driver returned an undefined row');
+  });
+
   test('persists records with distinct numeric and string keys across stores', async () => {
     const database = createDatabase();
     const writer = createStore(database);

@@ -1,24 +1,23 @@
-import { createRipple } from '../index';
+import { signal, watch } from '../index';
+
+import { itScoped } from './scope-test';
 
 describe('watch', () => {
-  it('does not invoke callback until source changes by default', () => {
-    const ripple = createRipple();
-    const count = ripple.signal(1);
+  itScoped('does not invoke callback until source changes by default', () => {
+    const count = signal(1);
     const values: Array<[number, number | undefined]> = [];
-    const stop = ripple.watch(count, (value, previous) => values.push([value, previous]));
+    const stop = watch(count, (value, previous) => values.push([value, previous]));
 
     count.value = 2;
 
     expect(values).toEqual([[2, 1]]);
     stop.dispose();
-    ripple.dispose();
   });
 
-  it('suppresses equal source output', () => {
-    const ripple = createRipple();
-    const count = ripple.signal(1);
+  itScoped('suppresses equal source output', () => {
+    const count = signal(1);
     const values: number[] = [];
-    const stop = ripple.watch(
+    const stop = watch(
       () => count.value % 2,
       (value) => values.push(value),
     );
@@ -28,15 +27,13 @@ describe('watch', () => {
 
     expect(values).toEqual([0]);
     stop.dispose();
-    ripple.dispose();
   });
 
-  it('does not track reactive reads made only by the callback', () => {
-    const ripple = createRipple();
-    const source = ripple.signal(0);
-    const unrelated = ripple.signal(0);
+  itScoped('does not track reactive reads made only by the callback', () => {
+    const source = signal(0);
+    const unrelated = signal(0);
     let sourceReads = 0;
-    const stop = ripple.watch(
+    const stop = watch(
       () => {
         sourceReads += 1;
         return source.value;
@@ -49,31 +46,31 @@ describe('watch', () => {
 
     expect(sourceReads).toBe(1);
     stop.dispose();
-    ripple.dispose();
   });
 
-  it('retries watcher after immediate callback fails', () => {
-    const errors: string[] = [];
-    const ripple = createRipple({
-      onError: (error, context) => errors.push(`${context.kind}:${(error as Error).message}`),
-    });
-    const count = ripple.signal(1);
-    const values: number[] = [];
-    const stop = ripple.watch(
-      count,
-      (value) => {
-        if (value === 1) throw new Error('not ready');
+  const errors: string[] = [];
 
-        values.push(value);
-      },
-      { immediate: true },
-    );
+  itScoped(
+    'retries watcher after immediate callback fails',
+    () => {
+      const count = signal(1);
+      const values: number[] = [];
+      const stop = watch(
+        count,
+        (value) => {
+          if (value === 1) throw new Error('not ready');
 
-    count.value = 2;
+          values.push(value);
+        },
+        { immediate: true },
+      );
 
-    expect(errors).toEqual(['effect:not ready']);
-    expect(values).toEqual([2]);
-    stop.dispose();
-    ripple.dispose();
-  });
+      count.value = 2;
+
+      expect(errors).toEqual(['effect:not ready']);
+      expect(values).toEqual([2]);
+      stop.dispose();
+    },
+    { onError: (error, context) => errors.push(`${context.kind}:${(error as Error).message}`) },
+  );
 });

@@ -1,10 +1,11 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, normalize } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { type DocsContractName } from '../validate-docs.ts';
-import { type DocsWorkspace, indexSidebarLinks, pagePathForLink, type SidebarMulti, validateSidebar } from '../validate-sidebar.ts';
+import { type MarkdownDocument, parseMarkdownDocument } from '../lib/markdown.ts';
+import { type DocsContractName, type DocsWorkspace } from '../validate-docs.ts';
+import { indexSidebarLinks, pagePathForLink, type SidebarMulti, validateSidebar } from '../validate-sidebar.ts';
 
 const roots: string[] = [];
 
@@ -19,8 +20,7 @@ function tempDir(): string {
 }
 
 /**
- * Build a DocsWorkspace by hand. validateSidebar only reads `knownFiles` (normalized absolute
- * paths) and each package's `files` keys, so the MarkdownDocument values are irrelevant here.
+ * Build a DocsWorkspace by hand, using actual page contents for anchor checks.
  */
 function workspace({
   contracts = new Map<string, DocsContractName>(),
@@ -31,12 +31,15 @@ function workspace({
   docsDir: string;
   pagesBySlug: Readonly<Record<string, readonly string[]>>;
 }): DocsWorkspace {
-  const packageDocs = new Map<string, { docsDir: string; files: Map<string, unknown>; slug: string }>();
+  const packageDocs = new Map<string, { docsDir: string; files: Map<string, MarkdownDocument>; slug: string }>();
   const knownFiles = new Set<string>();
   for (const [slug, pages] of Object.entries(pagesBySlug)) {
     packageDocs.set(slug, {
       docsDir: join(docsDir, slug),
-      files: new Map(pages.map((page) => [page, {}])),
+      files: new Map(pages.map((page) => {
+        const path = join(docsDir, slug, page);
+        return [page, parseMarkdownDocument(path, existsSync(path) ? readFileSync(path, 'utf8') : '')];
+      })),
       slug,
     });
     for (const page of pages) knownFiles.add(normalize(join(docsDir, slug, page)));

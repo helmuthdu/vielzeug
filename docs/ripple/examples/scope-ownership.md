@@ -14,31 +14,29 @@ A temporary panel owns reactive work that must stop together when the panel clos
 Create a scope, create work inside `run()`, then dispose the scope.
 
 ```ts
-import { createRipple } from '@vielzeug/ripple';
+import { createScope, effect, onCleanup, signal } from '@vielzeug/ripple';
 
-const ripple = createRipple();
-const scope = ripple.createScope('panel');
-const count = ripple.signal(0);
+const scope = createScope({ name: 'panel' });
+const count = signal(0);
 
 scope.run(() => {
-  ripple.effect(() => console.log(`Panel count: ${count.value}`));
-  ripple.onCleanup(() => console.log('panel closed'));
+  effect(() => console.log(`Panel count: ${count.value}`));
+  onCleanup(() => console.log('panel closed'));
 });
 
 count.value = 1;
 scope.dispose();
 count.value = 2;
-ripple.dispose();
 ```
 
 ### Pitfalls
 
 - Call `scope.run()` before creating work that belongs to the scope.
 - Do not call `run()` after scope disposal.
-- Dispose request and feature scopes even when their parent graph remains active.
+- Dispose request and feature scopes when their owner ends.
 
 ### Related
 
-- [Isolated Graph](./isolated-runtime.md)
+- [Usage Guide: Ownership with Scopes](../usage.md#ownership-with-scopes)
 - [Reactive Counter](./reactive-counter.md)
 - [Ore](/ore/)

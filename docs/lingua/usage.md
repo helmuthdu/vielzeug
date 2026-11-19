@@ -316,13 +316,15 @@ The same segment shape maps directly onto `h()` vnodes in Vue or `{#each}` block
 Bridge Lingua's `getSnapshot()`/`subscribe()` pair directly when templates need reactive locale reads.
 
 ```ts
-import { createRipple } from '@vielzeug/ripple';
+import { computed, createScope, fromSubscribable } from '@vielzeug/ripple';
 
-const ripple = createRipple();
-const i18nState = ripple.fromSubscribable(i18n);
-export const locale = ripple.computed(() => i18nState.value);
+const localeScope = createScope();
+export const locale = localeScope.run(() => {
+  const localeBridge = fromSubscribable(i18n);
+  return computed(() => localeBridge.value);
+});
 
-export const disposeLocaleBridge = () => ripple.dispose();
+export const disposeLocaleBridge = () => localeScope.dispose();
 ```
 
 Use Courier loaders when locale catalogs come from HTTP rather than bundled modules; pass each loader to `loadCatalog`.

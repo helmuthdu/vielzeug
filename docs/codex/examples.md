@@ -5,10 +5,9 @@ description: Practical MCP tool-call examples for package discovery, docs lookup
 
 ## Examples
 
-- [Listing Packages](./examples/listing-packages.md)
-- [Searching Packages](./examples/searching-packages.md)
-- [Package Metadata](./examples/package-metadata.md)
+- [Discovering Packages](./examples/discovering-packages.md)
+- [Searching Docs](./examples/searching.md)
 - [Reading Docs](./examples/reading-docs.md)
 - [Running REPL Examples](./examples/running-repl-examples.md)
-- [Looking Up Components](./examples/looking-up-components.md)
+- [Refine Components](./examples/refine-components.md)
 - [Inspector](./examples/inspector.md)

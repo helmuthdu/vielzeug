@@ -8,6 +8,18 @@
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
+  test('uses the control radius and keeps explicit radius overrides', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-textarea id="default" label="Notes"></ore-textarea>' +
+        '<ore-textarea id="explicit" label="Notes" rounded="lg"></ore-textarea>' +
+        '<ore-textarea id="custom" label="Notes" style="--textarea-radius: var(--rounded-2xl)"></ore-textarea>',
+    );
+
+    await expect(page.locator('#default [part="field"]')).toHaveCSS('border-radius', '8px');
+    await expect(page.locator('#explicit [part="field"]')).toHaveCSS('border-radius', '8px');
+    await expect(page.locator('#custom [part="field"]')).toHaveCSS('border-radius', '16px');
+  });
+
   // Regression coverage for a real bug: the focus/error/success glow (`box-shadow` on
   // `.field:focus-within`) lived in `@layer refine.base`, while solid/outline/ghost's
   // rest-state `box-shadow` (`fieldVariantMixin`) lives in `@layer refine.variants`: cascade

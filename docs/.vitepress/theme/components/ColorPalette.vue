@@ -13,7 +13,7 @@ interface ColorGroup {
 
 const brandGroups: ColorGroup[] = [
   {
-    description: 'Periwinkle violet: primary brand color',
+    description: 'Violet: primary brand color',
     name: 'Primary',
     swatches: [
       { label: 'Base', textVariable: '--color-primary-content', variable: '--color-primary' },
@@ -37,7 +37,7 @@ const brandGroups: ColorGroup[] = [
     ],
   },
   {
-    description: 'True gray: neutral UI surfaces',
+    description: 'Warm gray: neutral UI surfaces',
     name: 'Neutral',
     swatches: [
       { label: 'Base', textVariable: '--color-neutral-content', variable: '--color-neutral' },
@@ -69,7 +69,7 @@ const shadeGroups: ColorGroup[] = SHADE_FAMILIES.map((name) => ({
 
 const semanticGroups: ColorGroup[] = [
   {
-    description: 'Cyan-blue: informational messages',
+    description: 'Blue: informational messages',
     name: 'Info',
     swatches: [
       { label: 'Base', textVariable: '--color-info-content', variable: '--color-info' },
@@ -81,7 +81,7 @@ const semanticGroups: ColorGroup[] = [
     ],
   },
   {
-    description: 'Teal: positive outcomes & confirmations',
+    description: 'Green: positive outcomes & confirmations',
     name: 'Success',
     swatches: [
       { label: 'Base', textVariable: '--color-success-content', variable: '--color-success' },
@@ -105,7 +105,7 @@ const semanticGroups: ColorGroup[] = [
     ],
   },
   {
-    description: 'Vermilion: destructive actions & errors',
+    description: 'Red: destructive actions & errors',
     name: 'Error',
     swatches: [
       { label: 'Base', textVariable: '--color-error-content', variable: '--color-error' },

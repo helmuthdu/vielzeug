@@ -63,6 +63,7 @@ exports:
     ore-navbar-item,
     ore-navigation-menu,
     ore-navigation-menu-item,
+    ore-navigation-menu-link,
     ore-navigation-menu-panel,
     ore-number-input,
     ore-otp-input,
@@ -233,7 +234,7 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 
 ### Components
 
-Each entry below is a component with its own documentation page and registration subpath. Sub-element tags (`ore-accordion-item`, `ore-card-picker-item`, `ore-tab-item`, `ore-avatar-group`, and the rest) are documented on their parent's page and registered with it.
+Each entry below is a component with its own documentation page and registration subpath. Sub-element tags (`ore-accordion-item`, `ore-card-picker-item`, `ore-navigation-menu-link`, `ore-tab-item`, `ore-avatar-group`, and the rest) are documented on their parent's page and registered with it.
 
 **Content:** `ore-accordion`, `ore-avatar`, `ore-card`, `ore-card-picker`, `ore-carousel`, `ore-chat-message`, `ore-chat-panel`, `ore-code-window`, `ore-copy-command`, `ore-icon`, `ore-keyboard-key`, `ore-list`, `ore-marquee`, `ore-prose`, `ore-qr-code`, `ore-rank-list`, `ore-speech-player`, `ore-speed-reading`, `ore-stats`, `ore-table`, `ore-text`
 

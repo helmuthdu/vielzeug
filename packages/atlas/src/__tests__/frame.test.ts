@@ -5,7 +5,7 @@ import { apply, around, IDENTITY, multiply, rotate, scale, translate } from '../
 import { containsPoint } from '../rect.js';
 import type { Point, Rect } from '../shapes.js';
 
-const close = (a: number, b: number): number => expect(a).toBeCloseTo(b, 9);
+const close = (a: number, b: number): void => expect(a).toBeCloseTo(b, 9);
 const closePoint = (p: Point, x: number, y: number): void => {
   close(p.x, x);
   close(p.y, y);

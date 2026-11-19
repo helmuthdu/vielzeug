@@ -351,6 +351,11 @@
       "require": "./dist/navigation-menu.cjs",
       "types": "./dist/navigation/navigation-menu/navigation-menu.d.ts"
     },
+    "./navigation-menu-link": {
+      "import": "./dist/navigation-menu-link.js",
+      "require": "./dist/navigation-menu-link.cjs",
+      "types": "./dist/navigation/navigation-menu/navigation-menu-link.d.ts"
+    },
     "./number-input": {
       "import": "./dist/number-input.js",
       "require": "./dist/number-input.cjs",
@@ -730,6 +735,9 @@
       ],
       "navigation-menu": [
         "dist/navigation/navigation-menu/navigation-menu.d.ts"
+      ],
+      "navigation-menu-link": [
+        "dist/navigation/navigation-menu/navigation-menu-link.d.ts"
       ],
       "number-input": [
         "dist/inputs/number-input/number-input.d.ts"

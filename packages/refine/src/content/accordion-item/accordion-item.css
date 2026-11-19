@@ -4,20 +4,25 @@
        ======================================== */
 
   :host {
-    --accordion-details-radius: var(--rounded-lg);
+    --_accordion-top-radius: var(--accordion-item-radius, var(--rounded-lg));
+    --_accordion-bottom-radius: var(--accordion-item-radius, var(--rounded-lg));
+    --accordion-details-radius: var(--_accordion-top-radius) var(--_accordion-top-radius)
+      var(--_accordion-bottom-radius) var(--_accordion-bottom-radius);
+    --accordion-summary-radius: 0;
     --accordion-item-transition: var(--transition-normal);
     --accordion-item-expand-easing: var(--ease-spring);
     --accordion-item-row-duration: var(--duration-200);
     --accordion-item-fade-duration: var(--duration-200);
-    --accordion-item-fade-delay: 60ms;
-    --accordion-item-collapse-delay: 120ms;
+    --accordion-item-fade-delay: var(--duration-75);
+    --accordion-item-collapse-delay: var(--duration-100);
     display: block;
     color: var(--accordion-item-body-color, var(--text-color-body));
   }
 
   details {
     width: 100%;
-    border-radius: var(--accordion-item-radius);
+    border-radius: var(--_accordion-top-radius) var(--_accordion-top-radius) var(--_accordion-bottom-radius)
+      var(--_accordion-bottom-radius);
   }
 
   summary {
@@ -178,13 +183,11 @@
     border-radius: inherit;
   }
 
-  :host([variant='frost']) summary {
-    border-radius: inherit;
+  :host([variant='frost']:not([expanded])) summary {
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
   }
 
   :host([variant='frost']) .content-wrapper {
-    border-radius: 0;
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
   }
 
@@ -258,6 +261,15 @@
     }
   }
 
+  @media (pointer: fine) {
+    :host([variant='solid']:not([size])),
+    :host([variant='solid'][size='md']),
+    :host([variant='flat']:not([size])),
+    :host([variant='flat'][size='md']) {
+      --accordion-item-details-padding: var(--size-2) var(--size-4);
+    }
+  }
+
   /* ========================================
      States
      ======================================== */
@@ -307,8 +319,8 @@
 
   /* Expanded state - adjust border radius */
   :host([expanded]) {
-    --accordion-details-radius: var(--rounded-lg) var(--rounded-lg) 0 0;
-    --accordion-summary-radius: 0 0 var(--rounded-lg) var(--rounded-lg);
+    --accordion-details-radius: var(--_accordion-top-radius) var(--_accordion-top-radius) 0 0;
+    --accordion-summary-radius: 0 0 var(--_accordion-bottom-radius) var(--_accordion-bottom-radius);
   }
 
   @media (forced-colors: active) {

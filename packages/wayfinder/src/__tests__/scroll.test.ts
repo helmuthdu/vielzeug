@@ -43,18 +43,19 @@ describe('scroll coordination', () => {
   it('settles the view swap and scroll inside the view transition, not after it', async () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     const order: string[] = [];
-    const original = (document as Document & { startViewTransition?: unknown }).startViewTransition;
+    const original = Object.getOwnPropertyDescriptor(document, 'startViewTransition');
 
     // A minimal stand-in for the browser API: `finished` resolves after the callback runs.
     // Listeners and scroll must fire while the callback is still open: the transition's
     // new-state capture covers both, and neither lands as an uncovered jump after the fade.
-    (document as Document & { startViewTransition?: unknown }).startViewTransition = (
-      callback: () => void | Promise<void>,
-    ) => ({
-      finished: (async () => {
-        await callback();
-        order.push('finished');
-      })(),
+    Object.defineProperty(document, 'startViewTransition', {
+      configurable: true,
+      value: (callback: () => void | Promise<void>) => ({
+        finished: (async () => {
+          await callback();
+          order.push('finished');
+        })(),
+      }),
     });
 
     try {
@@ -76,7 +77,8 @@ describe('scroll coordination', () => {
       expect(order.indexOf('finished')).toBeGreaterThan(order.indexOf('scrolled'));
       router.dispose();
     } finally {
-      (document as Document & { startViewTransition?: unknown }).startViewTransition = original;
+      if (original) Object.defineProperty(document, 'startViewTransition', original);
+      else Reflect.deleteProperty(document, 'startViewTransition');
       scrollTo.mockRestore();
     }
   });

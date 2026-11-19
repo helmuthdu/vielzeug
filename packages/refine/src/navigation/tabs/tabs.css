@@ -5,6 +5,9 @@
     /* Host-level default so an ancestor's inherited `--_radius` cannot leak in. */
     --_radius: var(--rounded-lg);
     --tabs-radius: var(--_radius);
+    --_tabs-inset: var(--size-1);
+    --_tabs-border-width: var(--border);
+    --_tabs-inner-radius: max(0px, calc(var(--tabs-radius) - var(--_tabs-inset) - var(--_tabs-border-width)));
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -40,7 +43,7 @@
     top: 0;
     left: 0;
     pointer-events: none;
-    border-radius: var(--tabs-radius);
+    border-radius: var(--_tabs-inner-radius);
     transition:
       transform var(--tabs-transition),
       width var(--tabs-transition),
@@ -97,9 +100,9 @@
 
   :host [role='tablist'],
   :host([variant='solid']) [role='tablist'] {
-    padding: var(--size-1);
+    padding: var(--_tabs-inset);
     background: var(--_tablist-bg);
-    border: var(--border) solid var(--_tablist-border-color);
+    border: var(--_tabs-border-width) solid var(--_tablist-border-color);
     border-radius: var(--tabs-radius);
   }
 
@@ -115,17 +118,17 @@
 
     overflow: hidden;
     background: var(--tabs-bg, var(--color-contrast-100));
-    border: var(--border) solid var(--_tablist-border-color);
+    border: var(--_tabs-border-width) solid var(--_tablist-border-color);
     border-radius: var(--tabs-radius);
     box-shadow: var(--inset-shadow-xs), var(--shadow-2xs);
   }
 
   :host([variant='flat']) [role='tablist'] {
     gap: var(--size-1);
-    padding: var(--size-1);
+    padding: var(--_tabs-inset);
     background: transparent;
     border: none;
-    border-bottom: var(--border) solid var(--_tablist-border-color);
+    border-bottom: var(--_tabs-border-width) solid var(--_tablist-border-color);
     border-radius: 0;
   }
 
@@ -141,9 +144,9 @@
 
   :host([variant='bordered']) [role='tablist'] {
     gap: var(--size-1);
-    padding: var(--size-1);
+    padding: var(--_tabs-inset);
     background: transparent;
-    border: var(--border) solid var(--_tablist-border-color);
+    border: var(--_tabs-border-width) solid var(--_tablist-border-color);
     border-bottom: none;
     border-radius: var(--tabs-radius) var(--tabs-radius) 0 0;
   }
@@ -154,13 +157,13 @@
   }
 
   :host([variant='bordered']) .panels {
-    border: var(--border) solid var(--_tablist-border-color);
+    border: var(--_tabs-border-width) solid var(--_tablist-border-color);
     border-radius: 0 0 var(--tabs-radius) var(--tabs-radius);
   }
 
   :host([variant='bordered'][orientation='vertical']) [role='tablist'] {
     border-right: none;
-    border-bottom: var(--border) solid var(--_tablist-border-color);
+    border-bottom: var(--_tabs-border-width) solid var(--_tablist-border-color);
     border-radius: var(--tabs-radius) 0 0 var(--tabs-radius);
   }
 
@@ -169,9 +172,14 @@
   }
 
   /* ─── ghost ─── */
+  :host([variant='ghost']) {
+    --_tabs-inset: 0px;
+    --_tabs-border-width: 0px;
+  }
+
   :host([variant='ghost']) [role='tablist'] {
     gap: var(--size-1);
-    padding: 0;
+    padding: var(--_tabs-inset);
     background: transparent;
     border: none;
     border-radius: 0;
@@ -191,9 +199,9 @@
   }
 
   :host([variant='frost']) [role='tablist'] {
-    padding: var(--size-1);
+    padding: var(--_tabs-inset);
     background: var(--_tablist-bg);
-    border: var(--border) solid var(--_tablist-border-color);
+    border: var(--_tabs-border-width) solid var(--_tablist-border-color);
     border-radius: var(--tabs-radius);
     box-shadow: var(--shadow-md), var(--inset-shadow-xs);
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
@@ -223,11 +231,7 @@
 
   :host([density='compact']) [role='tablist'] {
     gap: var(--size-1);
-    padding: var(--size-1);
-  }
-
-  :host([density='compact'][variant='ghost']) [role='tablist'] {
-    padding: 0;
+    padding: var(--_tabs-inset);
   }
 }
 

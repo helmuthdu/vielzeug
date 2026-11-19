@@ -18,7 +18,8 @@ export interface ToolSchema {
 
 export const EMPTY_SCHEMA: ToolSchema = { additionalProperties: false, properties: {}, type: 'object' };
 
-export const PACKAGE_SLUG_PROPERTY: ToolProperty = {
+/** The one package parameter name used by every tool. */
+export const SLUG_PROPERTY: ToolProperty = {
   description: 'Package folder name, e.g. "ripple"',
   maxLength: 100,
   minLength: 1,
@@ -40,6 +41,19 @@ export function parseArgs<S extends ToolSchema>(schema: S, raw: Record<string, u
     const required = schema.required?.includes(key) ?? false;
     const value = raw[key];
 
+    if (
+      typeof value === 'string' &&
+      value.trim().length > 0 &&
+      property.minLength !== undefined &&
+      value.trim().length < property.minLength
+    )
+      throw new CatalogError('INVALID_ARG', `${key}: must be at least ${property.minLength} characters.`);
+    if (typeof value === 'string' && property.maxLength !== undefined && value.trim().length > property.maxLength)
+      throw new CatalogError(
+        'INVALID_ARG',
+        `${key}: exceeds ${property.maxLength} character limit. Shorten the value.`,
+      );
+
     if (value === undefined || value === '') {
       if (required) throw new CatalogError('INVALID_ARG', `${key}: required non-empty string.`);
       if (property.default !== undefined) result[key] = property.default;
@@ -51,13 +65,6 @@ export function parseArgs<S extends ToolSchema>(schema: S, raw: Record<string, u
     const trimmed = value.trim();
 
     if (required && trimmed.length === 0) throw new CatalogError('INVALID_ARG', `${key}: required non-empty string.`);
-    if (property.minLength !== undefined && trimmed.length < property.minLength)
-      throw new CatalogError('INVALID_ARG', `${key}: must be at least ${property.minLength} characters.`);
-    if (property.maxLength !== undefined && trimmed.length > property.maxLength)
-      throw new CatalogError(
-        'INVALID_ARG',
-        `${key}: exceeds ${property.maxLength} character limit. Shorten the value.`,
-      );
     if (property.enum && !property.enum.includes(trimmed))
       throw new CatalogError('INVALID_ARG', `${key}: must be one of ${property.enum.join(', ')}.`);
 

@@ -11,12 +11,7 @@ function content(value: unknown) {
   };
 }
 
-export function registerTools<CatalogType extends Catalog>(
-  server: Server,
-  catalog: CatalogType,
-  tools: readonly ToolDefinition<CatalogType>[],
-  debug = false,
-): void {
+export function registerTools(server: Server, catalog: Catalog, tools: readonly ToolDefinition[], debug = false): void {
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
 
   server.setRequestHandler('tools/list', () => ({

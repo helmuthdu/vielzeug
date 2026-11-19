@@ -732,7 +732,7 @@ pnpm add @vielzeug/codex
 **Key Features:**
 
 - Stdio and HTTP transport modes
-- Tools: `list-packages`, `search-packages`, `get-docs`, `get-package-api`, `list-components`, `get-component`, and more
+- Tools: `list-packages`, `search`, `get-docs`, `get-package`, `get-type-signature`, `refine-get-component`, and more
 - Works with Claude Desktop, Copilot Chat, and any MCP-compatible client
 
 [📖 Documentation](https://vielzeug.dev/codex/) • [Examples](https://vielzeug.dev/codex/examples)

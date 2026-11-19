@@ -186,7 +186,7 @@ test('pinch gesture reports baseline-relative scale from real touch input', asyn
   });
 
   const cdp = await page.context().newCDPSession(page);
-  const send = (type: string, points: { x: number; y: number }[]) =>
+  const send = (type: 'touchStart' | 'touchEnd' | 'touchMove' | 'touchCancel', points: { x: number; y: number }[]) =>
     cdp.send('Input.dispatchTouchEvent', {
       touchPoints: points.map((point, index) => ({ ...point, id: index })),
       type,

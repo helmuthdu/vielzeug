@@ -1,61 +1,33 @@
-export const DOC_PAGES = ['index', 'api', 'usage', 'examples'] as const;
-export type DocPage = (typeof DOC_PAGES)[number];
+/**
+ * The snapshot contract shared by the generator (`scripts/`) and the runtime (`src/`).
+ * One `data/snapshot.json` carries everything the server serves; metadata the server can
+ * derive from content (page lists, example ids, export names) is never stored beside it.
+ */
 
-export const SNAPSHOT_SCHEMA_VERSION = 2 as const;
+/** Documentation pages keyed by path relative to `docs/<slug>/` without the `.md` extension (`index`, `migration`, `components/button`). */
+export type PageMap = Readonly<Record<string, string>>;
 
-export interface CemTypeRef {
-  readonly text: string;
+/**
+ * One heading-delimited section of a docs page. `start`/`end` are offsets into the stored
+ * page markdown, computed at generate time against the exact shipped string.
+ */
+export interface Section {
+  readonly end: number;
+  /** Heading text without leading `#`s; the section before the first heading uses the page title. */
+  readonly heading: string;
+  readonly level: 2 | 3;
+  readonly page: string;
+  readonly start: number;
 }
 
-export interface CemAttribute {
-  readonly default?: string;
-  readonly description?: string;
-  readonly fieldName?: string;
+/** One public export of a package, resolved through the TypeScript checker at generate time. */
+export interface ExportEntry {
+  /** The export's JSDoc summary, when the declaration carries one. */
+  readonly doc?: string;
+  readonly kind: 'class' | 'const' | 'function' | 'interface' | 'type' | 'variable';
   readonly name: string;
-  readonly type?: CemTypeRef;
-}
-
-export interface CemCssPart {
-  readonly description?: string;
-  readonly name: string;
-}
-
-export interface CemCssProperty {
-  readonly default?: string;
-  readonly description?: string;
-  readonly name: string;
-}
-
-export interface CemEvent {
-  readonly description?: string;
-  readonly name: string;
-  readonly type?: CemTypeRef;
-}
-
-export interface CemMember {
-  readonly description?: string;
-  readonly kind?: 'field' | 'method';
-  readonly name: string;
-  readonly type?: CemTypeRef;
-}
-
-export interface CemSlot {
-  readonly description?: string;
-  readonly name: string;
-}
-
-export interface CemDeclaration {
-  readonly attributes?: readonly CemAttribute[];
-  readonly cssParts?: readonly CemCssPart[];
-  readonly cssProperties?: readonly CemCssProperty[];
-  readonly description?: string;
-  readonly events?: readonly CemEvent[];
-  readonly members?: readonly CemMember[];
-  readonly name?: string;
-  readonly slots?: readonly CemSlot[];
-  readonly superclass?: { readonly name: string; readonly package?: string };
-  readonly tagName?: string;
-  readonly [key: string]: unknown;
+  /** The declaration text including JSDoc, as written in source. */
+  readonly signature: string;
 }
 
 export interface Example {
@@ -65,12 +37,8 @@ export interface Example {
 }
 
 export interface PackageMeta {
-  readonly availableDocPages: readonly DocPage[];
   readonly category: string;
   readonly description: string;
-  readonly exampleIds: readonly string[];
-  readonly exports: readonly string[];
-  readonly hasSource: boolean;
   readonly keywords: readonly string[];
   readonly name: string;
   readonly related: readonly string[];
@@ -78,20 +46,54 @@ export interface PackageMeta {
   readonly version: string;
 }
 
-export interface PackageContent {
-  readonly apiSource: string | null;
-  readonly docs: Readonly<Partial<Record<DocPage, string>>>;
+/** Everything one package contributes to the snapshot. */
+export interface PackageEntry {
   readonly examples: readonly Example[];
-  readonly typeSignatures: Readonly<Record<string, string>>;
+  /** The package's real public exports; this list replaces any hand-curated one. */
+  readonly exports: readonly ExportEntry[];
+  readonly meta: PackageMeta;
+  readonly pages: PageMap;
+  readonly sections: readonly Section[];
+  /** Page title from each page's frontmatter, keyed like `pages`. */
+  readonly titles: Readonly<Record<string, string>>;
 }
 
-export interface CatalogFile {
-  readonly packages: readonly PackageMeta[];
-  readonly version: string;
+export interface RefineAttribute {
+  readonly default?: string;
+  readonly description?: string;
+  readonly name: string;
+  /** The CEM type text, e.g. `'primary' | 'ghost'` or `'boolean'`. */
+  readonly type?: string;
 }
 
-/** Layout filenames (`catalog.json`, `packages/`, `refine.json`) are code constants; the manifest carries data only. */
-export interface SnapshotManifest {
-  readonly schemaVersion: typeof SNAPSHOT_SCHEMA_VERSION;
+export interface RefineComponent {
+  readonly attributes?: readonly RefineAttribute[];
+  readonly cssParts?: readonly { readonly description?: string; readonly name: string }[];
+  readonly cssProperties?: readonly {
+    readonly default?: string;
+    readonly description?: string;
+    readonly name: string;
+  }[];
+  /** Docs page carrying this component's examples, e.g. `components/button`. */
+  readonly docPage?: string;
+  readonly events?: readonly { readonly description?: string; readonly name: string; readonly type?: string }[];
+  readonly slots?: readonly { readonly description?: string; readonly name: string }[];
+  readonly summary?: string;
+  readonly tag: string;
+}
+
+/** One theme custom property from `packages/refine/src/styles/theme.css`. */
+export interface ThemeToken {
+  readonly comment?: string;
+  readonly name: string;
+  readonly value: string;
+}
+
+export interface Snapshot {
+  /** Element declarations only; non-custom-element CEM declarations are projected out. */
+  readonly components: readonly RefineComponent[];
+  readonly packages: readonly PackageEntry[];
+  readonly tokens: readonly ThemeToken[];
+  /** The codex package version this snapshot was generated from. */
   readonly version: string;
 }

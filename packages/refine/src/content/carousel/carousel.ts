@@ -10,6 +10,7 @@ import { clearCoverflow, syncCoverflow } from './_coverflow';
 import componentStyles from './carousel.css?inline';
 import './carousel-slide';
 
+export { BUTTON_TAG } from '../../inputs/button/button';
 export { MEDIA_NAVIGATION_TAG } from '../../navigation/media-navigation/media-navigation';
 export { CAROUSEL_SLIDE_TAG } from './carousel-slide';
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -27,7 +28,7 @@ export type OreCarouselEvents = {
 export type OreCarouselProps = {
   /**
    * Whether to advance slides automatically. Defaults to `false`.
-   * Opt in explicitly: autoplay on by default is a WCAG 2.1 SC 2.2.2 violation for many use cases.
+   * Opt in explicitly so callers choose when the carousel starts moving.
    */
   autoplay?: boolean;
   /** Interval in milliseconds between automatic slide advances. Defaults to `5000`. */
@@ -69,7 +70,7 @@ export type OreCarouselProps = {
  * @element ore-carousel-slide - Child element for individual slides
  *
  * @attr {string}  color             - Theme color for navigation buttons: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {boolean} autoplay          - Advance slides automatically (default false)
+ * @attr {boolean} autoplay          - Advance slides automatically with a pause/resume control (default false)
  * @attr {number}  autoplay-interval - Milliseconds between automatic advances (default 5000)
  * @attr {string}  label             - Accessible label for the carousel region
  * @attr {boolean} loop              - Loop from last slide to first (default true)
@@ -103,6 +104,7 @@ export type OreCarouselProps = {
  * @part indicators - The indicator dots container
  * @part prev-btn   - The previous-slide button
  * @part next-btn   - The next-slide button
+ * @part autoplay-toggle - The autoplay pause/resume button
  *
  * @example
  * ```html
@@ -190,9 +192,13 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     // ── State ────────────────────────────────────────────────────────────────
 
     const activeIndex = signal<number>(props['slide-index'].value ?? 0);
+    const autoplayPaused = signal(false);
+    const autoplayRunning = signal(false);
     const initialTabindex = el.getAttribute('tabindex');
     let observeCoverflow = (): void => {};
     let focusedSlide: HTMLElement | undefined;
+    let pointerInside = false;
+    let focusWithin = false;
     let autoplayTimer: ReturnType<typeof setInterval> | null = null;
 
     // Slide cache: populated immediately, refreshed on slotchange.
@@ -208,6 +214,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     const looping = computed(() => props.loop.value !== false);
     const showControls = computed(() => props['show-controls'].value !== false);
     const showIndicators = computed(() => props['show-indicators'].value !== false);
+    const canAutoplay = computed(() => Boolean(props.autoplay.value) && slideCount.value > 1);
     const isCoverflow = computed(() => props.variant.value === 'coverflow');
     const isRtl = (): boolean => isCoverflow.value && isHorizontal.value && elementDirection(el) === 'rtl';
 
@@ -234,7 +241,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     };
 
     const prev = (): void => goTo(activeIndex.value - 1);
-    const next = (): void => goTo(activeIndex.value + 1);
+    const next = (announce_ = true): void => goTo(activeIndex.value + 1, announce_);
 
     // ── Sync prop → state ────────────────────────────────────────────────────
 
@@ -312,10 +319,18 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
 
     // ── Autoplay ─────────────────────────────────────────────────────────────
 
-    const startAutoplay = (): void => {
-      if (autoplayTimer !== null) return;
+    const startAutoplay = (ignoreInteraction = false): void => {
+      if (
+        !props.autoplay.value ||
+        slideCount.value < 2 ||
+        autoplayPaused.value ||
+        (!ignoreInteraction && (pointerInside || focusWithin)) ||
+        autoplayTimer !== null
+      )
+        return;
 
-      autoplayTimer = setInterval(next, props['autoplay-interval'].value ?? 5000);
+      autoplayTimer = setInterval(() => next(false), props['autoplay-interval'].value ?? 5000);
+      autoplayRunning.value = true;
     };
 
     const stopAutoplay = (): void => {
@@ -323,14 +338,26 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         clearInterval(autoplayTimer);
         autoplayTimer = null;
       }
+      autoplayRunning.value = false;
+    };
+
+    const toggleAutoplay = (): void => {
+      autoplayPaused.value = !autoplayPaused.value;
+      if (autoplayPaused.value) stopAutoplay();
+      else startAutoplay(true);
     };
 
     watch(
-      computed(() => ({ enabled: props.autoplay.value, interval: props['autoplay-interval'].value })),
-      ({ enabled }) => {
+      computed(() => ({
+        count: slideCount.value,
+        enabled: props.autoplay.value,
+        interval: props['autoplay-interval'].value,
+      })),
+      ({ count, enabled }) => {
         stopAutoplay();
+        if (!enabled) autoplayPaused.value = false;
 
-        if (enabled) startAutoplay();
+        if (enabled && count > 1) startAutoplay();
       },
     );
 
@@ -381,6 +408,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       },
       on: {
         focusin: (event: FocusEvent) => {
+          focusWithin = true;
           focusedSlide = event
             .composedPath()
             .find((node): node is HTMLElement => node instanceof HTMLElement && slides.includes(node));
@@ -392,16 +420,19 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
           if (!(event.relatedTarget instanceof Node) || !el.contains(event.relatedTarget)) {
             queueMicrotask(() => {
               if (focusedSlide === leaving && leaving?.isConnected !== false) focusedSlide = undefined;
+              focusWithin = el.contains(el.ownerDocument.activeElement);
+              if (!focusWithin) startAutoplay();
             });
           }
-          if (props.autoplay.value) startAutoplay();
         },
         keydown: handleKeydown,
         pointerenter: () => {
+          pointerInside = true;
           stopAutoplay();
         },
         pointerleave: () => {
-          if (props.autoplay.value) startAutoplay();
+          pointerInside = false;
+          startAutoplay();
         },
       },
     });
@@ -559,7 +590,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     // ── Template ─────────────────────────────────────────────────────────────
 
     return html`
-      <div class="track" part="track" aria-live=${() => (props.autoplay.value ? 'off' : 'polite')}>
+      <div class="track" part="track" aria-live=${() => (autoplayRunning.value ? 'off' : 'polite')}>
         <span class="coverflow-measure" aria-hidden="true"></span>
         <slot></slot>
       </div>
@@ -569,13 +600,20 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         previous-label="Previous slide" next-label="Next slide" count="${() => slideCount.value}" active-index="${() => activeIndex.value}"
         labels="${() => JSON.stringify(Array.from({ length: slideCount.value }, (_, index) => `Go to slide ${index + 1}`))}"
         color="${props.color}" orientation="${props.orientation}" loop="${() => String(looping.value)}"
+        show-actions="${() => String(canAutoplay.value)}"
         show-controls="${() => String(showControls.value)}" show-indicators="${() => String(showIndicators.value)}"
         max-indicators="${props['max-indicators']}"
-        progress-duration="${() => (props.autoplay.value ? (props['autoplay-interval'].value ?? 5000) : 0)}"
+        progress-duration="${() => (autoplayRunning.value ? (props['autoplay-interval'].value ?? 5000) : 0)}"
         @navigate="${(event: CustomEvent<{ index: number }>) => {
           event.stopPropagation();
           goTo(event.detail.index);
-        }}"></ore-media-navigation>
+        }}">
+        <ore-button slot="actions" class="autoplay-toggle" part="autoplay-toggle" variant="frost" elevation="0" rounded="full" icon-only
+          label="${() => (autoplayPaused.value ? 'Resume autoplay' : 'Pause autoplay')}"
+          ?hidden="${() => !canAutoplay.value}" @click="${toggleAutoplay}">
+          <ore-icon name="${() => (autoplayPaused.value ? 'play' : 'pause')}" size="16" stroke-width="2" aria-hidden="true"></ore-icon>
+        </ore-button>
+      </ore-media-navigation>
     `;
   },
   styles: [componentStyles],

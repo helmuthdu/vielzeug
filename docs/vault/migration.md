@@ -379,3 +379,7 @@ Spell schemas still plug in directly: `parsers: { settings: SettingsSchema }`. B
 ## Expect native counts and observer reporting
 
 `count()` and `isEmpty()` on SQLite no longer decode every row; expired rows are excluded in SQL. Pass `onObserverError` to any factory to receive errors thrown by `observe()` listeners; without it the snapshot stream stays silent, as before.
+
+## SQLite statement row types
+
+`SQLiteStatement.all()` now permits `undefined` in its declared result to accommodate Bun's generic SQLite types. Code that calls `all()` through this interface must check each row before using it. Vault rejects an undefined row with `VaultError`; SQLite drivers should continue to return only actual rows.

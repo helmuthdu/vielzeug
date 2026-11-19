@@ -76,13 +76,15 @@ Use the `rounded` attribute to match your surrounding UI radius:
 
 </ComponentPreview>
 
-Do not mix `--copy-command-radius` and `rounded`: the CSS property takes precedence over the attribute.
+`--copy-command-radius` overrides the `rounded` attribute when both are set. Hover and keyboard-focus surfaces use the outer radius minus the border width, clamped at zero, following the [shared shape policy](../theming.md#shape-and-rounded-corners).
 
 ## With a Suffix Slot
 
 Add any element to the `suffix` slot. It is separated by a divider that inherits the component's border color.
 
-The most common use is a "cycle" button that switches between multiple commands without losing the copy button's position. Keep suffix slot controls lightweight: the slot is visually grouped with the copy button and should feel like a single unit. Suffix slot content is part of the light DOM and must carry its own accessible labels (e.g. `aria-label="Show next package"`).
+The component stays within its available width in block, flex, and grid layouts. Long commands are ellipsized while the copy icon and suffix controls remain visible. The accessible name and copied value retain the full command.
+
+The most common use is a "cycle" button that switches between multiple commands without losing the copy button's position. Keep suffix slot controls lightweight: the slot is visually grouped with the copy button and should feel like a single unit. The copy button keeps its adjoining corners square in both left-to-right and right-to-left layouts. Suffix slot content is part of the light DOM and must carry its own accessible labels (e.g. `aria-label="Show next package"`).
 
 <ComponentPreview center vertical>
 

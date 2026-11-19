@@ -331,4 +331,4 @@ export default defineConfig({
 });
 ```
 
-Use `useRoute()` inside `PackagesMenu.vue` to apply `aria-current="page"` to the link for the active package. VitePress renders the same custom component in its mobile navigation screen with a `screen-menu` prop; render a native `<details>` fallback there instead of the desktop popover.
+Use `useRoute()` inside `PackagesMenu.vue` to mark the active package link. VitePress renders the same custom component in its mobile navigation screen with a `screen-menu` prop; pass that state to `ore-navigation-menu`'s `inline` attribute so the panel stays in document flow and uses the same disclosure and keyboard behavior as the desktop menu.

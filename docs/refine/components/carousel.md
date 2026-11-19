@@ -29,7 +29,9 @@ Give the carousel an explicit height and a descriptive `label`. The default vari
 
 ## Autoplay
 
-Autoplay is **off by default**. Add the `autoplay` attribute to enable timed slide advances. The timer pauses automatically when the pointer enters the carousel or any element inside receives keyboard focus, and resumes on leave.
+Autoplay is **off by default**. Add the `autoplay` attribute to enable timed slide advances. When there are at least two slides, an accessible **Pause autoplay** control appears in the media-navigation bar and remains available to touch and keyboard users. Pausing is persistent until **Resume autoplay** is activated.
+
+The timer also pauses while the pointer is over the carousel or keyboard focus is inside it, then resumes on leave if it was not manually paused. Activating **Resume autoplay** restarts it immediately, including while the control remains focused.
 
 Use `autoplay-interval` (in milliseconds, default `5000`) to control the delay. Changing `autoplay-interval` at runtime restarts the timer immediately.
 
@@ -462,7 +464,7 @@ Horizontal coverflow mirrors layout and Left/Right navigation for `dir="rtl"`. A
 | `orientation`       | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Slide direction and keyboard axis                                                           |
 | `slide-index`       | `number`                                                                  | `0`            | Active slide (zero-based). Writable at any time; reflected as an attribute after navigation |
 | `loop`              | `boolean`                                                                 | `true`         | Wrap last→first and first→last.                                                             |
-| `autoplay`          | `boolean`                                                                 | `false`        | Advance slides on a timer; pauses on hover and focus                                        |
+| `autoplay`          | `boolean`                                                                 | `false`        | Advance slides on a timer; provides a persistent pause/resume control                       |
 | `autoplay-interval` | `number`                                                                  | `5000`         | Milliseconds between automatic advances; reactive: changing it restarts the timer           |
 | `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A            | Theme color for prev/next navigation buttons                                                |
 | `show-controls`     | `boolean`                                                                 | `true`         | Show prev/next navigation buttons                                                           |
@@ -495,13 +497,14 @@ Horizontal coverflow mirrors layout and Left/Right navigation for `dir="rtl"`. A
 
 **`ore-carousel` CSS Parts**
 
-| Part         | Element        | Description                                                    |
-| ------------ | -------------- | -------------------------------------------------------------- |
-| `track`      | `<div>`        | The slide track: also the `aria-live` region                   |
-| `controls`   | `<div>`        | Prev/next button wrapper                                       |
-| `prev-btn`   | `<ore-button>` | Previous-slide button                                          |
-| `next-btn`   | `<ore-button>` | Next-slide button                                              |
-| `indicators` | `<div>`        | Navigation bar containing the indicator `tablist` and controls |
+| Part              | Element        | Description                                                                                                            |
+| ----------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `track`           | `<div>`        | The slide track: also the `aria-live` region                                                                           |
+| `controls`        | `<div>`        | Navigation controls, including prev/next buttons and the autoplay toggle                                               |
+| `prev-btn`        | `<ore-button>` | The previous-slide button                                                                                              |
+| `next-btn`        | `<ore-button>` | The next-slide button                                                                                                  |
+| `indicators`      | `<div>`        | Navigation bar containing the indicator `tablist`, controls, and autoplay toggle                                       |
+| `autoplay-toggle` | `<ore-button>` | Pause/resume autoplay control in the navigation bar; shown only when autoplay is enabled and there are multiple slides |
 
 **`ore-carousel-slide`**
 
@@ -531,9 +534,9 @@ After a drag activates, its pointer-generated click is suppressed so a cover pic
 
 The carousel follows the [ARIA Carousel pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/).
 
-The host carries `role="region"` and `aria-roledescription="carousel"`. Each `<ore-carousel-slide>` has `role="group"` and `aria-roledescription="slide"`. Inactive slides receive `aria-hidden="true"`; each slide's `aria-label` is auto-set to `"Slide N of M"` if not provided. The track uses `aria-live="polite"`, which switches to `"off"` during autoplay so timed advances don't trigger screen reader speech. Prev/next buttons carry `aria-label="Previous slide"` and `aria-label="Next slide"` respectively; `disabled` is set at boundaries when `loop="false"`. The indicators container has `role="tablist"` with each dot carrying `role="tab"` and `aria-selected`. An internal `announce()` helper fires a screen-reader announcement on every slide change.
+The host carries `role="region"` and `aria-roledescription="carousel"`. Each `<ore-carousel-slide>` has `role="group"` and `aria-roledescription="slide"`. Inactive slides receive `aria-hidden="true"`; each slide's `aria-label` is auto-set to `"Slide N of M"` if not provided. The track uses `aria-live="off"` while autoplay is running and `"polite"` when it is stopped, so timed advances do not trigger screen reader speech while manual navigation remains announced. Prev/next buttons carry `aria-label="Previous slide"` and `aria-label="Next slide"` respectively; `disabled` is set at boundaries when `loop="false"`. The indicators container has `role="tablist"` with each dot carrying `role="tab"` and `aria-selected`. The autoplay toggle changes its accessible name between **Pause autoplay** and **Resume autoplay**. An internal `announce()` helper fires a screen-reader announcement on every slide change.
 
-When `autoplay` is on, the timer stops on `focusin` or `pointerenter` so keyboard and pointer users can read slide content uninterrupted, and restarts on `focusout` or `pointerleave`.
+When `autoplay` is on, the timer stops on `focusin` or `pointerenter` so keyboard and pointer users can read slide content uninterrupted, and restarts on `focusout` or `pointerleave` unless autoplay was manually paused.
 
 Slide motion follows Motion Mode: `--carousel-transition-duration` defaults to `var(--duration-350)`, which zeroes under `prefers-reduced-motion` and under `data-motion="reduced"` (slides change instantly), and stays 350ms when the app opts back in with `data-motion="full"`.
 

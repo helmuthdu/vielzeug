@@ -26,7 +26,9 @@ Use it for supplementary status or promotional content, not information users mu
 
 ## Direction and Pause
 
-The ticker moves left by default. Set `direction="right"` for the reverse motion. The ticker already pauses on hover and keyboard focus; set `pause-on-hover="false"` only when the motion must never stop. Set a height on the marquee and a width on each child card so the loop is predictable.
+The ticker moves left by default. Set `direction="right"` for the reverse motion. The persistent **Pause marquee** control can stop and resume the ticker. Hover and keyboard focus also pause automatically by default; `pause-on-hover="false"` disables only those automatic pauses, not the persistent control. Set a height on the marquee and a width on each child card so the loop is predictable.
+
+The pause control remains available when `show-controls="false"` hides the previous/next buttons.
 
 <ComponentPreview>
 
@@ -52,7 +54,7 @@ The ticker moves left by default. Set `direction="right"` for the reverse motion
 | `color`          | `ThemeColor`        | N/A      | Theme color for navigation controls                    |
 | `duration`       | `number`            | `20`     | Seconds for one complete ticker cycle                  |
 | `direction`      | `'left' \| 'right'` | `'left'` | Horizontal scroll direction                            |
-| `pause-on-hover` | `boolean`           | `true`   | Pauses the animation while hovered or keyboard-focused |
+| `pause-on-hover` | `boolean`           | `true`   | Automatically pauses while hovered or keyboard-focused |
 | `show-controls`  | `boolean`           | `true`   | Shows previous and next controls                       |
 
 ### CSS Custom Properties
@@ -63,10 +65,12 @@ The ticker moves left by default. Set `direction="right"` for the reverse motion
 
 ### CSS Parts
 
-| Part    | Description               |
-| ------- | ------------------------- |
-| `track` | The animated ticker track |
+| Part           | Description                                            |
+| -------------- | ------------------------------------------------------ |
+| `track`        | The animated ticker track                              |
+| `controls`     | Previous/next controls and the persistent pause toggle |
+| `pause-toggle` | The persistent pause/resume button                     |
 
 ## Accessibility
 
-The animation stops automatically for `prefers-reduced-motion: reduce`, and for `data-motion="reduced"` regardless of the OS setting; `data-motion="full"` keeps it scrolling despite the OS preference (see [Motion Mode](/refine/animation#motion-mode)). It also pauses while the ticker is hovered or keyboard-focused: `pause-on-hover` defaults to `true`, so every user has a pointer and keyboard pause for the continuously repeating content (WCAG SC 2.2.2); set `pause-on-hover="false"` to opt out. Because a ticker repeats continuously, do not use it for essential instructions, time-sensitive actions, or content that needs keyboard interaction.
+The animation stops automatically for `prefers-reduced-motion: reduce`, and for `data-motion="reduced"` regardless of the OS setting; `data-motion="full"` keeps it scrolling despite the OS preference (see [Motion Mode](/refine/animation#motion-mode)). A persistent Pause/Resume button is available when the marquee has content; hover and keyboard focus also pause automatically by default. Set `pause-on-hover="false"` to disable only the automatic pauses. Because a ticker repeats continuously, do not use it for essential instructions, time-sensitive actions, or content that needs keyboard interaction.

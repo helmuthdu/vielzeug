@@ -277,6 +277,63 @@ test.describe('Layout', () => {
     expect(metrics.height).toBeGreaterThanOrEqual(44);
   });
 
+  for (const variant of ['solid', 'flat', 'bordered', 'frost', 'ghost']) {
+    for (const orientation of ['horizontal', 'vertical']) {
+      test(`nests ${orientation} ${variant} indicator and hover corners using the measured inset`, async ({
+        page,
+        refinePage,
+      }) => {
+        for (const { border, inset, radius } of [
+          { border: 1, inset: 4, radius: 12 },
+          { border: 3, inset: 6, radius: 16 },
+          { border: 2, inset: 8, radius: 4 },
+        ]) {
+          await refinePage.mountComponent(`
+            <ore-tabs value="one" variant="${variant}" orientation="${orientation}"
+              style="--tabs-radius: ${radius}px; --border: ${border}px; --size-1: ${inset}px">
+              <ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>
+              <ore-tab-item slot="tabs" value="two">Settings</ore-tab-item>
+            </ore-tabs>
+          `);
+          await page.getByRole('tab', { exact: true, name: 'Settings' }).hover();
+
+          const geometry = await page.locator('ore-tabs').evaluate((tabs) => {
+            const tablist = tabs.shadowRoot?.querySelector<HTMLElement>('[role="tablist"]');
+            const indicator = tabs.shadowRoot?.querySelector<HTMLElement>('.indicator');
+            const button = tabs.querySelector('ore-tab-item[value="two"]')?.shadowRoot?.querySelector('button');
+
+            if (!tablist || !indicator || !button) throw new Error('Expected tab surfaces.');
+
+            const variant = tabs.getAttribute('variant');
+            const container = variant === 'flat' ? tabs : tablist;
+            const outer = container.getBoundingClientRect();
+            const inner = indicator.getBoundingClientRect();
+            const buttonStyle = getComputedStyle(button);
+
+            return {
+              buttonRadius: Number.parseFloat(buttonStyle.borderTopLeftRadius),
+              hoverPainted: button.matches(':hover') && buttonStyle.backgroundColor !== 'rgba(0, 0, 0, 0)',
+              indicatorRadius: Number.parseFloat(getComputedStyle(indicator).borderTopLeftRadius),
+              leftInset: inner.left - outer.left,
+              outerRadius: Number.parseFloat(
+                variant === 'ghost'
+                  ? getComputedStyle(tabs).getPropertyValue('--tabs-radius')
+                  : getComputedStyle(container).borderTopLeftRadius,
+              ),
+              topInset: inner.top - outer.top,
+            };
+          });
+          const expected = Math.max(0, geometry.outerRadius - geometry.topInset);
+
+          expect(geometry.hoverPainted).toBe(true);
+          expect(geometry.topInset).toBeCloseTo(geometry.leftInset);
+          expect(geometry.indicatorRadius).toBeCloseTo(expected);
+          expect(geometry.buttonRadius).toBeCloseTo(expected);
+        }
+      });
+    }
+  }
+
   test('rounded drives corner radius; density no longer changes it', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-tabs id="plain" value="one" variant="solid">' +
@@ -287,6 +344,12 @@ test.describe('Layout', () => {
         '</ore-tabs>' +
         '<ore-tabs id="pill" value="one" variant="solid" rounded="full">' +
         '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>' +
+        '<ore-tabs id="custom" value="one" variant="solid" style="--tabs-radius: 12px">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '</ore-tabs>' +
+        '<ore-tabs id="ghost" value="one" variant="ghost">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
         '</ore-tabs>',
     );
 
@@ -294,18 +357,29 @@ test.describe('Layout', () => {
       const read = (id: string) => {
         const tabs = document.getElementById(id)!;
         const tablist = getComputedStyle(tabs.shadowRoot!.querySelector('[role="tablist"]')!);
+        const indicator = getComputedStyle(tabs.shadowRoot!.querySelector('.indicator')!);
         const item = getComputedStyle(tabs.querySelector('ore-tab-item')!.shadowRoot!.querySelector('button')!);
 
-        return { item: item.borderRadius, tablist: tablist.borderRadius };
+        return { indicator: indicator.borderRadius, item: item.borderRadius, tablist: tablist.borderRadius };
       };
 
-      return { dense: read('dense'), pill: read('pill'), plain: read('plain') };
+      return {
+        custom: read('custom'),
+        dense: read('dense'),
+        ghost: read('ghost'),
+        pill: read('pill'),
+        plain: read('plain'),
+      };
     });
 
     // Compact leaves the radius alone now that `rounded` owns it.
     expect(radii.dense).toEqual(radii.plain);
+    expect(radii.plain.indicator).toBe('3px');
+    expect(radii.custom.indicator).toBe('7px');
+    expect(radii.ghost.indicator).toBe('8px');
     expect(radii.pill.item).not.toBe(radii.plain.item);
     expect(radii.pill.tablist).toBe('9999px');
+    expect(radii.pill.indicator).toBe('9994px');
   });
 
   test('navigation-only tabs do not reserve panel space', async ({ page, refinePage }) => {

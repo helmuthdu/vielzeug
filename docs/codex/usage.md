@@ -69,22 +69,24 @@ curl http://127.0.0.1:3100/health
 ## Programmatic Usage
 
 ```ts
-import { SnapshotCatalog, StdioServerTransport, createMcpServer, loadSnapshot } from '@vielzeug/codex';
+import { createCodexServer } from '@vielzeug/codex';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
-const snapshot = loadSnapshot();
-const catalog = new SnapshotCatalog(snapshot);
-await createMcpServer(catalog, { version: snapshot.manifest.version }).connect(new StdioServerTransport());
+const server = createCodexServer();
+
+await server.connect(new StdioServerTransport());
 ```
 
-`createMcpServer` also registers the `refine-*` component tools whenever the loaded snapshot carries Refine metadata; there is nothing to opt into.
+`createCodexServer` loads the bundled snapshot by default and also registers the `refine-*`
+component tools whenever the snapshot carries Refine components; there is nothing to opt into.
+Pass `snapshot` (a path or an already-loaded snapshot object) to serve a different one.
 
 ## Best Practices
 
-- Use `search-packages` for capability discovery before loading broad source.
-- Use `get-type-signature` before loading full source.
-- Call `check-install` when working inside a project that depends on `@vielzeug/*`: it compares the served snapshot with the versions that project declares and its lockfile resolves, so agents can tell whether snapshot docs may lag the install.
-- Every snapshot is one flat directory (manifest, catalog, content chunks, optional Refine metadata); `--snapshot` points at it directly.
-- Pass `validateContents: true` to `loadSnapshot()` for artifact verification; normal startup keeps package chunks lazy.
+- Use `search` for capability discovery before loading broad docs; `get-docs` with a `section` returns one heading's slice instead of a whole page.
+- Use `get-type-signature` before loading full docs: signatures are the real declaration text with JSDoc, resolved by the TypeScript checker at generate time.
+- The server `instructions` carry the snapshot version. Compare it with the `@vielzeug/*` versions installed in the project before recommending APIs — the snapshot may lag the install.
+- `--snapshot` points at a single `snapshot.json` (or its directory). Parsing is the expensive step: load once and pass the object to every server you create.
 - Return a fresh configured server from `startHttpHost`'s `createServer` factory.
 - Keep HTTP local. Use stdio for normal client integration.
 - Run `bun run test:unit` before `bun run test:integration`.

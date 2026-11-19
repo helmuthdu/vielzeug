@@ -269,7 +269,8 @@ test('pen tool reveals the ink-width slider and it changes stroke thickness', as
   };
 
   await slider.evaluate((el) => {
-    (el as { value: string }).value = '1';
+    if (!('value' in el)) throw new Error('Pen width slider has no value property.');
+    el.value = '1';
     el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
   });
   await drawStroke(200);
@@ -277,7 +278,8 @@ test('pen tool reveals the ink-width slider and it changes stroke thickness', as
 
   await page.keyboard.press(`${MOD}+z`);
   await slider.evaluate((el) => {
-    (el as { value: string }).value = '24';
+    if (!('value' in el)) throw new Error('Pen width slider has no value property.');
+    el.value = '24';
     el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
   });
   await drawStroke(200);

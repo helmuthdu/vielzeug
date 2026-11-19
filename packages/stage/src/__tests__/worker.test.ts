@@ -8,7 +8,11 @@ import type { ServeStageSetup, WorkerSelfScope } from '../worker/serve.js';
 import { serveStage } from '../worker/serve.js';
 
 /** In-memory linked pair emulating a main-thread Worker scope and a worker self scope. */
-function createFakePair(): { main: WorkerScope; self: WorkerSelfScope; posted: unknown[] } {
+function createFakePair(): {
+  main: { -readonly [K in keyof WorkerScope]: WorkerScope[K] };
+  self: WorkerSelfScope;
+  posted: unknown[];
+} {
   const mainListeners = new Set<(event: { data: unknown }) => void>();
   const selfListeners = new Set<(event: { data: unknown }) => void>();
   const posted: unknown[] = [];

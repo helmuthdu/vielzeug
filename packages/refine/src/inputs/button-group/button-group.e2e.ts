@@ -10,6 +10,57 @@ import { axeCheck, expect, test } from '../../testing/fixtures';
 const SEGMENTED =
   '<ore-button-group value="list" label="View mode"><ore-button value="list">List</ore-button><ore-button value="grid">Grid</ore-button></ore-button-group>';
 
+test.describe('Shape', () => {
+  for (const orientation of ['horizontal', 'vertical']) {
+    test(`${orientation} attached groups round only their exterior and own their default`, async ({
+      page,
+      refinePage,
+    }) => {
+      await refinePage.mountComponent(
+        `<ore-card rounded="none"><ore-button-group attached orientation="${orientation}" label="Actions">` +
+          '<ore-button>First</ore-button>' +
+          '<ore-tooltip content="Middle action"><ore-button>Middle</ore-button></ore-tooltip>' +
+          '<ore-button>Last</ore-button>' +
+          '</ore-button-group></ore-card>',
+      );
+
+      const buttons = page.locator('ore-button [part="button"]');
+      const horizontal = orientation === 'horizontal';
+
+      for (const radius of ['8px', '12px']) {
+        await expect(buttons.nth(0)).toHaveCSS(
+          'border-radius',
+          horizontal ? `${radius} 0px 0px ${radius}` : `${radius} ${radius} 0px 0px`,
+        );
+        await expect(buttons.nth(1)).toHaveCSS('border-radius', '0px');
+        await expect(buttons.nth(2)).toHaveCSS(
+          'border-radius',
+          horizontal ? `0px ${radius} ${radius} 0px` : `0px 0px ${radius} ${radius}`,
+        );
+        await page.locator('ore-button-group').evaluate((group) => group.setAttribute('rounded', 'xl'));
+      }
+    });
+  }
+
+  test('respects the scoped control radius and the group override', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<div style="--radius: var(--rounded-xl)">' +
+        '<ore-button-group id="scoped" attached><ore-button>First</ore-button><ore-button>Last</ore-button></ore-button-group>' +
+        '<ore-button-group id="custom" attached style="--group-radius: 4px"><ore-button>First</ore-button><ore-button>Last</ore-button></ore-button-group>' +
+        '</div>',
+    );
+
+    await expect(page.locator('#scoped ore-button [part="button"]').first()).toHaveCSS(
+      'border-radius',
+      '12px 0px 0px 12px',
+    );
+    await expect(page.locator('#custom ore-button [part="button"]').first()).toHaveCSS(
+      'border-radius',
+      '4px 0px 0px 4px',
+    );
+  });
+});
+
 test.describe('Segmented control', () => {
   test('exposes the radiogroup/radio shape', async ({ page, refinePage }) => {
     await refinePage.mountComponent(SEGMENTED);
@@ -102,6 +153,50 @@ test.describe('Segmented control', () => {
     });
 
     expect(state).toEqual({ checked: ['false', 'true'], roles: ['radio', 'radio'], value: 'grid' });
+  });
+
+  test('keeps tooltip-wrapped attached segments contiguous with rounded outer edges', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-button-group attached value="full" label="Viewport">' +
+        '<ore-tooltip content="Full width"><ore-button value="full">Full</ore-button></ore-tooltip>' +
+        '<ore-tooltip content="Mobile"><ore-button value="mobile">Mobile</ore-button></ore-tooltip>' +
+        '<ore-tooltip content="Tablet"><ore-button value="tablet">Tablet</ore-button></ore-tooltip>' +
+        '<ore-tooltip content="Desktop"><ore-button value="desktop">Desktop</ore-button></ore-tooltip>' +
+        '</ore-button-group>',
+    );
+
+    const shape = await page.locator('ore-button-group').evaluate((group) => {
+      const buttons = Array.from(group.querySelectorAll<HTMLElement>('ore-button'));
+      const edges = buttons.map((button) => {
+        const surface = button.shadowRoot?.querySelector<HTMLElement>('[part="button"]');
+
+        if (!surface) throw new Error('Button surface was not rendered.');
+
+        const style = getComputedStyle(surface);
+        const rect = button.getBoundingClientRect();
+
+        return {
+          left: rect.left,
+          leftRounded: style.borderTopLeftRadius !== '0px',
+          right: rect.right,
+          rightRounded: style.borderTopRightRadius !== '0px',
+          startBorder: style.borderInlineStartWidth,
+        };
+      });
+
+      return {
+        edges: edges.map(({ leftRounded, rightRounded, startBorder }) => ({ leftRounded, rightRounded, startBorder })),
+        gaps: edges.slice(1).map((edge, index) => edge.left - (edges[index]?.right ?? 0)),
+      };
+    });
+
+    expect(shape.edges).toEqual([
+      { leftRounded: true, rightRounded: false, startBorder: '1px' },
+      { leftRounded: false, rightRounded: false, startBorder: '0px' },
+      { leftRounded: false, rightRounded: false, startBorder: '0px' },
+      { leftRounded: false, rightRounded: true, startBorder: '0px' },
+    ]);
+    expect(shape.gaps).toEqual([0, 0, 0]);
   });
 
   test('segmented control passes axe checks', async ({ page, refinePage }) => {

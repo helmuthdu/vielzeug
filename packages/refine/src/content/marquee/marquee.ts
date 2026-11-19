@@ -1,5 +1,5 @@
 import { define, getHost, html, onMounted, prop } from '@vielzeug/ore';
-import { watch } from '@vielzeug/ripple';
+import { signal, watch } from '@vielzeug/ripple';
 
 import { THEME_COLORS, type ThemeColor } from '../../types';
 
@@ -17,7 +17,7 @@ export type OreMarqueeProps = {
   direction?: MarqueeDirection;
   /** Duration in seconds for one complete ticker cycle. Defaults to `20`. */
   duration?: number;
-  /** Pause the ticker while it is hovered or keyboard-focused. Defaults to `true`; set `pause-on-hover="false"` to keep scrolling. */
+  /** Automatically pause while hovered or keyboard-focused. Defaults to `true`. */
   'pause-on-hover'?: boolean;
   /** Show previous/next navigation controls. Defaults to `true`. */
   'show-controls'?: boolean;
@@ -35,12 +35,14 @@ export type OreMarqueeProps = {
  * @attr {string} color - Theme color for the navigation controls.
  * @attr {number} duration - Duration in seconds for one ticker cycle (default: 20)
  * @attr {string} direction - 'left' (default) | 'right'
- * @attr {boolean} pause-on-hover - Pause while hovered or focused (default: true; set false to keep scrolling)
+ * @attr {boolean} pause-on-hover - Automatically pause while hovered or focused (default: true)
  * @attr {boolean} show-controls - Show previous/next controls (default: true)
  *
  * @cssprop --marquee-gap - Gap between ticker items (default: var(--size-4))
  *
  * @part track - The animated ticker track.
+ * @part controls - Previous/next controls and the persistent pause toggle.
+ * @part pause-toggle - Persistent pause/resume control.
  * @example
  * ```html
  * <ore-marquee duration="24" pause-on-hover>
@@ -61,6 +63,8 @@ define<OreMarqueeProps>(MARQUEE_TAG, {
   },
   setup(props) {
     const el = getHost();
+    const manuallyPaused = signal(false);
+    const itemCount = signal(0);
     let activeIndex = 0;
     let clones: HTMLElement[] = [];
     let items: HTMLElement[] = [];
@@ -68,6 +72,22 @@ define<OreMarqueeProps>(MARQUEE_TAG, {
     let loopWidth = 0;
     let resizeObserver: ResizeObserver | null = null;
     let track: HTMLElement | null = null;
+
+    const togglePause = (event: Event): void => {
+      event.stopPropagation();
+      manuallyPaused.value = !manuallyPaused.value;
+      el.toggleAttribute('data-marquee-paused', manuallyPaused.value);
+
+      if (manuallyPaused.value) {
+        el.removeAttribute('data-marquee-resumed');
+      } else if (el.matches(':hover, :focus-within')) {
+        el.setAttribute('data-marquee-resumed', '');
+      }
+    };
+
+    const clearResumeOverride = (): void => {
+      if (!el.matches(':hover, :focus-within')) el.removeAttribute('data-marquee-resumed');
+    };
 
     const seekTo = (index: number): void => {
       if (!track || items.length === 0) return;
@@ -96,6 +116,10 @@ define<OreMarqueeProps>(MARQUEE_TAG, {
       track = el.shadowRoot?.querySelector<HTMLElement>('.track') ?? null;
 
       const slot = el.shadowRoot?.querySelector<HTMLSlotElement>('slot') ?? null;
+      el.toggleAttribute('data-marquee-paused', manuallyPaused.value);
+      el.removeAttribute('data-marquee-resumed');
+      el.addEventListener('pointerleave', clearResumeOverride);
+      el.addEventListener('focusout', clearResumeOverride);
 
       const removeClones = (): void => {
         clones.forEach((clone) => {
@@ -161,6 +185,7 @@ define<OreMarqueeProps>(MARQUEE_TAG, {
         if (!itemsChanged) return;
 
         items = nextItems;
+        itemCount.value = items.length;
         activeIndex = Math.min(activeIndex, Math.max(items.length - 1, 0));
         syncLoop();
       };
@@ -175,6 +200,9 @@ define<OreMarqueeProps>(MARQUEE_TAG, {
 
         resizeObserver?.disconnect();
         slot?.removeEventListener('slotchange', refreshItems);
+        el.removeEventListener('pointerleave', clearResumeOverride);
+        el.removeEventListener('focusout', clearResumeOverride);
+        el.removeAttribute('data-marquee-resumed');
         removeClones();
         track = null;
         items = [];
@@ -187,37 +215,62 @@ define<OreMarqueeProps>(MARQUEE_TAG, {
         <slot></slot>
       </div>
       ${() =>
-        props['show-controls'].value !== false
+        props['show-controls'].value !== false || itemCount.value > 0
           ? html`
               <div class="controls" part="controls">
-                <ore-button
-                  class="nav-btn prev-btn"
-                  part="prev-btn"
-                  variant="ghost"
-                  color=${() => props.color.value}
-                  rounded
-                  icon-only
-                  label="Previous item"
-                  @click=${(event: Event) => {
-                    event.stopPropagation();
-                    seekTo(activeIndex - 1);
-                  }}>
-                  <ore-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></ore-icon>
-                </ore-button>
-                <ore-button
-                  class="nav-btn next-btn"
-                  part="next-btn"
-                  variant="ghost"
-                  color=${() => props.color.value}
-                  rounded
-                  icon-only
-                  label="Next item"
-                  @click=${(event: Event) => {
-                    event.stopPropagation();
-                    seekTo(activeIndex + 1);
-                  }}>
-                  <ore-icon name="chevron-right" size="16" stroke-width="2" aria-hidden="true"></ore-icon>
-                </ore-button>
+                ${() =>
+                  props['show-controls'].value !== false
+                    ? html`
+                        <ore-button
+                          class="nav-btn prev-btn"
+                          part="prev-btn"
+                          variant="ghost"
+                          color=${() => props.color.value}
+                          rounded="full"
+                          icon-only
+                          label="Previous item"
+                          @click=${(event: Event) => {
+                            event.stopPropagation();
+                            seekTo(activeIndex - 1);
+                          }}>
+                          <ore-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></ore-icon>
+                        </ore-button>
+                        <ore-button
+                          class="nav-btn next-btn"
+                          part="next-btn"
+                          variant="ghost"
+                          color=${() => props.color.value}
+                          rounded="full"
+                          icon-only
+                          label="Next item"
+                          @click=${(event: Event) => {
+                            event.stopPropagation();
+                            seekTo(activeIndex + 1);
+                          }}>
+                          <ore-icon name="chevron-right" size="16" stroke-width="2" aria-hidden="true"></ore-icon>
+                        </ore-button>
+                      `
+                    : null}
+                ${() =>
+                  itemCount.value > 0
+                    ? html`
+                        <ore-button
+                          class="pause-toggle"
+                          part="pause-toggle"
+                          variant="frost"
+                          elevation="0"
+                          rounded="full"
+                          icon-only
+                          label="${() => (manuallyPaused.value ? 'Resume marquee' : 'Pause marquee')}"
+                          @click=${togglePause}>
+                          <ore-icon
+                            name="${() => (manuallyPaused.value ? 'play' : 'pause')}"
+                            size="16"
+                            stroke-width="2"
+                            aria-hidden="true"></ore-icon>
+                        </ore-button>
+                      `
+                    : null}
               </div>
             `
           : null}

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Rebalance semantic theme colors for color-vision separation",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

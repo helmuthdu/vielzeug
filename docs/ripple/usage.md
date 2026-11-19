@@ -1,41 +1,44 @@
 ---
 title: 'Ripple: Usage Guide'
-description: Build reactive state with one explicit graph boundary.
+description: Build reactive state with one runtime and explicit scope lifetimes.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Use top-level functions when one application-lifetime graph is sufficient. Read a signal inside an effect to make that read reactive.
+Use top-level functions to create signals, derive values, and react to tracked reads. Put
+short-lived derived work in a scope so it can be disposed together.
 
 ```ts
-import { computed, effect, signal } from '@vielzeug/ripple';
+import { computed, createScope, effect, signal } from '@vielzeug/ripple';
 
+const scope = createScope();
 const count = signal(0);
-const label = computed(() => `Count: ${count.value}`);
-const stop = effect(() => console.log(label.value));
-
-count.value = 1;
-stop.dispose();
-```
-
-## Isolated Graphs
-
-Use `createRipple()` for tests, SSR requests, embedded applications, or independently disposable features. Never mix reactive values from separate graphs.
-
-```ts
-import { createRipple } from '@vielzeug/ripple';
-
-const ripple = createRipple({
-  onError: (error, context) => console.log(context.kind, error),
+scope.run(() => {
+  const label = computed(() => `Count: ${count.value}`);
+  effect(() => console.log(label.value));
 });
 
-const count = ripple.signal(0);
-const stop = ripple.effect(() => console.log(count.value));
+count.value = 1;
+scope.dispose();
+```
 
-stop.dispose();
-ripple.dispose();
+## Scope Lifetimes
+
+The package uses one runtime so reactive values can be tracked across scopes. Use a scope to own work that should be disposed together, such as a test, request, or feature.
+
+```ts
+import { createScope, effect, signal } from '@vielzeug/ripple';
+
+const scope = createScope({
+  name: 'feature',
+  onError: (error, context) => console.log(context.kind, error),
+});
+const count = signal(0);
+scope.run(() => effect(() => console.log(count.value)));
+count.value = 1;
+scope.dispose();
 ```
 
 ## Derived Values and Batches
@@ -43,19 +46,23 @@ ripple.dispose();
 Use `computed()` for pure derivation. Use `untrack()` when a current read must not become an effect dependency. Use `batch()` for related synchronous writes.
 
 ```ts
-const first = ripple.signal('Ada');
-const last = ripple.signal('Lovelace');
-const locale = ripple.signal('en-US');
-const name = ripple.computed(() => `${first.value} ${last.value}`);
+const first = signal('Ada');
+const last = signal('Lovelace');
+const locale = signal('en-US');
+const scope = createScope();
 
-ripple.effect(() => {
-  console.log({ locale: ripple.untrack(() => locale.value), name: name.value });
+scope.run(() => {
+  const name = computed(() => `${first.value} ${last.value}`);
+  effect(() => {
+    console.log({ locale: untrack(() => locale.value), name: name.value });
+  });
 });
 
-ripple.batch(() => {
+batch(() => {
   first.value = 'Grace';
   last.value = 'Hopper';
 });
+scope.dispose();
 ```
 
 ## Scheduling and Subscriptions
@@ -66,14 +73,14 @@ Effects coalesce writes made inside the same synchronous flush: a `batch()` (or 
 Each `subscribe()` registration fires once per flush, even when several subscriptions share one callback function.
 
 ```ts
-const count = ripple.signal(0);
+const count = signal(0);
 const log: string[] = [];
 
-ripple.effect(() => log.push(`effect: ${count.value}`));
+effect(() => log.push(`effect: ${count.value}`));
 count.subscribe(() => log.push(`listener: ${count.value}`));
 
 log.length = 0; // Ignore synchronous creation runs.
-ripple.batch(() => {
+batch(() => {
   count.value = 1;
   count.value = 2;
 });
@@ -85,18 +92,19 @@ console.log(log); // ['effect: 2', 'listener: 2']
 Create a scope when a group of effects or derived values shares one lifetime. Dispose the scope when its feature ends.
 
 ```ts
-const scope = ripple.createScope('panel');
-const count = ripple.signal(0);
+const scope = createScope({ name: 'panel' });
+const count = signal(0);
 
 scope.run(() => {
-  ripple.effect(() => console.log(`Panel count: ${count.value}`));
+  effect(() => console.log(`Panel count: ${count.value}`));
+  onCleanup(() => console.log('panel closed'));
 });
 
 count.value = 1;
 scope.dispose();
 ```
 
-Effects and computeds created directly during an effect run belong to that run and are disposed before rerun. `onCleanup(fn)` registers on that same owner: inside an effect it runs before the next run, and inside `scope.run()` it runs when the scope is disposed, after the scope's effects. Explicit scopes intentionally attach to the enclosing scope and survive effect reruns; create them outside rerunning effects or retain and dispose each scope yourself. A call with no scope or effect active registers on the graph root.
+Effects and computeds created directly during an effect run belong to that run and are disposed before rerun. `onCleanup(fn)` registers on that same owner: inside an effect it runs before the next run, and inside `scope.run()` it runs when the scope is disposed, after the scope's effects. Explicit scopes intentionally attach to the enclosing scope and survive effect reruns; create them outside rerunning effects or retain and dispose each scope yourself. A call with no scope or effect active registers on the permanent runtime root.
 
 Cleanups run with their disposed owner still active, so an `onCleanup()`, `effect()`, or `computed()` called from inside a cleanup is torn down immediately instead of leaking to the parent.
 
@@ -107,7 +115,7 @@ Disposed owned nodes detach from their parent immediately, so long-lived graphs 
 Use `watch()` for one selected output. Reactive reads made only inside its callback are untracked. For one-shot observation, dispose the returned handle from inside the callback; with `immediate: true` the callback runs before the handle exists, so do the first invocation at the call site. Use `effect()` when every callback read should be a dependency.
 
 ```ts
-const stopWatch = ripple.watch(
+const stopWatch = watch(
   () => `${first.value} ${last.value}`,
   (value, previous) => console.log({ previous, value }),
   { immediate: true },
@@ -118,23 +126,23 @@ stopWatch.dispose();
 
 ## Error Handling
 
-Failures inside effect callbacks, computed derivations, cleanups, and listeners never corrupt the graph: the failing node is reported and siblings keep updating. The `onError` option decides what reporting means. By default failures rethrow asynchronously (via `queueMicrotask`), surfacing as unhandled errors; pass a handler to route them to a logger or error boundary instead:
+Failures inside effects and cleanups are reported to the nearest `onError` handler in the owning scope tree. If no handler is found, the error is rethrown asynchronously through `queueMicrotask`. If a handler throws, its error escalates to the parent scope's handler.
 
 ```ts
-const ripple = createRipple({
+const scope = createScope({
+  name: 'panel',
   onError: (error, context) => {
-    // context.kind: 'cleanup' | 'effect' | 'flush' | 'listener'
+    // Effect and cleanup failures retain their context kind.
     console.error(`${context.kind}:`, error);
   },
 });
 ```
 
-`onError` is the only runtime option. Effect options accept only a `name`; effects do not have a
-microtask scheduler. Use `batch()` to coalesce related writes.
+Effects use the scope where they were created; cleanups use their owning scope. Listener failures and flush overflow are reported at the runtime root, so scope handlers do not intercept them. Effect options accept only a `name`; effects do not have a microtask scheduler. Use `batch()` to coalesce related writes.
 
 A computed caches a derivation error like a value: every read rethrows it until a source changes.
-The failure therefore reaches `onError` through whatever reads it (context kind `effect` for an
-effect, `listener` for a subscription), and a direct read throws it to the caller. The exported
+The failure therefore reaches the owning scope's `onError` through the effect that reads it, and
+a direct read throws it to the caller. The exported
 hierarchy is `RippleError`, `RippleCycleError`, and `RippleDisposedError`; callback failures retain
 their original values.
 
@@ -142,7 +150,7 @@ A runaway effect (one that keeps re-triggering itself) is caught by the flush it
 
 ## Bridging External Sources
 
-`fromSubscribable()` bridges external `{ getSnapshot, subscribe }` sources into a disposable reactive readable. Use `ripple.fromSubscribable()` inside isolated graphs; the root helper uses the process-lifetime default graph. The bridge rereads after subscription to close registration races, and disposal invokes the external unsubscribe function.
+`fromSubscribable()` bridges external `{ getSnapshot, subscribe }` sources into a disposable reactive readable. It uses the shared runtime, rereads after subscription to close registration races, and disposal invokes the external unsubscribe function.
 
 ```ts
 import { fromSubscribable, effect } from '@vielzeug/ripple';
@@ -165,14 +173,14 @@ routerState.dispose();
 `resource()` starts immediately, tracks its source reads, and aborts the previous loader whenever the source changes or `reload()` is called. It preserves the last successful value (including `undefined`) as `previous` while newer work is pending or fails.
 
 ```ts
-const userId = ripple.signal('42');
-const user = ripple.resource(
+const userId = signal('42');
+const user = resource(
   () => userId.value,
   (id, { signal }) => fetch(`/users/${id}`, { signal }).then((response) => response.json()),
   { name: 'user' },
 );
 
-const stop = ripple.effect(() => {
+const stop = effect(() => {
   const state = user.value;
   if (state.status === 'success') console.log(state.value);
   if (state.status === 'error') console.error(state.error);
@@ -193,30 +201,35 @@ and invalidation.
 `signal()` with `update()` holds one value and supports immutable replacement patterns. Return replacement objects from `update()` when object consumers depend on immutable updates.
 
 ```ts
-const cart = ripple.signal({ items: 0, label: 'empty' });
-const items = ripple.computed(() => cart.value.items);
+const scope = createScope();
+const cart = signal({ items: 0, label: 'empty' });
+const items = scope.run(() => computed(() => cart.value.items));
 
 cart.update((state) => ({ ...state, items: state.items + 1 }));
 cart.value = { items: 3, label: 'ready' };
 
 console.log(items.value);
+scope.dispose();
 ```
 
 ## Testing
 
-Create an isolated graph per test. Disposal prevents effects from leaking into later tests.
+Create a scope per test. Disposing it prevents owned effects and derived values from leaking into later tests.
 
 ```ts
 import { expect, test } from 'vitest';
-import { createRipple } from '@vielzeug/ripple';
+import { computed, createScope, signal } from '@vielzeug/ripple';
 
 test('derives a doubled count', () => {
-  const ripple = createRipple();
-  const count = ripple.signal(2);
-  const doubled = ripple.computed(() => count.value * 2);
+  const scope = createScope();
+  let doubled = 0;
+  scope.run(() => {
+    const count = signal(2);
+    doubled = computed(() => count.value * 2).value;
+  });
 
-  expect(doubled.value).toBe(4);
-  ripple.dispose();
+  expect(doubled).toBe(4);
+  scope.dispose();
 });
 ```
 
@@ -228,21 +241,23 @@ Use signals and effects with any renderer. Dispose component-owned effects when 
 
 ```ts [React]
 import { useEffect, useState } from 'react';
-import { createRipple } from '@vielzeug/ripple';
+import { createScope, effect, signal } from '@vielzeug/ripple';
 
-const ripple = createRipple();
-const count = ripple.signal(0);
+const count = signal(0);
 
 export function Counter() {
   const [, rerender] = useState(0);
 
   useEffect(() => {
-    const stop = ripple.effect(() => {
-      void count.value;
-      rerender((revision) => revision + 1);
+    const scope = createScope();
+    scope.run(() => {
+      effect(() => {
+        void count.value;
+        rerender((revision) => revision + 1);
+      });
     });
 
-    return () => stop.dispose();
+    return () => scope.dispose();
   }, []);
 
   return <button onClick={() => (count.value += 1)}>{count.value}</button>;
@@ -251,12 +266,11 @@ export function Counter() {
 
 ```ts [Vue 3]
 import { onUnmounted, ref } from 'vue';
-import { createRipple } from '@vielzeug/ripple';
+import { effect, signal } from '@vielzeug/ripple';
 
-const ripple = createRipple();
-const count = ripple.signal(0);
+const count = signal(0);
 const revision = ref(0);
-const stop = ripple.effect(() => {
+const stop = effect(() => {
   void count.value;
   revision.value++;
 });
@@ -267,12 +281,11 @@ onUnmounted(() => stop.dispose());
 ```ts [Svelte]
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { createRipple } from '@vielzeug/ripple';
+  import { effect, signal } from '@vielzeug/ripple';
 
-  const ripple = createRipple();
-  const count = ripple.signal(0);
+  const count = signal(0);
   let revision = 0;
-  const stop = ripple.effect(() => {
+  const stop = effect(() => {
     void count.value;
     revision++;
   });
@@ -290,23 +303,23 @@ onUnmounted(() => stop.dispose());
 Ore uses Ripple for component reactivity. Clockwork actors expose framework-neutral snapshots; bridge actor subscriptions into a Ripple signal. Ledger adds undo/redo commands around state changes without replacing graph.
 
 ```ts
-import { createRipple } from '@vielzeug/ripple';
+import { computed, createScope, fromSubscribable, signal } from '@vielzeug/ripple';
 import { defineMachine } from '@vielzeug/clockwork';
 
-const ripple = createRipple();
 const actor = defineMachine<Record<string, never>, { type: 'START' }>()({
   initial: 'idle',
   states: { active: {}, idle: { on: { START: { target: 'active' } } } },
 }).createActor();
 
-const snapshot = ripple.signal(actor.snapshot);
+const scope = createScope();
+const snapshot = signal(actor.snapshot);
 const stop = actor.subscribe((next) => (snapshot.value = next));
-const status = ripple.computed(() => snapshot.value.state);
+const status = scope.run(() => computed(() => snapshot.value.state));
 console.log(status.value);
 
 stop();
 actor.dispose();
-ripple.dispose();
+scope.dispose();
 ```
 
 ## Gotchas
@@ -329,10 +342,10 @@ If a computed's `derive` throws (e.g., a source is `null`), the computed keeps t
 
 ## Best Practices
 
-- Create one graph per ownership boundary.
+- Create one scope per ownership boundary.
 - Keep computed callbacks pure.
 - Return cleanup from effects.
-- Dispose test and feature graphs.
+- Dispose test and feature scopes.
 - Batch related synchronous writes.
 - Use `watch()` only for selected source transitions; callback-only reads are untracked.
 - Dispose external-source bridges when their owner ends.

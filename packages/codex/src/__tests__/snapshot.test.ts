@@ -1,211 +1,95 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { SnapshotCatalog } from '../catalog.js';
-import { loadSnapshot, validateSnapshot } from '../snapshot.js';
+import { Catalog, CatalogError } from '../catalog.js';
+import { loadSnapshot } from '../snapshot.js';
+import { snapshotFixture } from './fixtures.js';
 
 const roots: string[] = [];
 
-interface FixturePackage {
-  content?: Record<string, unknown>;
-  meta?: Record<string, unknown>;
-  slug: string;
-}
-
-/** Builds one flat snapshot directory (v2 layout) and returns its path. */
-function snapshotRoot(packages: FixturePackage[], refineComponents?: unknown[]): string {
+function writeSnapshotFile(snapshot = snapshotFixture()): string {
   const root = mkdtempSync(join(tmpdir(), 'codex-snapshot-'));
 
   roots.push(root);
-  mkdirSync(join(root, 'packages'), { recursive: true });
-  writeFileSync(join(root, 'manifest.json'), JSON.stringify({ schemaVersion: 2, version: '1.0.0' }));
-  writeFileSync(
-    join(root, 'catalog.json'),
-    JSON.stringify({
-      packages: packages.map(({ meta, slug }) => ({
-        availableDocPages: ['index'],
-        category: 'test',
-        description: 'Test package',
-        exampleIds: ['basic'],
-        exports: ['test'],
-        hasSource: true,
-        keywords: ['test'],
-        name: `@vielzeug/${slug}`,
-        related: [],
-        slug,
-        version: '1.0.0',
-        ...meta,
-      })),
-      version: '1.0.0',
-    }),
-  );
-  for (const { content, slug } of packages)
-    writeFileSync(
-      join(root, 'packages', `${slug}.json`),
-      JSON.stringify(
-        content ?? {
-          apiSource: 'export const test = 1',
-          docs: { index: '# Test' },
-          examples: [{ code: 'test()', id: 'basic', name: 'Basic' }],
-          typeSignatures: { test: 'export const test = 1' },
-        },
-      ),
-    );
-  if (refineComponents) writeFileSync(join(root, 'refine.json'), JSON.stringify(refineComponents));
+  writeFileSync(join(root, 'snapshot.json'), JSON.stringify(snapshot));
 
-  return root;
-}
-
-function defaultPackage(slug = 'test'): FixturePackage {
-  return { slug };
+  return join(root, 'snapshot.json');
 }
 
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
 });
 
-describe('snapshot catalog', () => {
-  it('loads metadata eagerly and content on demand', () => {
-    const catalog = new SnapshotCatalog(loadSnapshot(snapshotRoot([defaultPackage()])));
+describe('snapshot loader', () => {
+  it('loads a snapshot eagerly and accepts a directory containing snapshot.json', () => {
+    const file = writeSnapshotFile();
 
-    expect(catalog.listPackages()).toHaveLength(1);
-    expect(catalog.getDocs('test', 'index')).toBe('# Test');
-    expect(catalog.getTypeSignature('test', 'test')).toContain('export const test');
+    expect(loadSnapshot(file).version).toBe(loadSnapshot(file.slice(0, file.lastIndexOf('/'))).version);
+    expect(loadSnapshot(file).packages.map((pkg) => pkg.meta.slug)).toEqual(['demo']);
   });
 
-  it('has no component tools available without refine metadata', () => {
-    const catalog = new SnapshotCatalog(loadSnapshot(snapshotRoot([defaultPackage()])));
+  it('refuses a snapshot generated for a different codex version', () => {
+    const file = writeSnapshotFile(snapshotFixture({ version: '0.0.0-not-this-build' }));
 
-    expect(catalog.listComponents()).toEqual([]);
-    expect(() => catalog.getComponent('ore-button')).toThrow('Component "ore-button" not found.');
+    expect(() => loadSnapshot(file)).toThrow(/generated for codex 0\.0\.0-not-this-build/);
   });
 
-  it('serves component metadata bundled in the snapshot', () => {
-    const directory = snapshotRoot([defaultPackage()], [{ attributes: [{ name: 'variant' }], tagName: 'ore-button' }]);
-    const catalog = new SnapshotCatalog(loadSnapshot(directory));
+  it('reports a missing snapshot file clearly', () => {
+    expect(() => loadSnapshot(join(tmpdir(), 'definitely-missing-snapshot.json'))).toThrow('Failed to read snapshot');
+  });
+});
 
-    expect(catalog.listComponents()).toHaveLength(1);
-    expect(catalog.getComponent('ore-button').attributes?.[0]?.name).toBe('variant');
+describe('catalog', () => {
+  const catalog = () => new Catalog(snapshotFixture());
+
+  it('looks up packages, pages, examples, and exports', () => {
+    expect(catalog().getMeta('demo').name).toBe('@vielzeug/demo');
+    expect(catalog().getDocs('demo', 'api').markdown).toContain('## Signals');
+    expect(catalog().getExample('demo', 'basic').code).toBe('const s = signal(1)');
+    expect(catalog().getExport('demo', 'signal').signature).toContain('export function signal');
   });
 
-  it('searches the lazily read content chunks', () => {
-    const catalog = new SnapshotCatalog(loadSnapshot(snapshotRoot([defaultPackage()])));
-
-    expect(catalog.search('package')).toEqual([{ matchedIn: ['metadata'], name: '@vielzeug/test', slug: 'test' }]);
-    expect(catalog.search('# Test')).toEqual([
-      { matchedIn: ['docs'], matchedPages: ['index'], name: '@vielzeug/test', slug: 'test' },
-    ]);
-    expect(catalog.search('test()')).toEqual([
-      { matchedExamples: ['basic'], matchedIn: ['examples'], name: '@vielzeug/test', slug: 'test' },
-    ]);
-    expect(catalog.search('export const')).toEqual([{ matchedIn: ['source'], name: '@vielzeug/test', slug: 'test' }]);
-    expect(catalog.search('nothing matches this')).toEqual([]);
-    expect(() => catalog.search('   ')).toThrow('query: required non-empty string.');
+  it('slices one section by heading text or slug', () => {
+    expect(catalog().getDocs('demo', 'api', 'Signals').markdown).toContain('signal()');
+    expect(catalog().getDocs('demo', 'api', 'writing-signals').markdown).toContain('set()');
+    expect(() => catalog().getDocs('demo', 'api', 'Nope')).toThrow(CatalogError);
   });
 
-  it('ranks exact package matches above content matches', () => {
-    const catalog = new SnapshotCatalog(
-      loadSnapshot(
-        snapshotRoot([
-          {
-            content: {
-              apiSource: 'export const arsenal = 1',
-              docs: { index: 'arsenal mentions foo bar support' },
-              examples: [{ code: 'arsenal()', id: 'basic', name: 'Basic' }],
-              typeSignatures: { test: 'export const arsenal = 1' },
-            },
-            slug: 'arsenal',
-          },
-          {
-            content: {
-              apiSource: null,
-              docs: { index: 'foo bar support' },
-              examples: [],
-              typeSignatures: {},
-            },
-            meta: { description: 'Foo bar', exampleIds: [], exports: [], hasSource: false, slug: 'foo-bar' },
-            slug: 'foo-bar',
-          },
-        ]),
-      ),
-    );
-
-    expect(catalog.search('foo-bar').map((hit) => hit.slug)).toEqual(['foo-bar', 'arsenal']);
+  it('names the missing target in every lookup error', () => {
+    expect(() => catalog().getMeta('nope')).toThrow('Package "nope" not found');
+    expect(() => catalog().getDocs('demo', 'nope')).toThrow('No "nope" page for "demo"');
+    expect(() => catalog().getExport('demo', 'nope')).toThrow('No exported symbol "nope"');
+    expect(() => catalog().getComponent('ore-missing')).toThrow('Component "ore-missing" not found');
   });
 
-  it('returns empty but present content without treating it as missing', () => {
-    const directory = snapshotRoot([
-      {
-        content: {
-          apiSource: '',
-          docs: { index: '' },
-          examples: [{ code: '', id: 'basic', name: '' }],
-          typeSignatures: { test: '' },
-        },
-        slug: 'test',
-      },
-    ]);
-    const catalog = new SnapshotCatalog(loadSnapshot(directory));
+  it('requires every term inside one section and ranks heading matches first', () => {
+    const hits = catalog().search('signal');
 
-    expect(catalog.getDocs('test', 'index')).toBe('');
-    expect(catalog.getSource('test')).toBe('');
-    expect(catalog.getTypeSignature('test', 'test')).toBe('');
-    expect(catalog.getExample('test', 'basic').code).toBe('');
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits[0].slug).toBe('demo');
+    expect(hits[0].page).toBe('api');
+    // "Signals" is a heading match (weight 3); the Animation section only mentions spring().
+    expect(hits[0].heading).toBe('Signals');
+    expect(hits[0].snippet).toContain('signal()');
   });
 
-  it('does not expose mutable catalog metadata or component declarations', () => {
-    const directory = snapshotRoot([defaultPackage()], [{ attributes: [{ name: 'variant' }], tagName: 'ore-button' }]);
-    const catalog = new SnapshotCatalog(loadSnapshot(directory));
-    const packageMeta = catalog.getPackage('test');
-
-    Object.assign(packageMeta, { keywords: ['changed'] });
-    Object.assign(packageMeta.keywords, { 0: 'changed' });
-
-    const component = catalog.getComponent('ore-button');
-
-    Object.assign(component.attributes?.[0] ?? {}, { name: 'changed' });
-
-    expect(catalog.getPackage('test').keywords).toEqual(['test']);
-    expect(catalog.getComponent('ore-button').attributes?.[0]?.name).toBe('variant');
+  it('drops sections that miss any term', () => {
+    expect(catalog().search('signal animation')).toEqual([]);
+    expect(catalog().search('spring animate')).toHaveLength(1);
+    expect(catalog().search('spring animate')[0].heading).toBe('Animation');
   });
 
-  it('rejects path traversal and duplicate slugs before catalog creation', () => {
-    expect(() => loadSnapshot(snapshotRoot([{ meta: { slug: '../bad' }, slug: 'bad' }]))).toThrow(
-      'must be a lowercase package slug',
-    );
+  it('rejects an empty query', () => {
+    expect(() => catalog().search('   ')).toThrow('query: required non-empty string.');
   });
 
-  it('rejects malformed chunks and catalog/content inconsistencies during full validation', () => {
-    const directory = snapshotRoot([
-      {
-        content: { apiSource: null, docs: {}, examples: [{ id: 'bad', name: 'Bad' }], typeSignatures: {} },
-        slug: 'test',
-      },
-    ]);
+  it('serves components and tokens without copying', () => {
+    const instance = catalog();
 
-    expect(() => validateSnapshot(directory)).toThrow('packages/test.json.examples[0].code: must be a string');
-  });
-
-  it('rejects snapshots from another schema version', () => {
-    const directory = snapshotRoot([defaultPackage()]);
-
-    writeFileSync(join(directory, 'manifest.json'), JSON.stringify({ schemaVersion: 1, version: '1.0.0' }));
-    expect(() => loadSnapshot(directory)).toThrow('schemaVersion: must equal 2');
-  });
-
-  it('validates the component tag contract in refine metadata', () => {
-    const directory = snapshotRoot([defaultPackage()], [{ attributes: 'invalid', tagName: 'ore-button' }]);
-
-    expect(() => loadSnapshot(directory)).not.toThrow();
-
-    const badTag = snapshotRoot([defaultPackage()], [{ tagName: '[' }]);
-
-    expect(() => loadSnapshot(badTag)).toThrow('tagName: must be a custom element name');
-
-    const duplicate = snapshotRoot([defaultPackage()], [{ tagName: 'ore-button' }, { tagName: 'ore-button' }]);
-
-    expect(() => loadSnapshot(duplicate)).toThrow('tagName: duplicates ore-button');
+    expect(instance.getComponent('ore-button').summary).toBe('A button.');
+    expect(instance.tokens).toHaveLength(2);
+    expect(instance.getComponent('ore-button')).toBe(instance.getComponent('ore-button'));
   });
 });

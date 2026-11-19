@@ -17,6 +17,9 @@ const prevBtn = (f: Fixture<HTMLElement>): HTMLElement | null =>
 const nextBtn = (f: Fixture<HTMLElement>): HTMLElement | null =>
   navigationRoot(f)?.querySelector<HTMLElement>('[part="next"]') ?? null;
 
+const autoplayToggle = (f: Fixture<HTMLElement>): HTMLElement | null =>
+  f.query<HTMLElement>('[part="autoplay-toggle"]') ?? null;
+
 const SLIDES_HTML = `
   <ore-carousel-slide>Slide 1</ore-carousel-slide>
   <ore-carousel-slide>Slide 2</ore-carousel-slide>
@@ -88,6 +91,74 @@ describe('ore-carousel', () => {
       await fixture.flush();
 
       expect((fixture.element as HTMLElement & { autoplay: boolean }).autoplay).toBe(false);
+    });
+
+    it('shows an accessible autoplay toggle only when autoplay can advance', async () => {
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+      expect(autoplayToggle(fixture)?.hasAttribute('hidden')).toBe(true);
+
+      fixture = await mount('ore-carousel', { attrs: { autoplay: 'true' }, html: slides });
+      await fixture.flush();
+      expect(autoplayToggle(fixture)?.hasAttribute('hidden')).toBe(false);
+      expect(autoplayToggle(fixture)?.getAttribute('label')).toBe('Pause autoplay');
+      expect(autoplayToggle(fixture)?.parentElement).toBe(fixture.query('ore-media-navigation'));
+      expect(autoplayToggle(fixture)?.getAttribute('slot')).toBe('actions');
+
+      fixture = await mount('ore-carousel', {
+        attrs: { autoplay: 'true' },
+        html: '<ore-carousel-slide>Only slide</ore-carousel-slide>',
+      });
+      await fixture.flush();
+      expect(autoplayToggle(fixture)?.hasAttribute('hidden')).toBe(true);
+    });
+
+    it('switches the live region to polite when autoplay is manually paused', async () => {
+      fixture = await mount('ore-carousel', { attrs: { autoplay: 'true' }, html: slides });
+      await fixture.flush();
+
+      autoplayToggle(fixture)?.click();
+      await fixture.flush();
+
+      expect(autoplayToggle(fixture)?.getAttribute('label')).toBe('Resume autoplay');
+      expect(fixture.query('.track')?.getAttribute('aria-live')).toBe('polite');
+    });
+
+    it('does not announce timed slide changes', async () => {
+      for (const region of document.querySelectorAll('[data-block-announcer]')) region.remove();
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+
+      let callback: TimerHandler | undefined;
+      const timerHandle = setInterval(() => {}, 0);
+      clearInterval(timerHandle);
+      const timer = vi.spyOn(window, 'setInterval').mockImplementation((handler) => {
+        callback = handler;
+
+        return timerHandle;
+      });
+      try {
+        fixture.element.setAttribute('autoplay', '');
+        await Promise.resolve();
+      } finally {
+        timer.mockRestore();
+      }
+      await fixture.flush();
+
+      if (typeof callback !== 'function') throw new Error('Expected autoplay to register a timer callback.');
+      callback();
+
+      expect(document.querySelector('[data-block-announcer="polite"]')).toBeNull();
+    });
+
+    it('announces manually selected slides', async () => {
+      for (const region of document.querySelectorAll('[data-block-announcer]')) region.remove();
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+
+      nextBtn(fixture)?.click();
+
+      expect(document.querySelector('[data-block-announcer="polite"]')).not.toBeNull();
     });
 
     it('hides controls when show-controls is false', async () => {

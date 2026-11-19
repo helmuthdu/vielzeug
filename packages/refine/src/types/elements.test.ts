@@ -50,6 +50,7 @@ describe('HTMLElementTagNameMap: form-associated element type coverage', () => {
     expectTypeOf<RefineElementMap['ore-keyboard-shortcut']['pressed']>().toEqualTypeOf<boolean | undefined>();
     expectTypeOf<RefineElementMap['ore-list']['selectable']>().toEqualTypeOf<boolean | undefined>();
     expectTypeOf<RefineElementMap['ore-navigation-menu']['open']>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<RefineElementMap['ore-navigation-menu-link']['href']>().toEqualTypeOf<string | undefined>();
     expectTypeOf<RefineElementMap['ore-stats']['value']>().toEqualTypeOf<string | undefined>();
     expectTypeOf<RefineElementMap['ore-speed-reading']['wpm']>().toEqualTypeOf<number | undefined>();
     expectTypeOf<RefineElementMap['ore-speed-reading']['seek']>().toEqualTypeOf<(index: number) => void>();

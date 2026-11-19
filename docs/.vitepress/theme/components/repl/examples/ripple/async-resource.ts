@@ -1,10 +1,11 @@
 export const asyncResourceExample = {
-  code: `import { createRipple } from '@vielzeug/ripple'
+  code: `import { createScope, effect, resource, signal } from '@vielzeug/ripple'
 
 // Resource reloads from tracked input and ignores stale loader work.
-const ripple = createRipple()
-const userId = ripple.signal('u1')
-const user = ripple.resource(
+const scope = createScope()
+const { userId, user } = scope.run(() => {
+  const userId = signal('u1')
+  const user = resource(
   () => userId.value,
   async (id, { signal }) => {
     await new Promise((resolve) => setTimeout(resolve, 30))
@@ -13,13 +14,14 @@ const user = ripple.resource(
   },
 )
 
-ripple.effect(() => console.log(user.value))
+  effect(() => console.log(user.value))
+  return { userId, user }
+})
 
 userId.value = 'u2'
 await new Promise((resolve) => setTimeout(resolve, 50))
 user.reload()
 await new Promise((resolve) => setTimeout(resolve, 50))
-user.dispose()
-ripple.dispose()`,
+scope.dispose()`,
   name: 'Async Resource',
 };

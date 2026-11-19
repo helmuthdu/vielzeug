@@ -86,7 +86,7 @@ export type OreTabsProps = {
  * @slot tabs - Place `ore-tab-item` elements here
  * @slot - Place `ore-tab-panel` elements here
  *
- * @cssprop --tabs-radius - Border radius of the tablist container and panels
+ * @cssprop --tabs-radius - Outer corner radius; indicator and tab buttons subtract the enclosing border and padding
  * @cssprop --tabs-transition - Transition duration/easing for the sliding active pill
  * @cssprop --tabs-indicator-color - Background of the sliding active pill (raised surface, or the theme color on `ghost`)
  * @cssprop --tabs-bg - Background of the host element (flat variant)

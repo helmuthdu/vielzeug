@@ -43,7 +43,7 @@
     color: var(--color-primary);
     letter-spacing: 0.03em;
     background: var(--color-primary-backdrop);
-    border: var(--border) solid oklch(70% 0.12 293deg / 20%);
+    border: var(--border) solid oklch(70% 0.12 var(--color-primary-hue) / 20%);
     border-radius: var(--rounded-sm);
   }
 

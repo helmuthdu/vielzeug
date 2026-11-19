@@ -29,7 +29,13 @@ Without an owner updating `active-index`, the component keeps displaying the sup
 
 `orientation="horizontal"` places indicators and arrows in a row. `orientation="vertical"` arranges them in a column and uses Up/Down Arrow for indicator navigation. Horizontal navigation follows the element's text direction.
 
-`show-controls="false"` hides arrows. `show-indicators="false"` hides indicators. Disabling both hides the whole navigation surface. `loop` permits requests to wrap from either end; otherwise the corresponding boundary arrow is disabled.
+`show-controls="false"` hides arrows. `show-indicators="false"` hides indicators. Disabling both hides the whole navigation surface unless `show-actions` is enabled. Place additional controls in the `actions` slot; they appear alongside the arrows and remain visible when arrows are hidden. `loop` permits requests to wrap from either end; otherwise the corresponding boundary arrow is disabled.
+
+```html
+<ore-media-navigation count="3" show-actions label="Browse products">
+  <ore-button slot="actions" variant="ghost">Pause</ore-button>
+</ore-media-navigation>
+```
 
 The component supplies the visual bar, not its page position. Place it below media or position its host over a dedicated navigation area. The carousel and picker retain their own placement rules.
 
@@ -70,6 +76,7 @@ Set `progress-duration` to a duration in milliseconds to animate the active indi
 | `orientation`       | `'horizontal' \| 'vertical'` | `horizontal`       | Control layout and keyboard axis                                       |
 | `loop`              | `boolean`                    | `false`            | Wrap requests at the ends                                              |
 | `disabled`          | `boolean`                    | `false`            | Block navigation requests                                              |
+| `show-actions`      | `boolean`                    | `false`            | Show custom controls assigned to the `actions` slot                    |
 | `show-controls`     | `boolean`                    | `true`             | Show arrows                                                            |
 | `show-indicators`   | `boolean`                    | `true`             | Show indicators                                                        |
 | `max-indicators`    | `number`                     | `7`                | Maximum visible indicators; positive values round down to at least one |
@@ -89,7 +96,9 @@ Set `progress-duration` to a duration in milliseconds to animate the active indi
 
 ### Parts and Styling
 
-Parts: `bar`, `controls`, `indicators`, `indicator`, `previous`, and `next`. CSS custom properties: `--media-navigation-bg` and `--media-navigation-dot-bg`.
+Parts: `bar`, `controls`, `indicators`, `indicator`, `previous`, and `next`. The `controls` part includes arrows and slotted actions. CSS custom properties: `--media-navigation-bg` and `--media-navigation-dot-bg`.
+
+The `actions` slot accepts additional controls within the navigation bar. Set `show-actions` when an assigned action should keep the bar visible without arrows or indicators. Slotted actions manage their own disabled state.
 
 ### Types
 
@@ -101,5 +110,5 @@ Exported types: `OreMediaNavigationProps`, `OreMediaNavigationEvents`, `MediaNav
 - `labels` is a JSON array of accessible indicator names. Missing or blank names fall back to `Go to item N`.
 - Indicators are native buttons with `aria-current`, not tabs. Only the active indicator enters sequential Tab order.
 - Left/Right Arrow or Up/Down Arrow follows the orientation. Home and End request the first and last items.
-- `disabled` blocks requests and disables every control.
+- `disabled` blocks navigation requests and disables the arrow and indicator controls. Slotted actions manage their own disabled state.
 - Progress visuals are hidden from assistive technology; the current indicator communicates the active item.

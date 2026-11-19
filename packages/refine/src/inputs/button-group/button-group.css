@@ -5,7 +5,8 @@
 
   :host {
     --group-gap: var(--target-gap-bezel);
-    --group-radius: var(--_radius, var(--rounded-lg));
+    --_radius: var(--radius);
+    --group-radius: var(--_radius);
     display: inline-flex;
   }
 
@@ -54,7 +55,9 @@
 
   /* Ensure attached buttons have proper z-index on hover/focus */
   :host([attached]) ::slotted(ore-button:hover),
-  :host([attached]) ::slotted(ore-button:focus-within) {
+  :host([attached]) ::slotted(ore-button:focus-within),
+  :host([attached]) ::slotted(ore-tooltip:hover),
+  :host([attached]) ::slotted(ore-tooltip:focus-within) {
     position: relative;
     z-index: 1;
   }
@@ -76,6 +79,23 @@
     --button-radius: 0 var(--group-radius) var(--group-radius) 0;
   }
 
+  /* Tooltip wrappers inherit the same button variables as directly slotted buttons. */
+  :host([attached]) ::slotted(ore-tooltip) {
+    --button-radius: 0;
+  }
+
+  :host([attached]) ::slotted(ore-tooltip:not(:first-child)) {
+    --button-border-start: 0;
+  }
+
+  :host([attached]:not([orientation='vertical'])) ::slotted(ore-tooltip:first-child) {
+    --button-radius: var(--group-radius) 0 0 var(--group-radius);
+  }
+
+  :host([attached]:not([orientation='vertical'])) ::slotted(ore-tooltip:last-child) {
+    --button-radius: 0 var(--group-radius) var(--group-radius) 0;
+  }
+
   /* Vertical attached - remove inner borders and round corners */
   :host([attached][orientation='vertical']) ::slotted(ore-button) {
     --button-radius: 0;
@@ -90,6 +110,18 @@
   }
 
   :host([attached][orientation='vertical']) ::slotted(ore-button:last-child) {
+    --button-radius: 0 0 var(--group-radius) var(--group-radius);
+  }
+
+  :host([attached][orientation='vertical']) ::slotted(ore-tooltip:not(:first-child)) {
+    --button-border-top: 0;
+  }
+
+  :host([attached][orientation='vertical']) ::slotted(ore-tooltip:first-child) {
+    --button-radius: var(--group-radius) var(--group-radius) 0 0;
+  }
+
+  :host([attached][orientation='vertical']) ::slotted(ore-tooltip:last-child) {
     --button-radius: 0 0 var(--group-radius) var(--group-radius);
   }
 }

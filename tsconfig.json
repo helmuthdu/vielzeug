@@ -19,5 +19,6 @@
     "types": ["node", "vitest/globals", "vite/client"],
     "useDefineForClassFields": true,
     "verbatimModuleSyntax": true
-  }
+  },
+  "exclude": ["packages/vault/runtime-smoke/bun-sqlite.ts", "packages/vault/runtime-smoke/deno-sqlite.ts"]
 }
