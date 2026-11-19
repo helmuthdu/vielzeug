@@ -31,10 +31,33 @@ for (const atlas of modules) {
 }
 
 for (const grid of gridModules) {
-  for (const name of ['computeFov', 'createFog', 'visibleTileRange', 'iterateTileRange', 'tileToRect', 'tileKey']) {
+  for (const name of [
+    'computeFov',
+    'createFog',
+    'visibleTileRange',
+    'iterateTileRange',
+    'tileToRect',
+    'tileKey',
+    'computeHexFov',
+    'hexCorners',
+    'hexDistance',
+    'hexKey',
+    'hexLine',
+    'hexNeighbors',
+    'hexRange',
+    'hexToWorld',
+    'worldToHex',
+    'visibleHexes',
+    'findPath',
+    'reachable',
+    'squareTopology',
+  ]) {
     if (typeof grid[name] !== 'function') {
       throw new Error(`grid ${name} export missing`);
     }
+  }
+  if (typeof grid.hexTopology !== 'object' || typeof grid.squareTopology !== 'function') {
+    throw new Error('grid topology exports missing');
   }
   if (typeof grid.AtlasError !== 'function' || typeof grid.AtlasConfigError !== 'function') {
     throw new Error('grid error exports missing');

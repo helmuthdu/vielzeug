@@ -1,6 +1,6 @@
 ---
 title: 'Atlas: API Reference'
-description: API reference for the Atlas camera, spatial index, matrix, rect, frame, and narrow-phase geometry helpers.
+description: API reference for the Atlas camera, spatial index, matrix, rect, frame, grid, and narrow-phase geometry helpers.
 ---
 
 [[toc]]
@@ -27,10 +27,10 @@ description: API reference for the Atlas camera, spatial index, matrix, rect, fr
 
 ## Package Entry Point
 
-| Import                 | Purpose                                                                |
-| ---------------------- | ---------------------------------------------------------------------- |
-| `@vielzeug/atlas`      | Camera, spatial index, matrix/rect/geometry helpers, types, and errors |
-| `@vielzeug/atlas/grid` | Square-tile math, recursive shadowcasting FOV, and fog-of-war state    |
+| Import                 | Purpose                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------ |
+| `@vielzeug/atlas`      | Camera, spatial index, matrix/rect/geometry helpers, types, and errors               |
+| `@vielzeug/atlas/grid` | Square-tile and hex math, grid topologies, A* pathfinding, FOV, and fog-of-war state |
 
 ---
 
@@ -241,7 +241,7 @@ A `SnapGuide` is `{ axis, kind, position, from, to, marks? }`: `axis` is the axi
 
 ## Grid Functions
 
-From the `@vielzeug/atlas/grid` subpath:
+From the `@vielzeug/atlas/grid` subpath. Square tiles:
 
 | Function                               | Returns                                                                                         |
 | -------------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -255,6 +255,51 @@ From the `@vielzeug/atlas/grid` subpath:
 | `createFog()`                          | Three-state fog tracker over tile keys: `update`/`state`/`visible`, `exportState`/`importState` |
 
 `grid` is `{ tileSize }` (positive; `worldToTile`/`tileToRect`/`tileCenter`/`visibleTileRange` throw `AtlasConfigError` otherwise, as does a negative/non-integer FOV `radius`). `computeFov` options: `blocks(coord)` returns true when sight cannot pass through the tile; blocking tiles within range are themselves visible. The origin is always in the result. `TileCoord` is `{ col, row }`. `createFog()` stores `tileKey` strings, so a `computeFov` result feeds `fog.update()` directly: one call demotes the previously visible tiles to `seen` and marks the new keys `visible`. `fog.visible` is a `ReadonlySet<string>`.
+
+Hexes (axial coordinates, `HexCoord` = `{ q, r }`; `HexLayout` = `{ orientation: 'flat' | 'pointy', size }` where `size` is the centre-to-corner radius):
+
+| Function                               | Returns                                                                             |
+| -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `hexToWorld(coord, layout)`            | World `Point` at the hex's centre                                                   |
+| `worldToHex(point, layout)`            | `HexCoord` whose centre is nearest the point (exact inverse of `hexToWorld`)        |
+| `hexCorners(coord, layout)`            | The six corner `Point`s, clockwise                                                  |
+| `hexKey(coord)`                        | Stable `"q:r"` string                                                               |
+| `hexDistance(a, b)`                    | Hex steps between two hexes                                                         |
+| `hexNeighbors(coord)`                  | The six adjacent hexes (`HEX_DIRECTIONS` is the direction set, clockwise from east) |
+| `hexRange(center, radius)`             | Every hex within `radius` steps, centre included                                    |
+| `hexLine(a, b)`                        | The hexes a straight walk crosses, both ends included; symmetric under reversal     |
+| `visibleHexes(view, layout)`           | Every `HexCoord` overlapping a world `Rect` (culling for render loops)              |
+| `computeHexFov(origin, radius, opts?)` | `Set<string>` of visible `hexKey`s along unobstructed `hexLine`s                    |
+
+`computeHexFov` blocks sight on the `hexLine` between origin and target; a blocking hex is itself visible when the path to it is clear.
+
+### Topologies and pathfinding
+
+A `GridTopology<C>` is the four facts a search needs about a grid: `distance`, `key`, `line`, and `neighbors` over cells of type `C`. `squareTopology({ diagonal? })` builds one for square tiles (4-way Manhattan by default, 8-way Chebyshev with `diagonal: true`; `line` is supercover, so a sight line never skips a corner tile). `hexTopology` is the fixed hex instance.
+
+| Function                            | Returns                                                                                          |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `squareTopology(options?)`          | `GridTopology<TileCoord>` for square tiles                                                       |
+| `hexTopology`                       | The `GridTopology<HexCoord>` instance                                                            |
+| `findPath(start, goal, options)`    | The cheapest cell path (`C[]`, both ends included), or `null` when blocked or unreachable        |
+| `reachable(start, budget, options)` | `Map<key, { cost, prev }>` of every cell enterable within `budget`, with predecessors for routes |
+
+`findPath` is A* and `reachable` a Dijkstra flood; both take `SearchOptions<C>`: `passable(coord)` gates entry (the start is queried too), `cost(coord)` prices entry (default 1, positive and finite), `topology` supplies adjacency and the heuristic. `findPath` accepts an optional `maxCost` cap and returns `null` when an endpoint is impassable or the goal unreachable. `reachable` charges entry costs against `budget` (the start cell is free) and keys results by `topology.key`, so `prev` chains rebuild routes.
+
+The search space must be finite: `passable` has to reject the cells beyond the world's edge, or a search for an unreachable goal expands forever.
+
+```ts
+import { findPath, hexTopology } from '@vielzeug/atlas/grid';
+
+const route = findPath(
+  { q: 0, r: 0 },
+  { q: 4, r: -2 },
+  {
+    passable: (hex) => Math.abs(hex.q) <= 10 && Math.abs(hex.r) <= 10 && !walls.has(`${hex.q}:${hex.r}`),
+    topology: hexTopology,
+  },
+); // [{ q: 0, r: 0 }, …, { q: 4, r: -2 }] or null
+```
 
 ---
 

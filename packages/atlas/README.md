@@ -34,7 +34,7 @@ index.queryRect(camera.visibleRect); // viewport culling, returns ids
 - Narrow-phase geometry: `pointInPolygon`, `distanceToPolyline`, `pointNearPolygon`
 - Frames: `frameMatrix()` placement, `boundsOfFrame()` world AABBs, and `resizeRect()` edge/corner resizing with min and aspect locks
 - Snapping: `snapRect()` with candidate, grid, and equal-gap (`spacing`) targets and kind-tagged guide descriptors, plus pure `alignRects()`/`distributeRects()`
-- `@vielzeug/atlas/grid` subpath: square-tile coordinate math, viewport tile ranges, 8-octant shadowcasting `computeFov()`, and three-state `createFog()`
+- `@vielzeug/atlas/grid` subpath: square-tile and axial-hex coordinate math, viewport culling, 8-octant shadowcasting `computeFov()` and hex-line `computeHexFov()`, three-state `createFog()`, `squareTopology()`/`hexTopology`, and `findPath()`/`reachable()` search
 - Typed errors; the camera follows the Vielzeug disposal contract
 - Zero runtime dependencies, no DOM requirement
 
