@@ -127,6 +127,7 @@ define<OreTabsProps>(TABS_TAG, {
     const tablistRef = ref<HTMLElement>();
     const indicatorRef = ref<HTMLElement>();
     const selectedValue = signal<string | undefined>(props.value.value);
+    let keyboardNavigation = false;
     const hasPanels = signal(false);
     const isManualActivation = () => props.activation.value === 'manual';
     const isVertical = () => props.orientation.value === 'vertical';
@@ -199,7 +200,10 @@ define<OreTabsProps>(TABS_TAG, {
         if (!isManualActivation()) {
           const value = item.getAttribute('value');
 
-          if (value) setSelection(value, true);
+          if (value && value !== selectedValue.value) {
+            keyboardNavigation = true;
+            setSelection(value, true);
+          }
         }
       },
       orientation: () => (isVertical() ? 'vertical' : 'both'),
@@ -280,7 +284,11 @@ define<OreTabsProps>(TABS_TAG, {
     };
 
     watch(selectedValue, () => {
-      requestAnimationFrame(() => updateIndicator(true));
+      // Keyboard moves snap the pill to the new tab; every other change slides.
+      const animate = !keyboardNavigation;
+
+      keyboardNavigation = false;
+      requestAnimationFrame(() => updateIndicator(animate));
     });
 
     // ────────────────────────────────────────────────────────────────
