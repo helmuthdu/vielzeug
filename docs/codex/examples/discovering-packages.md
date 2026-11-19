@@ -20,9 +20,7 @@ Call `list-packages` for the compact catalog (name, slug, description for every 
 Result excerpt:
 
 ```json
-[
-  { "description": "Reactive signals, computed, effects, and stores", "name": "@vielzeug/ripple", "slug": "ripple" }
-]
+[{ "description": "Reactive signals, computed, effects, and stores", "name": "@vielzeug/ripple", "slug": "ripple" }]
 ```
 
 ```json
@@ -35,7 +33,14 @@ Result excerpt:
 {
   "examples": [{ "id": "signal-basics", "name": "Reactive basics" }],
   "exports": ["computed", "effect", "signal"],
-  "meta": { "category": "state", "keywords": ["signals", "reactivity"], "name": "@vielzeug/ripple", "related": ["necromancer"], "slug": "ripple", "version": "26.11.24" },
+  "meta": {
+    "category": "state",
+    "keywords": ["signals", "reactivity"],
+    "name": "@vielzeug/ripple",
+    "related": ["necromancer"],
+    "slug": "ripple",
+    "version": "26.11.24"
+  },
   "pages": [{ "page": "index", "title": "Ripple" }, { "page": "api", "title": "Ripple API" }]
 }
 ```

@@ -46,10 +46,22 @@ function summarise(tool: ToolDefinition): string {
   return tool.description.split(/(?<=\.)\s(?=[A-Z])/)[0] ?? tool.description;
 }
 
-function renderTable(tools: ToolDefinition[]): string {
-  const rows = tools.map((t) => `| \`${t.name}\` | ${formatInputs(t)} | ${summarise(t)} |`);
+/** Pad cells to the column width so the table matches Biome's markdown formatting. */
+function padTable(header: readonly string[], rows: readonly (readonly string[])[]): string {
+  const widths = header.map((cell, column) =>
+    Math.max(cell.length, ...rows.map((row) => (row[column] ?? '').length)),
+  );
+  const line = (cells: readonly string[]) =>
+    `| ${cells.map((cell, column) => cell.padEnd(widths[column])).join(' | ')} |`;
+  const divider = `| ${widths.map((width) => '-'.repeat(width)).join(' | ')} |`;
 
-  return ['| Tool | Input | Description |', '| --- | --- | --- |', ...rows].join('\n');
+  return [line(header), divider, ...rows.map(line)].join('\n');
+}
+
+function renderTable(tools: ToolDefinition[]): string {
+  const rows = tools.map((t) => [`\`${t.name}\``, formatInputs(t), summarise(t)]);
+
+  return padTable(['Tool', 'Input', 'Description'], rows);
 }
 
 function replaceBetweenMarkers(content: string, marker: string, replacement: string): string {
