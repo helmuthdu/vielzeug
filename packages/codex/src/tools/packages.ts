@@ -1,30 +1,40 @@
-import { detectConsumer } from '../consumer.js';
-import { DOC_PAGES } from '../types.js';
-import { EMPTY_SCHEMA, PACKAGE_SLUG_PROPERTY, parseArgs, type ToolSchema } from './schema.js';
+import type { SearchHit } from '../catalog.js';
+import type { PackageEntry } from '../types.js';
+import { EMPTY_SCHEMA, parseArgs, SLUG_PROPERTY, type ToolSchema } from './schema.js';
 import type { ToolDefinition } from './shared.js';
 
 const slug = {
   additionalProperties: false,
-  properties: { packageSlug: PACKAGE_SLUG_PROPERTY },
-  required: ['packageSlug'],
+  properties: { slug: SLUG_PROPERTY },
+  required: ['slug'],
   type: 'object',
 } satisfies ToolSchema;
 const docs = {
   additionalProperties: false,
   properties: {
-    packageSlug: PACKAGE_SLUG_PROPERTY,
-    page: { default: 'index', description: 'Documentation page', enum: DOC_PAGES, type: 'string' },
+    page: {
+      description: 'Documentation page, e.g. "index", "api", "components/button"',
+      maxLength: 200,
+      minLength: 1,
+      type: 'string',
+    },
+    section: {
+      description: 'Optional heading (or its slug) to return one section instead of the whole page',
+      maxLength: 200,
+      type: 'string',
+    },
+    slug: SLUG_PROPERTY,
   },
-  required: ['packageSlug'],
+  required: ['slug', 'page'],
   type: 'object',
 } satisfies ToolSchema;
 const example = {
   additionalProperties: false,
   properties: {
     exampleId: { description: 'Example identifier', maxLength: 100, minLength: 1, type: 'string' },
-    packageSlug: PACKAGE_SLUG_PROPERTY,
+    slug: SLUG_PROPERTY,
   },
-  required: ['packageSlug', 'exampleId'],
+  required: ['slug', 'exampleId'],
   type: 'object',
 } satisfies ToolSchema;
 const query = {
@@ -36,125 +46,84 @@ const query = {
 const signature = {
   additionalProperties: false,
   properties: {
-    slug: PACKAGE_SLUG_PROPERTY,
+    slug: SLUG_PROPERTY,
     symbol: { description: 'Exported symbol name', maxLength: 200, minLength: 1, type: 'string' },
   },
   required: ['slug', 'symbol'],
   type: 'object',
 } satisfies ToolSchema;
-const drift = {
-  additionalProperties: false,
-  properties: {
-    projectDir: {
-      description: 'Project directory to inspect; defaults to the server working directory',
-      maxLength: 500,
-      minLength: 1,
-      type: 'string',
-    },
-  },
-  type: 'object',
-} satisfies ToolSchema;
+
+/** `get-package` output: everything discoverable about one package, without page bodies. */
+function packageSummary(pkg: PackageEntry) {
+  return {
+    examples: pkg.examples.map(({ id, name }) => ({ id, name })),
+    exports: pkg.exports.map((entry) => entry.name),
+    meta: pkg.meta,
+    pages: Object.keys(pkg.pages)
+      .sort()
+      .map((page) => ({ page, title: pkg.titles[page] ?? page })),
+  };
+}
 
 export const packageTools: readonly ToolDefinition[] = [
   {
     description: 'List every Vielzeug package. Start here for package discovery.',
-    execute: (_args, catalog) => catalog.listPackages(),
+    execute: (_args, catalog) =>
+      catalog.packages.map(({ meta }) => ({ description: meta.description, name: meta.name, slug: meta.slug })),
     inputSchema: EMPTY_SCHEMA,
     name: 'list-packages',
   },
   {
-    description: 'Read metadata for one package.',
-    execute: (args, catalog) => catalog.getPackage(parseArgs(slug, args).packageSlug),
+    description: 'Read metadata for one package: docs pages, example ids, and export names.',
+    execute: (args, catalog) => packageSummary(catalog.getPackage(parseArgs(slug, args).slug)),
     inputSchema: slug,
     name: 'get-package',
   },
   {
-    description: 'Read one documentation page as Markdown.',
+    description: 'Read one documentation page as Markdown, optionally just one section of it.',
     execute: (args, catalog) => {
       const input = parseArgs(docs, args);
 
-      return catalog.getDocs(input.packageSlug, input.page);
+      return catalog.getDocs(input.slug, input.page, input.section).markdown;
     },
     inputSchema: docs,
     name: 'get-docs',
-  },
-  {
-    description: 'Read bundled public source for one package.',
-    execute: (args, catalog) => catalog.getSource(parseArgs(slug, args).packageSlug),
-    inputSchema: slug,
-    name: 'get-source',
-  },
-  {
-    description: 'List runnable REPL examples for one package.',
-    execute: (args, catalog) => catalog.listExamples(parseArgs(slug, args).packageSlug),
-    inputSchema: slug,
-    name: 'list-examples',
   },
   {
     description: 'Read one runnable REPL example.',
     execute: (args, catalog) => {
       const input = parseArgs(example, args);
 
-      return catalog.getExample(input.packageSlug, input.exampleId).code;
+      return catalog.getExample(input.slug, input.exampleId).code;
     },
     inputSchema: example,
     name: 'get-example',
   },
   {
-    description:
-      'Search package metadata, docs, examples, and source. Results are relevance-tiered, then ordered by slug.',
-    execute: (args, catalog) => catalog.search(parseArgs(query, args).query),
-    inputSchema: query,
-    name: 'search-packages',
-  },
-  {
-    description: 'Read one exported TypeScript declaration.',
+    description: 'Read one exported TypeScript declaration with its JSDoc.',
     execute: (args, catalog) => {
       const input = parseArgs(signature, args);
 
-      return catalog.getTypeSignature(input.slug, input.symbol);
+      return catalog.getExport(input.slug, input.symbol);
     },
     inputSchema: signature,
     name: 'get-type-signature',
   },
   {
     description:
-      'Compare the snapshot versions with the @vielzeug/* versions installed in a consumer project. Snapshot docs may lag the install.',
-    execute: (args, catalog) => {
-      const input = parseArgs(drift, args);
-      const consumer = detectConsumer(input.projectDir);
+      'Search all docs by section. Every term must match inside one section; results are ranked and located, so follow up with get-docs and the section.',
+    execute: (args, catalog): readonly Omit<SearchHit, 'score'>[] => {
+      const hits = catalog.search(parseArgs(query, args).query);
 
-      if (!consumer) {
-        return { note: 'No package.json with @vielzeug/* dependencies was found.', packages: [], projectDir: null };
-      }
-
-      const snapshot = new Map(catalog.listPackages().map((meta) => [meta.name, meta.version]));
-
-      return {
-        packages: consumer.packages.map((entry) => {
-          const snapshotVersion = snapshot.get(entry.name);
-          // Link/workspace specifiers track a checkout; the snapshot cannot match them.
-          const linked = !/^[~^0-9*]/.test(entry.declared);
-
-          let status: string;
-
-          if (linked) status = 'linked';
-          else if (!snapshotVersion) status = 'not-in-snapshot';
-          else if (entry.installed) status = entry.installed === snapshotVersion ? 'match' : 'drift';
-          else status = entry.declared === snapshotVersion ? 'match' : 'unresolved';
-
-          return {
-            declared: entry.declared,
-            installed: entry.installed ?? null,
-            name: entry.name,
-            snapshotVersion: snapshotVersion ?? null,
-            status,
-          };
-        }),
-        projectDir: consumer.projectDir,
-      };
+      return hits.map(({ heading, page, section, slug: hitSlug, snippet }) => ({
+        heading,
+        page,
+        section,
+        slug: hitSlug,
+        snippet,
+      }));
     },
-    inputSchema: drift,
-    name: 'check-install',
+    inputSchema: query,
+    name: 'search',
   },
 ];

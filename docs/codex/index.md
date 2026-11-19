@@ -5,7 +5,7 @@ package: codex
 category: AI
 keywords: [mcp, docs, ai]
 related: [refine]
-exports: [loadSnapshot, SnapshotCatalog, createMcpServer, startHttpHost, StdioServerTransport, CatalogError, CodexError]
+exports: [createCodexServer, startHttpHost, CodexError]
 environments: [node]
 ---
 
@@ -29,11 +29,10 @@ npx -y @vielzeug/codex
 
 ## Features
 
-- `loadSnapshot` validates chunked snapshot metadata.
-- `SnapshotCatalog` loads package content only when requested.
-- `createMcpServer` registers package tools, plus Refine component tools whenever the snapshot carries them.
-- The single entry point publishes TypeScript declarations.
+- One generated `data/snapshot.json` carries all docs, checker-resolved type signatures, REPL examples, Refine components, and theme tokens.
+- `createCodexServer` registers the package tools, plus Refine component tools whenever the snapshot carries them, and reports the snapshot version in its instructions.
 - `startHttpHost` enforces loopback binding plus localhost Host and Origin validation.
+- The CLI ships a `vielzeug` agent skill installable into downstream projects.
 
 ## Documentation
 

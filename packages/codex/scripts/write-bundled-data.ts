@@ -1,61 +1,80 @@
-import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
-import { dirname, resolve } from 'node:path';
-
-import type { SnapshotArtifacts } from './generator.ts';
-import { generateLlmsTxt } from './llms.ts';
-
-function writeJson(path: string, value: unknown): void {
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-}
-
-function writeDirectory(directory: string, snapshot: SnapshotArtifacts): void {
-  writeJson(resolve(directory, 'catalog.json'), snapshot.catalog);
-  writeJson(resolve(directory, 'refine.json'), snapshot.refineComponents);
-  for (const [slug, content] of snapshot.contents) writeJson(resolve(directory, 'packages', `${slug}.json`), content);
-  const llms = generateLlmsTxt(snapshot.catalog, snapshot.contents);
-  writeFileSync(resolve(directory, 'llms.txt'), llms.llmsTxt, 'utf8');
-  writeFileSync(resolve(directory, 'llms-full.txt'), llms.llmsFullTxt, 'utf8');
-  writeJson(resolve(directory, 'manifest.json'), snapshot.manifest);
-}
-
-/** The publish gate: catalog metadata must agree with every content chunk before anything is written. */
-function validateArtifacts(snapshot: SnapshotArtifacts): void {
-  const slugs = new Set(snapshot.catalog.packages.map((pkg) => pkg.slug));
-
-  if (slugs.size !== snapshot.catalog.packages.length || snapshot.contents.size !== slugs.size) {
-    throw new Error('Snapshot artifacts must contain exactly one catalog entry and content chunk per package.');
-  }
-
-  for (const meta of snapshot.catalog.packages) {
-    const content = snapshot.contents.get(meta.slug);
-
-    if (!content) throw new Error(`Snapshot artifacts are missing ${meta.slug}.`);
-    if ((content.apiSource !== null) !== meta.hasSource)
-      throw new Error(`Snapshot source metadata disagrees for ${meta.slug}.`);
-    if (Object.keys(content.docs).sort().join() !== [...meta.availableDocPages].sort().join())
-      throw new Error(`Snapshot documentation metadata disagrees for ${meta.slug}.`);
-    if (content.examples.map((example) => example.id).sort().join() !== [...meta.exampleIds].sort().join())
-      throw new Error(`Snapshot example metadata disagrees for ${meta.slug}.`);
-  }
-}
-
+// Explicit .ts import extensions are the repo convention for these scripts (run directly under bun, never compiled by tsc).
 /**
- * Publishes one complete snapshot directory through a staging swap: the directory becomes the
- * whole snapshot at once, never a partially rewritten one. Used for both published `data/` and
- * local `.dev/`.
+ * Publishes the generated snapshot as one `snapshot.json` through a staging swap: the file
+ * becomes the whole snapshot at once, never a partially rewritten one. This is the snapshot's
+ * validation gate — the runtime loader trusts the file because nothing else can write it, so
+ * every structural invariant the tools rely on is checked here, before anything is published.
  */
-export function writeSnapshot(snapshotRoot: string, snapshot: SnapshotArtifacts): void {
-  validateArtifacts(snapshot);
-  const staging = `${snapshotRoot}.staging-${process.pid}-${randomUUID()}`;
+import { mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { resolve } from 'node:path';
+
+import type { Snapshot } from '../src/types.ts';
+import { SNAPSHOT_FILE } from './generator.ts';
+
+function validateSnapshot(snapshot: Snapshot): void {
+  const problems: string[] = [];
+
+  if (typeof snapshot.version !== 'string' || snapshot.version.length === 0) problems.push('version must be a non-empty string.');
+
+  const slugs = new Set<string>();
+
+  for (const pkg of snapshot.packages) {
+    const where = pkg.meta?.slug ?? '(missing slug)';
+
+    if (slugs.has(where)) problems.push(`Duplicate package ${where}.`);
+    slugs.add(where);
+
+    for (const [page, markdown] of Object.entries(pkg.pages)) {
+      if (typeof markdown !== 'string') problems.push(`${where}/${page}: page content must be a string.`);
+    }
+    for (const section of pkg.sections) {
+      const page = pkg.pages[section.page];
+
+      if (page === undefined) problems.push(`${where}: section "${section.heading}" references missing page "${section.page}".`);
+      else if (!(section.start >= 0 && section.end <= page.length && section.start <= section.end))
+        problems.push(`${where}/${section.page}: section "${section.heading}" offsets ${section.start}..${section.end} exceed the page (${page.length} chars).`);
+    }
+    for (const example of pkg.examples) {
+      if (!example.id || !example.code) problems.push(`${where}: example entries need an id and code.`);
+    }
+    for (const entry of pkg.exports) {
+      if (!entry.name || !entry.signature) problems.push(`${where}: export entries need a name and signature.`);
+    }
+  }
+
+  const tags = new Set<string>();
+
+  for (const component of snapshot.components) {
+    if (!component.tag) problems.push('Component declarations must carry a tag.');
+    else if (tags.has(component.tag)) problems.push(`Duplicate component tag ${component.tag}.`);
+    else tags.add(component.tag);
+  }
+
+  if (problems.length > 0) throw new Error(`Snapshot validation failed:\n${problems.map((p) => `  - ${p}`).join('\n')}`);
+}
+
+/** Write `snapshot` into `snapshotRoot` atomically via a staging file swap. */
+export function writeSnapshot(snapshotRoot: string, snapshot: Snapshot): void {
+  validateSnapshot(snapshot);
+
+  mkdirSync(snapshotRoot, { recursive: true });
+  const target = resolve(snapshotRoot, SNAPSHOT_FILE);
+  const staging = `${target}.staging-${process.pid}-${randomUUID()}`;
+
+  // The snapshot is the only artifact the runtime reads; drop anything the
+  // previous data format left behind.
+  for (const entry of readdirSync(snapshotRoot)) {
+    if (entry !== SNAPSHOT_FILE && entry !== 'README.md') rmSync(resolve(snapshotRoot, entry), { force: true, recursive: true });
+  }
 
   try {
-    writeDirectory(staging, snapshot);
-    rmSync(snapshotRoot, { force: true, recursive: true });
-    renameSync(staging, snapshotRoot);
+    writeFileSync(staging, `${JSON.stringify(snapshot)}\n`, 'utf8');
+    renameSync(staging, target);
   } catch (error) {
-    rmSync(staging, { force: true, recursive: true });
+    rmSync(staging, { force: true });
     throw error;
   }
 }
+
+export { validateSnapshot };

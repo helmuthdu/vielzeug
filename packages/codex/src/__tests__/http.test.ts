@@ -1,36 +1,25 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { SnapshotCatalog } from '../catalog.js';
 import { startHttpHost } from '../http.js';
-import { createMcpServer } from '../server.js';
-import { loadSnapshot } from '../snapshot.js';
+import { createCodexServer } from '../server.js';
+import { codexVersion, snapshotFixture } from './fixtures.js';
 
-const roots: string[] = [];
+const hosts: Array<{ dispose(): Promise<void> }> = [];
 
-function catalog({ refine = false }: { refine?: boolean } = {}): SnapshotCatalog {
-  const root = mkdtempSync(join(tmpdir(), 'codex-http-'));
-  const directory = join(root, 'snapshot');
+function host() {
+  const instance = startHttpHost({
+    createServer: () => createCodexServer({ snapshot: snapshotFixture() }),
+    port: 0,
+    version: codexVersion,
+  });
 
-  roots.push(root);
-  mkdirSync(join(directory, 'packages'), { recursive: true });
-  writeFileSync(join(directory, 'manifest.json'), JSON.stringify({ schemaVersion: 2, version: '1.0.0' }));
-  writeFileSync(join(directory, 'catalog.json'), JSON.stringify({ packages: [], version: '1.0.0' }));
-  if (refine)
-    writeFileSync(
-      join(directory, 'refine.json'),
-      JSON.stringify([{ description: 'A button.', tagName: 'ore-button' }]),
-    );
+  hosts.push({ dispose: async () => void (await instance).dispose() });
 
-  return new SnapshotCatalog(loadSnapshot(directory));
+  return instance;
 }
 
 afterEach(async () => {
-  const { rmSync } = await import('node:fs');
-
-  for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
+  for (const entry of hosts.splice(0)) await entry.dispose();
 });
 
 // Both SSE-framed (`event: message\ndata: {...}`) and plain-JSON response bodies are valid MCP
@@ -46,210 +35,143 @@ async function readMcpResult(response: Response): Promise<{ error?: { message: s
   };
 }
 
+async function initialize(port: number): Promise<Response> {
+  return fetch(`http://127.0.0.1:${port}/`, {
+    body: JSON.stringify({
+      id: 1,
+      jsonrpc: '2.0',
+      method: 'initialize',
+      params: { capabilities: {}, clientInfo: { name: 'test', version: '0' }, protocolVersion: '2025-06-18' },
+    }),
+    headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
+    method: 'POST',
+  });
+}
+
 describe('HTTP host', () => {
   it('binds loopback and exposes health only as host-owned infrastructure', async () => {
-    const source = catalog();
-    const host = await startHttpHost({
-      createServer: () => createMcpServer(source, { version: '1.0.0' }),
-      port: 0,
-      version: '1.0.0',
-    });
+    const instance = await host();
 
-    try {
-      const response = await fetch(`http://${host.host}:${host.port}/health`);
+    const response = await fetch(`http://${instance.host}:${instance.port}/health`);
 
-      await expect(response.json()).resolves.toEqual({ status: 'ok', version: '1.0.0' });
-      expect(response.headers.get('access-control-allow-origin')).toBeNull();
-    } finally {
-      await host.dispose();
-      await expect(host.dispose()).resolves.toBeUndefined();
-    }
+    await expect(response.json()).resolves.toEqual({ status: 'ok', version: codexVersion });
+    expect(response.headers.get('access-control-allow-origin')).toBeNull();
   });
 
   it('rejects non-loopback host options and hostile Host/Origin headers', async () => {
     await expect(
       startHttpHost({
-        createServer: () => createMcpServer(catalog(), { version: '1.0.0' }),
+        createServer: () => createCodexServer({ snapshot: snapshotFixture() }),
         host: '0.0.0.0' as '127.0.0.1',
         port: 0,
-        version: '1.0.0',
+        version: codexVersion,
       }),
     ).rejects.toThrow('loopback');
 
-    const source = catalog();
-    const host = await startHttpHost({
-      createServer: () => createMcpServer(source, { version: '1.0.0' }),
-      port: 0,
-      version: '1.0.0',
-    });
+    const instance = await host();
 
-    try {
-      const response = await fetch(`http://${host.host}:${host.port}/`, {
-        body: JSON.stringify({ id: 1, jsonrpc: '2.0', method: 'tools/list', params: {} }),
-        headers: {
-          accept: 'application/json, text/event-stream',
-          'content-type': 'application/json',
-          host: 'evil.example',
-          origin: 'http://evil.example',
-        },
-        method: 'POST',
-      });
-
-      expect(response.status).toBe(403);
-
-      const originResponse = await fetch(`http://${host.host}:${host.port}/`, {
-        body: JSON.stringify({ id: 2, jsonrpc: '2.0', method: 'tools/list', params: {} }),
-        headers: {
-          accept: 'application/json, text/event-stream',
-          'content-type': 'application/json',
-          origin: 'http://evil.example',
-        },
-        method: 'POST',
-      });
-
-      expect(originResponse.status).toBe(403);
-    } finally {
-      await host.dispose();
-    }
-  });
-
-  it('creates a fully configured Refine server for each request', async () => {
-    let creations = 0;
-    const source = catalog({ refine: true });
-    const host = await startHttpHost({
-      createServer: () => {
-        creations += 1;
-        return createMcpServer(source, { version: '1.0.0' });
+    const hostile = await fetch(`http://${instance.host}:${instance.port}/`, {
+      body: JSON.stringify({ id: 1, jsonrpc: '2.0', method: 'tools/list', params: {} }),
+      headers: {
+        accept: 'application/json, text/event-stream',
+        'content-type': 'application/json',
+        host: 'evil.example',
+        origin: 'http://evil.example',
       },
-      port: 0,
-      version: '1.0.0',
+      method: 'POST',
     });
 
-    try {
-      expect(creations).toBe(0);
-      const response = await fetch(`http://${host.host}:${host.port}/`, {
-        body: JSON.stringify({ id: 1, jsonrpc: '2.0', method: 'tools/list', params: {} }),
-        headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
-        method: 'POST',
-      });
-      const { result } = await readMcpResult(response);
-      const tools = result as { tools: { name: string }[] };
+    expect(hostile.status).toBe(403);
 
-      expect(creations).toBe(1);
-      expect(tools.tools.map((tool) => tool.name)).toContain('refine-list-components');
+    const originResponse = await fetch(`http://${instance.host}:${instance.port}/`, {
+      body: JSON.stringify({ id: 2, jsonrpc: '2.0', method: 'tools/list', params: {} }),
+      headers: {
+        accept: 'application/json, text/event-stream',
+        'content-type': 'application/json',
+        origin: 'http://evil.example',
+      },
+      method: 'POST',
+    });
 
-      const secondResponse = await fetch(`http://${host.host}:${host.port}/`, {
-        body: JSON.stringify({ id: 2, jsonrpc: '2.0', method: 'tools/list', params: {} }),
-        headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
-        method: 'POST',
-      });
-
-      expect(secondResponse.status).toBe(200);
-      expect(creations).toBe(2);
-      expect(host.disposed).toBe(false);
-    } finally {
-      await host.dispose();
-      expect(host.disposed).toBe(true);
-    }
+    expect(originResponse.status).toBe(403);
   });
 
-  it('answers a legacy-shaped tools/list call over the MCP endpoint', async () => {
-    const source = catalog();
-    const host = await startHttpHost({
-      createServer: () => createMcpServer(source, { version: '1.0.0' }),
-      port: 0,
-      version: '1.0.0',
+  it('serves the consolidated tool list over MCP', async () => {
+    const instance = await host();
+    const init = await initialize(instance.port);
+
+    expect(init.status).toBe(200);
+
+    const list = await fetch(`http://${instance.host}:${instance.port}/`, {
+      body: JSON.stringify({ id: 2, jsonrpc: '2.0', method: 'tools/list', params: {} }),
+      headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
+      method: 'POST',
     });
+    const { result } = await readMcpResult(list);
+    const tools = (result as { tools: Array<{ name: string }> }).tools.map((tool) => tool.name);
 
-    try {
-      const response = await fetch(`http://${host.host}:${host.port}/`, {
-        body: JSON.stringify({ id: 1, jsonrpc: '2.0', method: 'tools/list', params: {} }),
-        headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
-        method: 'POST',
-      });
-
-      expect(response.status).toBe(200);
-
-      const { result } = await readMcpResult(response);
-      const tools = result as { tools: { name: string }[] };
-
-      expect(tools.tools.map((tool) => tool.name)).toContain('search-packages');
-      expect(tools.tools.map((tool) => tool.name)).not.toContain('refine-list-components');
-    } finally {
-      await host.dispose();
-    }
+    expect(tools).toEqual([
+      'list-packages',
+      'get-package',
+      'get-docs',
+      'get-example',
+      'get-type-signature',
+      'search',
+      'refine-list-components',
+      'refine-get-component',
+      'refine-get-tokens',
+      'refine-validate-usage',
+    ]);
   });
 
-  it('answers a modern 2026-07-28 envelope-carrying tools/call over the MCP endpoint', async () => {
-    const source = catalog();
-    const host = await startHttpHost({
-      createServer: () => createMcpServer(source, { version: '1.0.0' }),
-      port: 0,
-      version: '1.0.0',
+  it('answers tool calls and reports expected catalog errors as tool errors', async () => {
+    const instance = await host();
+
+    await initialize(instance.port);
+
+    const call = await fetch(`http://${instance.host}:${instance.port}/`, {
+      body: JSON.stringify({
+        id: 3,
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: { arguments: { slug: 'demo' }, name: 'get-package' },
+      }),
+      headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
+      method: 'POST',
     });
+    const ok = await readMcpResult(call);
 
-    try {
-      const response = await fetch(`http://${host.host}:${host.port}/`, {
-        body: JSON.stringify({
-          id: 1,
-          jsonrpc: '2.0',
-          method: 'tools/call',
-          params: {
-            _meta: {
-              'io.modelcontextprotocol/clientCapabilities': {},
-              'io.modelcontextprotocol/clientInfo': { name: 'codex-test', version: '1.0' },
-              'io.modelcontextprotocol/protocolVersion': '2026-07-28',
-            },
-            arguments: { query: 'ripple' },
-            name: 'search-packages',
-          },
-        }),
-        headers: {
-          accept: 'application/json, text/event-stream',
-          'content-type': 'application/json',
-          'mcp-method': 'tools/call',
-          'mcp-name': 'search-packages',
-          'mcp-protocol-version': '2026-07-28',
-        },
-        method: 'POST',
-      });
+    expect((ok.result as { isError?: boolean }).isError).toBeUndefined();
 
-      expect(response.status).toBe(200);
+    const bad = await fetch(`http://${instance.host}:${instance.port}/`, {
+      body: JSON.stringify({
+        id: 4,
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: { arguments: { slug: 'missing' }, name: 'get-package' },
+      }),
+      headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
+      method: 'POST',
+    });
+    const failed = await readMcpResult(bad);
 
-      const { result } = await readMcpResult(response);
-      const content = result as { content: { text: string }[] };
-
-      expect(content.content[0]?.text).toBe('[]');
-    } finally {
-      await host.dispose();
-    }
+    expect((failed.result as { isError: boolean }).isError).toBe(true);
+    expect((failed.result as { content: Array<{ text: string }> }).content[0].text).toContain('NOT_FOUND');
   });
 
-  it('rejects an unknown tool with a MethodNotFound JSON-RPC error', async () => {
-    const source = catalog();
-    const host = await startHttpHost({
-      createServer: () => createMcpServer(source, { version: '1.0.0' }),
-      port: 0,
-      version: '1.0.0',
-    });
+  it('carries the snapshot version in server instructions', async () => {
+    const instance = await host();
+    const init = await initialize(instance.port);
+    const { result } = await readMcpResult(init);
 
-    try {
-      const response = await fetch(`http://${host.host}:${host.port}/`, {
-        body: JSON.stringify({
-          id: 1,
-          jsonrpc: '2.0',
-          method: 'tools/call',
-          params: { arguments: {}, name: 'does-not-exist' },
-        }),
-        headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
-        method: 'POST',
-      });
+    expect((result as { serverInfo?: { name: string } }).serverInfo?.name).toBe('vielzeug');
+    expect((result as { instructions?: string }).instructions).toContain(codexVersion);
+  });
 
-      const { error } = await readMcpResult(response);
+  it('is idempotent to dispose twice', async () => {
+    const instance = await host();
 
-      expect(error?.message).toContain('Unknown tool: does-not-exist');
-    } finally {
-      await host.dispose();
-    }
+    await expect(instance.dispose()).resolves.toBeUndefined();
+    await expect(instance.dispose()).resolves.toBeUndefined();
   });
 });

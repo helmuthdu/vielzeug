@@ -4,6 +4,49 @@ title: Codex Migration
 
 # Codex Migration
 
+## Breaking Changes Since 26.11.24
+
+One snapshot file, ten tools, one `slug` parameter.
+
+**The library surface shrank to three exports.** `loadSnapshot`, `validateSnapshot`,
+`SnapshotCatalog`, `CatalogError`, `Catalog`, and the re-exported `StdioServerTransport` are no
+longer public. The supported contract is `createCodexServer`, `startHttpHost`, and `CodexError`;
+everything else is internal and may change without notice. `StdioServerTransport` comes from
+`@modelcontextprotocol/server/stdio` now:
+
+```ts
+import { createCodexServer } from '@vielzeug/codex';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
+
+const server = createCodexServer();
+
+await server.connect(new StdioServerTransport());
+```
+
+`createCodexServer()` loads the bundled snapshot; pass `snapshot` (a path to a `snapshot.json`, or
+an already-loaded snapshot object) to serve another one. The snapshot version travels in the
+server `instructions`, replacing `check-install`: read the version from `initialize` and compare it
+with the versions installed in your project.
+
+**The snapshot is one file.** The flat directory (`manifest.json`, `catalog.json`,
+`packages/<slug>.json`, `refine.json`) is gone; `data/snapshot.json` carries everything, validated
+by the writer at generate time. `--snapshot` still accepts a path — now a file, or a directory
+containing `snapshot.json`. There is no lazy chunk loading to configure.
+
+**Tool surface.** `list-examples`, `get-source`, `check-install`, and `refine-generate-template`
+are removed; `search-packages` is now `search`. Generic tools take one `slug` parameter (the
+package slug, e.g. `ripple`) instead of a `package` name. `get-docs` gained a `section` parameter
+that returns one heading's slice instead of the whole page. Type signatures are the real
+declaration text with JSDoc, resolved by the TypeScript checker at generate time — not the
+re-export line from a barrel file. `refine-validate-usage` checks every `<ore-*>` opening tag in
+the fragment: unknown tags, unknown attributes, and values outside each attribute's allowed set.
+
+**`llms.txt` moved.** The docs site build (VitePress `buildEnd`) generates `llms.txt` and
+`llms-full.txt` from `docs/` directly; codex no longer ships or copies them. Building codex before
+docs is no longer required for the llms files — only for the snapshot bundle.
+
+CLI, stdio, and loopback HTTP behavior are otherwise unchanged.
+
 ## Breaking Changes Since 26.11.11
 
 One entry point, one catalog, one directory layout.

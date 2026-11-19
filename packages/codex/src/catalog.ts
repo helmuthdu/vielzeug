@@ -1,8 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { CodexError } from './errors.js';
-import { type LoadedSnapshot, parseContent } from './snapshot.js';
-import type { CemDeclaration, DocPage, Example, PackageContent, PackageMeta } from './types.js';
+import type { Example, PackageEntry, PackageMeta, RefineComponent, Section, Snapshot, ThemeToken } from './types.js';
 
 export type CatalogErrorCode = 'INVALID_ARG' | 'NOT_FOUND' | 'UNAVAILABLE';
 
@@ -15,73 +12,39 @@ export class CatalogError extends CodexError {
   }
 }
 
+/** One ranked search result: where the match lives and a short excerpt of it. */
 export interface SearchHit {
-  readonly matchedExamples?: readonly string[];
-  readonly matchedIn: readonly ('docs' | 'examples' | 'exports' | 'keywords' | 'metadata' | 'related' | 'source')[];
-  readonly matchedPages?: readonly DocPage[];
-  readonly name: string;
+  readonly heading: string;
+  readonly page: string;
+  readonly score: number;
+  readonly section: string;
   readonly slug: string;
+  readonly snippet: string;
 }
 
 /**
- * The query surface every consumer (MCP tools, embedders) codes against. `search` reads package
- * content chunks lazily through the same cache as the content getters, so there is no separate
- * search index to keep in sync.
+ * Plain functions over the loaded snapshot; the snapshot is immutable once read, so there are
+ * no defensive copies. All lookups are O(1) map reads except `search`, which scans the section
+ * index.
  */
-export interface Catalog {
-  getComponent(tagName: string): CemDeclaration;
-  getDocs(slug: string, page: DocPage): string;
-  getExample(slug: string, exampleId: string): Example;
-  getPackage(slug: string): PackageMeta;
-  getSource(slug: string): string;
-  getTypeSignature(slug: string, symbol: string): string;
-  listComponents(): readonly CemDeclaration[];
-  listExamples(slug: string): readonly Pick<Example, 'id' | 'name'>[];
-  listPackages(): readonly PackageMeta[];
-  search(query: string): readonly SearchHit[];
-}
+export class Catalog {
+  readonly components: readonly RefineComponent[];
+  readonly packages: readonly PackageEntry[];
+  readonly tokens: readonly ThemeToken[];
+  readonly version: string;
+  private readonly bySlug: Map<string, PackageEntry>;
+  private readonly byTag: Map<string, RefineComponent>;
 
-function matches(haystack: string, terms: readonly string[]): boolean {
-  return terms.every((term) => haystack.includes(term));
-}
-
-function normalise(value: string): string {
-  return value.toLowerCase().replaceAll('-', ' ');
-}
-
-function copyPackage(pkg: PackageMeta): PackageMeta {
-  return {
-    ...pkg,
-    availableDocPages: [...pkg.availableDocPages],
-    exampleIds: [...pkg.exampleIds],
-    exports: [...pkg.exports],
-    keywords: [...pkg.keywords],
-    related: [...pkg.related],
-  };
-}
-
-interface RankedSearchHit {
-  hit: SearchHit;
-  tier: 0 | 1 | 2 | 3;
-}
-
-export class SnapshotCatalog implements Catalog {
-  private readonly bySlug: Map<string, PackageMeta>;
-  private readonly componentsByTag: Map<string, CemDeclaration>;
-  private readonly components: readonly CemDeclaration[];
-  private readonly contentCache = new Map<string, PackageContent>();
-  private readonly snapshot: LoadedSnapshot;
-
-  constructor(snapshot: LoadedSnapshot) {
-    this.snapshot = snapshot;
-    this.bySlug = new Map(snapshot.catalog.packages.map((pkg) => [pkg.slug, pkg]));
-    this.components = snapshot.refineComponents;
-    this.componentsByTag = new Map(
-      this.components.flatMap((component) => (component.tagName ? [[component.tagName, component] as const] : [])),
-    );
+  constructor(snapshot: Snapshot) {
+    this.version = snapshot.version;
+    this.packages = snapshot.packages;
+    this.components = snapshot.components;
+    this.tokens = snapshot.tokens;
+    this.bySlug = new Map(snapshot.packages.map((pkg) => [pkg.meta.slug, pkg]));
+    this.byTag = new Map(snapshot.components.map((component) => [component.tag, component]));
   }
 
-  private requirePackage(slug: string): PackageMeta {
+  requirePackage(slug: string): PackageEntry {
     const pkg = this.bySlug.get(slug);
 
     if (!pkg)
@@ -93,169 +56,160 @@ export class SnapshotCatalog implements Catalog {
     return pkg;
   }
 
-  getPackage(slug: string): PackageMeta {
-    return copyPackage(this.requirePackage(slug));
+  getPackage(slug: string): PackageEntry {
+    return this.requirePackage(slug);
   }
 
-  listComponents(): readonly CemDeclaration[] {
-    return this.components.map((component) => structuredClone(component));
+  getMeta(slug: string): PackageMeta {
+    return this.requirePackage(slug).meta;
   }
 
-  getComponent(tagName: string): CemDeclaration {
-    const component = this.componentsByTag.get(tagName);
+  getDocs(slug: string, page: string, section?: string): { markdown: string; pkg: PackageEntry; section?: Section } {
+    const pkg = this.requirePackage(slug);
+    const markdown = pkg.pages[page];
 
-    if (!component) throw new CatalogError('NOT_FOUND', `Component "${tagName}" not found.`);
-
-    return structuredClone(component);
-  }
-
-  private readContent(slug: string): PackageContent {
-    this.requirePackage(slug);
-
-    const cached = this.contentCache.get(slug);
-
-    if (cached) return cached;
-
-    const path = resolve(this.snapshot.contentDirectory, `${slug}.json`);
-    let content: PackageContent;
-
-    try {
-      content = parseContent(JSON.parse(readFileSync(path, 'utf8')), slug);
-    } catch (error) {
-      if (error instanceof CodexError) throw error;
-
-      throw new CodexError(
-        `Failed to read snapshot content for ${slug}: ${error instanceof Error ? error.message : String(error)}`,
-        { cause: error },
-      );
-    }
-
-    this.contentCache.set(slug, content);
-
-    return content;
-  }
-
-  listPackages(): readonly PackageMeta[] {
-    return [...this.bySlug.values()].map(copyPackage);
-  }
-
-  getDocs(slug: string, page: DocPage): string {
-    const content = this.readContent(slug).docs[page];
-
-    if (content === undefined)
+    if (markdown === undefined)
       throw new CatalogError(
         'NOT_FOUND',
-        `No "${page}" page for "${slug}". Available: ${this.requirePackage(slug).availableDocPages.join(', ') || 'none'}.`,
+        `No "${page}" page for "${slug}". Available: ${Object.keys(pkg.pages).sort().join(', ') || 'none'}.`,
       );
 
-    return content;
-  }
+    if (section === undefined) return { markdown, pkg };
 
-  getSource(slug: string): string {
-    const source = this.readContent(slug).apiSource;
+    const wanted = normalise(section);
+    const match = pkg.sections.find(
+      (item) => item.page === page && (normalise(item.heading) === wanted || headingSlug(item.heading) === wanted),
+    );
 
-    if (source === null) throw new CatalogError('UNAVAILABLE', `Package "${slug}" has no bundled source.`);
+    if (!match)
+      throw new CatalogError(
+        'NOT_FOUND',
+        `No section "${section}" on "${slug}/${page}". Headings: ${pkg.sections
+          .filter((item) => item.page === page)
+          .map((item) => item.heading)
+          .join(', ')}.`,
+      );
 
-    return source;
-  }
-
-  listExamples(slug: string): readonly Pick<Example, 'id' | 'name'>[] {
-    return this.readContent(slug).examples.map(({ id, name }) => ({ id, name }));
+    return { markdown: markdown.slice(match.start, match.end), pkg, section: match };
   }
 
   getExample(slug: string, exampleId: string): Example {
-    const example = this.readContent(slug).examples.find((item) => item.id === exampleId);
+    const example = this.requirePackage(slug).examples.find((item) => item.id === exampleId);
 
     if (!example) throw new CatalogError('NOT_FOUND', `No example "${exampleId}" for "${slug}".`);
 
-    return { ...example };
+    return example;
   }
 
-  getTypeSignature(slug: string, symbol: string): string {
-    const signature = this.readContent(slug).typeSignatures[symbol];
+  getExport(slug: string, symbol: string) {
+    const entry = this.requirePackage(slug).exports.find((item) => item.name === symbol);
 
-    if (signature === undefined) throw new CatalogError('NOT_FOUND', `No exported symbol "${symbol}" for "${slug}".`);
+    if (!entry)
+      throw new CatalogError(
+        'NOT_FOUND',
+        `No exported symbol "${symbol}" for "${slug}". Run get-package for the full export list.`,
+      );
 
-    return signature;
+    return entry;
   }
 
-  search(query: string): readonly SearchHit[] {
+  getComponent(tag: string): RefineComponent {
+    const component = this.byTag.get(tag);
+
+    if (!component)
+      throw new CatalogError(
+        'NOT_FOUND',
+        `Component "${tag}" not found. Run refine-list-components for the full tag list.`,
+      );
+
+    return component;
+  }
+
+  /**
+   * Scores every section of every page. Every term must match inside the section: a term in the
+   * heading weighs 3, a body term that is also an export name or keyword 2, a plain body term 1.
+   * The ten best sections win, each reported with its exact location and a snippet.
+   */
+  search(query: string): SearchHit[] {
     const terms = normalise(query).split(/\s+/).filter(Boolean);
 
     if (terms.length === 0) throw new CatalogError('INVALID_ARG', 'query: required non-empty string.');
 
-    const ranked: RankedSearchHit[] = [];
+    const hits: SearchHit[] = [];
 
-    for (const pkg of this.snapshot.catalog.packages) {
-      const hit = this.searchPackage(pkg, terms);
+    for (const pkg of this.packages) {
+      const names = normalise(
+        `${pkg.exports.map((entry) => entry.name).join(' ')} ${pkg.meta.keywords.join(' ')} ${pkg.meta.related.join(' ')}`,
+      );
 
-      if (hit) ranked.push(hit);
-    }
+      for (const section of pkg.sections) {
+        const markdown = pkg.pages[section.page];
+        const body = normalise(markdown.slice(section.start, section.end));
+        const heading = normalise(section.heading);
 
-    return ranked
-      .sort((left, right) => left.tier - right.tier || left.hit.slug.localeCompare(right.hit.slug))
-      .map((result) => result.hit);
-  }
+        let score = 0;
 
-  private searchPackage(pkg: PackageMeta, terms: readonly string[]): RankedSearchHit | null {
-    const matched = new Set<SearchHit['matchedIn'][number]>();
-    const pages: DocPage[] = [];
-    const examples: string[] = [];
+        for (const term of terms) {
+          if (heading.includes(term)) score += 3;
+          else if (body.includes(term)) score += names.includes(term) ? 2 : 1;
+          else {
+            score = -1;
+            break;
+          }
+        }
 
-    if (
-      matches(normalise(pkg.name), terms) ||
-      matches(normalise(pkg.category), terms) ||
-      matches(normalise(pkg.description), terms)
-    )
-      matched.add('metadata');
+        if (score <= 0) continue;
 
-    const fields: Array<['keywords' | 'exports' | 'related', string]> = [
-      ['keywords', pkg.keywords.join(' ')],
-      ['exports', pkg.exports.join(' ')],
-      ['related', pkg.related.join(' ')],
-    ];
-
-    for (const [field, value] of fields) if (matches(normalise(value), terms)) matched.add(field);
-
-    const content = this.readContent(pkg.slug);
-
-    for (const [page, value] of Object.entries(content.docs) as Array<[DocPage, string]>) {
-      if (matches(normalise(value), terms)) {
-        matched.add('docs');
-        pages.push(page);
+        hits.push({
+          heading: section.heading,
+          page: section.page,
+          score,
+          section: headingSlug(section.heading),
+          slug: pkg.meta.slug,
+          snippet: snippet(markdown.slice(section.start, section.end)),
+        });
       }
     }
-    for (const example of content.examples) {
-      if (matches(normalise(`${example.name} ${example.code}`), terms)) {
-        matched.add('examples');
-        examples.push(example.id);
-      }
-    }
-    if (content.apiSource !== null && matches(normalise(content.apiSource), terms)) matched.add('source');
 
-    if (matched.size === 0) return null;
-
-    const normalizedQuery = terms.join(' ');
-    const normalizedName = normalise(pkg.name);
-    const normalizedSlug = normalise(pkg.slug);
-    const tier =
-      normalizedSlug === normalizedQuery || normalizedName === normalizedQuery
-        ? 0
-        : normalizedSlug.startsWith(normalizedQuery) || normalizedName.startsWith(normalizedQuery)
-          ? 1
-          : matched.has('metadata') || matched.has('keywords') || matched.has('exports') || matched.has('related')
-            ? 2
-            : 3;
-
-    return {
-      hit: {
-        ...(examples.length > 0 && { matchedExamples: examples }),
-        matchedIn: [...matched].sort(),
-        ...(pages.length > 0 && { matchedPages: pages }),
-        name: pkg.name,
-        slug: pkg.slug,
-      },
-      tier,
-    };
+    return hits
+      .sort(
+        (left, right) =>
+          right.score - left.score || left.slug.localeCompare(right.slug) || left.page.localeCompare(right.page),
+      )
+      .slice(0, 10);
   }
+}
+
+function normalise(value: string): string {
+  return value.toLowerCase().replaceAll('-', ' ');
+}
+
+/** A URL-style id for a heading; `get-docs` accepts either this id or the heading text. */
+export function headingSlug(heading: string): string {
+  return heading
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+/** A ~240-character excerpt starting at the section's first non-heading prose line. */
+function snippet(sectionMarkdown: string): string {
+  const lines = sectionMarkdown.split('\n');
+  const body: string[] = [];
+
+  for (const line of lines.slice(1)) {
+    const trimmed = line.trim();
+
+    if (trimmed.length === 0 || trimmed.startsWith('#') || trimmed.startsWith('```')) {
+      if (body.length > 0) break;
+      continue;
+    }
+    body.push(trimmed);
+    if (body.join(' ').length >= 240) break;
+  }
+
+  const text = body.join(' ');
+
+  return text.length > 240 ? `${text.slice(0, 237)}...` : text;
 }

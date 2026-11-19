@@ -1,20 +1,10 @@
 import type { Catalog } from '../catalog.js';
-import type { CemAttribute, CemDeclaration } from '../types.js';
 import { EMPTY_SCHEMA, parseArgs, type ToolSchema } from './schema.js';
 import type { ToolDefinition } from './shared.js';
 
 const tag = {
   additionalProperties: false,
   properties: { tagName: { description: 'Custom element tag', maxLength: 100, minLength: 1, type: 'string' } },
-  required: ['tagName'],
-  type: 'object',
-} satisfies ToolSchema;
-const template = {
-  additionalProperties: false,
-  properties: {
-    scenario: { default: '', description: 'Optional scenario label', maxLength: 200, type: 'string' },
-    tagName: tag.properties.tagName,
-  },
   required: ['tagName'],
   type: 'object',
 } satisfies ToolSchema;
@@ -25,77 +15,119 @@ const tokenFilter = {
 } satisfies ToolSchema;
 const usage = {
   additionalProperties: false,
-  properties: {
-    html: { description: 'Component HTML fragment', maxLength: 5000, minLength: 1, type: 'string' },
-    tagName: tag.properties.tagName,
-  },
-  required: ['html', 'tagName'],
+  properties: { html: { description: 'Component HTML fragment', maxLength: 5000, minLength: 1, type: 'string' } },
+  required: ['html'],
   type: 'object',
 } satisfies ToolSchema;
 
-function escapeHtml(value: string): string {
-  return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+/** Attributes every element accepts from the platform or ARIA, never flagged as unknown. */
+const SAFE_ATTRIBUTES = new Set([
+  'accesskey',
+  'autocapitalize',
+  'autofocus',
+  'class',
+  'contenteditable',
+  'dir',
+  'draggable',
+  'enterkeyhint',
+  'exportparts',
+  'hidden',
+  'id',
+  'inert',
+  'inputmode',
+  'is',
+  'itemid',
+  'itemprop',
+  'itemref',
+  'itemscope',
+  'itemtype',
+  'lang',
+  'nonce',
+  'part',
+  'popover',
+  'role',
+  'slot',
+  'spellcheck',
+  'style',
+  'tabindex',
+  'title',
+  'translate',
+]);
+
+/** Parse the opening tags of `ore-*` custom elements: tag name plus [name, value|null] pairs. */
+function parseOpeningTags(html: string): Array<{ attributes: [string, string | null][]; tag: string }> {
+  const tags: Array<{ attributes: [string, string | null][]; tag: string }> = [];
+
+  for (const match of html.matchAll(/<(ore-[\w-]+)((?:"[^"]*"|'[^']*'|[^'">])*)>/gi)) {
+    const attributes: [string, string | null][] = [];
+
+    for (const attr of match[2].matchAll(/([\w:@][\w:.-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s/>]+)))?/g)) {
+      attributes.push([attr[1].toLowerCase(), attr[2] ?? attr[3] ?? attr[4] ?? null]);
+    }
+    tags.push({ attributes, tag: match[1].toLowerCase() });
+  }
+
+  return tags;
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** The literal members of a CEM union type (`'a' | 'b'`), or null when it is not a closed set. */
+function enumValues(type: string | undefined): string[] | null {
+  if (!type) return null;
+  const literals = [...type.matchAll(/'([^']*)'|"([^"]*)"/g)].map((m) => m[1] ?? m[2]);
+
+  return literals.length > 0 && /^[\s|]*$/.test(type.replaceAll(/'[^']*'|"[^"]*"/g, '')) ? literals : null;
 }
 
-function attribute(attr: CemAttribute): string {
-  if (attr.type?.text === 'boolean') return attr.name;
+function validateFragment(catalog: Catalog, html: string) {
+  const issues: Array<{ message: string; tag: string; type: 'error' }> = [];
 
-  if (attr.default !== undefined) return `${attr.name}="${escapeHtml(attr.default)}"`;
+  for (const opening of parseOpeningTags(html)) {
+    const component = catalog.components.find((item) => item.tag === opening.tag);
 
-  return `${attr.name}=""`;
-}
+    if (!component) {
+      issues.push({
+        message: `Unknown component <${opening.tag}>. Run refine-list-components for the tag list.`,
+        tag: opening.tag,
+        type: 'error',
+      });
+      continue;
+    }
 
-function htmlTemplate(component: CemDeclaration, scenario: string): string {
-  const name = component.tagName ?? '';
-  const attributes = (component.attributes ?? []).filter((item) => item.default === undefined).map(attribute);
-  const slots = (component.slots ?? [])
-    .filter((slot) => slot.name)
-    .map((slot) => `  <span slot="${escapeHtml(slot.name)}">${escapeHtml(slot.description ?? slot.name)}</span>`);
-  const body = slots.length > 0 ? `\n${slots.join('\n')}\n` : '\n  Content\n';
+    const known = new Map((component.attributes ?? []).map((attr) => [attr.name.toLowerCase(), attr]));
 
-  const comment = scenario ? `<!-- ${scenario.replaceAll('--', ':')} -->\n` : '';
+    for (const [name, value] of opening.attributes) {
+      if (SAFE_ATTRIBUTES.has(name) || name.startsWith('aria-') || name.startsWith('data-')) continue;
 
-  return `${comment}<${name}${attributes.length ? `\n  ${attributes.join('\n  ')}` : ''}>${body}</${name}>`;
-}
+      const attr = known.get(name);
 
-function usageIssues(component: CemDeclaration, html: string): Array<{ message: string; type: 'error' }> {
-  const name = component.tagName ?? '';
-  const opening = new RegExp(`<${escapeRegExp(name)}(?=[\\s/>])((?:"[^"]*"|'[^']*'|[^'">])*)>`, 'i').exec(html);
+      if (!attr) {
+        issues.push({ message: `Unknown attribute "${name}" on <${opening.tag}>.`, tag: opening.tag, type: 'error' });
+        continue;
+      }
+      if (value === null || attr.type === undefined) continue;
+      // Boolean attributes accept presence, an empty value, or the name itself.
+      if (/\bboolean\b/i.test(attr.type)) continue;
 
-  if (!opening) return [{ message: `Could not find opening <${name}> tag.`, type: 'error' }];
+      const allowed = enumValues(attr.type);
 
-  const known = new Set((component.attributes ?? []).map((attribute) => attribute.name.toLowerCase()));
-  const safe = new Set(['class', 'id', 'slot', 'style', 'title', 'hidden', 'part']);
-  const issues: Array<{ message: string; type: 'error' }> = [];
-
-  for (const match of opening[1].matchAll(/([\w-]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s/>]+))?/g)) {
-    const attribute = match[1].toLowerCase();
-
-    if (
-      !safe.has(attribute) &&
-      !attribute.startsWith('aria-') &&
-      !attribute.startsWith('data-') &&
-      !known.has(attribute)
-    ) {
-      issues.push({ message: `Unknown attribute "${attribute}" on <${name}>.`, type: 'error' });
+      // An enum attribute with a CEM default accepts an empty value as "use the default".
+      if (allowed && !allowed.includes(value) && !(value === '' && attr.default !== undefined))
+        issues.push({
+          message: `Value "${value}" is not valid for "${name}" on <${opening.tag}>. Allowed: ${allowed.join(', ')}.`,
+          tag: opening.tag,
+          type: 'error',
+        });
     }
   }
 
   return issues;
 }
 
-export const refineTools: readonly ToolDefinition<Catalog>[] = [
+export const refineTools: readonly ToolDefinition[] = [
   {
     description: 'List bundled Refine component tags and descriptions.',
     execute: (_args, catalog) =>
-      catalog
-        .listComponents()
-        .filter((component) => component.tagName)
-        .map((component) => ({ description: component.description ?? '', tagName: component.tagName })),
+      catalog.components.map((component) => ({ description: component.summary ?? '', tagName: component.tag })),
     inputSchema: EMPTY_SCHEMA,
     name: 'refine-list-components',
   },
@@ -106,48 +138,19 @@ export const refineTools: readonly ToolDefinition<Catalog>[] = [
     name: 'refine-get-component',
   },
   {
-    description: 'Generate a minimal Refine component HTML template.',
-    execute: (args, catalog) => {
-      const input = parseArgs(template, args);
-
-      return htmlTemplate(catalog.getComponent(input.tagName), input.scenario);
-    },
-    inputSchema: template,
-    name: 'refine-generate-template',
-  },
-  {
-    description: 'List bundled Refine CSS custom properties.',
+    description: 'List Refine theme tokens (custom properties from theme.css) with values and notes.',
     execute: (args, catalog) => {
       const filter = parseArgs(tokenFilter, args).filter.toLowerCase();
-      const tokens = new Map<string, { component: string; default?: string; description?: string; name: string }>();
 
-      for (const component of catalog.listComponents())
-        for (const property of component.cssProperties ?? []) {
-          if (
-            property.name &&
-            !tokens.has(property.name) &&
-            (!filter || property.name.toLowerCase().startsWith(filter))
-          )
-            tokens.set(property.name, {
-              component: component.tagName ?? component.name ?? 'unknown',
-              ...(property.default !== undefined && { default: property.default }),
-              ...(property.description && { description: property.description }),
-              name: property.name,
-            });
-        }
-
-      return [...tokens.values()].sort((left, right) => left.name.localeCompare(right.name));
+      return catalog.tokens.filter((token) => !filter || token.name.toLowerCase().startsWith(filter));
     },
     inputSchema: tokenFilter,
     name: 'refine-get-tokens',
   },
   {
-    description: 'Validate unknown attributes in one Refine component HTML fragment.',
-    execute: (args, catalog) => {
-      const input = parseArgs(usage, args);
-
-      return usageIssues(catalog.getComponent(input.tagName), input.html);
-    },
+    description:
+      "Validate a Refine HTML fragment: unknown ore-* tags, unknown attributes, and values outside each attribute's allowed set, across every opening tag.",
+    execute: (args, catalog) => validateFragment(catalog, parseArgs(usage, args).html),
     inputSchema: usage,
     name: 'refine-validate-usage',
   },

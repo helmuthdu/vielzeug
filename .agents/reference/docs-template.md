@@ -39,7 +39,7 @@ Every other package uses `standard`. Add an override only for durable package-le
 
 Diátaxis type: **Explanation**. Landing page: helps the reader decide whether to adopt the library in 2–3 minutes. Not a tutorial, not a reference.
 
-Required frontmatter: `title`, `description`, `package`, `category`, `keywords`, `related`, `exports`, `environments`. The Codex MCP server reads these fields to expose packages to AI clients (`list-packages`, `search-packages`, `get-package`), so keep them accurate.
+Required frontmatter: `title`, `description`, `package`, `category`, `keywords`, `related`, `exports`, `environments`. The Codex MCP server reads these fields to expose packages to AI clients (`list-packages`, `search`, `get-package`), so keep them accurate.
 
 - `package`: folder name without the `@vielzeug/` prefix; must equal the docs directory name.
 - `category`: lowercase grouping key used by the docs site and Codex (e.g. `state`, `ui`, `http`).

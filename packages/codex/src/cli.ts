@@ -6,32 +6,44 @@ import { parseArgs } from 'node:util';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
 import { log } from './_log.js';
-import { SnapshotCatalog } from './catalog.js';
+import { CodexError } from './errors.js';
 import { startHttpHost } from './http.js';
-import { resolvePort } from './port.js';
-import { createMcpServer } from './server.js';
+import { createCodexServer } from './server.js';
 import { installSkills, SKILL_TARGET_CANDIDATES } from './skills.js';
 import { loadSnapshot } from './snapshot.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+/** Parses and validates a --port CLI argument. Returns the port number or null if omitted. */
+function resolvePort(raw: string | undefined): number | null {
+  if (raw === undefined) return null;
+
+  const port = Number(raw);
+
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new CodexError(`Invalid --port value: "${raw}". Expected an integer between 1 and 65535.`);
+  }
+
+  return port;
+}
+
 function usage(): void {
   log(
     [
-      'Usage: codex [--port=<number>] [--snapshot=<directory>] [--debug]',
+      'Usage: codex [--port=<number>] [--snapshot=<file>] [--debug]',
       '       codex skills install [--target=<directory>] [--force]',
       '',
       'Options:',
-      '  --port=<number>        Run Streamable HTTP on loopback.',
-      '  --snapshot=<directory> Load a snapshot directory.',
-      '  --debug                Log tool timings and expected tool errors.',
-      '  -h, --help             Show help.',
-      '  -v, --version          Print version.',
+      '  --port=<number>     Run Streamable HTTP on loopback.',
+      '  --snapshot=<file>   Load a snapshot JSON file.',
+      '  --debug             Log tool timings and expected tool errors.',
+      '  -h, --help          Show help.',
+      '  -v, --version       Print version.',
       '',
       'Skills:',
-      '  skills install         Copy the bundled agent skill(s) into the project.',
-      `  --target=<directory>   Skills directory. Default: first existing of ${SKILL_TARGET_CANDIDATES.join(', ')}.`,
-      '  --force                Overwrite an already installed skill.',
+      '  skills install      Copy the bundled agent skill(s) into the project.',
+      `  --target=<directory> Skills directory. Default: first existing of ${SKILL_TARGET_CANDIDATES.join(', ')}.`,
+      '  --force             Overwrite an already installed skill.',
     ].join('\n'),
   );
 }
@@ -91,12 +103,12 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
       strict: true,
     }));
 
+    // Load once; every per-request HTTP server reuses the same parsed snapshot.
     const snapshot = loadSnapshot(values.snapshot);
-    const catalog = new SnapshotCatalog(snapshot);
     const port = resolvePort(values.port);
 
     if (port === null) {
-      const server = createMcpServer(catalog, { debug: values.debug, version: snapshot.manifest.version });
+      const server = createCodexServer({ debug: values.debug, snapshot });
 
       await server.connect(new StdioServerTransport());
 
@@ -104,9 +116,9 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     }
 
     const host = await startHttpHost({
-      createServer: () => createMcpServer(catalog, { debug: values.debug, version: snapshot.manifest.version }),
+      createServer: () => createCodexServer({ debug: values.debug, snapshot }),
       port,
-      version: snapshot.manifest.version,
+      version: snapshot.version,
     });
     const shutdown = (): void => {
       void host.dispose().then(

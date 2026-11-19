@@ -20,11 +20,12 @@ npx -y @vielzeug/codex skills install
 ## Quick Start
 
 ```ts
-import { SnapshotCatalog, StdioServerTransport, createMcpServer, loadSnapshot } from '@vielzeug/codex';
+import { createCodexServer } from '@vielzeug/codex';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
-const snapshot = loadSnapshot();
-const catalog = new SnapshotCatalog(snapshot);
-await createMcpServer(catalog, { version: snapshot.manifest.version }).connect(new StdioServerTransport());
+const server = createCodexServer();
+
+await server.connect(new StdioServerTransport());
 ```
 
 ## Documentation
