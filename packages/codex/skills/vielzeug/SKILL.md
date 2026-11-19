@@ -58,7 +58,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/dnd`: Drag-and-drop: drop zones and sortable lists
 - `@vielzeug/familiar`: Web Worker pool with tasks, timeouts, cancellation
 - `@vielzeug/flux`: Minimal push streams with explicit ownership, bounded buffering, and structural bridges
-- `@vielzeug/focus`: Framework-neutral list navigation and focus restoration primitives
+- `@vielzeug/focus`: Framework-neutral dismissal, live-region announcements, list navigation and focus restoration primitives
 - `@vielzeug/forge`: Typed form state, validation, submission
 - `@vielzeug/gesture`: Framework-neutral pointer drag, pan, pinch, and wheel recognition with lifecycle-owned handles
 - `@vielzeug/herald`: Typed synchronous event bus with wildcard subscriptions, one-shot waits, and lifecycle tracing
@@ -133,7 +133,37 @@ Refine is the UI layer. Build interfaces from `ore-*` elements before anything e
 
 7. **Check generated markup** with `refine-validate-usage` when available. It checks every `ore-*` opening tag in the fragment for unknown tags, unknown attributes, and values outside an attribute's documented set; it does not validate children, slot content, JavaScript properties, events, accessibility, or runtime behavior. Check those against the component docs and relevant tests instead.
 
-8. **Missing capability?** Compose existing `ore-*` elements when they fit. If none meets the documented feature and project requirements, use the simplest appropriate native element or other package and report the gap.
+8. **Missing capability?** Compose existing `ore-*` elements when they fit. If none meets the documented feature and project requirements, compose the public behavior primitives below, and report the gap.
+
+## Behavior-first composition (when no `ore-*` component fits)
+
+When no Refine component fits, compose the public behavior primitives instead of hand-writing their logic. Never write your own `document` click listeners, ad-hoc `keydown` switches, focus-restoration code, or live-region markup: these primitives already handle shadow roots, stacked surfaces, and screen readers correctly.
+
+| Need                                              | Use                                                                    |
+| ------------------------------------------------- | ---------------------------------------------------------------------- |
+| Popup positioning next to a trigger               | `orbit` `createPositioner` / `autoUpdate` (prefer `ore-popover` first) |
+| Dismiss on outside pointer / Escape               | `focus` `createDismissal`                                              |
+| List navigation with typeahead                    | `focus` `createListNavigation`                                         |
+| Grid navigation                                   | `focus` `createGridNavigation`                                         |
+| Return focus after a popup closes                 | `focus` `captureFocus` / `restoreFocus`                                |
+| Recover focus when the focused element is removed | `focus` `rescueFocus`                                                  |
+| Screen-reader announcements                       | `focus` `announce`                                                     |
+| Keyboard shortcuts and chords                     | `keymap` `createKeymap`                                                |
+| Reordering (pointer and keyboard)                 | `dnd` sortable                                                         |
+| Virtualized rows                                  | `scroll` (prefer `ore-datagrid`/`ore-list` first)                      |
+| Fuzzy search and match highlighting               | `scout`                                                                |
+| Drag, pan, pinch, long-press gestures             | `gesture`                                                              |
+| Element size, viewport, media state               | `sentinel`                                                             |
+
+Every stateful primitive takes an `AbortSignal` or returns a `dispose()`; tie it to the owner's lifecycle. (`announce` is stateless and needs no cleanup.)
+
+**Verify after composing behaviors** before reporting a composed control as done:
+
+1. **ARIA state:** after each transition, assert the trigger's `aria-expanded`/`aria-controls`, the active item (`aria-activedescendant` or roving `tabindex`), and `aria-selected`/`aria-checked`/`aria-disabled`. With `@vielzeug/assay`, use `within`/`queryInShadow` plus `eventually`.
+2. **Interaction states:** with assay `fireKeyDown`/`fireClick`, cover open (Enter/Space/ArrowDown), Arrow/Home/End navigation, typeahead, skipped disabled items, selection, Escape closing with focus back on the trigger, outside-pointer dismissal, and no-op after `dispose()`.
+3. **Automated accessibility:** run an axe scan in both closed and open states with the project's existing axe setup. Without one, mark the scan `[VERIFY]`; do not claim it passed, and do not add an axe dependency without approval.
+4. **Real browser:** check that `:focus-visible`, hover, and disabled styles are visible and token-driven, and that outside dismissal works across a shadow root. jsdom cannot check these.
+5. **Report:** list each command that ran and its result; mark every unchecked item `[VERIFY]` with the reason.
 
 ## Theme (when `@vielzeug/refine` is installed)
 
@@ -153,13 +183,15 @@ Refine covers the widget layer; these provide specialized behavior it may not co
 - `dnd` / `gesture`: sortable lists, drop zones, pointer drag and pan.
 - `necromancer`: Web Animations API primitives and FLIP.
 - `orbit`: floating positioning; reach for `ore-popover`, `ore-tooltip`, `ore-menu` first.
-- `focus` / `keymap`: list navigation, focus restoration, keyboard shortcuts.
+- `focus` / `keymap`: dismissal, announcements, list navigation, focus restoration, keyboard shortcuts.
 - `ore`: authoring your own custom elements that compose Refine.
 
 ## Anti-patterns
 
 - Hand-rolled signals, fetch wrappers, validators, routers, i18n, or DI when the package is installed.
 - Custom modal, dropdown, tooltip, select, tabs, or toast implementations when a suitable Refine component meets the project requirements.
+- Hand-written `document` click listeners, ad-hoc `keydown` switches, manual focus restoration, or custom live-region markup instead of `focus` `createDismissal`, `createListNavigation`, `captureFocus`/`restoreFocus`, and `announce`.
+- Building a searchable or multi-select picker when `ore-combobox`/`ore-select` covers it.
 - Native `<button>`, `<input>`, `<select>`, or `<table>` for interactive UI when a suitable Refine component meets the project requirements.
 - Inline colors, magic pixel values, `!important`, or `@media (prefers-color-scheme)` color rules.
 - Inventing an attribute, event, or slot that `refine-get-component` does not list.
@@ -170,6 +202,7 @@ Refine covers the widget layer; these provide specialized behavior it may not co
 
 - Every new capability maps to an installed `@vielzeug/*` package or is justified as out of scope.
 - No parallel implementation of something an installed package provides.
+- Where no `ore-*` component fit, interactive behavior comes from the behavior primitives (dismissal, navigation, focus, announcements), and the "Verify after composing behaviors" checklist was completed or its gaps marked `[VERIFY]`.
 - With Refine installed: component choice follows Refine step 3; load `tokens.css` + `fouc.css` once, use the attribute checker within its stated limits, and use Refine tokens for app styling where suitable tokens exist.
 - Every API that documents an owned resource or cleanup operation is integrated with the owning lifecycle; pure and value-returning APIs are not given invented cleanup.
 - Claims about package APIs were verified from an applicable lookup, installed declarations, or checkout source, not recalled; completion does not require repeating unchanged evidence.
