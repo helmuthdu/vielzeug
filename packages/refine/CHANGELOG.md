@@ -1,7 +1,27 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 18 Nov 2026 14:27:22 GMT and should not be manually modified.
+This log was last generated on Thu, 19 Nov 2026 09:06:34 GMT and should not be manually modified.
 
+## 26.11.25
+
+Thu, 19 Nov 2026 09:06:34 GMT
+
+### Major changes
+
+- Add accessible responsive navigation menus and link component
+
+### Minor changes
+
+- Use an 8px default control radius and tune neutral surfaces; set --radius to var(--rounded-xl) to restore the previous 12px radius (see migration guide)
+- Add persistent marquee and carousel pause controls
+
+### Patches
+
+- Apply border-inclusive nested-corner geometry across accordions, tabs, and contained surfaces
+- Fix attached tooltip-wrapped button groups
+- Align grouped accordion row height
+- Rebalance semantic theme colors for color-vision separation
+- Use a more vibrant violet default primary palette
 ## 26.11.24
 
 Wed, 18 Nov 2026 14:27:22 GMT

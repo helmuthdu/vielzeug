@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/palette",
-  "version": "26.11.24",
+  "version": "26.11.25",
   "description": "Color parsing, conversion, mixing, and contrast for design tools",
   "repository": {
     "type": "git",

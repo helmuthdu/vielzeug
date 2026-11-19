@@ -2,6 +2,59 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add accessible responsive navigation menus and link component",
+            "commit": "53d9bdabb8ea3a326e3841bd37501e00e4aa728f"
+          }
+        ],
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Use an 8px default control radius and tune neutral surfaces; set --radius to var(--rounded-xl) to restore the previous 12px radius (see migration guide)",
+            "commit": "53d9bdabb8ea3a326e3841bd37501e00e4aa728f"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add persistent marquee and carousel pause controls",
+            "commit": "53d9bdabb8ea3a326e3841bd37501e00e4aa728f"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Apply border-inclusive nested-corner geometry across accordions, tabs, and contained surfaces",
+            "commit": "53d9bdabb8ea3a326e3841bd37501e00e4aa728f"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Fix attached tooltip-wrapped button groups",
+            "commit": "53d9bdabb8ea3a326e3841bd37501e00e4aa728f"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Align grouped accordion row height",
+            "commit": "53d9bdabb8ea3a326e3841bd37501e00e4aa728f"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Rebalance semantic theme colors for color-vision separation",
+            "commit": "53d9bdabb8ea3a326e3841bd37501e00e4aa728f"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Use a more vibrant violet default primary palette",
+            "commit": "53d9bdabb8ea3a326e3841bd37501e00e4aa728f"
+          }
+        ]
+      },
+      "date": "Thu, 19 Nov 2026 09:06:34 GMT",
+      "tag": "@vielzeug/refine_v26.11.25",
+      "version": "26.11.25"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",
