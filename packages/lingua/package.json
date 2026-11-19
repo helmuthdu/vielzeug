@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/lingua",
-  "version": "26.11.25",
+  "version": "26.11.26",
   "description": "Typed i18n with pluralization and lazy locale loading",
   "repository": {
     "type": "git",
