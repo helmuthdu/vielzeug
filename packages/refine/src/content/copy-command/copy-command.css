@@ -3,51 +3,19 @@
     --_bg: var(--copy-command-bg, var(--color-contrast-100));
     --_color: var(--copy-command-color, var(--text-color-body));
     --_border-color: var(--copy-command-border-color, var(--color-contrast-300));
-    --_radius: var(--copy-command-radius, var(--rounded-md));
+    --_radius: var(--rounded-md);
     --_padding: var(--copy-command-padding, var(--size-2) var(--size-3));
     --_font-size: var(--copy-command-font-size, var(--text-sm));
     --_icon-color: var(--copy-command-icon-color, var(--text-color-secondary));
     --_hover-bg: var(--copy-command-hover-bg, var(--color-contrast-200));
 
     display: inline-block;
+    min-width: 0;
+    max-width: 100%;
   }
 
   :host([hidden]) {
     display: none;
-  }
-
-  /* ── rounded attribute → CSS variable ───────────────────── */
-
-  :host([rounded='none']) {
-    --_radius: var(--rounded-none, 0);
-  }
-
-  :host([rounded='sm']) {
-    --_radius: var(--rounded-sm);
-  }
-
-  :host([rounded='md']) {
-    --_radius: var(--rounded-md);
-  }
-
-  :host([rounded='lg']) {
-    --_radius: var(--rounded-lg);
-  }
-
-  :host([rounded='xl']) {
-    --_radius: var(--rounded-xl);
-  }
-
-  :host([rounded='2xl']) {
-    --_radius: var(--rounded-2xl);
-  }
-
-  :host([rounded='3xl']) {
-    --_radius: var(--rounded-3xl);
-  }
-
-  :host([rounded='full']) {
-    --_radius: var(--rounded-full);
   }
 
   /* ── size variants ───────────────────────────────────────── */
@@ -78,12 +46,12 @@
   /* ── layout ──────────────────────────────────────────────── */
 
   .wrapper {
-    display: inline-flex;
+    display: flex;
     align-items: stretch;
     overflow: hidden;
     background: var(--_bg);
     border: var(--border) solid var(--_border-color);
-    border-radius: var(--_radius);
+    border-radius: var(--copy-command-radius, var(--_radius));
     transition:
       border-color var(--transition-normal),
       background var(--transition-normal);
@@ -96,6 +64,7 @@
     flex: 1;
     gap: var(--size-2);
     align-items: center;
+    min-width: 0;
     padding: var(--_padding);
     font-family: var(--font-mono);
     font-size: var(--_font-size);
@@ -104,7 +73,13 @@
     cursor: pointer;
     background: transparent;
     border: none;
+    border-radius: max(0px, calc(var(--copy-command-radius, var(--_radius)) - var(--border)));
     transition: background var(--transition-normal);
+  }
+
+  .wrapper:has(.suffix:not([hidden])) .command {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
   }
 
   .command:hover {
@@ -114,7 +89,6 @@
   .command:focus-visible {
     outline: var(--focus-ring);
     outline-offset: calc(var(--focus-ring-offset) * -1);
-    border-radius: calc(var(--_radius) - 1px);
   }
 
   /* ── command text ────────────────────────────────────────── */
@@ -169,6 +143,7 @@
 
   .suffix {
     display: flex;
+    flex-shrink: 0;
     align-items: stretch;
     border-inline-start: var(--border) solid var(--_border-color);
   }

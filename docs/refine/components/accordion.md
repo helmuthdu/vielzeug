@@ -49,7 +49,7 @@ Only one item can be expanded at a time. Use `single` mode for mutually exclusiv
 ## Variants
 
 Seven variants apply to all items through the parent accordion, including frost for translucent surfaces.
-Contained variants (`solid`, `flat`, and `frost`) keep an inset group surface and derive the inner radius from `outer radius − inset`. Only the first item's top corners and the last item's bottom corners are rounded; adjoining item corners stay square, including when expanded.
+Contained variants (`solid`, `flat`, and `frost`) keep an inset group surface and follow [Cloud Four's nested-corner geometry](https://cloudfour.com/thinks/the-math-behind-nesting-rounded-corners/): `inner radius = max(0px, outer radius − padding − border width)`. With the default 12px outer radius and 8px padding, bordered `solid` and `flat` groups use 3px inner corners; borderless `frost` uses 4px. Only the first item's top corners and the last item's bottom corners are rounded; adjoining item corners stay square, including when expanded.
 
 <ComponentPreview vertical>
 
@@ -265,7 +265,7 @@ Prevent interaction with specific items.
 | Property                      | Description                                                                           | Default                    |
 | ----------------------------- | ------------------------------------------------------------------------------------- | -------------------------- |
 | `--accordion-item-bg`         | Item background color                                                                 | `transparent`              |
-| `--accordion-item-radius`     | Item border radius; contained parents derive it from the group radius minus its inset | `var(--rounded-lg)`        |
+| `--accordion-item-radius`     | Item border radius; contained parents subtract their padding and border from the group radius | `var(--rounded-lg)`        |
 | `--accordion-item-padding`    | Item inner padding                                                                    | Size-dependent             |
 | `--accordion-item-transition` | Transition duration for expand/collapse animation                                     | `var(--transition-normal)` |
 | `--accordion-border-color`    | Container border color (solid/flat variants)                                          | Theme-dependent            |

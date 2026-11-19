@@ -66,61 +66,70 @@ test.describe('Layout', () => {
     expect(measurements[1]?.summaryHeight).toBeLessThan(measurements[2]?.summaryHeight ?? 0);
   });
 
-  test('derives contained corner radii from the outer radius and inset', async ({ page, refinePage }) => {
+  test('keeps contained corners concentric with the measured border and padding inset', async ({
+    page,
+    refinePage,
+  }) => {
+    // Isolate component geometry from the optional document reset without removing its color tokens.
     await page.evaluate(() => {
-      document.querySelector('style')?.remove();
-      const frame = document.querySelector<HTMLElement>('.frame');
+      for (const sheet of document.styleSheets) {
+        for (let index = sheet.cssRules.length - 1; index >= 0; index--) {
+          const rule = sheet.cssRules[index];
 
-      if (!frame) throw new Error('Expected the component frame.');
-
-      Object.entries({
-        '--border': '1px',
-        '--rounded-lg': '8px',
-        '--rounded-xl': '12px',
-        '--size-2': '8px',
-      }).forEach(([name, value]) => {
-        frame.style.setProperty(name, value);
-      });
+          if (rule instanceof CSSLayerBlockRule && rule.name === 'refine.reset') sheet.deleteRule(index);
+        }
+      }
     });
 
-    await refinePage.mountComponent(`
-      <ore-accordion variant="solid">
-        <ore-accordion-item expanded><span slot="title">Solid</span>Content</ore-accordion-item>
-      </ore-accordion>
-      <ore-accordion variant="flat">
-        <ore-accordion-item expanded><span slot="title">Flat</span>Content</ore-accordion-item>
-      </ore-accordion>
-      <ore-accordion variant="frost">
-        <ore-accordion-item expanded><span slot="title">Frost</span>Content</ore-accordion-item>
-      </ore-accordion>
-    `);
+    for (const { border, inset, radius } of [
+      { border: 1, inset: 8, radius: 12 },
+      { border: 3, inset: 4, radius: 20 },
+      { border: 2, inset: 8, radius: 4 },
+    ]) {
+      await refinePage.mountComponent(
+        ['solid', 'flat', 'frost']
+          .map(
+            (variant) => `
+            <ore-accordion variant="${variant}"
+              style="--border: ${border}px; --size-2: ${inset}px; --rounded-xl: ${radius}px">
+              <ore-accordion-item expanded><span slot="title">${variant}</span>Content</ore-accordion-item>
+            </ore-accordion>`,
+          )
+          .join(''),
+      );
 
-    const measurements = await page.locator('ore-accordion').evaluateAll((accordions) =>
-      accordions.map((accordion) => {
-        const item = accordion.querySelector('ore-accordion-item');
-        const summary = item?.shadowRoot?.querySelector('summary');
-        const content = item?.shadowRoot?.querySelector('.content-wrapper');
+      const measurements = await page.locator('ore-accordion').evaluateAll((accordions) =>
+        accordions.map((accordion) => {
+          const item = accordion.querySelector('ore-accordion-item');
+          const summary = item?.shadowRoot?.querySelector('summary');
+          const content = item?.shadowRoot?.querySelector('.content-wrapper');
 
-        if (!item || !summary || !content) throw new Error('Expected an expanded accordion item.');
+          if (!item || !summary || !content) throw new Error('Expected an expanded accordion item.');
 
-        const outerStyle = getComputedStyle(accordion);
+          const outer = accordion.getBoundingClientRect();
+          const inner = item.getBoundingClientRect();
 
-        return {
-          contentRadius: getComputedStyle(content).borderRadius,
-          groupInset: outerStyle.paddingTop,
-          groupRadius: outerStyle.borderRadius,
-          itemRadius: getComputedStyle(item).borderRadius,
-          summaryRadius: getComputedStyle(summary).borderRadius,
-        };
-      }),
-    );
+          return {
+            bottomInset: outer.bottom - inner.bottom,
+            contentRadius: Number.parseFloat(getComputedStyle(content).borderBottomLeftRadius),
+            innerRadius: Number.parseFloat(getComputedStyle(item).borderTopLeftRadius),
+            leftInset: inner.left - outer.left,
+            outerRadius: Number.parseFloat(getComputedStyle(accordion).borderTopLeftRadius),
+            summaryRadius: Number.parseFloat(getComputedStyle(summary).borderTopLeftRadius),
+            topInset: inner.top - outer.top,
+          };
+        }),
+      );
 
-    for (const measurement of measurements) {
-      expect(measurement.groupRadius).toBe('12px');
-      expect(measurement.groupInset).toBe('8px');
-      expect(measurement.itemRadius).toBe('4px');
-      expect(measurement.summaryRadius).toBe('4px 4px 0px 0px');
-      expect(measurement.contentRadius).toBe('0px 0px 4px 4px');
+      for (const measurement of measurements) {
+        const expected = Math.max(0, measurement.outerRadius - measurement.topInset);
+
+        expect(measurement.topInset).toBeCloseTo(measurement.leftInset);
+        expect(measurement.bottomInset).toBeCloseTo(measurement.topInset);
+        expect(measurement.innerRadius).toBeCloseTo(expected);
+        expect(measurement.summaryRadius).toBeCloseTo(expected);
+        expect(measurement.contentRadius).toBeCloseTo(expected);
+      }
     }
   });
 
@@ -133,6 +142,8 @@ test.describe('Layout', () => {
         if (!frame) throw new Error('Expected the component frame.');
 
         Object.entries({
+          '--accordion-border-color': 'transparent',
+          '--border': '1px',
           '--rounded-lg': '8px',
           '--rounded-xl': '12px',
           '--size-2': '8px',
@@ -167,16 +178,22 @@ test.describe('Layout', () => {
           }),
         );
 
-        expect(measurements.map(({ itemRadius }) => itemRadius)).toEqual(['4px 4px 0px 0px', '0px', '0px 0px 4px 4px']);
-        expect(measurements.map(({ summaryRadius }) => summaryRadius)).toEqual([
-          '4px 4px 0px 0px',
+        const radius = variant === 'frost' ? '4px' : '3px';
+
+        expect(measurements.map(({ itemRadius }) => itemRadius)).toEqual([
+          `${radius} ${radius} 0px 0px`,
           '0px',
-          expanded ? '0px' : '0px 0px 4px 4px',
+          `0px 0px ${radius} ${radius}`,
+        ]);
+        expect(measurements.map(({ summaryRadius }) => summaryRadius)).toEqual([
+          `${radius} ${radius} 0px 0px`,
+          '0px',
+          expanded ? '0px' : `0px 0px ${radius} ${radius}`,
         ]);
         expect(measurements.map(({ contentRadius }) => contentRadius)).toEqual([
           '0px',
           '0px',
-          expanded ? '0px 0px 4px 4px' : '0px',
+          expanded ? `0px 0px ${radius} ${radius}` : '0px',
         ]);
       }
     });

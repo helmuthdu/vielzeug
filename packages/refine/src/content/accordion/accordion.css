@@ -44,7 +44,11 @@
   :host([variant='frost']) {
     --_contained-radius: var(--rounded-xl);
     --_contained-inset: var(--size-2);
-    --accordion-item-radius: max(0px, calc(var(--_contained-radius) - var(--_contained-inset)));
+    --_contained-border-width: 0px;
+    --accordion-item-radius: max(
+      0px,
+      calc(var(--_contained-radius) - var(--_contained-inset) - var(--_contained-border-width))
+    );
 
     gap: 0;
     padding: var(--_contained-inset);
@@ -70,19 +74,21 @@
 
   /* Solid variant (default) */
   :host([variant='solid']) {
+    --_contained-border-width: var(--border);
     --_bg: var(--accordion-bg, var(--color-contrast-50));
     --_border-color: var(--accordion-border-color, var(--color-contrast-200));
 
-    border: var(--border) solid var(--_border-color);
+    border: var(--_contained-border-width) solid var(--_border-color);
     box-shadow: var(--accordion-shadow, var(--shadow-xs));
   }
 
   /* Flat variant */
   :host([variant='flat']) {
+    --_contained-border-width: var(--border);
     --_bg: var(--accordion-bg, var(--color-contrast-100));
     --_border-color: var(--accordion-border-color, var(--color-contrast-200));
 
-    border: var(--border) solid var(--_border-color);
+    border: var(--_contained-border-width) solid var(--_border-color);
     box-shadow: var(--accordion-shadow, var(--inset-shadow-xs));
   }
 

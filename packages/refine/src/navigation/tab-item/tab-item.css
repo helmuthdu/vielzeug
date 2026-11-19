@@ -4,7 +4,7 @@
 
     /* Host-level default so an ancestor's inherited `--_radius` cannot leak in. */
     --_radius: var(--rounded-lg);
-    --tab-item-radius: var(--_radius);
+    --tab-item-radius: var(--_tabs-inner-radius, var(--_radius));
     display: inline-flex;
     outline: none;
   }
