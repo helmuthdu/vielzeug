@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Replace isolated runtimes with scopes",
+            "commit": "53d9bdabb8ea3a326e3841bd37501e00e4aa728f"
+          }
+        ]
+      },
+      "date": "Thu, 19 Nov 2026 09:06:34 GMT",
+      "tag": "@vielzeug/ripple_v26.11.25",
+      "version": "26.11.25"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

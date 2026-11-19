@@ -1,7 +1,18 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Wed, 18 Nov 2026 14:27:22 GMT and should not be manually modified.
+This log was last generated on Thu, 19 Nov 2026 09:06:34 GMT and should not be manually modified.
 
+## 26.11.25
+
+Thu, 19 Nov 2026 09:06:34 GMT
+
+### Major changes
+
+- rebuild the snapshot pipeline: one snapshot.json, checker-resolved signatures, section search, 10 consolidated tools
+
+### Patches
+
+- chore(codex): refresh bundled docs data
 ## 26.11.24
 
 Wed, 18 Nov 2026 14:27:22 GMT
