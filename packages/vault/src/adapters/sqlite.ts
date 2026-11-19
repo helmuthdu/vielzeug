@@ -30,7 +30,7 @@ type SQLiteRow = Record<string, unknown>;
  * structural protocol without adding a runtime dependency to Vault.
  */
 export interface SQLiteStatement {
-  all(...parameters: SQLiteParameter[]): readonly SQLiteRow[];
+  all(...parameters: SQLiteParameter[]): readonly (SQLiteRow | undefined)[];
   finalize?(): void;
   get(...parameters: SQLiteParameter[]): SQLiteRow | null | undefined;
   run(...parameters: SQLiteParameter[]): unknown;
@@ -224,7 +224,13 @@ function get(database: SQLiteDatabase, sql: string, parameters: SQLiteParameter[
 }
 
 function all(database: SQLiteDatabase, sql: string, parameters: SQLiteParameter[] = []): readonly SQLiteRow[] {
-  return withStatement(database, sql, (statement) => statement.all(...parameters));
+  return withStatement(database, sql, (statement) =>
+    Array.from(statement.all(...parameters), (row) => {
+      if (row === undefined) throw new VaultError('SQLite driver returned an undefined row');
+
+      return row;
+    }),
+  );
 }
 
 /**
