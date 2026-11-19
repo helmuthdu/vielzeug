@@ -1,7 +1,19 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Thu, 19 Nov 2026 09:06:34 GMT and should not be manually modified.
+This log was last generated on Thu, 19 Nov 2026 20:05:01 GMT and should not be manually modified.
 
+## 26.11.26
+
+Thu, 19 Nov 2026 20:05:01 GMT
+
+### Minor changes
+
+- Add modeless drawer support
+- Add enterkeyhint to text editors
+
+### Patches
+
+- Keep hover, focus, and motion behavior correct on touch and keyboard
 ## 26.11.25
 
 Thu, 19 Nov 2026 09:06:34 GMT

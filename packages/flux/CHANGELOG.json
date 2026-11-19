@@ -6,6 +6,20 @@
           {
             "author": "release-train",
             "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "cc164ebe984cdca6a115fefbd5e41bce1ac22fa5"
+          }
+        ]
+      },
+      "date": "Thu, 19 Nov 2026 20:05:01 GMT",
+      "tag": "@vielzeug/flux_v26.11.26",
+      "version": "26.11.26"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "53d9bdabb8ea3a326e3841bd37501e00e4aa728f"
           }
         ]
