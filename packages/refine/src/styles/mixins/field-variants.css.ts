@@ -70,46 +70,60 @@ export const fieldVariantMixin = ({
       --_border-color: var(--${tokenPrefix}-border-color, var(--color-contrast-300));
     }
 
-    :host(:not([variant])) ${container}, :host([variant='solid']) ${container} {
+    :host(:not([variant])) ${container},
+    :host([variant='solid']) ${container} {
       box-shadow: var(--shadow-2xs);
     }
 
     /* Flat */
     :host([variant='flat']) {
       --_bg: var(--${tokenPrefix}-bg, var(--color-contrast-100));
-      --_border-color: var(--${tokenPrefix}-border-color, color-mix(in oklch, var(${accentVar}) 20%, transparent));
+      --_border-color: var(
+        --${tokenPrefix}-border-color,
+        color-mix(in oklch, var(${accentVar}) 20%, transparent)
+      );
     }
 
     :host([variant='flat']) ${container} {
       box-shadow: var(--inset-shadow-2xs);
     }
 
-    :host([variant='flat']:not([disabled])) ${container}:hover {
-      background: var(--${tokenPrefix}-hover-bg, color-mix(in oklch, var(--_theme-base) 6%, var(--color-contrast-100)));
-      border-color: var(
-        --${tokenPrefix}-hover-border-color,
-        color-mix(in oklch, var(--_theme-base) 35%, var(--color-contrast-300))
-      );
+    @media (hover: hover) {
+      :host([variant='flat']:not([disabled])) ${container}:hover {
+        background: var(
+          --${tokenPrefix}-hover-bg,
+          color-mix(in oklch, var(--_theme-base) 6%, var(--color-contrast-100))
+        );
+        border-color: var(
+          --${tokenPrefix}-hover-border-color,
+          color-mix(in oklch, var(--_theme-base) 35%, var(--color-contrast-300))
+        );
+      }
     }
 
     :host([variant='flat']:not([disabled])) ${container}:focus-within {
       background: var(--${tokenPrefix}-focus-bg, color-mix(in oklch, var(--_theme-base) 8%, var(--color-canvas)));
-      border-color: var(--${tokenPrefix}-focus-border-color, color-mix(in oklch, var(${accentVar}) 60%, transparent));
+      border-color: var(
+        --${tokenPrefix}-focus-border-color,
+        color-mix(in oklch, var(${accentVar}) 60%, transparent)
+      );
       box-shadow: var(--_theme-shadow);
     }
 
     /* Bordered: the themed surface pairing (backdrop background + its designed border
-       color), matching the bordered recipe of ore-alert/ore-badge. The typed text stays
-       neutral ink on purpose: the theme base color on the pale backdrop misses AA contrast
-       (axe-verified in the alert wave) and turns user content into decoration. The accent
-       appears on hover/focus borders instead — that interaction is the variant's identity. */
+           color), matching the bordered recipe of ore-alert/ore-badge. The typed text stays
+           neutral ink on purpose: the theme base color on the pale backdrop misses AA contrast
+           (axe-verified in the alert wave) and turns user content into decoration. The accent
+           appears on hover/focus borders instead — that interaction is the variant's identity. */
     :host([variant='bordered']) {
       --_bg: var(--${tokenPrefix}-bg, var(--_theme-backdrop));
       --_border-color: var(--${tokenPrefix}-border-color, var(--_theme-border));
     }
 
-    :host([variant='bordered']:not([disabled])) ${container}:hover {
-      border-color: var(--${tokenPrefix}-hover-border-color, var(${accentVar}));
+    @media (hover: hover) {
+      :host([variant='bordered']:not([disabled])) ${container}:hover {
+        border-color: var(--${tokenPrefix}-hover-border-color, var(${accentVar}));
+      }
     }
 
     :host([variant='bordered']) ${container}:focus-within {
@@ -119,9 +133,9 @@ export const fieldVariantMixin = ({
     }
 
     /* Outline: border always visible, so unlike the other variants it can't lean on a
-       per-component \`:host{}\` base fallback for \`--_border-color\` that may or may not exist
-       (\`ore-message-composer\` has none: every other rule here sets both custom properties, so
-       its base layer omits a default on the assumption that always holds). Set explicitly. */
+           per-component \`:host{}\` base fallback for \`--_border-color\` that may or may not exist
+           (\`ore-message-composer\` has none: every other rule here sets both custom properties, so
+           its base layer omits a default on the assumption that always holds). Set explicitly. */
     :host([variant='outline']) {
       --_bg: var(--${tokenPrefix}-bg, transparent);
       --_border-color: var(--${tokenPrefix}-border-color, var(--color-contrast-300));
@@ -141,8 +155,10 @@ export const fieldVariantMixin = ({
       box-shadow: none;
     }
 
-    :host([variant='ghost']:not([disabled])) ${container}:hover {
-      background: var(--${tokenPrefix}-hover-bg, var(--color-contrast-100));
+    @media (hover: hover) {
+      :host([variant='ghost']:not([disabled])) ${container}:hover {
+        background: var(--${tokenPrefix}-hover-bg, var(--color-contrast-100));
+      }
     }
 
     /* frost */
@@ -156,8 +172,10 @@ export const fieldVariantMixin = ({
       backdrop-filter: blur(var(--blur-md));
     }
 
-    :host([variant='frost']:not([disabled])) ${container}:hover {
-      background: var(--${tokenPrefix}-hover-bg, var(--color-contrast-100));
+    @media (hover: hover) {
+      :host([variant='frost']:not([disabled])) ${container}:hover {
+        background: var(--${tokenPrefix}-hover-bg, var(--color-contrast-100));
+      }
     }
   }
 `;

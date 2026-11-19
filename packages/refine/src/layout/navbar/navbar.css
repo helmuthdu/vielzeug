@@ -226,10 +226,12 @@
       color var(--transition-fast);
   }
 
-  .mobile-toggle:hover {
-    color: var(--color-contrast-900);
-    background: var(--color-contrast-100);
-    border-color: var(--color-contrast-200);
+  @media (hover: hover) {
+    .mobile-toggle:hover {
+      color: var(--color-contrast-900);
+      background: var(--color-contrast-100);
+      border-color: var(--color-contrast-200);
+    }
   }
 
   .mobile-toggle:focus-visible {
@@ -403,7 +405,15 @@
       color var(--transition-fast);
   }
 
-  .item:hover,
+  @media (hover: hover) {
+    .item:hover {
+      color: var(--navbar-item-hover-color, var(--color-contrast-900));
+      outline: var(--focus-ring);
+      outline-offset: 1px;
+      background: var(--navbar-item-hover-bg, var(--color-contrast-100));
+    }
+  }
+
   .item:focus-visible {
     color: var(--navbar-item-hover-color, var(--color-contrast-900));
     outline: var(--focus-ring);
@@ -416,8 +426,17 @@
     background: var(--navbar-item-active-bg, color-mix(in oklch, var(--color-primary) 12%, transparent));
   }
 
+  @media (hover: hover) {
+    :host([disabled]) .item:hover {
+      color: var(--color-contrast-400);
+      pointer-events: none;
+      cursor: not-allowed;
+      outline: none;
+      background: transparent;
+    }
+  }
+
   :host([disabled]) .item,
-  :host([disabled]) .item:hover,
   :host([disabled]) .item:focus-visible {
     color: var(--color-contrast-400);
     pointer-events: none;

@@ -325,9 +325,11 @@
     display: none;
   }
 
-  .close:hover {
-    background: color-mix(in oklch, currentcolor 12%, transparent);
-    opacity: 1;
+  @media (hover: hover) {
+    .close:hover {
+      background: color-mix(in oklch, currentcolor 12%, transparent);
+      opacity: 1;
+    }
   }
 
   .close:focus-visible {

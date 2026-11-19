@@ -31,6 +31,9 @@
     height: var(--_cell-size);
     padding: 0;
     font-size: var(--_cell-font-size);
+    @media (pointer: coarse) {
+      font-size: max(16px, var(--otp-cell-font-size, var(--_cell-font-size)));
+    }
     font-weight: var(--font-semibold);
     line-height: 1;
     color: var(--color-contrast-900);

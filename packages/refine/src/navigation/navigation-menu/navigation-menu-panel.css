@@ -109,7 +109,13 @@
       color var(--transition-fast);
   }
 
-  ::slotted(a:hover),
+  @media (hover: hover) {
+    ::slotted(a:hover) {
+      color: var(--color-primary);
+      background: var(--color-contrast-100);
+    }
+  }
+
   ::slotted(a:focus-visible) {
     color: var(--color-primary);
     background: var(--color-contrast-100);
@@ -133,7 +139,12 @@
     border-top: var(--border) solid var(--color-divider);
   }
 
-  ::slotted(a[slot='footer']:hover),
+  @media (hover: hover) {
+    ::slotted(a[slot='footer']:hover) {
+      background: var(--color-contrast-100);
+    }
+  }
+
   ::slotted(a[slot='footer']:focus-visible) {
     background: var(--color-contrast-100);
   }

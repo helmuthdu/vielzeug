@@ -128,8 +128,10 @@
     display: none;
   }
 
-  .close:hover {
-    background: color-mix(in oklch, var(--color-contrast-900) 8%, transparent);
+  @media (hover: hover) {
+    .close:hover {
+      background: color-mix(in oklch, var(--color-contrast-900) 8%, transparent);
+    }
   }
 
   .close:focus-visible {

@@ -106,8 +106,10 @@
     align-items: center;
   }
 
-  .dg-th[aria-sort]:has(.dg-sort-btn:hover):not(:has(.dg-sort-btn[aria-disabled='true'])) {
-    background: color-mix(in oklch, var(--color-contrast-900) 5%, transparent);
+  @media (hover: hover) {
+    .dg-th[aria-sort]:has(.dg-sort-btn:hover):not(:has(.dg-sort-btn[aria-disabled='true'])) {
+      background: color-mix(in oklch, var(--color-contrast-900) 5%, transparent);
+    }
   }
 
   .dg-th[aria-sort='ascending'] .dg-sort-icon,
@@ -149,8 +151,10 @@
     transition: background var(--transition-fast);
   }
 
-  .dg-body .dg-tr:hover:not([data-disabled], [aria-selected='true']) {
-    background: var(--_row-hover-bg);
+  @media (hover: hover) {
+    .dg-body .dg-tr:hover:not([data-disabled], [aria-selected='true']) {
+      background: var(--_row-hover-bg);
+    }
   }
 
   /* ── Selection ─────────────────────────────────────────────────────────────── */
@@ -536,8 +540,10 @@
     border-radius: var(--rounded-md);
   }
 
-  .dg-pop-col-item:hover {
-    background: var(--color-contrast-150);
+  @media (hover: hover) {
+    .dg-pop-col-item:hover {
+      background: var(--color-contrast-150);
+    }
   }
 
   .dg-pop-col-item::part(label) {
@@ -612,9 +618,11 @@
     height: var(--size-7);
   }
 
-  .dg-page-btn:hover {
-    --button-color: var(--color-contrast-900);
-    --button-bg: var(--color-contrast-300);
+  @media (hover: hover) {
+    .dg-page-btn:hover {
+      --button-color: var(--color-contrast-900);
+      --button-bg: var(--color-contrast-300);
+    }
   }
 
   .dg-page-btn:disabled {
@@ -641,7 +649,12 @@
     transition: background var(--transition-fast);
   }
 
-  .dg-col-resize:hover,
+  @media (hover: hover) {
+    .dg-col-resize:hover {
+      background: var(--_accent, var(--color-contrast-300));
+    }
+  }
+
   .dg-col-resize:active {
     background: var(--_accent, var(--color-contrast-300));
   }
@@ -695,8 +708,10 @@
     height: var(--size-5);
   }
 
-  .dg-expand-btn:hover {
-    --button-color: var(--color-contrast-900);
+  @media (hover: hover) {
+    .dg-expand-btn:hover {
+      --button-color: var(--color-contrast-900);
+    }
   }
 
   .dg-expand-btn:disabled {

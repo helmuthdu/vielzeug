@@ -161,6 +161,9 @@
     padding: 0;
     font: inherit;
     font-size: var(--text-base);
+    @media (pointer: coarse) {
+      font-size: max(16px, var(--text-base));
+    }
     color: var(--color-contrast-900);
     outline: none;
     background: transparent;
@@ -270,11 +273,12 @@
     color: var(--color-contrast-800);
     cursor: pointer;
     border-radius: var(--rounded-md);
-    transition: background var(--transition-fast);
   }
 
-  .item:hover:not([data-disabled]) {
-    background: var(--_option-hover-bg);
+  @media (hover: hover) {
+    .item:hover:not([data-disabled]) {
+      background: var(--_option-hover-bg);
+    }
   }
 
   .item[data-focused]:not([data-disabled]) {
@@ -347,9 +351,11 @@
     border-block-end: var(--border) solid var(--color-divider);
   }
 
-  .back-row:hover {
-    color: var(--color-contrast-900);
-    background: var(--_option-hover-bg);
+  @media (hover: hover) {
+    .back-row:hover {
+      color: var(--color-contrast-900);
+      background: var(--_option-hover-bg);
+    }
   }
 
   .back-row:focus-visible {

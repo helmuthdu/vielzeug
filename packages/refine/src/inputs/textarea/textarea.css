@@ -166,6 +166,9 @@
     padding: 0;
     font: inherit;
     font-size: var(--_font-size);
+    @media (pointer: coarse) {
+      font-size: max(16px, var(--textarea-font-size, var(--_font-size)));
+    }
     line-height: var(--leading-relaxed);
     color: var(--textarea-color, var(--text-color-body));
     resize: vertical; /* Default resize, can be overridden by inline style */
@@ -209,8 +212,10 @@
        Hover & Focus States
        ======================================== */
 
-  :host(:not([disabled], [variant='bordered'], [variant='flat'])) .field:hover {
-    border-color: var(--color-contrast-400);
+  @media (hover: hover) {
+    :host(:not([disabled], [variant='bordered'], [variant='flat'])) .field:hover {
+      border-color: var(--color-contrast-400);
+    }
   }
 
   :host(:not([disabled])) .field:focus-within ~ .label,

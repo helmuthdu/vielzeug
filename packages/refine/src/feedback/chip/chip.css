@@ -72,9 +72,11 @@
       opacity var(--transition-fast);
   }
 
-  .remove-btn:hover {
-    background: color-mix(in oklch, currentcolor 28%, transparent);
-    opacity: 1;
+  @media (hover: hover) {
+    .remove-btn:hover {
+      background: color-mix(in oklch, currentcolor 28%, transparent);
+      opacity: 1;
+    }
   }
 
   .remove-btn:focus-visible {
@@ -246,40 +248,46 @@
     border: var(--border) solid var(--_remove-bg);
   }
 
-  :host([variant='bordered']) .remove-btn:hover,
-  :host([variant='outline']) .remove-btn:hover {
-    background: var(--chip-remove-hover-bg, color-mix(in oklch, var(--_remove-bg) 80%, var(--color-contrast-900)));
-    opacity: 1;
+  @media (hover: hover) {
+    :host([variant='bordered']) .remove-btn:hover,
+    :host([variant='outline']) .remove-btn:hover {
+      background: var(--chip-remove-hover-bg, color-mix(in oklch, var(--_remove-bg) 80%, var(--color-contrast-900)));
+      opacity: 1;
+    }
   }
 
   :host([variant='ghost']) .remove-btn {
     border: var(--border) solid var(--_theme-focus, var(--color-contrast-400));
   }
 
-  :host([variant='ghost']) .remove-btn:hover {
-    background: var(--chip-remove-hover-bg, color-mix(in oklch, currentcolor 15%, transparent));
+  @media (hover: hover) {
+    :host([variant='ghost']) .remove-btn:hover {
+      background: var(--chip-remove-hover-bg, color-mix(in oklch, currentcolor 15%, transparent));
+    }
   }
 
   /* ========================================
      Hover / Active Feedback: interactive modes
      ======================================== */
 
-  :host(
-      :is(
-        :not([variant]),
-        [variant='solid'],
-        [variant='flat'],
-        [variant='bordered'],
-        [variant='outline'],
-        [variant='ghost'],
-        [variant='frost']
-      ):is([mode='selectable'], [mode='action']):not([disabled])
-    )
-    .chip-btn:hover
-    .chip {
-    color: var(--_hover-color, var(--_color));
-    background: var(--_hover-bg, var(--_bg));
-    border-color: var(--_hover-border-color, var(--_border-color));
+  @media (hover: hover) {
+    :host(
+        :is(
+          :not([variant]),
+          [variant='solid'],
+          [variant='flat'],
+          [variant='bordered'],
+          [variant='outline'],
+          [variant='ghost'],
+          [variant='frost']
+        ):is([mode='selectable'], [mode='action']):not([disabled])
+      )
+      .chip-btn:hover
+      .chip {
+      color: var(--_hover-color, var(--_color));
+      background: var(--_hover-bg, var(--_bg));
+      border-color: var(--_hover-border-color, var(--_border-color));
+    }
   }
 
   :host(

@@ -110,8 +110,10 @@
       transform var(--duration-100) var(--ease-spring);
   }
 
-  .btn:hover:not(:disabled) {
-    background: var(--color-contrast-300);
+  @media (hover: hover) {
+    .btn:hover:not(:disabled) {
+      background: var(--color-contrast-300);
+    }
   }
 
   .btn:active:not(:disabled) {
@@ -141,8 +143,10 @@
     background: color-mix(in oklch, currentColor 18%, transparent);
   }
 
-  :host([variant='frost']) .btn:hover:not(:disabled) {
-    background: color-mix(in oklch, currentColor 30%, transparent);
+  @media (hover: hover) {
+    :host([variant='frost']) .btn:hover:not(:disabled) {
+      background: color-mix(in oklch, currentColor 30%, transparent);
+    }
   }
 
   :host([variant='frost']) .btn-large {
@@ -168,9 +172,11 @@
     border: var(--border) solid var(--_border-color);
   }
 
-  .btn-large:hover:not(:disabled) {
-    color: var(--text-color-heading);
-    background: var(--color-contrast-200);
+  @media (hover: hover) {
+    .btn-large:hover:not(:disabled) {
+      color: var(--text-color-heading);
+      background: var(--color-contrast-200);
+    }
   }
 
   .value {

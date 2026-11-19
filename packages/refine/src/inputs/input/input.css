@@ -152,6 +152,10 @@
     text-overflow: ellipsis;
     font: inherit;
     font-size: var(--_font-size);
+    @media (pointer: coarse) {
+      /* iOS focus zoom depends on CSS pixels, not the theme's root-relative scale. */
+      font-size: max(16px, var(--input-font-size, var(--_font-size)));
+    }
     line-height: var(--leading-normal);
 
     /* No all: unset needed - reset layer handles it */
@@ -174,8 +178,10 @@
        Hover & Focus States
        ======================================== */
 
-  :host(:not([disabled], [variant='bordered'], [variant='flat'])) .field:hover {
-    border-color: var(--color-contrast-400);
+  @media (hover: hover) {
+    :host(:not([disabled], [variant='bordered'], [variant='flat'])) .field:hover {
+      border-color: var(--color-contrast-400);
+    }
   }
 
   :host(:not([disabled])) .field:focus-within .label {
@@ -209,8 +215,10 @@
     transition: var(--_motion-transition, color var(--transition-fast));
   }
 
-  .clear-btn:hover {
-    color: var(--color-contrast-900);
+  @media (hover: hover) {
+    .clear-btn:hover {
+      color: var(--color-contrast-900);
+    }
   }
 
   .clear-btn:focus-visible {
@@ -249,8 +257,10 @@
     transition: var(--_motion-transition, color var(--transition-fast));
   }
 
-  .pwd-toggle-btn:hover {
-    color: var(--color-contrast-900);
+  @media (hover: hover) {
+    .pwd-toggle-btn:hover {
+      color: var(--color-contrast-900);
+    }
   }
 
   .pwd-toggle-btn:focus-visible {

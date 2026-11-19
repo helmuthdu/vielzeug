@@ -192,9 +192,11 @@
       color var(--transition-fast);
   }
 
-  .close:hover {
-    color: var(--color-contrast-900);
-    background: var(--color-contrast-200);
+  @media (hover: hover) {
+    .close:hover {
+      color: var(--color-contrast-900);
+      background: var(--color-contrast-200);
+    }
   }
 
   .close:focus-visible {

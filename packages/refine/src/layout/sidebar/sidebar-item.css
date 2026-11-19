@@ -69,8 +69,18 @@
     );
   }
 
+  @media (hover: hover) {
+    :host([disabled]) .item:hover {
+      color: var(--sidebar-item-disabled-color, var(--color-contrast-300));
+      pointer-events: none;
+      cursor: not-allowed;
+      outline: none;
+      background: none;
+      opacity: 1;
+    }
+  }
+
   :host([disabled]) .item,
-  :host([disabled]) .item:hover,
   :host([disabled]) .item:focus-visible {
     color: var(--sidebar-item-disabled-color, var(--color-contrast-300));
     pointer-events: none;
@@ -145,8 +155,10 @@
     background: none;
   }
 
-  :host([sidebar-collapsed]) .item:hover {
-    background: none;
+  @media (hover: hover) {
+    :host([sidebar-collapsed]) .item:hover {
+      background: none;
+    }
   }
 
   :host([sidebar-collapsed][active]) .item-icon {
@@ -157,9 +169,11 @@
     border-radius: var(--rounded-full);
   }
 
-  :host([sidebar-collapsed]) .item-icon:hover {
-    background: var(--color-contrast-100);
-    border-radius: var(--rounded-full);
+  @media (hover: hover) {
+    :host([sidebar-collapsed]) .item-icon:hover {
+      background: var(--color-contrast-100);
+      border-radius: var(--rounded-full);
+    }
   }
 
   /* Unified badge overlay logic for collapsed mode */
@@ -240,13 +254,24 @@
     display: none;
   }
 
-  :host([sidebar-collapsed]) .item:hover .item-reveal,
+  @media (hover: hover) {
+    :host([sidebar-collapsed]) .item:hover .item-reveal {
+      opacity: 1;
+      transform: translateY(-50%) scale(1);
+    }
+  }
+
   :host([sidebar-collapsed]) .item:focus-within .item-reveal {
     opacity: 1;
     transform: translateY(-50%) scale(1);
   }
 
-  :host([sidebar-collapsed]) .item:hover .item-reveal[data-side='left'],
+  @media (hover: hover) {
+    :host([sidebar-collapsed]) .item:hover .item-reveal[data-side='left'] {
+      transform: translate(-100%, -50%) scale(1);
+    }
+  }
+
   :host([sidebar-collapsed]) .item:focus-within .item-reveal[data-side='left'] {
     transform: translate(-100%, -50%) scale(1);
   }

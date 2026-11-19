@@ -62,10 +62,9 @@ export const srOnlyMixin = css`
  *    - `size="sm"` → md-scale tokens
  *    - `size="lg"` → nothing (already at max scale)
  *
- *    `--_font-size` is the exception: it floors at `--text-base` (16 px) at *every*
- *    size, including `sm`. iOS Safari zooms the whole page when a focused text
- *    control's computed font-size is below 16 px, so a coarse pointer never renders
- *    field text smaller than 16 px whatever `size` says (SC 1.4.4).
+ *    Default/md/sm text uses `--text-base`. Native editable controls additionally
+ *    enforce a 16 CSS pixel minimum in their own styles: a root-relative token
+ *    alone cannot prevent iOS focus zoom when the consumer reduces the root font.
  *
  * Ordering contract: this mixin must come **after** `sizeVariantMixin()` in a
  * component's `styles: [...]` array. Both sheets are unlayered, so on an equal-
@@ -109,7 +108,7 @@ export const touchTargetMixin = css`
       --_padding: var(--size-2-5) var(--size-5);
     }
 
-    /* sm size: promote the box to md scale; text stays at the 16 px iOS zoom floor */
+    /* sm size: promote the box and text to md-scale tokens */
     :host([size='sm']) {
       --_font-size: var(--text-base);
       --_gap: var(--size-2);

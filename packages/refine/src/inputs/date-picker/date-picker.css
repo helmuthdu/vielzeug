@@ -101,9 +101,11 @@
       color var(--transition-fast);
   }
 
-  .nav-btn:hover {
-    color: var(--color-contrast-900);
-    background: var(--color-contrast-300);
+  @media (hover: hover) {
+    .nav-btn:hover {
+      color: var(--color-contrast-900);
+      background: var(--color-contrast-300);
+    }
   }
 
   .nav-btn:focus-visible {
@@ -125,8 +127,10 @@
     transition: background var(--transition-fast);
   }
 
-  .cal-label-btn:hover {
-    background: var(--color-contrast-300);
+  @media (hover: hover) {
+    .cal-label-btn:hover {
+      background: var(--color-contrast-300);
+    }
   }
 
   .cal-label-btn:focus-visible {
@@ -198,9 +202,11 @@
     color: var(--color-contrast-800);
   }
 
-  .cal-cell-day:hover:not([data-disabled]) {
-    color: var(--color-contrast-900);
-    background: color-mix(in oklch, var(--_day-selected-bg) 15%, transparent);
+  @media (hover: hover) {
+    .cal-cell-day:hover:not([data-disabled]) {
+      color: var(--color-contrast-900);
+      background: color-mix(in oklch, var(--_day-selected-bg) 15%, transparent);
+    }
   }
 
   .cal-cell-day:focus-visible {
@@ -249,9 +255,11 @@
     border-radius: var(--rounded-md);
   }
 
-  .cal-cell-month:hover:not([data-disabled]),
-  .cal-cell-year:hover:not([data-disabled]) {
-    background: color-mix(in oklch, var(--_day-selected-bg) 15%, transparent);
+  @media (hover: hover) {
+    .cal-cell-month:hover:not([data-disabled]),
+    .cal-cell-year:hover:not([data-disabled]) {
+      background: color-mix(in oklch, var(--_day-selected-bg) 15%, transparent);
+    }
   }
 
   .cal-cell-month:focus-visible,

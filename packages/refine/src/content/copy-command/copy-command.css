@@ -82,8 +82,10 @@
     border-end-end-radius: 0;
   }
 
-  .command:hover {
-    background: var(--_hover-bg);
+  @media (hover: hover) {
+    .command:hover {
+      background: var(--_hover-bg);
+    }
   }
 
   .command:focus-visible {

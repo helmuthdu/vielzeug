@@ -46,8 +46,10 @@
     cursor: pointer;
   }
 
-  :host([collapsible]) .group-header:hover {
-    background: var(--color-contrast-100);
+  @media (hover: hover) {
+    :host([collapsible]) .group-header:hover {
+      background: var(--color-contrast-100);
+    }
   }
 
   :host([collapsible]) .group-header:focus-visible {

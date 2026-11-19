@@ -46,9 +46,11 @@
     background: transparent;
   }
 
-  .control::part(button):hover {
-    color: var(--text-color-body);
-    background: var(--_hover-bg);
+  @media (hover: hover) {
+    .control::part(button):hover {
+      color: var(--text-color-body);
+      background: var(--_hover-bg);
+    }
   }
 
   /* The gauge marks the pace control; the text names its step, and the widest step

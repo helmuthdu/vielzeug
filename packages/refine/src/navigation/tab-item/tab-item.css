@@ -88,9 +88,11 @@
 
   /* ─── Shared interactive states (read per-variant --_* tokens) ─── */
 
-  :host button:hover {
-    color: var(--tab-item-active-color, var(--text-color-heading));
-    background: var(--_hover-bg);
+  @media (hover: hover) {
+    :host button:hover {
+      color: var(--tab-item-active-color, var(--text-color-heading));
+      background: var(--_hover-bg);
+    }
   }
 
   /* The default active surface is the parent ore-tabs sliding pill (::part(indicator)):

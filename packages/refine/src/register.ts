@@ -13,3 +13,4 @@ import * as overlay from './overlay';
 
 // Exporting the namespaces makes every registration module part of the standalone bundle.
 export const components = { content, feedback, inputs, layout, navigation, overlay };
+export { createThemeController } from './theme';

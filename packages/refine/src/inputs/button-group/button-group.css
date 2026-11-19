@@ -54,9 +54,14 @@
   }
 
   /* Ensure attached buttons have proper z-index on hover/focus */
-  :host([attached]) ::slotted(ore-button:hover),
+  @media (hover: hover) {
+    :host([attached]) ::slotted(ore-button:hover),
+    :host([attached]) ::slotted(ore-tooltip:hover) {
+      position: relative;
+      z-index: 1;
+    }
+  }
   :host([attached]) ::slotted(ore-button:focus-within),
-  :host([attached]) ::slotted(ore-tooltip:hover),
   :host([attached]) ::slotted(ore-tooltip:focus-within) {
     position: relative;
     z-index: 1;

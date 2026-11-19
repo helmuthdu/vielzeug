@@ -47,8 +47,10 @@
 
   /* `flat` excluded: it gets its own theme-tinted hover/focus recipe below instead of the
      plain canvas-background one every other variant shares (mirrors `ore-textarea`). */
-  :host(:not([disabled], [variant='bordered'], [variant='flat'])) .composer:hover {
-    border-color: var(--color-contrast-400);
+  @media (hover: hover) {
+    :host(:not([disabled], [variant='bordered'], [variant='flat'])) .composer:hover {
+      border-color: var(--color-contrast-400);
+    }
   }
 
   :host([error]:not([error=''])) .composer {
@@ -100,6 +102,9 @@
     padding: 0;
     font: inherit;
     font-size: var(--_font-size);
+    @media (pointer: coarse) {
+      font-size: max(16px, var(--_font-size));
+    }
     line-height: var(--leading-relaxed);
     color: var(--text-color-body);
     resize: none;

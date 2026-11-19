@@ -136,8 +136,10 @@
     outline: var(--border) solid currentcolor;
     outline-offset: var(--size-0-5);
   }
-  .indicator:hover:not(:disabled) {
-    opacity: 0.8;
+  @media (hover: hover) {
+    .indicator:hover:not(:disabled) {
+      opacity: 0.8;
+    }
   }
   .indicator:disabled {
     opacity: 0.5;

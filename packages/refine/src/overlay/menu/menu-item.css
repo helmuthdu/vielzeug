@@ -26,9 +26,6 @@
     cursor: pointer;
     user-select: none;
     border-radius: 0;
-    transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
   }
 
   :host(:first-of-type) .item {
@@ -92,8 +89,10 @@
     --ore-icon-size: var(--menu-item-card-icon-size, var(--size-5));
   }
 
-  :host(:not([disabled])) .item:hover {
-    background: var(--_hover-bg);
+  @media (hover: hover) {
+    :host(:not([disabled])) .item:hover {
+      background: var(--_hover-bg);
+    }
   }
 
   /* Focus lands on the inner div — it is the role=menuitem roving target the

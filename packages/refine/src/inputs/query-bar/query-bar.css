@@ -583,8 +583,10 @@
     display: none;
   }
 
-  .clear-btn:hover {
-    color: var(--color-contrast-600);
+  @media (hover: hover) {
+    .clear-btn:hover {
+      color: var(--color-contrast-600);
+    }
   }
 
   .clear-btn:focus-visible {
@@ -651,13 +653,12 @@
     line-height: var(--leading-normal);
     cursor: pointer;
     border-radius: var(--rounded-sm);
-    transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
   }
 
-  .option:hover {
-    background: var(--_option-hover-bg);
+  @media (hover: hover) {
+    .option:hover {
+      background: var(--_option-hover-bg);
+    }
   }
 
   .option[data-focused] {
