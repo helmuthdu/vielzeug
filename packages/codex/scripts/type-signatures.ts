@@ -21,13 +21,9 @@ export interface PackageExports {
 function kindOf(symbol: ts.Symbol): ExportEntry['kind'] | null {
   const declared = symbol.valueDeclaration ?? symbol.declarations?.find((d) => !ts.isTypeOnlyExportDeclaration(d));
 
-  if (!declared) {
-    // Type-only symbols (interfaces, aliases) have no valueDeclaration; map from flags.
-    if (symbol.flags & ts.SymbolFlags.Interface) return 'interface';
-    if (symbol.flags & ts.SymbolFlags.TypeAlias) return 'type';
-
-    return null;
-  }
+  if (!declared) return null;
+  if (ts.isInterfaceDeclaration(declared)) return 'interface';
+  if (ts.isTypeAliasDeclaration(declared)) return 'type';
   if (ts.isClassDeclaration(declared)) return 'class';
   if (ts.isFunctionDeclaration(declared)) return 'function';
   if (ts.isVariableDeclaration(declared)) {

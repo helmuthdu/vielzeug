@@ -95,7 +95,8 @@ the runtime reads it without re-validating. A snapshot carries:
 - `version` — the codex version it was generated from; the loader refuses a mismatch.
 - `packages` — per package: metadata, docs pages as markdown keyed by page path, heading sections
   with offsets into the stored page text, REPL examples, and checker-resolved exports with their
-  real declaration text and JSDoc.
+  real declaration text and JSDoc. This includes type aliases and interfaces, including
+  type-only re-exports resolved to their original declarations.
 - `components` — Refine custom elements projected from the Custom Elements Manifest.
 - `tokens` — theme custom properties from `theme.css` with values and notes.
 
