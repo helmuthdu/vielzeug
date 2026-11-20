@@ -54,7 +54,7 @@ function estWidth(text: string): number {
  * color; one that fits neither way is skipped rather than clipped.
  */
 export function renderBarValueLabels(group: SVGGElement, labels: BarValueLabel[], options: BarValueLabelOptions): void {
-  while (group.firstChild) group.removeChild(group.firstChild);
+  group.replaceChildren();
 
   for (const label of labels) {
     const width = estWidth(label.text);

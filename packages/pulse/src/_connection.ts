@@ -83,14 +83,9 @@ export function createConnection(
 
     socket = nextSocket;
 
-    let resolveOpening: () => void;
-    let rejectOpeningPromise: (error: PulseConnectionError) => void;
-    const promise = new Promise<void>((resolve, reject) => {
-      resolveOpening = resolve;
-      rejectOpeningPromise = reject;
-    });
+    const { promise, resolve, reject } = Promise.withResolvers<void>();
 
-    opening = { promise, reject: rejectOpeningPromise!, resolve: resolveOpening!, socket: nextSocket };
+    opening = { promise, reject, resolve, socket: nextSocket };
 
     nextSocket.onopen = (): void => {
       if (socket !== nextSocket || !desired) {

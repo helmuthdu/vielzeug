@@ -103,7 +103,7 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
   let undoButton: HTMLElement | null = null;
   let redoButton: HTMLElement | null = null;
 
-  container.innerHTML = '';
+  container.replaceChildren();
 
   const viewport = document.createElement('div');
   viewport.className = 'studio-viewport flow-viewport';
@@ -690,7 +690,7 @@ export function mountFlowScene(container: HTMLElement): SceneHandle {
       ledger.dispose();
       camera.dispose();
       model.dispose();
-      container.innerHTML = '';
+      container.replaceChildren();
     },
     dock: toolbarParent,
     // Same framing as the initial mount: frame the current graph for the viewport.

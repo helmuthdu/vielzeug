@@ -22,7 +22,7 @@ const escapeRegistries = new WeakMap<Document, EscapeRegistry>();
 const onDocumentEscape = (registry: EscapeRegistry, event: KeyboardEvent): void => {
   if (event.key !== 'Escape' || event.defaultPrevented) return;
 
-  for (const entry of [...registry.surfaces].reverse()) {
+  for (const entry of [...registry.surfaces].toReversed()) {
     if (!entry.isActive()) continue;
 
     event.preventDefault();

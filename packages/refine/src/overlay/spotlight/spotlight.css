@@ -1,9 +1,10 @@
 @layer refine.base {
   :host {
     /* A scrim is always a darkening veil; --color-scrim carries the per-scheme
-       alpha. The token lives in theme.css because component CSS is compiled by
-       lightningcss, which rewrites light-dark() inside custom properties into
-       var() switches that nothing defines. */
+       alpha. The token lives in theme.css because it is shared cross-component
+       vocabulary, not because light-dark() is unavailable here: theme.css
+       defines the --lightningcss-* scheme switches on `html`, so component
+       light-dark() resolves against the `html.dark` contract. */
     --_dim: var(--spotlight-dim, var(--color-scrim));
     --_ring: var(--spotlight-ring, none);
     --_geometry-transition: var(--spotlight-transition, var(--duration-250) var(--ease-spring));

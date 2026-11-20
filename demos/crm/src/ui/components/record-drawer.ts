@@ -138,7 +138,7 @@ define('crm-record-drawer', {
         })
         .slice(0, 6),
     );
-    const timelineActivities = computed(() => activities.value.slice().reverse());
+    const timelineActivities = computed(() => activities.value.toReversed());
     const move = (event: Event): void => {
       const current = opportunity.value;
       const detail = (event as CustomEvent<{ value?: string; values?: string[] }>).detail;

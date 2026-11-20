@@ -28,12 +28,7 @@ export async function joinTavern<Mounted>(options: TavernGuestOptions<Mounted>):
   const tappers = createTappers<TavernGuestEvent>();
   let mounted: Mounted | null = null;
   let ended = false;
-  let resolveReady!: (subject: Mounted) => void;
-  let rejectReady!: (error: Error) => void;
-  const ready = new Promise<Mounted>((resolve, reject) => {
-    resolveReady = resolve;
-    rejectReady = reject;
-  });
+  const { promise: ready, resolve: resolveReady, reject: rejectReady } = Promise.withResolvers<Mounted>();
   // A ready the consumer never awaits must not surface as an unhandled rejection.
   void ready.catch(() => undefined);
 

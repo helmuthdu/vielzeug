@@ -11,11 +11,13 @@ for (const sourcererModule of modules) {
     });
     throw new Error('expected invalid configuration');
   } catch (error) {
-    if (!(error instanceof sourcererModule.SourcererError)) throw new Error('SourcererError identity mismatch');
+    if (!(error instanceof sourcererModule.SourcererError))
+      throw new Error('SourcererError identity mismatch', { cause: error });
     if (!(error instanceof sourcererModule.SourcererConfigurationError)) {
-      throw new Error('SourcererConfigurationError identity mismatch');
+      throw new Error('SourcererConfigurationError identity mismatch', { cause: error });
     }
-    if (error.name !== 'SourcererConfigurationError') throw new Error(`unexpected error name: ${error.name}`);
+    if (error.name !== 'SourcererConfigurationError')
+      throw new Error(`unexpected error name: ${error.name}`, { cause: error });
   }
 
   const source = sourcererModule.createPageSource({

@@ -95,7 +95,7 @@ chart.dispose();
 resetTheme({ scope });
 ```
 
-For a dark/light toggle without a stylesheet, set `data-prism-theme="dark"` on the container (or any ancestor): the shipped theme ships the same dark token block for `[data-prism-theme='dark']` as for `html.dark`.
+For a dark/light toggle without a stylesheet, set `data-prism-theme="dark"` (or `"light"`) on the container or any ancestor: the shipped theme narrows the inherited `color-scheme` for that subtree, exactly as `html.dark` / `html.light` do for the page.
 
 ### Pitfalls
 

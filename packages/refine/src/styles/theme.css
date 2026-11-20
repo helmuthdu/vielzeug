@@ -881,12 +881,23 @@
   /* mode": any consumer, not just this repo's own docs site, can rely on   */
 
   /* this class toggle. */
+  /* The `--lightningcss-*` pair are the switches lightningcss lowers every
+     component-side `light-dark(A, B)` into (`var(--lightningcss-light, A)
+     var(--lightningcss-dark, B)`): a switch defined empty kills its own side,
+     the undefined one lets the other fall back. Defining the pair per scheme
+     here lets component CSS author `light-dark()` directly instead of
+     mirroring tokens in this file. They track the same `.dark` class as
+     `color-scheme`, never `prefers-color-scheme`. */
   html.dark {
     --surface-overlay: var(--color-contrast-200);
+    --lightningcss-light: initial;
+    --lightningcss-dark: ;
     color-scheme: dark;
   }
 
   html:not(.dark) {
+    --lightningcss-light: ;
+    --lightningcss-dark: initial;
     color-scheme: light;
   }
 

@@ -20,10 +20,22 @@
   }
 
   .tooltip {
-    --_tooltip-fg: var(--color-contrast-100);
-    --_tooltip-bg: color-mix(in oklch, var(--color-contrast-900) 80%, transparent);
+    /* Scheme-pinned ink: a dark bubble with light ink, mirrored per scheme.
+       light-dark() resolves through the --lightningcss-* switches that
+       theme.css defines on `html` (the `html.dark` contract), never
+       `prefers-color-scheme`. */
+    --_tooltip-fg: light-dark(var(--color-contrast-100), var(--color-contrast-900));
+    --_tooltip-bg: color-mix(
+      in oklch,
+      light-dark(var(--color-contrast-900), var(--color-contrast-100)) 80%,
+      transparent
+    );
     --_tooltip-border-width: var(--border);
-    --_tooltip-border-color: color-mix(in oklch, var(--color-contrast-100) 12%, transparent);
+    --_tooltip-border-color: color-mix(
+      in oklch,
+      light-dark(var(--color-contrast-100), var(--color-contrast-900)) 12%,
+      transparent
+    );
     --_tooltip-shadow: var(--shadow-md);
     --_tooltip-closed-transform: translateY(4px) scale(0.98);
 
@@ -46,14 +58,6 @@
     backdrop-filter: blur(var(--blur-sm));
     transform: var(--_tooltip-closed-transform);
     transition: var(--_overlay-dismiss);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .tooltip {
-      --_tooltip-fg: var(--color-contrast-900);
-      --_tooltip-bg: color-mix(in oklch, var(--color-contrast-100) 80%, transparent);
-      --_tooltip-border-color: color-mix(in oklch, var(--color-contrast-900) 12%, transparent);
-    }
   }
 
   .tooltip-text {
@@ -97,20 +101,20 @@
 }
 
 @layer refine.variants {
-  /* Light tooltip */
+  /* Light tooltip: the mirror of the default ink, same scheme switches. */
   :host([variant='light']) .tooltip {
-    --_tooltip-fg: var(--color-contrast-900);
-    --_tooltip-bg: color-mix(in oklch, var(--color-contrast-100) 80%, transparent);
-    --_tooltip-border-color: color-mix(in oklch, var(--color-contrast-900) 12%, transparent);
+    --_tooltip-fg: light-dark(var(--color-contrast-900), var(--color-contrast-100));
+    --_tooltip-bg: color-mix(
+      in oklch,
+      light-dark(var(--color-contrast-100), var(--color-contrast-900)) 80%,
+      transparent
+    );
+    --_tooltip-border-color: color-mix(
+      in oklch,
+      light-dark(var(--color-contrast-900), var(--color-contrast-100)) 12%,
+      transparent
+    );
     --_tooltip-shadow: var(--shadow-md);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :host([variant='light']) .tooltip {
-      --_tooltip-fg: var(--color-contrast-100);
-      --_tooltip-bg: color-mix(in oklch, var(--color-contrast-900) 80%, transparent);
-      --_tooltip-border-color: color-mix(in oklch, var(--color-contrast-100) 12%, transparent);
-    }
   }
 }
 

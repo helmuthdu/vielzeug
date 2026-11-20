@@ -602,6 +602,21 @@ describe('ore-query-bar', () => {
       expect(host.state).toEqual({ text: '', tokens: [{ key: 'author', value: 'alice' }] });
     });
 
+    it('Enter that confirms an IME composition does not pick the highlighted suggestion', async () => {
+      const host = await mountBar();
+
+      await typeInto('author:');
+      fireKeyDown(getInput()!, { key: 'ArrowDown' });
+      await fixture.flush();
+
+      fireKeyDown(getInput()!, { isComposing: true, key: 'Enter' });
+      await fixture.flush();
+      // The composition commit passes through untouched: no pill, draft still in the field.
+      expect(host.state?.tokens).toEqual([]);
+      expect(pills()).toEqual([]);
+      expect(getInput()?.value).toBe('author:');
+    });
+
     it('ArrowUp from no highlight wraps to the last suggestion', async () => {
       await mountBar();
 

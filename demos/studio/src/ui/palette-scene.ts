@@ -48,7 +48,7 @@ function wcagBadge(ratio: number): { label: string; state: 'ok' | 'warn' | 'fail
  * WCAG contrast badges, a two-color mix strip, and readable-text selection.
  */
 export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
-  container.innerHTML = '';
+  container.replaceChildren();
 
   const root = document.createElement('div');
   root.className = 'palette-root';
@@ -150,7 +150,7 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
     }
 
     // Formats: each conversion can be copied to the clipboard.
-    formatsEl.innerHTML = '';
+    formatsEl.replaceChildren();
     for (const [name, value] of [
       ['hex', toHex(base, { alpha: true })],
       ['rgb', toRgbString(base)],
@@ -176,7 +176,7 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
     }
 
     // Contrast against white and black
-    contrastEl.innerHTML = '';
+    contrastEl.replaceChildren();
     for (const [name, bg] of [
       ['on white', WHITE],
       ['on black', BLACK],
@@ -195,7 +195,7 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
     }
 
     // Lightness ramp: clicking a swatch re-bases the scene
-    rampEl.innerHTML = '';
+    rampEl.replaceChildren();
     for (const swatchColor of ramp(base, RAMP)) {
       const el = swatch(swatchColor, 'palette-ramp-swatch', true);
       el.addEventListener('click', () => {
@@ -206,7 +206,7 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
     }
 
     // Mix strip toward the second color
-    mixEl.innerHTML = '';
+    mixEl.replaceChildren();
     let second: Rgba | null = null;
     try {
       second = parseColor(mixField.value);
@@ -254,7 +254,7 @@ export function mountPaletteScene(container: HTMLElement): { dispose(): void } {
       mixField.removeEventListener('input', render);
       mixField.removeEventListener('change', render);
       picker.removeEventListener('change', onPick);
-      container.innerHTML = '';
+      container.replaceChildren();
     },
   };
 }

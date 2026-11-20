@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "preserve error cause in export verification failures",
+      "packageName": "@vielzeug/ripple",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

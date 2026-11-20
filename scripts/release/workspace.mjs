@@ -25,7 +25,7 @@ function readManifests(root) {
       pkg = JSON.parse(readFileSync(path.join(root, folder, 'package.json'), 'utf8'));
     } catch (err) {
       if (err.code === 'ENOENT') continue; // half-scaffolded package directory
-      throw new Error(`${folder}/package.json: ${err.message}`);
+      throw new Error(`${folder}/package.json: ${err.message}`, { cause: err });
     }
 
     if (typeof pkg.name !== 'string') continue;

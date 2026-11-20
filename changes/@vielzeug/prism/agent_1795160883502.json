@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "modernize dark mode to color-scheme and light-dark() tokens",
+      "packageName": "@vielzeug/prism",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

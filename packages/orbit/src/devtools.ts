@@ -105,7 +105,7 @@ export function debugPositioner(
   document.body.appendChild(overlay);
 
   function renderOverlay(result: ComputePositionResult): void {
-    overlay.innerHTML = '';
+    overlay.replaceChildren();
 
     // Viewport boundary.
     overlay.appendChild(createOutlineBox(1, 1, window.innerWidth - 2, window.innerHeight - 2, 'rgba(0,100,255,0.3)'));

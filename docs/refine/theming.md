@@ -45,6 +45,8 @@ document.documentElement.classList.toggle('dark'); // toggle
 
 Dark mode works automatically from the OS preference. The `.dark` class overrides it. No `@media (prefers-color-scheme)` blocks needed: every color token uses `light-dark()` and resolves based on the active `color-scheme`.
 
+Component stylesheets do the same. The build lowers `light-dark()` into `var(--lightningcss-light, …) var(--lightningcss-dark, …)` switches, and `theme.css` defines those switches on `html` alongside the `color-scheme` declarations, so a component's `light-dark()` resolves against the `.dark` class exactly like the tokens do. When authoring component CSS, reach for `light-dark()` directly instead of a `prefers-color-scheme` block.
+
 For an instant palette change without staggered component color transitions, use [`createThemeController`](./api.md#createthemecontrolleroptions):
 
 ```ts

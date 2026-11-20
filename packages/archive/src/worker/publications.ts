@@ -267,9 +267,9 @@ export async function listEntries(
 /** The collection's public self-description: name plus the declared query vocabularies. */
 export function collectionMeta(collection: ArchiveCollection): Response {
   const parsed = archiveCollectionMetaSchema.safeParse({
-    filters: [...collection.filters].sort(),
+    filters: collection.filters.toSorted(),
     name: collection.name,
-    tags: [...collection.tags].sort(),
+    tags: collection.tags.toSorted(),
   });
   if (!parsed.success) throw recordUnavailable();
   return json(200, parsed.data, noStore);

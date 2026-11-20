@@ -4,7 +4,7 @@ import { elementDirection } from '../direction';
 
 describe('elementDirection()', () => {
   afterEach(() => {
-    document.body.innerHTML = '';
+    document.body.replaceChildren();
     document.documentElement.removeAttribute('dir');
   });
 

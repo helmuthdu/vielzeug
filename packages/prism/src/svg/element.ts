@@ -32,7 +32,5 @@ export function setAttributes(el: SVGElement, attrs: Record<string, number | str
 }
 
 export function removeChildren(el: SVGElement): void {
-  while (el.firstChild) {
-    el.removeChild(el.firstChild);
-  }
+  el.replaceChildren();
 }

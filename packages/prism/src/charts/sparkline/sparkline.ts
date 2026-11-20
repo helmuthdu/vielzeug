@@ -174,7 +174,7 @@ export function createSparkline(
     const { height: h, width: w } = base.dimensions;
     const plot = plotArea();
 
-    while (innerGroup.firstChild) innerGroup.removeChild(innerGroup.firstChild);
+    innerGroup.replaceChildren();
 
     innerGroup.setAttribute('transform', `translate(${plot.inset},${plot.inset})`);
 

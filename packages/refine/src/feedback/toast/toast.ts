@@ -648,7 +648,7 @@ define<OreToastProps>(TOAST_TAG, {
       if (event.key !== 'Escape' || event.defaultPrevented || modalPaused.value) return;
       if (focusPaused.value) return;
 
-      const newest = [...entries.value].reverse().find((entry) => entry.dismissible && entry.phase !== 'exiting');
+      const newest = entries.value.findLast((entry) => entry.dismissible && entry.phase !== 'exiting');
 
       if (newest) {
         event.preventDefault();

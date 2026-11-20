@@ -72,7 +72,7 @@ export function sort<T>(
   if (typeof selectorOrSelectors === 'function') {
     const multiplier = direction === 'desc' ? -1 : 1;
 
-    return [...array].sort((a, b) => compare(selectorOrSelectors(a), selectorOrSelectors(b)) * multiplier);
+    return array.toSorted((a, b) => compare(selectorOrSelectors(a), selectorOrSelectors(b)) * multiplier);
   }
 
   if (isCriteriaForm(selectorOrSelectors)) {
@@ -81,7 +81,7 @@ export function sort<T>(
       path: String(key),
     }));
 
-    return [...array].sort((a, b) => {
+    return array.toSorted((a, b) => {
       for (const { multiplier, path } of criteria) {
         const result = compare(getPath(a, path), getPath(b, path)) * multiplier;
 
@@ -92,5 +92,5 @@ export function sort<T>(
     });
   }
 
-  return [...array].sort(compareBy(selectorOrSelectors));
+  return array.toSorted(compareBy(selectorOrSelectors));
 }

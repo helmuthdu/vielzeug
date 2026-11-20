@@ -278,7 +278,7 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
 
     const column = options.columns.value.find((candidate) => candidate.key === key);
 
-    return rows.slice().sort((a, b) => {
+    return rows.toSorted((a, b) => {
       const aValue = column?.sortValue ? column.sortValue(a) : (a[key] as number | string);
       const bValue = column?.sortValue ? column.sortValue(b) : (b[key] as number | string);
       const comparison =

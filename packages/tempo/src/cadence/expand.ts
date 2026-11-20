@@ -331,7 +331,7 @@ export function* resolveCadenceDates(
   options: CadenceDatesOptions = {},
 ): Generator<Temporal.ZonedDateTime, void, undefined> {
   const exceptions = new Set((options.exdate ?? []).map((zdt) => zdt.toInstant().toString()));
-  const extras = [...(options.rdate ?? [])].sort((a, b) => Temporal.Instant.compare(a.toInstant(), b.toInstant()));
+  const extras = (options.rdate ?? []).toSorted((a, b) => Temporal.Instant.compare(a.toInstant(), b.toInstant()));
   const emitted = new Set<string>();
   const limit = options.limit ?? 10_000;
   let emittedCount = 0;
