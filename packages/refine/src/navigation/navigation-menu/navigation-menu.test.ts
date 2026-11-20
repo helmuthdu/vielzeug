@@ -192,7 +192,7 @@ describe('ore-navigation-menu', () => {
     const panel = fixture.element.querySelector<HTMLElement>('ore-navigation-menu-panel');
     const firstLink = panel?.querySelector<HTMLAnchorElement>('a[href="/first"]');
 
-    if (!trigger || !panel || !firstLink) throw new Error('Expected trigger, panel, and first link');
+    if (!item || !trigger || !panel || !firstLink) throw new Error('Expected trigger, panel, and first link');
 
     fireClick(trigger);
     trigger.focus();

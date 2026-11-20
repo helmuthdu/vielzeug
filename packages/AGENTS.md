@@ -1,25 +1,17 @@
 # AGENTS.md: Packages
 
-Every `packages/<name>/` is an independent, publishable `@vielzeug/*` library. `.agents/conventions.md` is the full engineering contract for package source: read it before editing any package. Package facts come from `packages/<name>/package.json` (summarized in the generated `.agents/reference/packages.md`); usage docs live in `docs/<name>/`.
+> Read when: editing source under any `packages/<name>/` directory.
+
+Every `packages/<name>/` is an independent, publishable `@vielzeug/*` library. `.agents/conventions.md` is the full engineering contract for package source: read it before editing any package. Package facts come from `packages/<name>/package.json`; the generated [`.agents/reference/packages.md`](../.agents/reference/packages.md) indexes every package's sub-paths, docs directory, and local `AGENTS.md`; usage docs live in `docs/<name>/`.
 
 ## Standard shape
 
-`src/index.ts` (root public surface; approved subpaths are declared in the manifest), `src/__tests__/` (Vitest), `vite.config.ts` + `vite.bundle.config.ts` (ESM + CJS + IIFE), `tsconfig.json` / `tsconfig.declarations.json` (strict), `README.md`. Create new packages with `bun run new:package`.
+`src/index.ts` (root public surface; approved subpaths are declared in the manifest), `src/__tests__/` (Vitest), `vite.config.ts` + `vite.bundle.config.ts` (ESM + CJS + IIFE), `tsconfig.json` / `tsconfig.declarations.json` (strict), `README.md`. New packages come from `bun run new:package` (owner: `.agents/conventions.md` → New packages).
 
 ## Verification
 
-Default gates live in root `AGENTS.md` → **Project profile** (Commands and Validation gates). Package-specific additions belong in this package's `AGENTS.md` only when they differ.
-
-- Tests: `bun x vitest run packages/<name>/src/__tests__/`
-- Lint: `bun run --filter @vielzeug/<name> lint`
-- Build: `bun run --filter @vielzeug/<name> build`
+Default gates live in root `AGENTS.md` → **Project profile** (Commands and Validation gates). A package's own `AGENTS.md` lists only what differs from them.
 
 ## Packages with local rules
 
-Most packages need no `AGENTS.md`; only these carry rules beyond the conventions.
-
-- `packages/archive/AGENTS.md`: community content Worker core and passwordless issuer; browser-safe root plus `./worker` and `./auth` subpaths; package-owned D1 initialization; real-workerd integration suite.
-- `packages/ore/AGENTS.md`: web-component authoring primitives; `./testing` sub-path; narrow a11y contract.
-- `packages/prism/AGENTS.md`: reactive SVG charting; DOM-output; a11y hard requirement.
-- `packages/refine/AGENTS.md`: component library; manifest-driven exports; library-neutral core and structural icon adapters; optional Lucide peer only for the opt-in full-set registrar; design modes.
-- `packages/codex/AGENTS.md`: MCP server + CLI; bundles docs at build time.
+Most packages need no `AGENTS.md`. The authoritative list of packages that carry rules beyond the conventions is the generated **Subtree AGENTS.md index** in root `AGENTS.md` — read a package's file when its `Read when:` condition matches your task.

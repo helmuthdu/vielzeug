@@ -1,5 +1,7 @@
 # AGENTS.md: prism
 
+> Read when: working on `@vielzeug/prism` charts.
+
 Responsive SVG charting library with explicit data updates. Each chart factory mounts an `<svg>` into a host container and returns a typed `ChartHandle` with `update()` and `dispose()`.
 
 ## Local contracts
@@ -20,8 +22,4 @@ Responsive SVG charting library with explicit data updates. Each chart factory m
 
 ## Verification
 
-Default gates: root `AGENTS.md` → **Project profile**.
-
-- Tests: `bun x vitest run packages/prism/src/__tests__/` (or `bun run --filter @vielzeug/prism test`)
-- Lint: `bun run --filter @vielzeug/prism lint`
-- Build: `bun run --filter @vielzeug/prism build`
+Default gates: root `AGENTS.md` → **Project profile** (Package source). `bun run --filter @vielzeug/prism test` is the package's own alternative to the focused vitest path.

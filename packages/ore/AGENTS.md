@@ -1,5 +1,7 @@
 # AGENTS.md: ore
 
+> Read when: working on `@vielzeug/ore` primitives; breaking changes here cascade to `refine`.
+
 Functional web-component authoring primitives built on `ripple`; the foundation `refine` is built on. Output is real DOM / custom elements. Depends on `@vielzeug/ripple` (`workspace:*`); `@vielzeug/assay` is an **optional peer** (`workspace:^`) used only by the `./testing` sub-path: production consumers never install it, and the `^` keeps the published peer range from going stale on every assay bump. Breaking changes here cascade to `refine`.
 
 ## Local contracts
@@ -27,9 +29,4 @@ Functional web-component authoring primitives built on `ripple`; the foundation 
 
 ## Verification
 
-Default gates: root `AGENTS.md` → **Project profile**. Package-specific additions below.
-
-- Tests: `bun x vitest run packages/ore/src/__tests__/`
-- Lint: `bun run --filter @vielzeug/ore lint`
-- Build: `bun run --filter @vielzeug/ore build`
-- Downstream: `bun x vitest run packages/refine/src/` after API changes.
+Default gates: root `AGENTS.md` → **Project profile** (Package source). Addition: after API changes, also run `bun x vitest run packages/refine/src/` — refine is the downstream consumer whose tests catch cascading breaks.

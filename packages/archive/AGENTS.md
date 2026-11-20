@@ -1,5 +1,7 @@
 # AGENTS.md: Archive
 
+> Read when: working on `@vielzeug/archive` (Cloudflare Workers + D1 content publishing).
+
 Community content publishing for Cloudflare Workers + D1: a hardened catalog Worker
 core over per-collection payload schemas, plus the reference passwordless identity
 issuer that mints the sessions it verifies. Consumers are deployments (the two
@@ -190,11 +192,9 @@ server subpaths) and their browsers (the root contract).
 
 ## Verification
 
-Default gates: root `AGENTS.md` → **Project profile**. Archive-specific commands use Bun, matching the root `packageManager`, and the scripts declared in `package.json`.
+Default gates: root `AGENTS.md` → **Project profile** (Package source). Archive-specific additions:
 
-- Unit (fast, hermetic): `bun x vitest run packages/archive/src/__tests__/`
 - Types: `bun run --filter @vielzeug/archive test:types`
 - Integration (real workerd + local D1): `bun run --filter @vielzeug/archive test:integration` — fixtures generate Wrangler configs into isolated run dirs; never start a second suite run until the previous one has fully exited.
 - Exercise the canonical catalog/auth DDL directly; issuer production workerd coverage must run the package factory, not only a signing fixture.
-- Lint/build: `bun run --filter @vielzeug/archive lint` / `build`
 - Deployment-adapter consumers: run the deployment's catalog and issuer smoke tests.

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix navigation menu test typecheck",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}
