@@ -98,7 +98,7 @@ export function renderScatterPoints(parent: SVGGElement, points: Point[], option
   // moving points all share lane 0 so an update never crawls.
   const entering = points.map((_, i) => i).filter((i) => i >= drawn.length);
   const lanes = new Map(
-    [...entering].sort((a, b) => points[a].x - points[b].x).map((pointIndex, lane) => [pointIndex, lane]),
+    entering.toSorted((a, b) => points[a].x - points[b].x).map((pointIndex, lane) => [pointIndex, lane]),
   );
   const stagger = Math.min(motion.stagger, MAX_STAGGER_TOTAL / Math.max(1, entering.length));
 

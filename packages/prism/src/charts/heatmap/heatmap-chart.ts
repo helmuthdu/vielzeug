@@ -495,7 +495,7 @@ export function createHeatmapChart(container: HTMLElement, config: HeatmapChartC
 function buildBinBounds(bins: number[] | undefined): Array<[number | null, number | null]> {
   if (!bins || bins.length === 0) return [];
 
-  const thresholds = [...bins].sort((a, b) => a - b);
+  const thresholds = bins.toSorted((a, b) => a - b);
   const bounds: Array<[number | null, number | null]> = [];
   let lower: number | null = null;
 

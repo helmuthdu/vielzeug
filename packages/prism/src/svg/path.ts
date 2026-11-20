@@ -70,7 +70,7 @@ export function areaPath(
   const topPath =
     curve === 'monotone' ? monotonePath(topPoints) : curve === 'step' ? stepPath(topPoints) : linePath(topPoints);
   let d = topPath;
-  const reversed = [...bottomPoints].reverse();
+  const reversed = bottomPoints.toReversed();
 
   if (reversed.length > 0) {
     d += `L${reversed[0].x},${reversed[0].y}`;

@@ -6,14 +6,14 @@
        Distinguishable under deuteranopia, protanopia, and tritanopia.
        Ordered for maximum perceptual contrast between adjacent series.
        ======================================== */
-    --prism-color-1: #0072b2; /* Blue */
+    --prism-color-1: light-dark(#0072b2, #56b4e9); /* Blue (sky blue in dark) */
     --prism-color-2: #e69f00; /* Orange */
     --prism-color-3: #009e73; /* Bluish green */
     --prism-color-4: #cc79a7; /* Reddish purple */
-    --prism-color-5: #56b4e9; /* Sky blue */
+    --prism-color-5: light-dark(#56b4e9, #0072b2); /* Sky blue (blue in dark) */
     --prism-color-6: #d55e00; /* Vermilion */
     --prism-color-7: #f0e442; /* Yellow */
-    --prism-color-8: #000; /* Black */
+    --prism-color-8: light-dark(#000, #fff); /* Black (white in dark) */
 
     /* ========================================
        Chart Structure
@@ -28,17 +28,17 @@
        ======================================== */
     --prism-axis-color: hsl(215deg 16% 47%);
     --prism-axis-width: 1;
-    --prism-grid-color: hsl(220deg 10% 75%);
+    --prism-grid-color: light-dark(hsl(220deg 10% 75%), hsl(220deg 10% 25%));
     --prism-grid-width: 1;
     --prism-grid-dash: none;
-    --prism-grid-opacity: 0.25;
+    --prism-grid-opacity: light-dark(0.25, 0.5);
 
     /* ========================================
        Typography
        Chart labels, ticks, and titles
        ======================================== */
-    --prism-text-color: hsl(215deg 25% 27%);
-    --prism-text-color-secondary: hsl(215deg 16% 47%);
+    --prism-text-color: light-dark(hsl(215deg 25% 27%), hsl(214deg 32% 91%));
+    --prism-text-color-secondary: light-dark(hsl(215deg 16% 47%), hsl(215deg 16% 57%));
     --prism-font-family: system-ui, -apple-system, sans-serif;
     --prism-font-size: 0.75rem;
     --prism-font-size-label: 0.6875rem;
@@ -50,19 +50,19 @@
        Tooltip
        Floating data detail overlay
        ======================================== */
-    --prism-tooltip-bg: hsl(222deg 47% 11%);
-    --prism-tooltip-color: hsl(210deg 40% 98%);
-    --prism-tooltip-border: hsl(215deg 19% 25%);
+    --prism-tooltip-bg: light-dark(hsl(222deg 47% 11%), hsl(222deg 47% 6%));
+    --prism-tooltip-color: light-dark(hsl(210deg 40% 98%), hsl(210deg 40% 96%));
+    --prism-tooltip-border: light-dark(hsl(215deg 19% 25%), hsl(215deg 19% 18%));
     --prism-tooltip-radius: 0.375rem;
     --prism-tooltip-padding: 0.375rem 0.625rem;
-    --prism-tooltip-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+    --prism-tooltip-shadow: light-dark(0 4px 12px rgb(0 0 0 / 12%), 0 4px 12px rgb(0 0 0 / 40%));
     --prism-tooltip-font-size: 0.75rem;
 
     /* ========================================
        Crosshair
        Hover guide lines
        ======================================== */
-    --prism-crosshair-color: hsl(215deg 16% 47%);
+    --prism-crosshair-color: light-dark(hsl(215deg 16% 47%), hsl(215deg 16% 57%));
     --prism-crosshair-width: 1;
     --prism-crosshair-dash: 4 2;
     --prism-crosshair-opacity: 0.6;
@@ -165,58 +165,43 @@
     --prism-legend-gap: 1rem;
     --prism-legend-dot-size: 0.5rem;
     --prism-legend-font-size: 0.75rem;
+    /* Declaring both schemes lets `light-dark()` tokens below follow the OS
+       preference, while `html.dark` / `html.light` / `[data-prism-theme]`
+       force one scheme by narrowing `color-scheme` (inherited, so a scoped
+       attribute re-schemes its whole subtree). No `prefers-color-scheme`
+       blocks: the scheme is the single dark-mode mechanism. */
+    color-scheme: light dark;
   }
 
   /* ========================================
      Dark Mode
-     Triggers: OS preference, html.dark, or [data-prism-theme='dark'] on any
+     Triggers: OS preference (via `color-scheme: light dark` on :root),
+     html.dark / html.light, or [data-prism-theme='dark'/'light'] on any
      ancestor of the chart (the hook for apps that switch theme in JS without
-     touching <html>, e.g. MUI/Backstage palette toggles).
+     touching <html>, e.g. MUI/Backstage palette toggles). Each trigger just
+     narrows the inherited `color-scheme`, and every themed token is a
+     `light-dark()` pair, so one mechanism covers all triggers.
      ======================================== */
-  @media (prefers-color-scheme: dark) {
-    :root:not(.light) {
-      --prism-color-1: #56b4e9; /* Sky blue (brighter in dark) */
-      --prism-color-2: #e69f00; /* Orange */
-      --prism-color-3: #009e73; /* Bluish green */
-      --prism-color-4: #cc79a7; /* Reddish purple */
-      --prism-color-5: #0072b2; /* Blue */
-      --prism-color-6: #d55e00; /* Vermilion */
-      --prism-color-7: #f0e442; /* Yellow */
-      --prism-color-8: #fff; /* White (replaces black for dark bg) */
-      --prism-axis-color: hsl(215deg 16% 47%);
-      --prism-grid-color: hsl(220deg 10% 25%);
-      --prism-grid-opacity: 0.5;
-      --prism-text-color: hsl(214deg 32% 91%);
-      --prism-text-color-secondary: hsl(215deg 16% 57%);
-      --prism-tooltip-bg: hsl(222deg 47% 6%);
-      --prism-tooltip-color: hsl(210deg 40% 96%);
-      --prism-tooltip-border: hsl(215deg 19% 18%);
-      --prism-tooltip-shadow: 0 4px 12px rgb(0 0 0 / 40%);
-      --prism-crosshair-color: hsl(215deg 16% 57%);
-      --prism-point-stroke: none;
-    }
-  }
-
+  /* The `--lightningcss-*` pair are the switches lightningcss lowers every
+     `light-dark(A, B)` into (`var(--lightningcss-light, A) var(--lightningcss-dark, B)`).
+     Its auto-emitted switches only follow `prefers-color-scheme`, so a
+     bundler that lowers this file (Vite with an old browser target) would
+     leave the class and attribute triggers inert without these definitions.
+     `initial` is the guaranteed-invalid value, which makes var() take its
+     fallback; an empty value substitutes nothing. Inert for browsers that
+     keep `light-dark()` native. */
   html.dark,
   [data-prism-theme='dark'] {
-    --prism-color-1: #56b4e9;
-    --prism-color-2: #e69f00;
-    --prism-color-3: #009e73;
-    --prism-color-4: #cc79a7;
-    --prism-color-5: #0072b2;
-    --prism-color-6: #d55e00;
-    --prism-color-7: #f0e442;
-    --prism-color-8: #fff;
-    --prism-axis-color: hsl(215deg 16% 47%);
-    --prism-grid-color: hsl(215deg 12% 18%);
-    --prism-text-color: hsl(214deg 32% 91%);
-    --prism-text-color-secondary: hsl(215deg 16% 57%);
-    --prism-tooltip-bg: hsl(222deg 47% 6%);
-    --prism-tooltip-color: hsl(210deg 40% 96%);
-    --prism-tooltip-border: hsl(215deg 19% 18%);
-    --prism-tooltip-shadow: 0 4px 12px rgb(0 0 0 / 40%);
-    --prism-crosshair-color: hsl(215deg 16% 57%);
-    --prism-point-stroke: none;
+    --lightningcss-light: ;
+    --lightningcss-dark: initial;
+    color-scheme: dark;
+  }
+
+  html.light,
+  [data-prism-theme='light'] {
+    --lightningcss-light: initial;
+    --lightningcss-dark: ;
+    color-scheme: light;
   }
 
   /* ========================================
