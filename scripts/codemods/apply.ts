@@ -45,7 +45,7 @@ export function applyEdits(source: string, edits: readonly TextEdit[]): string {
   let output = source;
   let lastStart = Number.POSITIVE_INFINITY;
 
-  for (const edit of [...edits].sort((a, b) => b.start - a.start)) {
+  for (const edit of edits.toSorted((a, b) => b.start - a.start)) {
     if (edit.end > lastStart) continue;
 
     output = output.slice(0, edit.start) + edit.text + output.slice(edit.end);

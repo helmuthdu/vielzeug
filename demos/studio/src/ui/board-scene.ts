@@ -158,7 +158,7 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
   // Base ink width for new pen strokes; the dock slider writes it, the pen reads it.
   let penWidth = DEFAULT_STROKE_WIDTH;
 
-  container.innerHTML = '';
+  container.replaceChildren();
 
   const viewport = document.createElement('div');
   viewport.className = 'studio-viewport';
@@ -1015,7 +1015,7 @@ export function mountBoardScene(container: HTMLElement): SceneHandle {
       tools.dispose();
       camera.dispose();
       model.dispose();
-      container.innerHTML = '';
+      container.replaceChildren();
     },
     dock: toolbarParent,
     fit: fitToContent,

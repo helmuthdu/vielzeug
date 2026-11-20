@@ -36,6 +36,7 @@ Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeu
 | Full pass from plan to delivery                        | `pipeline`                                                                            |
 | Refresh stale **Project profile** (commands, gates)    | `onboard`                                                                             |
 | Consume `@vielzeug/*` packages (demos, Refine UI work) | `.agents/skills/vielzeug/SKILL.md`                                                    |
+| Write or change HTML/CSS or client-side JS (refine, ore, prism, demos, docs theme) | `modern-web-guidance` alongside `build` — search its guides before writing platform code |
 
 3. When a task matches multiple rows, load each matching skill. In particular, code changes to demos that consume `@vielzeug/*` require both `build` and `vielzeug`.
 4. Read the Project profile and its linked files. Load `.agents/conventions.md` before editing package source.
@@ -46,7 +47,7 @@ Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeu
 Read by the klugzeug skills. Each **bold** name in the tables below is a profile key defined in `~/.agents/klugzeug/contract.md` → **Profile keys**; `none` means the repository has no such thing. Rules elsewhere in this file still apply.
 
 - **Stack**: TypeScript strict monorepo; Bun workspaces (`packages/*`, `demos/*`); Vite library builds (ESM and CJS); Vitest with jsdom; Biome; VitePress docs; Lefthook hooks.
-- **Workflow skills**: `plan`, `build`, `test`, `review`, `docs`, `deliver`, `pipeline`, `onboard` — klugzeug, installed per machine under `~/.agents/skills/`.
+- **Workflow skills**: `plan`, `build`, `test`, `review`, `docs`, `deliver`, `pipeline`, `onboard` — klugzeug, installed per machine under `~/.agents/skills/`. `modern-web-guidance` (same directory) is the search-first guide corpus for HTML/CSS and client-side JS work; see **Browser support** below.
 - **Profile refresh**: run klugzeug `onboard` when root `package.json` scripts, validation gates, protected paths, release or CI workflow facts, or `.agents/` layout change.
 
 ### Commands
@@ -122,6 +123,7 @@ Accessibility assertions: global `axeCheck(element)` in ore, refine, and prism V
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Design system        | `@vielzeug/refine` tokens and theme (`packages/refine/src/styles/`); component and token lookups through `.agents/skills/vielzeug/SKILL.md`                                                                                                                    |
 | Accessibility target | WCAG 2.2 Level AA for Refine and demo UI: jsdom `axeCheck` plus Playwright `test:e2e` with `color-contrast` and `target-size` (`docs/refine/accessibility.md`). prism: jsdom `axeCheck` only; colour and layout rules stay manual (`packages/prism/AGENTS.md`) |
+| Browser support      | Baseline **Widely available** features are safe without fallbacks. For newer features, adopt a guide fallback only when it adds ≤ 20 lines and no external dependency; otherwise feature-detect with graceful degradation or redesign. Guide lookups via the `modern-web-guidance` skill (`~/.agents/skills/`). Library rule: `@media (prefers-color-scheme)` is never the dark-mode mechanism in shipped CSS — the `html.dark` class + forced `color-scheme` + `light-dark()` contract in `packages/refine/src/styles/theme.css` wins |
 | Bundle budget        | none                                                                                                                                                                                                                                                           |
 | Security checklist   | `.agents/reference/security-checklist.md`                                                                                                                                                                                                                      |
 | Doc templates        | `.agents/reference/docs-template.md`, `.agents/reference/readme-template.md`                                                                                                                                                                                   |

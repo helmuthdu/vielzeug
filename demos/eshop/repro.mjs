@@ -21,7 +21,7 @@ await page.evaluate(() => {
   const itemsList = clone.querySelector('.order-card__items');
 
   if (itemsList) {
-    itemsList.innerHTML = '';
+    itemsList.replaceChildren();
 
     const names = [
       'Vielzeug R350 Executive Grand Touring Limousine Deluxe Edition',

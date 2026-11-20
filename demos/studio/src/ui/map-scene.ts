@@ -148,7 +148,7 @@ function seedEncounter(): EncounterState {
  * whole scene can render on a worker thread via @vielzeug/stage/worker.
  */
 export function mountMapScene(container: HTMLElement): SceneHandle {
-  container.innerHTML = '';
+  container.replaceChildren();
 
   const root = document.createElement('div');
   root.className = 'map-root';
