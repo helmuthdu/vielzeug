@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix tooltip dark mode to follow the html.dark contract via lightningcss scheme switches",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

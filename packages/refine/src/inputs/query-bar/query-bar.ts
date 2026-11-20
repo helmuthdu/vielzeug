@@ -410,6 +410,9 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
 
       switch (e.key) {
         case 'Enter': {
+          // Enter that confirms an IME composition must not pick a suggestion
+          // (same guard as core/composer.ts).
+          if (e.isComposing) break;
           const active = isOpen.value ? suggestions.value[focusedIndex.value] : undefined;
           if (active) {
             e.preventDefault();

@@ -83,7 +83,7 @@ describe('animateReflow', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    document.body.innerHTML = '';
+    document.body.replaceChildren();
   });
 
   it('runs the mutation when there are no tracked elements', () => {
