@@ -78,12 +78,7 @@ export function createWorkerStage<Scene = unknown>(
     if (!disposed) worker.postMessage(cmd);
   };
 
-  let resolveReady: () => void = () => {};
-  let rejectReady: (err: Error) => void = () => {};
-  const ready = new Promise<void>((resolve, reject) => {
-    resolveReady = resolve;
-    rejectReady = reject;
-  });
+  const { promise: ready, resolve: resolveReady, reject: rejectReady } = Promise.withResolvers<void>();
   // A stage disposed before the worker ever answered should not leave an
   // unhandled rejection in fire-and-forget usage.
   ready.catch(() => {});

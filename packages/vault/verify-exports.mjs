@@ -31,8 +31,9 @@ for (const [vault, memory] of modulePairs) {
     await store.get('users', 1);
     throw new Error('expected disposed operation to reject');
   } catch (error) {
-    if (!(error instanceof vault.VaultError)) throw new Error('VaultError identity mismatch');
-    if (!(error instanceof vault.VaultDisposedError)) throw new Error('VaultDisposedError identity mismatch');
-    if (error.name !== 'VaultDisposedError') throw new Error(`unexpected error name: ${error.name}`);
+    if (!(error instanceof vault.VaultError)) throw new Error('VaultError identity mismatch', { cause: error });
+    if (!(error instanceof vault.VaultDisposedError))
+      throw new Error('VaultDisposedError identity mismatch', { cause: error });
+    if (error.name !== 'VaultDisposedError') throw new Error(`unexpected error name: ${error.name}`, { cause: error });
   }
 }

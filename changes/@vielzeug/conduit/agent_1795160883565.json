@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "use toSorted/toReversed instead of copying before sorting or reversing",
+      "packageName": "@vielzeug/conduit",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/conduit"
+}

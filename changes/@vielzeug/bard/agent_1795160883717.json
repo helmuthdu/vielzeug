@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "use Promise.withResolvers for deferred promises",
+      "packageName": "@vielzeug/bard",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/bard"
+}

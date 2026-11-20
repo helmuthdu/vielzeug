@@ -122,10 +122,7 @@ export function playSynth(deps: {
     }
 
     const total = timings.attack + timings.decay + timings.hold + timings.release;
-    let resolveFinished!: () => void;
-    const finished = new Promise<void>((resolve) => {
-      resolveFinished = resolve;
-    });
+    const { promise: finished, resolve: resolveFinished } = Promise.withResolvers<void>();
     let settled = false;
     let stopped = false;
 

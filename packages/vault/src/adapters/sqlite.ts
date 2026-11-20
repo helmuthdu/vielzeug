@@ -88,15 +88,13 @@ class ConnectionExecutor {
   private tail: Promise<void> = Promise.resolve();
 
   async acquire(): Promise<() => void> {
-    let release: (() => void) | undefined;
     const previous = this.tail;
+    const { promise, resolve: release } = Promise.withResolvers<void>();
 
-    this.tail = new Promise<void>((resolve) => {
-      release = resolve;
-    });
+    this.tail = promise;
     await previous;
 
-    return () => release?.();
+    return () => release();
   }
 
   async run<T>(work: () => T | Promise<T>): Promise<T> {

@@ -35,9 +35,11 @@ for (const courierModule of modules) {
     await networkCourier.get('/health');
     throw new Error('expected request to reject');
   } catch (error) {
-    if (!(error instanceof courierModule.CourierError)) throw new Error('CourierError identity mismatch');
-    if (!(error instanceof courierModule.CourierNetworkError)) throw new Error('CourierNetworkError identity mismatch');
-    if (error.name !== 'CourierNetworkError') throw new Error(`unexpected error name: ${error.name}`);
+    if (!(error instanceof courierModule.CourierError))
+      throw new Error('CourierError identity mismatch', { cause: error });
+    if (!(error instanceof courierModule.CourierNetworkError))
+      throw new Error('CourierNetworkError identity mismatch', { cause: error });
+    if (error.name !== 'CourierNetworkError') throw new Error(`unexpected error name: ${error.name}`, { cause: error });
   }
 
   const httpCourier = courierModule.createCourier({ fetch: async () => new Response(null, { status: 404 }) });
@@ -45,7 +47,8 @@ for (const courierModule of modules) {
     await httpCourier.get('/missing');
     throw new Error('expected request to reject');
   } catch (error) {
-    if (!courierModule.CourierHttpError.is(error, 404)) throw new Error('CourierHttpError identity mismatch');
-    if (error.name !== 'CourierHttpError') throw new Error(`unexpected error name: ${error.name}`);
+    if (!courierModule.CourierHttpError.is(error, 404))
+      throw new Error('CourierHttpError identity mismatch', { cause: error });
+    if (error.name !== 'CourierHttpError') throw new Error(`unexpected error name: ${error.name}`, { cause: error });
   }
 }

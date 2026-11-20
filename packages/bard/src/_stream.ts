@@ -42,12 +42,7 @@ export function createStreams(context: AudioContext): StreamManager {
       element.src = definition.src;
       // The node must exist before playback or the sound bypasses the graph.
       const source = context.createMediaElementSource(element);
-      let settle!: () => void;
-      let reject!: (reason: unknown) => void;
-      const outcome = new Promise<void>((resolve, rejectFn) => {
-        settle = resolve;
-        reject = rejectFn;
-      });
+      const { promise: outcome, resolve: settle, reject } = Promise.withResolvers<void>();
       // A rejection with no immediate await would surface as an unhandled
       // rejection; the deck awaits it, and the catch here keeps it quiet.
       outcome.catch(() => {});

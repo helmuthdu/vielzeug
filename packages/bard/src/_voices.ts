@@ -147,10 +147,7 @@ export function createVoicePool(deps: {
       panner.connect(bus.input);
       source.connect(gain);
 
-      let resolveFinished!: () => void;
-      const finished = new Promise<void>((resolve) => {
-        resolveFinished = resolve;
-      });
+      const { promise: finished, resolve: resolveFinished } = Promise.withResolvers<void>();
       let settled = false;
       const finish = (): void => {
         if (settled) return;

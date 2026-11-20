@@ -36,7 +36,7 @@ export function compose<TMeta = undefined>(
       } catch (error) {
         const compensationFailures: unknown[] = [];
 
-        for (const command of [...applied].reverse()) {
+        for (const command of applied.toReversed()) {
           try {
             await command.revert(context);
           } catch (compensationError) {
@@ -57,7 +57,7 @@ export function compose<TMeta = undefined>(
     revert: async (context: CommandContext) => {
       const failures: unknown[] = [];
 
-      for (const command of [...steps].reverse()) {
+      for (const command of steps.toReversed()) {
         try {
           await command.revert(context);
         } catch (error) {

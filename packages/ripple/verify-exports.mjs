@@ -20,10 +20,11 @@ for (const rippleModule of modules) {
     scope.run(() => undefined);
     throw new Error('expected disposed scope failure');
   } catch (error) {
-    if (!(error instanceof rippleModule.RippleError)) throw new Error('RippleError identity mismatch');
+    if (!(error instanceof rippleModule.RippleError))
+      throw new Error('RippleError identity mismatch', { cause: error });
     if (!(error instanceof rippleModule.RippleDisposedError)) {
-      throw new Error('RippleDisposedError identity mismatch');
+      throw new Error('RippleDisposedError identity mismatch', { cause: error });
     }
-    if (error.name !== 'RippleDisposedError') throw new Error(`unexpected error name: ${error.name}`);
+    if (error.name !== 'RippleDisposedError') throw new Error(`unexpected error name: ${error.name}`, { cause: error });
   }
 }

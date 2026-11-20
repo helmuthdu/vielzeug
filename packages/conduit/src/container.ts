@@ -149,7 +149,7 @@ class ContainerImpl implements Container {
       }),
     ];
 
-    for (const resource of [...this.#owned].reverse()) {
+    for (const resource of this.#owned.toReversed()) {
       if (!resource.dispose) continue;
 
       try {
