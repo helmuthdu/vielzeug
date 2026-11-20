@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Raise integration test timeout so snapshot generation passes under CI coverage",
+      "packageName": "@vielzeug/codex",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

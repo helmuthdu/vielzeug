@@ -16,5 +16,8 @@ export default defineConfig({
       },
       { extends: true, test: { include: ['src/__tests__/**/*.integration.test.ts'], name: 'integration' } },
     ],
+    // Integration tests run generateSnapshot over the whole monorepo; under
+    // coverage on CI runners that exceeds the 5s default.
+    testTimeout: 60_000,
   },
 });
