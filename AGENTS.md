@@ -52,24 +52,24 @@ Read by the klugzeug skills. Each **bold** name in the tables below is a profile
 
 ### Commands
 
-| Key                             | Value                                                                                                                                                                               |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Install                         | `bun install`                                                                                                                                                                       |
-| Dev command                     | `bun run docs:dev` (docs and Refine components); demos: `bun run --filter vielzeug-crm-demo dev` (also `vielzeug-motors-demo`, `vielzeug-studio-demo`, `vielzeug-voyage-demo`)      |
-| Browser-test command            | `bun run --filter @vielzeug/refine test:e2e` (run `build:e2e` first); demos: `test:e2e` in `vielzeug-crm-demo`, `vielzeug-motors-demo`, `vielzeug-studio-demo`                      |
-| Test (all)                      | `bun run test`                                                                                                                                                                      |
-| Test (one file)                 | `bun x vitest run <file>`; one package: `bun x vitest run packages/<name>/src/` (Refine tests are co-located)                                                                       |
-| Lint                            | `bun run --filter @vielzeug/<name> lint` (all: `bun run lint`)                                                                                                                      |
-| Lint fix                        | `bun run fix`                                                                                                                                                                       |
-| Typecheck                       | none at root; `bun x tsc -p packages/<name>/tsconfig.json --noEmit`; also `bun run --filter @vielzeug/<name> <script>` for `test:types`/`typecheck` listed in Navigation            |
-| Build                           | `bun run --filter @vielzeug/<name> build` (all: `bun run build`)                                                                                                                    |
-| E2E                             | `bun run --filter @vielzeug/<name> test:e2e` where declared (Navigation table: gesture, necromancer, refine, sentinel; demos crm, eshop, studio)                                    |
-| Docs                            | `bun run --filter @vielzeug/codex build && bun run docs:build`; validators `validate:docs`, `validate:readme`, `validate:repl`, `validate:sidebar`, each with `-- --package=<name>` |
-| Analyse command                 | none                                                                                                                                                                                |
-| Audit command                   | none                                                                                                                                                                                |
-| Performance measurement command | none                                                                                                                                                                                |
-| Packed-package check            | `bun run verify:packed -- --package=@vielzeug/<name>` (only when asked)                                                                                                             |
-| Change-file command             | `bun scripts/change.mjs <name> <patch\|minor\|major> "<message>"`                                                                                                                   |
+| Key                             | Value                                                                                                                                                                                                            |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install                         | `bun install`                                                                                                                                                                                                    |
+| Dev command                     | `bun run docs:dev` (docs); `bun run docs:dev:refine` (docs + Refine bundle watch); demos: `bun run --filter vielzeug-crm-demo dev` (also `vielzeug-motors-demo`, `vielzeug-studio-demo`, `vielzeug-voyage-demo`) |
+| Browser-test command            | `bun run --filter @vielzeug/refine test:e2e` (run `build:e2e` first); demos: `test:e2e` in `vielzeug-crm-demo`, `vielzeug-motors-demo`, `vielzeug-studio-demo`                                                   |
+| Test (all)                      | `bun run test`                                                                                                                                                                                                   |
+| Test (one file)                 | `bun x vitest run <file>`; one package: `bun x vitest run packages/<name>/src/` (Refine tests are co-located)                                                                                                    |
+| Lint                            | `bun run --filter @vielzeug/<name> lint` (all: `bun run lint`)                                                                                                                                                   |
+| Lint fix                        | `bun run fix`                                                                                                                                                                                                    |
+| Typecheck                       | none at root; `bun x tsc -p packages/<name>/tsconfig.json --noEmit`; also `bun run --filter @vielzeug/<name> <script>` for `test:types`/`typecheck` listed in `.agents/reference/packages.md` → Navigation       |
+| Build                           | `bun run --filter @vielzeug/<name> build` (all: `bun run build`)                                                                                                                                                 |
+| E2E                             | `bun run --filter @vielzeug/<name> test:e2e` where declared (`.agents/reference/packages.md` → Navigation: gesture, necromancer, refine, sentinel; demos crm, eshop, studio)                                     |
+| Docs                            | `bun run --filter @vielzeug/codex build && bun run docs:build`; validators `validate:docs`, `validate:readme`, `validate:repl`, `validate:sidebar`, each with `-- --package=<name>`                              |
+| Analyse command                 | none                                                                                                                                                                                                             |
+| Audit command                   | none                                                                                                                                                                                                             |
+| Performance measurement command | none                                                                                                                                                                                                             |
+| Packed-package check            | `bun run verify:packed -- --package=@vielzeug/<name>` (only when asked)                                                                                                                                          |
+| Change-file command             | `bun scripts/change.mjs <name> <patch\|minor\|major> "<message>"`                                                                                                                                                |
 
 ### Validation gates by changed surface
 
@@ -106,16 +106,16 @@ Accessibility assertions: global `axeCheck(element)` in ore, refine, and prism V
 
 ### Conventions
 
-| Key                     | Value                                                                                                          |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Reactivity model        | `@vielzeug/ripple` signals; ore renders from reactive state; refine builds on ore                              |
-| Translation mechanism   | `@vielzeug/lingua` (`createI18n`, `@vielzeug/lingua/ripple`); demo catalogs in `demos/<name>/src/core/i18n.ts` |
-| Error types             | `<Pkg>Error` base class in `src/errors.ts` (`.agents/conventions.md`)                                          |
-| Return-shape convention | no Result type: failures throw the `<Pkg>Error` hierarchy (`.agents/conventions.md` → Errors)                  |
-| Query key convention    | none                                                                                                           |
-| Large-list approach     | `@vielzeug/scroll` virtual rows; no fixed threshold (see `docs/scroll/`)                                       |
-| Commit convention       | conventional commits (`feat(courier): add retry logic`)                                                        |
-| PR template             | `.github/pull_request_template.md`                                                                             |
+| Key                     | Value                                                                                                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Reactivity model        | `@vielzeug/ripple` signals; ore renders from reactive state; refine builds on ore                                                                                              |
+| Translation mechanism   | `@vielzeug/lingua` (`createI18n`, `@vielzeug/lingua/ripple`); catalogs in `demos/crm/src/core/i18n.ts` and `demos/eshop/src/core/i18n.ts` (studio and voyage are untranslated) |
+| Error types             | `<Pkg>Error` base class in `src/errors.ts` (`.agents/conventions.md`)                                                                                                          |
+| Return-shape convention | no Result type: failures throw the `<Pkg>Error` hierarchy (`.agents/conventions.md` → Errors)                                                                                  |
+| Query key convention    | none                                                                                                                                                                           |
+| Large-list approach     | `@vielzeug/scroll` virtual rows; no fixed threshold (see `docs/scroll/`)                                                                                                       |
+| Commit convention       | conventional commits (`feat(courier): add retry logic`)                                                                                                                        |
+| PR template             | `.github/pull_request_template.md`                                                                                                                                             |
 
 ### Design, accessibility, and budgets
 
