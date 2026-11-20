@@ -515,11 +515,15 @@ export async function main({ check = false } = {}) {
       }),
   );
   const citedPaths = [...new Set(Object.values(citationContents).flatMap((content) => extractCitedPaths(content)))];
-  const ignoredPaths = findIgnoredPaths(citedPaths.map((token) => (token.endsWith('/') ? token.slice(0, -1) : token)));
+  // git matches a directory-only ignore pattern (`data/`) only with the trailing slash when
+  // the directory is absent, so submit both forms and let isIgnored match either.
+  const ignoredPaths = findIgnoredPaths([
+    ...new Set(citedPaths.flatMap((token) => [token, token.endsWith('/') ? token.slice(0, -1) : `${token}/`])),
+  ]);
   const badCitations = findBadCitations(citationContents, {
     rootScripts,
     fileExists: (relPath) => existsSync(path.join(ROOT, relPath)),
-    isIgnored: (relPath) => ignoredPaths.has(relPath),
+    isIgnored: (relPath) => ignoredPaths.has(relPath) || ignoredPaths.has(`${relPath}/`),
   })
     .concat(findBadFilteredCitations(citationContents, packageScripts))
     .concat(findBadToolCitations(citationContents, codexToolNames))
