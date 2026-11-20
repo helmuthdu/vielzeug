@@ -1,5 +1,7 @@
 # AGENTS.md: codex
 
+> Read when: working on the codex MCP server, its tools, or its bundled docs data.
+
 MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI clients. An executable tool, not a consumed library; standalone: no `@vielzeug/*` runtime dependencies. The docs it bundles live in `docs/` (see `docs/AGENTS.md`).
 
 ## Local contracts
@@ -11,7 +13,7 @@ MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI
 - Entry points: `src/cli.ts` (CLI, run locally as `bun dist/cli.js`; the published `codex` bin keeps its `#!/usr/bin/env node` shebang for consumers), `src/index.ts` (the public contract: `createCodexServer`, `startHttpHost`, `CodexError` — everything else is internal, enforced by `verify-exports.mjs` during `build`), `src/server.ts` (`createCodexServer`: registers the tools and carries the snapshot version in the server instructions so clients can compare against their installed packages), `src/catalog.ts` (the only reader of snapshot data: lookups, section slicing, ranked search), `src/http.ts` (loopback Streamable HTTP transport), `src/snapshot.ts` (loader), and `src/skills.ts` (CLI-only `codex skills install`: not exported from any entry point).
 - **`skills/vielzeug/SKILL.md` is the consumer-facing agent skill** shipped in the npm package (`files`) and installed into downstream projects via `codex skills install`. `.agents/skills/vielzeug` at the repo root is a symlink to it, so demos and monorepo agents load the same file. Its `<!-- GENERATED:skill-packages -->` block is rendered from `packages/*/package.json` by `bun run gen:ai-data` (guarded by `bun run check:ai-data`): edit the prose, never the block. It must not hand-list Refine components or tokens; it points agents at the `refine-*` MCP tools instead.
 - **MCP tools live in `src/tools/`, one file per domain**: `packages.ts` (six catalog tools, all taking one `slug` param), `refine.ts` (four `refine-`-prefixed tools; `createCodexServer` adds them only when the snapshot carries components, so tools that could only answer "unavailable" are never offered), `index.ts` (MCP adapter: the only place that serializes MCP results; tools return domain values), `schema.ts` (local `ToolSchema` declarations: the single source for both wire `inputSchema` and runtime validation via `parseArgs()`), and `shared.ts` (MCP manifest shape).
-- **MCP tool tables are generated, not hand-written.** `bun run gen:tool-docs` (`scripts/generate-tool-docs.ts`, run explicitly after tool changes: deliberately not part of `build`, which must not write outside the package) renders the `<!-- TOOLS:GENERIC -->` / `<!-- TOOLS:REFINE -->` tables in `docs/codex/tools.md` straight from `packageTools` and `refineTools`: never edit those tables by hand, edit the tool's `description`/`inputSchema` and run the generator. The script imports the registries from `src/` (Bun resolves the `.js` specifiers to their `.ts` sources), so no build is needed first.
+- **MCP tool tables are generated, not hand-written.** `bun run --filter @vielzeug/codex gen:tool-docs` (`scripts/generate-tool-docs.ts`, run explicitly after tool changes: deliberately not part of `build`, which must not write outside the package) renders the `<!-- TOOLS:GENERIC -->` / `<!-- TOOLS:REFINE -->` tables in `docs/codex/tools.md` straight from `packageTools` and `refineTools`: never edit those tables by hand, edit the tool's `description`/`inputSchema` and run the generator. The script imports the registries from `src/` (Bun resolves the `.js` specifiers to their `.ts` sources), so no build is needed first.
 - **Expected catalog failures throw `CatalogError(code, message)`, never hand-built MCP error results.** `code` is `'INVALID_ARG' | 'NOT_FOUND' | 'UNAVAILABLE'`; `registerTools()` centrally maps it to MCP `{isError: true}` JSON. Resolve package, content, and Refine data through `Catalog` methods instead of duplicate lookups in tools.
 - **No hand-duplicated package internals.** Don't hand-author reference data that mirrors another package's real exports: it drifts silently. Type signatures come from the checker pass in `scripts/type-signatures.ts` (real declaration text plus JSDoc, resolved through `checker.getExportsOfModule`), Refine facts from the Custom Elements Manifest, tokens from `theme.css`, REPL examples from `scripts/repl-examples.ts` — never from a second, hand-maintained copy.
 - Scripts stderr output must go through `scripts/_log.ts` (`log()`). Never use bare `process.stderr.write` in scripts.
@@ -21,13 +23,13 @@ MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI
 ## Testing
 
 - Tests are split into two Vitest projects (`vitest.config.ts`): `*.test.ts` uses temporary fixture snapshots only (`src/__tests__/fixtures.ts`); `*.integration.test.ts` regenerates a current snapshot from real `docs/` and sibling packages, requiring a full monorepo checkout.
-- `bun run test:unit`: fast loop while iterating, no `prepare:data` needed beforehand.
-- `bun run test:integration` / `bun run test`: integration coverage; `test:integration` regenerates snapshot data first.
+- `bun run --filter @vielzeug/codex test:unit`: fast loop while iterating, no `prepare:data` needed beforehand.
+- `bun run --filter @vielzeug/codex test:integration` / `bun run --filter @vielzeug/codex test`: integration coverage; `test:integration` regenerates snapshot data first.
 - `generator.integration.test.ts` validates real monorepo snapshot generation. New tests that load real package/docs inputs belong in `*.integration.test.ts`; all other tests must construct temporary snapshots.
 
 ## Adding an MCP tool
 
-Add it to `src/tools/packages.ts` (generic) or `src/tools/refine.ts` (Refine-specific: use a `refine-` name prefix), define its local `ToolSchema` once with `satisfies ToolSchema`, return a domain value from `execute()`, use `Catalog` methods for expected failures, cover it in `src/__tests__/`, then run `bun run gen:tool-docs` to refresh the generated tool reference.
+Add it to `src/tools/packages.ts` (generic) or `src/tools/refine.ts` (Refine-specific: use a `refine-` name prefix), define its local `ToolSchema` once with `satisfies ToolSchema`, return a domain value from `execute()`, use `Catalog` methods for expected failures, cover it in `src/__tests__/`, then run `bun run --filter @vielzeug/codex gen:tool-docs` to refresh the generated tool reference.
 
 ## Verification
 

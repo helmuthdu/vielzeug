@@ -11,7 +11,9 @@ Agent-facing material that ships with the monorepo. Workflow procedure for imple
 | `reference/docs-template.md` | Structural contract for `docs/<name>/` pages (`docs` skill uses it via the profile). |
 | `reference/readme-template.md` | README shape enforced by `validate:readme`. |
 | `reference/security-checklist.md` | Project security prompts for the `review` `security` lens. |
-| `reference/packages.md` | Generated package table — edit manifests, then `bun run gen:ai-data`. |
+| `reference/packages.md` | Generated package tables (dependency graph + navigation) — edit manifests, then `bun run gen:ai-data`. |
+| `reference/recipes.md` | Task recipes: task → files to touch → gate, for cross-cutting changes. |
+| `reference/refine-design.md` | Refine design principles and improvement lenses (moved from `packages/refine/AGENTS.md`). |
 | `skills/vielzeug` | Symlink to `packages/codex/skills/vielzeug/SKILL.md` — consumer skill for `@vielzeug/*` usage. |
 
 Repo-wide policy, commands, and validation gates: root `AGENTS.md` → **Project profile**.
@@ -28,19 +30,4 @@ Do not add workflow skill files under `.agents/skills/` in this repo: `bun run c
 
 ## Subtree `AGENTS.md`
 
-Local rules only when they are not already in root `AGENTS.md` or `conventions.md`.
-
-| Path | Scope |
-| ---- | ----- |
-| `packages/AGENTS.md` | All packages; index of packages with extra local rules |
-| `packages/archive/AGENTS.md` | Worker catalog + auth issuer |
-| `packages/codex/AGENTS.md` | MCP server, bundled docs, consumer skill source |
-| `packages/ore/AGENTS.md` | Web-component primitives, narrow a11y |
-| `packages/prism/AGENTS.md` | SVG charts, jsdom a11y |
-| `packages/refine/AGENTS.md` | Component library, e2e a11y, design modes |
-| `docs/AGENTS.md` | VitePress, REPL, validators |
-| `demos/AGENTS.md` | Integration harnesses |
-| `scripts/AGENTS.md` | Repo tooling |
-| `.github/AGENTS.md` | CI/CD and release (approval required to edit) |
-
-See also the index at the end of root `AGENTS.md`.
+Local rules only when they are not already in root `AGENTS.md` or `conventions.md`. Each subtree file carries a `> Read when:` line; the authoritative index of every subtree file and its read condition is the generated **Subtree AGENTS.md index** at the end of root `AGENTS.md` (`bun run gen:ai-data` renders it, `check:ai-data` guards it). `.github/AGENTS.md` and `.junie/AGENTS.md` are client entrypoints their clients auto-load, not routed entries.

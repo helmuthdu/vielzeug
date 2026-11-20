@@ -12,7 +12,9 @@ export interface PackageManifest {
   description: string;
   name: string;
   peers: PackagePeer[];
+  scripts: string[];
   slug: string;
+  subpaths: string[];
 }
 
 export function readPackageManifests(packagesDir: string): PackageManifest[];

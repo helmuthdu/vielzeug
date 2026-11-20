@@ -44,6 +44,11 @@ function unscope(name) {
  * `dependencies` and `peers` are both already unscoped (`"ripple"`, not `"@vielzeug/ripple"`)
  * and contain only `@vielzeug/*` edges: this monorepo's graph never needs to know about
  * `vitest`, `vite`, etc. for any of the three current consumers.
+ *
+ * `subpaths` lists the package's public export subpaths (`"."`, `"./json"`, ...) straight from
+ * the manifest's `exports` map (a string shorthand counts as just `"."`, no `exports` means
+ * the root only). `scripts` holds the manifest's script names. Both feed the generated
+ * navigation table in `.agents/reference/packages.md`; other consumers ignore them.
  */
 export function readPackageManifests(packagesDir) {
   const slugs = readdirSync(packagesDir, { withFileTypes: true })
@@ -86,12 +91,22 @@ export function readPackageManifests(packagesDir) {
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
+    const exportsMap = pkg.exports;
+    const subpaths =
+      typeof exportsMap === 'string'
+        ? ['.']
+        : exportsMap && typeof exportsMap === 'object'
+          ? Object.keys(exportsMap).sort()
+          : ['.'];
+
     manifests.push({
       dependencies,
       description: typeof pkg.description === 'string' ? pkg.description : '',
       name: typeof pkg.name === 'string' ? pkg.name : `@vielzeug/${slug}`,
       peers,
+      scripts: Object.keys(pkg.scripts ?? {}).sort(),
       slug,
+      subpaths,
     });
   }
 

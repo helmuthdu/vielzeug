@@ -1,6 +1,8 @@
 # AGENTS.md: refine
 
-Accessible, themeable web components built on `ore`. Largest package; one custom element per component, organised by category folder (`content/`, `core/`, `disclosure/`, `feedback/`, `inputs/`, `layout/`, `overlay/`). Depends on `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `orbit`, `ore`, `ripple`, `sentinel`, `sigil`, and `tempo` (`workspace:*`). `lucide` is an optional peer and a devDependency; `assay` is test-only.
+> Read when: working on `@vielzeug/refine` components, tokens, styles, or theme.
+
+Accessible, themeable web components built on `ore`. Largest package; one custom element per component, organised by category folder (`blueprint/`, `content/`, `core/`, `feedback/`, `inputs/`, `layout/`, `navigation/`, `overlay/`; `icons/` is shared infrastructure). The single category map is `docs/.vitepress/theme/components/refineCategories.ts`: component docs and the docs sidebar generate from it, so a new or moved component updates the map, never a hand-maintained list. Depends on `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `necromancer`, `orbit`, `ore`, `ripple`, `scribe`, `sentinel`, `sigil`, and `tempo` (`workspace:*`; the generated table in `.agents/reference/packages.md` mirrors the manifest). `lucide` is an optional peer and a devDependency; `assay` is test-only.
 
 ## Local contracts
 
@@ -27,9 +29,9 @@ Two test layers cover different concerns.
 - Assert roles, names, and ARIA state with `@vielzeug/assay` and keyboard/focus behaviour through the component's visible DOM contract.
 - Why jsdom can't do more: no CSS box model, `getComputedStyle` is stubbed, `@layer` blocks are silently dropped.
 
-### Layer 2: real browser (Playwright, `bun run test:e2e`)
+### Layer 2: real browser (Playwright, `bun run --filter @vielzeug/refine test:e2e`)
 
-**Co-located next to the component**, same convention as jsdom `*.test.ts` files: `src/<category>/<component>/<component>.e2e.ts`. No dev server needed: loads the built IIFE stack via `page.setContent()`. Requires a prior `bun run build:e2e` (refine's own IIFE bundle + `dist/styles`; ~1s, no type/manifest/packed gates). Use the full `bun run build` when the run validates the shipped artifact itself (types, CEM, per-entry dist) or when dependency packages changed.
+**Co-located next to the component**, same convention as jsdom `*.test.ts` files: `src/<category>/<component>/<component>.e2e.ts`. No dev server needed: loads the built IIFE stack via `page.setContent()`. Requires a prior `bun run --filter @vielzeug/refine build:e2e` (refine's own IIFE bundle + `dist/styles`; ~1s, no type/manifest/packed gates). Use the full `bun run --filter @vielzeug/refine build` when the run validates the shipped artifact itself (types, CEM, per-entry dist) or when dependency packages changed.
 
 Follow root Build Scheduling: iterate with focused jsdom tests and the source-backed docs preview, then build Refine once after the implementation changes and batch the affected e2e files against that output. Do not build once per component or test file. E2E-test-only edits can reuse that build; changes to bundled source/styles or consumed dependency artifacts require a fresh build before the next e2e run. If an earlier dist-backed check is necessary, explain why before building; never substitute a stale-dist test pass for validation of source edits.
 
@@ -50,63 +52,9 @@ Each `*.e2e.ts` file groups its tests into `describe('Accessibility', ...)` / `d
 
 **Known shadow DOM limitation with axe:** axe-core's flat-tree traversal cannot pierce shadow boundaries for role-child relationships (e.g. `listbox > option`). Components where the ARIA role tree crosses the shadow/light boundary may produce false-positive violations. Mark these `test.fail()` with an explanation: they document known gaps, not real failures.
 
-## Core Design Principles
+## Design principles and modes
 
-Follow these when authoring or reviewing component styles and behaviour:
-
-### Layout and Spacing
-
-- **4-point grid**: all spacing and dimensions use multiples of 4 via `var(--size-*)`.
-- **Whitespace**: sections breathe at 32 px / `var(--section-spacing)`; use proximity and containers to group related elements.
-- **Responsiveness**: `ore-grid` is container-responsive — `cols-*` breakpoints react to the grid's own width (not the viewport), so a narrow grid in a sidebar collapses to its mobile layout on a wide screen. Pick column counts per breakpoint (`cols="1" cols-md="2" cols-lg="4"`); a common content rhythm is 1-col mobile → 2-col tablet → 3–4-col desktop, scaling up to 12 for dense dashboards. Fixed counts resolve through the `--grid-1`–`--grid-12` tokens.
-
-### Typography
-
-- Single sans-serif font via `var(--font-sans)`.
-- Headers: letter-spacing `var(--tracking-header)` (−5%), line-height `var(--leading-tight)` (115%).
-- Component type scale: seven steps (`--text-2xs` 11px → `--text-2xl` 24px); `--text-3xl` is reserved for display values like the circular-progress label. Never render component text below `--text-2xs` (11px floor); avoid sizes above 24 px on high-density pages.
-- Hierarchy via size, weight, and color: most important content large/bold/top.
-
-### Color and Depth
-
-- One primary brand color; ramp it light for backgrounds, dark for text.
-- Semantic roles: blue = info/primary, red = danger/error, yellow = warning, green = success.
-- Dark mode: lighter card colors on darker backgrounds for depth; lower border contrast; dim accent saturation. Avoid heavy shadows.
-- Shadows: subtle, low-opacity, high-blur. Popovers need stronger shadows than cards.
-
-### Components
-
-- **Buttons:** four states minimum (default, hover, active, disabled). Ghost buttons for secondary CTAs. Horizontal padding = 2× vertical (2:1 ratio).
-- **Icons:** sized to body line height (24 px / `var(--leading-6)`).
-- **Inputs:** clear focus and error states (red border + message).
-- **Overlays:** linear gradient or progressive blur for text-over-image readability.
-
-### Feedback and Interaction
-
-- Every action gets a response (spinner, success message).
-- Micro-interactions confirm actions subtly (e.g., chip slide-up).
-- Signifiers (tooltips, active nav highlights) explain functionality without words.
-
-## Design Modes
-
-Named improvement lenses to guide AI-driven design work on components. Each lists its recommended combinations and what refine already covers.
-
-| Mode          | Intent                                              | Recommended with                   | Refine coverage                                                                                         |
-| ------------- | --------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **harden**    | Error handling, text overflow, edge-case resilience | `normalize`, `clarify`, `adapt`    | N/A                                                                                                     |
-| **normalize** | Match design system; ensure consistency             | `extract`, `polish`, `harden`      | Shared tokenized spacing/radius/typography/color mixins; consistent `focus-visible` outlines            |
-| **optimize**  | Loading speed, rendering, animations, bundle size   | `distill`, `adapt`, `animate`      | Reduced-motion fallbacks; variant styling via reusable mixins                                           |
-| **polish**    | Alignment, spacing, consistency: good → great       | `normalize`, `clarify`, `quieter`  | Refined helper/counter/label text; consistent focus ring and hover affordances                          |
-| **bolder**    | Amplify safe designs; more visual impact            | `colorize`, `animate`, `delight`   | Variant spectrum (solid/flat/bordered/outline/ghost/frost); optional rainbow/frost effects              |
-| **quieter**   | Tone down visually aggressive designs               | `distill`, `normalize`, `polish`   | Text/ghost variants and tokenized contrast levels                                                       |
-| **adapt**     | Cross-device, cross-context consistency             | `harden`, `optimize`, `onboard`    | Small-screen dialog/drawer constraints; coarse-pointer touch targets; `dvh`-based overlay sizing        |
-| **clarify**   | UX copy, error messages, labels, microcopy          | `harden`, `polish`, `onboard`      | Input helper/error separation + ARIA wiring; accessible labels for close/clear/loading/password actions |
-| **distill**   | Strip unnecessary complexity                        | `normalize`, `optimize`, `quieter` | Shared mixin architecture for size/rounded/color/state; no one-off per-component overrides              |
-| **animate**   | Purposeful animations and micro-interactions        | `delight`, `optimize`, `bolder`    | Transition and keyframe usage on key interactions with reduced-motion fallback                          |
-| **colorize**  | Add strategic color to monochromatic UI             | `bolder`, `normalize`, `polish`    | Semantic theme colors via `colorThemeMixin`; variant styles use semantic theme roles                    |
-| **delight**   | Joy, personality, memorable moments                 | `animate`, `bolder`, `onboard`     | Optional rainbow effect and frost variant                                                               |
-| **onboard**   | Onboarding flows, empty states, first-use UX        | `clarify`, `adapt`, `distill`      | Component-level labels, helper text, and error text patterns                                            |
-| **extract**   | Consolidate reusable tokens and patterns            | `normalize`, `distill`, `optimize` | Shared token and mixin layer is the default implementation path for new components                      |
+Authoring guidance for component styles and behaviour (4-point grid, type scale, color roles, the named improvement lenses) lives in [`.agents/reference/refine-design.md`](../../.agents/reference/refine-design.md). Load it when shaping or reviewing component styling; the code rules below always apply.
 
 ## Adding a component
 

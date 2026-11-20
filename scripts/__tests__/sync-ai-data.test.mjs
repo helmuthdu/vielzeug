@@ -7,10 +7,21 @@ import { describe, expect, it } from 'vitest';
 import {
   collectAiReferenceSources,
   extractAiReferences,
+  extractCitedPaths,
+  extractReadWhen,
+  checkRootSize,
+  findBadCitations,
+  findBadFilteredCitations,
+  findBadToolCitations,
+  findBadSymbolCitations,
   findDanglingAiReferences,
+  findMissingReadWhen,
   isAiReferenceSource,
+  patchAgentsIndex,
+  patchPackagesNavigation,
   patchPackagesReference,
   patchSkillPackages,
+  renderPackagesNavigation,
   renderPackagesTable,
   renderSkillPackages,
 } from '../sync-ai-data.mjs';
@@ -183,5 +194,200 @@ describe('findDanglingAiReferences()', () => {
     );
 
     expect(dangling).toEqual([{ file: 'packages/AGENTS.md', ref: '.agents/missing.md' }]);
+  });
+});
+
+describe('renderPackagesNavigation() / patchPackagesNavigation()', () => {
+  const packages = [
+    {
+      slug: 'spell',
+      name: '@vielzeug/spell',
+      subpaths: ['.', './json', './predicates'],
+      scripts: ['build', 'lint', 'test', 'test:types', 'typecheck'],
+    },
+    { slug: 'assay', name: '@vielzeug/assay', subpaths: ['.'], scripts: ['build', 'lint', 'test'] },
+  ];
+  const hasDocs = (slug) => slug === 'spell';
+  const hasAgents = (slug) => slug === 'spell';
+
+  it('renders subpaths, docs, agents link, and notable scripts', () => {
+    const table = renderPackagesNavigation(packages, { hasDocs, hasAgents });
+
+    expect(table).toContain('`@vielzeug/spell/json`, `@vielzeug/spell/predicates`');
+    expect(table).toContain('[`docs/spell/`](../../docs/spell/)');
+    expect(table).toContain('[`packages/spell/AGENTS.md`](../../packages/spell/AGENTS.md)');
+    expect(table).toContain('`test:types`');
+    expect(table).toContain('`typecheck`');
+    expect(table).not.toContain('`build`');
+  });
+
+  it('marks root-only packages and missing extras as N/A', () => {
+    const table = renderPackagesNavigation(packages, { hasDocs, hasAgents });
+    const assayRow = table.split('\n').find((line) => line.includes('assay'));
+
+    expect(assayRow).toContain('root only');
+    expect(assayRow).toContain('N/A');
+  });
+
+  it('patches the generated navigation block', () => {
+    const source = [
+      '<!-- GENERATED:packages-navigation:BEGIN -->',
+      '<!-- GENERATED:packages-navigation:END -->',
+    ].join('\n');
+
+    expect(patchPackagesNavigation(source, packages, { hasDocs, hasAgents })).toContain('@vielzeug/spell');
+  });
+});
+
+describe('extractReadWhen() / findMissingReadWhen() / patchAgentsIndex()', () => {
+  it('extracts the read-when condition', () => {
+    expect(extractReadWhen('# AGENTS.md: x\n\n> Read when: editing `docs/` pages.\n')).toBe('editing `docs/` pages.');
+    expect(extractReadWhen('# AGENTS.md: x\n\nNo condition here.\n')).toBeNull();
+  });
+
+  it('reports subtree files without a condition, never the root file', () => {
+    const missing = findMissingReadWhen({
+      'AGENTS.md': '# root\nno condition needed\n',
+      'docs/AGENTS.md': '# docs\nno condition\n',
+      'scripts/AGENTS.md': '# scripts\n\n> Read when: editing scripts.\n',
+    });
+
+    expect(missing).toEqual(['docs/AGENTS.md']);
+  });
+
+  it('renders and patches the index block', () => {
+    const source = ['<!-- GENERATED:agents-index:BEGIN -->', '<!-- GENERATED:agents-index:END -->'].join('\n');
+    const patched = patchAgentsIndex(source, [['docs/AGENTS.md', 'editing docs.']]);
+
+    expect(patched).toContain('[`docs/AGENTS.md`](./docs/AGENTS.md): editing docs.');
+  });
+});
+
+describe('extractCitedPaths()', () => {
+  it('keeps root-anchored backticked paths and skips placeholders, globs, and bare roots', () => {
+    const text = [
+      'see `packages/refine/src/` and `docs/codex/tools.md`',
+      'placeholder `packages/<name>/src/`, glob `scripts/**`',
+      'bare root `changes/` names the concept',
+      'template `.agents/...` is not a citation',
+      'unrooted `workflows/ci.yml` is left alone',
+    ].join('\n');
+
+    expect(extractCitedPaths(text).sort()).toEqual(['docs/codex/tools.md', 'packages/refine/src/']);
+  });
+});
+
+describe('findBadCitations()', () => {
+  const options = { rootScripts: new Set(['build', 'test']), fileExists: () => true };
+
+  it('flags a bare bun run citation that is not a root script', () => {
+    const bad = findBadCitations({ 'packages/x/AGENTS.md': 'run `bun run test:e2e` now' }, options);
+
+    expect(bad).toEqual([
+      { file: 'packages/x/AGENTS.md', citation: 'bun run test:e2e', reason: 'not a root script (use --filter or a cd block)' },
+    ]);
+  });
+
+  it('accepts root scripts, --filter citations, and cd blocks', () => {
+    const content = [
+      '`bun run build` at root',
+      '`bun run --filter @vielzeug/refine test:e2e`',
+      '```bash',
+      'cd packages/refine',
+      'bun run test:e2e',
+      '```',
+    ].join('\n');
+
+    expect(findBadCitations({ 'packages/refine/AGENTS.md': content }, options)).toEqual([]);
+  });
+
+  it('flags a missing cited path but resolves package-local scripts against the owner', () => {
+    const exists = new Set(['packages/refine/src/index.ts', 'packages/codex/scripts/generator.ts']);
+    const bad = findBadCitations(
+      {
+        'packages/refine/AGENTS.md': 'entry `packages/refine/src/index.ts`, ghost `packages/refine/src/nope.ts`',
+        'packages/codex/AGENTS.md': 'generator `scripts/generator.ts`',
+      },
+      { rootScripts: new Set(), fileExists: (rel) => exists.has(rel) },
+    );
+
+    expect(bad).toEqual([{ file: 'packages/refine/AGENTS.md', citation: 'packages/refine/src/nope.ts', reason: 'path does not exist' }]);
+  });
+
+  it('ignores files that are not citation sources', () => {
+    expect(findBadCitations({ 'docs/index.md': '`bun run ghost`' }, { rootScripts: new Set() })).toEqual([]);
+  });
+});
+
+describe('findBadFilteredCitations()', () => {
+  it('flags a --filter citation for a script the package lacks', () => {
+    const packageScripts = new Map([['refine', new Set(['test:e2e'])]]);
+    const bad = findBadFilteredCitations(
+      {
+        'AGENTS.md': '`bun run --filter @vielzeug/refine test:e2e` ok, `bun run --filter @vielzeug/refine ghost` bad',
+      },
+      packageScripts,
+    );
+
+    expect(bad).toEqual([
+      { file: 'AGENTS.md', citation: 'bun run --filter @vielzeug/refine ghost', reason: 'package has no such script' },
+    ]);
+  });
+
+  it('flags a --filter citation for a package that does not exist', () => {
+    const packageScripts = new Map([['refine', new Set(['test:e2e'])]]);
+    const bad = findBadFilteredCitations({ 'AGENTS.md': '`bun run --filter @vielzeug/ghost build`' }, packageScripts);
+
+    expect(bad).toEqual([{ file: 'AGENTS.md', citation: 'bun run --filter @vielzeug/ghost build', reason: 'no such package' }]);
+  });
+});
+
+describe('findBadSymbolCitations()', () => {
+  it('flags a symbol missing from a resolvable cited file', () => {
+    const files = { 'vite.config.ts': 'export const realThing = 1;' };
+    const readFile = (rel) => {
+      if (rel in files) return files[rel];
+      throw new Error('ENOENT');
+    };
+    const bad = findBadSymbolCitations(
+      { 'AGENTS.md': 'root `vite.config.ts` (`ghostSymbol`) and root `vite.config.ts` (`realThing`)' },
+      readFile,
+    );
+
+    expect(bad).toEqual([{ file: 'AGENTS.md', citation: '`vite.config.ts` (`ghostSymbol`)', reason: 'symbol not found in cited file' }]);
+  });
+
+  it('leaves prose-relative file tokens alone', () => {
+    const readFile = () => {
+      throw new Error('ENOENT');
+    };
+
+    expect(findBadSymbolCitations({ '.github/AGENTS.md': '`config.ts` (`anything`)' }, readFile)).toEqual([]);
+  });
+});
+
+describe('findBadToolCitations()', () => {
+  it('flags unknown backticked get/refine tools in citation sources', () => {
+    const tools = new Set(['get-docs', 'list-packages', 'refine-get-tokens', 'search']);
+    const bad = findBadToolCitations(
+      {
+        'AGENTS.md':
+          '`get-docs`, `list-packages`, `search`, and `refine-get-tokens`; stale names: `get-package-info` and `refine-get-widget`',
+        'docs/index.md': '`refine-get-widget` is not a citation source',
+      },
+      tools,
+    );
+
+    expect(bad).toEqual([
+      { file: 'AGENTS.md', citation: '`get-package-info`', reason: 'no such codex MCP tool' },
+      { file: 'AGENTS.md', citation: '`refine-get-widget`', reason: 'no such codex MCP tool' },
+    ]);
+  });
+});
+
+describe('checkRootSize()', () => {
+  it('warns above the budget and stays quiet below it', () => {
+    expect(checkRootSize('a\nb\nc', 2)).toContain('[SIZE]');
+    expect(checkRootSize('a\nb\nc', 10)).toBeNull();
   });
 });
