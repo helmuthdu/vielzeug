@@ -340,15 +340,14 @@ describe('createDismissal', () => {
       document.body.appendChild(frame);
 
       const frameDoc = frame.contentDocument;
-
-      expect(frameDoc).not.toBeNull();
+      if (!frameDoc) throw new Error('Expected iframe content document');
 
       const onDismiss = vi.fn();
       const dismissal = createDismissal({
         getTargets: () => [],
         isActive: () => true,
         onDismiss,
-        ownerDocument: frameDoc as Document,
+        ownerDocument: frameDoc,
       });
 
       fireOutside();

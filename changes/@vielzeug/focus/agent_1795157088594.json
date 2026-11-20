@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix dismissal test typecheck",
+      "packageName": "@vielzeug/focus",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/focus"
+}
