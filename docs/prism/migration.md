@@ -249,13 +249,28 @@ The shipped theme no longer duplicates a dark token block inside `@media (prefer
 
 ```css
 /* before: a dark token block per trigger */
-@media (prefers-color-scheme: dark) { :root:not(.light) { --prism-text-color: hsl(214deg 32% 91%); } }
-html.dark, [data-prism-theme='dark'] { --prism-text-color: hsl(214deg 32% 91%); }
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --prism-text-color: hsl(214deg 32% 91%);
+  }
+}
+html.dark,
+[data-prism-theme='dark'] {
+  --prism-text-color: hsl(214deg 32% 91%);
+}
 
 /* after: one mechanism */
-:root { color-scheme: light dark; }
-html.dark, [data-prism-theme='dark'] { color-scheme: dark; }
-html.light, [data-prism-theme='light'] { color-scheme: light; }
+:root {
+  color-scheme: light dark;
+}
+html.dark,
+[data-prism-theme='dark'] {
+  color-scheme: dark;
+}
+html.light,
+[data-prism-theme='light'] {
+  color-scheme: light;
+}
 ```
 
 Behavior differences to check:
@@ -263,4 +278,3 @@ Behavior differences to check:
 - `html.light` and `[data-prism-theme='light']` are now honored: they pin the light scheme even under an OS dark preference. Previously only a `.light` class on `:root` suppressed the OS-dark block, and only for the media trigger.
 - The two former dark blocks disagreed on `--prism-grid-color` and `--prism-grid-opacity`; the modernized values follow the media block (`hsl(220deg 10% 25%)` / `0.5`), so class-triggered dark grids are slightly lighter and more opaque than before.
 - Overriding a themed token with a plain color (not a `light-dark()` pair) still works and wins, as before.
-
