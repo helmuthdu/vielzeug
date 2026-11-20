@@ -15,6 +15,7 @@ import {
   findBadToolCitations,
   findBadSymbolCitations,
   findDanglingAiReferences,
+  findIgnoredPaths,
   findMissingReadWhen,
   isAiReferenceSource,
   patchAgentsIndex,
@@ -316,6 +317,66 @@ describe('findBadCitations()', () => {
 
   it('ignores files that are not citation sources', () => {
     expect(findBadCitations({ 'docs/index.md': '`bun run ghost`' }, { rootScripts: new Set() })).toEqual([]);
+  });
+
+  it('resolves a cited path that is gitignored (a generated artifact)', () => {
+    // CI checkouts lack generated files such as packages/codex/data/snapshot.json;
+    // a gitignored citation is a build artifact, not a dead end, so it must not fail.
+    const exists = new Set();
+    const bad = findBadCitations(
+      { 'packages/codex/AGENTS.md': 'snapshot `packages/codex/data/snapshot.json`' },
+      { rootScripts: new Set(), fileExists: (rel) => exists.has(rel), isIgnored: (rel) => rel.startsWith('packages/codex/data/') },
+    );
+
+    expect(bad).toEqual([]);
+  });
+});
+
+describe('findIgnoredPaths()', () => {
+  it('returns the paths git reports as ignored', () => {
+    const spawnSync = (cmd, args, { input }) => {
+      expect(cmd).toBe('git');
+      expect(args).toEqual(['check-ignore', '--stdin']);
+      // git echoes back only the ignored paths, one per line.
+      const ignored = String(input)
+        .split('\n')
+        .filter((rel) => rel.startsWith('packages/codex/data/'));
+      return { status: ignored.length > 0 ? 0 : 1, stdout: `${ignored.join('\n')}\n` };
+    };
+
+    expect(findIgnoredPaths(['packages/codex/data/snapshot.json', 'AGENTS.md'], { spawn: spawnSync })).toEqual(
+      new Set(['packages/codex/data/snapshot.json']),
+    );
+  });
+
+  it('returns an empty set when git exits non-zero (nothing ignored)', () => {
+    const spawnSync = () => ({ status: 1, stdout: '' });
+
+    expect(findIgnoredPaths(['AGENTS.md'], { spawn: spawnSync })).toEqual(new Set());
+  });
+
+  it('returns an empty set when git is unavailable', () => {
+    const spawnSync = () => {
+      throw new Error('spawn git ENOENT');
+    };
+
+    expect(findIgnoredPaths(['AGENTS.md'], { spawn: spawnSync })).toEqual(new Set());
+  });
+
+  it('retries per path when the batch fails with 128 (pathspec beyond a symlink)', () => {
+    const calls = [];
+    const spawnSync = (cmd, args, { input }) => {
+      const batch = String(input).trim().split('\n');
+      calls.push(batch.length);
+      if (batch.includes('.agents/skills/link/SKILL.md')) return { status: 128, stdout: '' };
+      const ignored = batch.filter((rel) => rel.startsWith('packages/codex/data/'));
+      return { status: ignored.length > 0 ? 0 : 1, stdout: `${ignored.join('\n')}\n` };
+    };
+
+    expect(findIgnoredPaths(['packages/codex/data/snapshot.json', '.agents/skills/link/SKILL.md'], { spawn: spawnSync })).toEqual(
+      new Set(['packages/codex/data/snapshot.json']),
+    );
+    expect(calls).toEqual([2, 1, 1]); // batch, then one retry per path
   });
 });
 

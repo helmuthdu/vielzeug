@@ -9,6 +9,7 @@
 // recipes: see "Reference integrity" and "Citation integrity" below. There is deliberately no
 // curated JSON layer: package facts live in manifests and task procedures live as skills.
 
+import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -309,12 +310,42 @@ export function cdBefore(text, index) {
   return /(^|\n)\s*cd\s+\S+/.test(region);
 }
 
+/** The subset of `paths` that git reports as ignored, batched through
+ * `git check-ignore --stdin`. A gitignored citation names a generated artifact (e.g.
+ * `packages/codex/data/snapshot.json`): it exists after a build but not in a fresh CI
+ * checkout, so it must not fail the citation check. Empty set when nothing matches or
+ * git is unavailable. */
+export function findIgnoredPaths(paths, { spawn = spawnSync } = {}) {
+  if (paths.length === 0) return new Set();
+  const check = (batch) => {
+    try {
+      const result = spawn('git', ['check-ignore', '--stdin'], { input: `${batch.join('\n')}\n`, encoding: 'utf8', cwd: ROOT });
+      return result.status === 128 ? null : new Set(String(result.stdout ?? '').split('\n').filter(Boolean)); // 1: nothing ignored
+    } catch {
+      return null; // git unavailable
+    }
+  };
+  const batched = check(paths);
+  if (batched) return batched;
+  // 128: one bad pathspec (e.g. beyond a symbolic link) fails the whole batch — retry
+  // per path so a single unreadable token cannot hide the rest.
+  const ignored = new Set();
+  for (const rel of paths) {
+    const single = check([rel]);
+    if (single) for (const hit of single) ignored.add(hit);
+  }
+  return ignored;
+}
+
 /** Checks `fileContents` (relPath -> content) for citations that don't resolve. `rootScripts`
  * comes from the real root manifest. A token resolves against the repo root and, when it
  * starts with `scripts/` or `src/`, against the citing file's own directory too (a package's
  * AGENTS.md cites its package-local `scripts/` the same way). Filtered citations are checked
  * separately by `findBadFilteredCitations`. `fileExists` is injectable for unit tests. */
-export function findBadCitations(fileContents, { rootScripts, fileExists = (relPath) => existsSync(path.join(ROOT, relPath)) }) {
+export function findBadCitations(
+  fileContents,
+  { rootScripts, fileExists = (relPath) => existsSync(path.join(ROOT, relPath)), isIgnored = () => false },
+) {
   const bad = [];
   for (const [file, content] of Object.entries(fileContents)) {
     if (!CITATION_SOURCES.test(file)) continue;
@@ -324,7 +355,7 @@ export function findBadCitations(fileContents, { rootScripts, fileExists = (relP
       const candidates = [/^(scripts|src)\//.test(rel) && owner !== '.' ? `${owner}/${rel}` : null, rel].filter(
         (candidate) => candidate !== null,
       );
-      if (!candidates.some((candidate) => fileExists(candidate))) {
+      if (!candidates.some((candidate) => fileExists(candidate) || isIgnored(candidate))) {
         bad.push({ file, citation: token, reason: 'path does not exist' });
       }
     }
@@ -483,9 +514,12 @@ export async function main({ check = false } = {}) {
         return [...source.matchAll(/\bname:\s*['"]([^'"]+)['"]/g)].map(([, name]) => name);
       }),
   );
+  const citedPaths = [...new Set(Object.values(citationContents).flatMap((content) => extractCitedPaths(content)))];
+  const ignoredPaths = findIgnoredPaths(citedPaths.map((token) => (token.endsWith('/') ? token.slice(0, -1) : token)));
   const badCitations = findBadCitations(citationContents, {
     rootScripts,
     fileExists: (relPath) => existsSync(path.join(ROOT, relPath)),
+    isIgnored: (relPath) => ignoredPaths.has(relPath),
   })
     .concat(findBadFilteredCitations(citationContents, packageScripts))
     .concat(findBadToolCitations(citationContents, codexToolNames))
