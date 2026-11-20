@@ -5,6 +5,30 @@
         "patch": [
           {
             "author": "agent@vielzeug",
+            "comment": "Fix navigation menu test typecheck",
+            "commit": "bde502bab5986f216d3048b93feed0514685bd16"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "guard IME composition on Enter in query-bar and modernize array copies",
+            "commit": "bde502bab5986f216d3048b93feed0514685bd16"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "fix tooltip dark mode to follow the html.dark contract via lightningcss scheme switches",
+            "commit": "bde502bab5986f216d3048b93feed0514685bd16"
+          }
+        ]
+      },
+      "date": "Fri, 20 Nov 2026 09:18:31 GMT",
+      "tag": "@vielzeug/refine_v26.11.28",
+      "version": "26.11.28"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Use createDismissal and announce from @vielzeug/focus",
             "commit": "c264c14e0e8e2fb79edaf5ee65d96ca438993f40"
           }

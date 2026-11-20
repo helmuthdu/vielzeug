@@ -2,6 +2,27 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "modernize dark mode to color-scheme and light-dark() tokens",
+            "commit": "bde502bab5986f216d3048b93feed0514685bd16"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "use toSorted/toReversed and replaceChildren in chart internals",
+            "commit": "bde502bab5986f216d3048b93feed0514685bd16"
+          }
+        ]
+      },
+      "date": "Fri, 20 Nov 2026 09:18:31 GMT",
+      "tag": "@vielzeug/prism_v26.11.28",
+      "version": "26.11.28"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

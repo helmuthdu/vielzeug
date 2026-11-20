@@ -1,7 +1,16 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Thu, 19 Nov 2026 21:35:32 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Nov 2026 09:18:31 GMT and should not be manually modified.
 
+## 26.11.28
+
+Fri, 20 Nov 2026 09:18:31 GMT
+
+### Patches
+
+- Fix navigation menu test typecheck
+- guard IME composition on Enter in query-bar and modernize array copies
+- fix tooltip dark mode to follow the html.dark contract via lightningcss scheme switches
 ## 26.11.27
 
 Thu, 19 Nov 2026 21:35:32 GMT

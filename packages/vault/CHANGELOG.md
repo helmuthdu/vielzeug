@@ -1,7 +1,15 @@
 # Change Log - @vielzeug/vault
 
-This log was last generated on Thu, 19 Nov 2026 21:35:32 GMT and should not be manually modified.
+This log was last generated on Fri, 20 Nov 2026 09:18:31 GMT and should not be manually modified.
 
+## 26.11.28
+
+Fri, 20 Nov 2026 09:18:31 GMT
+
+### Patches
+
+- use Promise.withResolvers for deferred promises
+- preserve error cause in export verification failures
 ## 26.11.27
 
 Thu, 19 Nov 2026 21:35:32 GMT

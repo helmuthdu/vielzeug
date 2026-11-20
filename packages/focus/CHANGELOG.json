@@ -2,6 +2,25 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Fix dismissal test typecheck",
+            "commit": "bde502bab5986f216d3048b93feed0514685bd16"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "use toSorted/toReversed instead of copying before sorting or reversing",
+            "commit": "bde502bab5986f216d3048b93feed0514685bd16"
+          }
+        ]
+      },
+      "date": "Fri, 20 Nov 2026 09:18:31 GMT",
+      "tag": "@vielzeug/focus_v26.11.28",
+      "version": "26.11.28"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",

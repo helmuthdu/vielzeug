@@ -2,6 +2,25 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "chore(codex): refresh bundled docs data",
+            "commit": "bde502bab5986f216d3048b93feed0514685bd16"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Raise integration test timeout so snapshot generation passes under CI coverage",
+            "commit": "bde502bab5986f216d3048b93feed0514685bd16"
+          }
+        ]
+      },
+      "date": "Fri, 20 Nov 2026 09:18:31 GMT",
+      "tag": "@vielzeug/codex_v26.11.28",
+      "version": "26.11.28"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",
