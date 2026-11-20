@@ -6,19 +6,19 @@ Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeu
 
 ## Find it fast
 
-| Question                                                            | Fastest source                                                                                                             |
-| ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| What packages exist; a package's subpaths, docs, local rules        | [`.agents/reference/packages.md`](./.agents/reference/packages.md) (generated); `packages/<name>/package.json` for one package |
-| Public API of a package                                             | `packages/<name>/src/index.ts` and its sub-path entries; MCP `get-type-signature` when codex is available                  |
-| How to use a package                                                | `docs/<name>/`; MCP `get-docs` / `search`                                                                                  |
-| Refine component, token, or markup                                  | MCP `refine-get-component`, `refine-get-tokens`, `refine-validate-usage`; token source in `packages/refine/src/styles/`    |
-| MCP tool map, setup, or fallback                                    | [Codex skill tool map](./packages/codex/skills/vielzeug/SKILL.md); [server setup](./docs/codex/usage.md); without MCP, read package source and docs |
-| What command to run                                                 | **Commands** table below; `bun run` lists all root scripts                                                                 |
-| Which files a cross-cutting task touches (new package, docs page…)  | [`.agents/reference/recipes.md`](./.agents/reference/recipes.md)                                                           |
-| What lives in `.agents/`                                            | [`.agents/README.md`](./.agents/README.md)                                                                                 |
-| Package source conventions                                          | [`.agents/conventions.md`](./.agents/conventions.md)                                                                       |
-| Rules for a subtree (packages, demos, docs, scripts)                | **Subtree AGENTS.md index** at the end of this file                                                                        |
-| CI, publishing, or release automation                               | `.github/AGENTS.md` (protected: approval required before any change)                                                       |
+| Question                                                           | Fastest source                                                                                                                                      |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| What packages exist; a package's subpaths, docs, local rules       | [`.agents/reference/packages.md`](./.agents/reference/packages.md) (generated); `packages/<name>/package.json` for one package                      |
+| Public API of a package                                            | `packages/<name>/src/index.ts` and its sub-path entries; MCP `get-type-signature` when codex is available                                           |
+| How to use a package                                               | `docs/<name>/`; MCP `get-docs` / `search`                                                                                                           |
+| Refine component, token, or markup                                 | MCP `refine-get-component`, `refine-get-tokens`, `refine-validate-usage`; token source in `packages/refine/src/styles/`                             |
+| MCP tool map, setup, or fallback                                   | [Codex skill tool map](./packages/codex/skills/vielzeug/SKILL.md); [server setup](./docs/codex/usage.md); without MCP, read package source and docs |
+| What command to run                                                | **Commands** table below; `bun run` lists all root scripts                                                                                          |
+| Which files a cross-cutting task touches (new package, docs page…) | [`.agents/reference/recipes.md`](./.agents/reference/recipes.md)                                                                                    |
+| What lives in `.agents/`                                           | [`.agents/README.md`](./.agents/README.md)                                                                                                          |
+| Package source conventions                                         | [`.agents/conventions.md`](./.agents/conventions.md)                                                                                                |
+| Rules for a subtree (packages, demos, docs, scripts)               | **Subtree AGENTS.md index** at the end of this file                                                                                                 |
+| CI, publishing, or release automation                              | `.github/AGENTS.md` (protected: approval required before any change)                                                                                |
 
 ## Start work
 
@@ -55,14 +55,14 @@ Read by the klugzeug skills. Each **bold** name in the tables below is a profile
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Install                         | `bun install`                                                                                                                                                                       |
 | Dev command                     | `bun run docs:dev` (docs and Refine components); demos: `bun run --filter vielzeug-crm-demo dev` (also `vielzeug-motors-demo`, `vielzeug-studio-demo`, `vielzeug-voyage-demo`)      |
-| Browser-test command            | `bun run --filter @vielzeug/refine test:e2e` (run `build:e2e` first); demos: `test:e2e` in `vielzeug-crm-demo`, `vielzeug-motors-demo`, `vielzeug-studio-demo`                     |
+| Browser-test command            | `bun run --filter @vielzeug/refine test:e2e` (run `build:e2e` first); demos: `test:e2e` in `vielzeug-crm-demo`, `vielzeug-motors-demo`, `vielzeug-studio-demo`                      |
 | Test (all)                      | `bun run test`                                                                                                                                                                      |
-| Test (one file)                 | `bun x vitest run <file>`; one package: `bun x vitest run packages/<name>/src/` (Refine tests are co-located)                                                                      |
+| Test (one file)                 | `bun x vitest run <file>`; one package: `bun x vitest run packages/<name>/src/` (Refine tests are co-located)                                                                       |
 | Lint                            | `bun run --filter @vielzeug/<name> lint` (all: `bun run lint`)                                                                                                                      |
 | Lint fix                        | `bun run fix`                                                                                                                                                                       |
-| Typecheck                       | none at root; `bun x tsc -p packages/<name>/tsconfig.json --noEmit`; also `bun run --filter @vielzeug/<name> <script>` for `test:types`/`typecheck` listed in Navigation |
+| Typecheck                       | none at root; `bun x tsc -p packages/<name>/tsconfig.json --noEmit`; also `bun run --filter @vielzeug/<name> <script>` for `test:types`/`typecheck` listed in Navigation            |
 | Build                           | `bun run --filter @vielzeug/<name> build` (all: `bun run build`)                                                                                                                    |
-| E2E                             | `bun run --filter @vielzeug/<name> test:e2e` where declared (Navigation table: gesture, necromancer, refine, sentinel; demos crm, eshop, studio)                                      |
+| E2E                             | `bun run --filter @vielzeug/<name> test:e2e` where declared (Navigation table: gesture, necromancer, refine, sentinel; demos crm, eshop, studio)                                    |
 | Docs                            | `bun run --filter @vielzeug/codex build && bun run docs:build`; validators `validate:docs`, `validate:readme`, `validate:repl`, `validate:sidebar`, each with `-- --package=<name>` |
 | Analyse command                 | none                                                                                                                                                                                |
 | Audit command                   | none                                                                                                                                                                                |
@@ -76,7 +76,7 @@ Final gates run once, per Build Scheduling below. Focused checks run while itera
 
 | Changed surface                              | Gate                                                                                                                                                          |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Package source                               | focused vitest for affected behavior, package `tsconfig.json` check, any listed `test:types`/`typecheck` script, `lint`, and `build`                        |
+| Package source                               | focused vitest for affected behavior, package `tsconfig.json` check, any listed `test:types`/`typecheck` script, `lint`, and `build`                          |
 | Real-browser behaviour (`test:e2e` declared) | `test:e2e` scoped to the affected component; refine needs `build:e2e` first                                                                                   |
 | Public API                                   | package gate plus `bun run validate:docs`, `validate:readme`, `validate:repl`, `validate:sidebar` with `-- --package=<name>`                                  |
 | Tests only                                   | focused tests; lint and build only when config or imports changed                                                                                             |
@@ -93,13 +93,13 @@ Final gates run once, per Build Scheduling below. Focused checks run while itera
 
 ### Testing
 
-| Key                | Value                                                                                                                                                                               |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Key                | Value                                                                                                                                                                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Test layers        | unit: vitest + jsdom in `src/__tests__/`; component: refine co-located tests; integration: `codex` and `archive` (real workerd); e2e: Playwright; types: package `tsconfig.json` plus declared type-test scripts; visual: none |
-| Query helper       | `@vielzeug/assay` (role-first DOM queries)                                                                                                                                          |
-| Interaction helper | `@vielzeug/assay` (keyboard simulation)                                                                                                                                             |
-| Network helper     | none                                                                                                                                                                                |
-| Visual baseline    | none                                                                                                                                                                                |
+| Query helper       | `@vielzeug/assay` (role-first DOM queries)                                                                                                                                                                                     |
+| Interaction helper | `@vielzeug/assay` (keyboard simulation)                                                                                                                                                                                        |
+| Network helper     | none                                                                                                                                                                                                                           |
+| Visual baseline    | none                                                                                                                                                                                                                           |
 
 Accessibility assertions: global `axeCheck(element)` in ore, refine, and prism Vitest (`vitest.setup.ts`); `axeCheck(page)` from `@vielzeug/refine/testing` in per-component `*.e2e.ts`.
 
