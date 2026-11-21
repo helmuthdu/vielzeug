@@ -130,13 +130,13 @@ Before each minor release:
 
 ### Navigation
 
-| Component             | Role                           | Keyboard                              | Key ARIA attrs                                      |
-| --------------------- | ------------------------------ | ------------------------------------- | --------------------------------------------------- |
-| `ore-tabs`            | `tablist` + `tab` + `tabpanel` | Arrow keys                            | `aria-selected`, `aria-controls`, `aria-labelledby` |
-| `ore-stepper`         | `navigation` + `list`          | Arrow / Home / End (when `clickable`) | `aria-current="step"`, `aria-disabled`              | Roving `tabindex` over navigable steps; message region uses `role="status"` + `aria-live="polite"` |
-| `ore-pagination`      | `navigation`                   | Standard                              | `aria-label`, `aria-current`                        |
-| `ore-breadcrumb`      | `navigation`                   | Standard                              | `aria-label`, `aria-current`                        |
-| `ore-navigation-menu` | `navigation` + disclosure      | Arrow / Enter / Escape                | `aria-expanded`, `aria-controls`, `aria-haspopup`   | Panel opens on hover/focus and closes on Escape or outside pointer                                 |
+| Component             | Role                           | Keyboard                               | Key ARIA attrs                                      |
+| --------------------- | ------------------------------ | -------------------------------------- | --------------------------------------------------- |
+| `ore-tabs`            | `tablist` + `tab` + `tabpanel` | Arrow keys                             | `aria-selected`, `aria-controls`, `aria-labelledby` |
+| `ore-stepper`         | `navigation` + `list`          | Tab / Enter / Space (when `clickable`) | `aria-current="step"`                               | Native buttons for navigable steps; supply status text where needed |
+| `ore-pagination`      | `navigation`                   | Standard                               | `aria-label`, `aria-current`                        |
+| `ore-breadcrumb`      | `navigation`                   | Standard                               | `aria-label`, `aria-current`                        |
+| `ore-navigation-menu` | `navigation` + disclosure      | Arrow / Enter / Escape                 | `aria-expanded`, `aria-controls`, `aria-haspopup`   | Panel opens on hover/focus and closes on Escape or outside pointer  |
 
 ### Overlay
 

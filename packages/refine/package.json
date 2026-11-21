@@ -311,6 +311,11 @@
       "require": "./dist/keyboard-key.cjs",
       "types": "./dist/content/keyboard-key/keyboard-key.d.ts"
     },
+    "./lightbox": {
+      "import": "./dist/lightbox.js",
+      "require": "./dist/lightbox.cjs",
+      "types": "./dist/overlay/lightbox/lightbox.d.ts"
+    },
     "./list": {
       "import": "./dist/list.js",
       "require": "./dist/list.cjs",
@@ -470,6 +475,11 @@
       "import": "./dist/speed-reading.js",
       "require": "./dist/speed-reading.cjs",
       "types": "./dist/content/speed-reading/speed-reading.d.ts"
+    },
+    "./splitter": {
+      "import": "./dist/splitter.js",
+      "require": "./dist/splitter.cjs",
+      "types": "./dist/layout/splitter/splitter.d.ts"
     },
     "./spotlight": {
       "import": "./dist/spotlight.js",
@@ -717,6 +727,9 @@
       "keyboard-key": [
         "dist/content/keyboard-key/keyboard-key.d.ts"
       ],
+      "lightbox": [
+        "dist/overlay/lightbox/lightbox.d.ts"
+      ],
       "list": [
         "dist/content/list/list.d.ts"
       ],
@@ -812,6 +825,9 @@
       ],
       "speed-reading": [
         "dist/content/speed-reading/speed-reading.d.ts"
+      ],
+      "splitter": [
+        "dist/layout/splitter/splitter.d.ts"
       ],
       "spotlight": [
         "dist/overlay/spotlight/spotlight.d.ts"

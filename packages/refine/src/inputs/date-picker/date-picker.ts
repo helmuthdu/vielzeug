@@ -1,6 +1,6 @@
 import { createDismissal } from '@vielzeug/focus';
 import { bind, define, getHost, html, onCleanup, onMounted, prop, ref, useField } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
+import { computed, signal, watch } from '@vielzeug/ripple';
 import { format, Temporal } from '@vielzeug/tempo';
 import {
   createDatePickerControl,
@@ -61,6 +61,20 @@ export type OreDatePickerProps = {
   placeholder?: string;
   /** Mark field as required */
   required?: boolean;
+  /** Select a complete inclusive date range. */
+  range?: boolean;
+  /** Instruction displayed while choosing the first endpoint. */
+  'range-start-label'?: string;
+  /** Instruction displayed while choosing the second endpoint. */
+  'range-end-label'?: string;
+  /** Message for an invalid range. */
+  'range-invalid-message'?: string;
+  /** Message for an empty required range. */
+  'range-required-message'?: string;
+  /** Accessible label for the selected start date. */
+  'range-start-selected-label'?: string;
+  /** Accessible label for the selected end date. */
+  'range-end-selected-label'?: string;
   /** Border radius */
   rounded?: RoundedSize;
   /** Component size */
@@ -71,8 +85,9 @@ export type OreDatePickerProps = {
    */
   success?: boolean;
   /**
-   * Selected date in ISO 8601 format (yyyy-MM-dd).
-   * @example '2025-06-15'
+   * Selected date (`yyyy-MM-dd`) or, in range mode, inclusive interval
+   * (`yyyy-MM-dd/yyyy-MM-dd`).
+   * @example '2025-06-15/2025-06-20'
    */
   value?: string;
   /** Visual variant */
@@ -94,7 +109,7 @@ export type OreDatePickerProps = {
  *
  * @element ore-date-picker
  *
- * @attr {string} value - Selected date in ISO 8601 format (yyyy-MM-dd)
+ * @attr {string} value - ISO date, or inclusive ISO interval separated by "/" in range mode
  * @attr {string} min - Minimum selectable date (yyyy-MM-dd)
  * @attr {string} max - Maximum selectable date (yyyy-MM-dd)
  * @attr {string} label - Label text
@@ -102,6 +117,13 @@ export type OreDatePickerProps = {
  * @attr {string} placeholder - Trigger placeholder
  * @attr {boolean} disabled - Disable the picker
  * @attr {boolean} required - Required field
+ * @attr {boolean} range - Select an inclusive date range
+ * @attr {string} range-start-label - Instruction for the first endpoint
+ * @attr {string} range-end-label - Instruction for the second endpoint
+ * @attr {string} range-start-selected-label - Label for the selected start date
+ * @attr {string} range-end-selected-label - Label for the selected end date
+ * @attr {string} range-invalid-message - Invalid range message
+ * @attr {string} range-required-message - Empty required range message
  * @attr {string} name - Form field name
  * @attr {string} error - Error message
  * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
@@ -163,6 +185,13 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
     min: prop.string(),
     name: prop.string(),
     placeholder: prop.string(),
+    range: prop.bool(false),
+    'range-end-label': prop.string('Choose an end date'),
+    'range-end-selected-label': prop.string('End date'),
+    'range-invalid-message': prop.string('Enter a valid date range.'),
+    'range-required-message': prop.string('Choose a date range.'),
+    'range-start-label': prop.string('Choose a start date'),
+    'range-start-selected-label': prop.string('Start date'),
     required: prop.bool(false),
     success: prop.bool(false),
     value: prop.string(),
@@ -177,21 +206,50 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
 
     const isOpen = signal(false);
 
-    // ── Selected date: local-override pattern ──────────────────────────────
-    // localSelection holds a user-initiated pick (or undefined = no override).
-    // selectedDate falls back to the value prop reactively: no setInterval needed.
+    const localValue = signal<string | undefined>(undefined);
+    const draftStart = signal<Temporal.PlainDate | null>(null);
+    const customMessage = signal('');
+    const rawValue = computed(() => localValue.value ?? props.value.value ?? '');
+    const rangeDates = computed((): [Temporal.PlainDate, Temporal.PlainDate] | null => {
+      if (!props.range.value) return null;
 
-    const localSelection = signal<Temporal.PlainDate | null | undefined>(undefined);
+      const parts = rawValue.value.split('/');
 
+      if (parts.length !== 2 || !parts.every((part) => /^\d{4}-\d{2}-\d{2}$/.test(part))) return null;
+
+      const start = parseIso(parts[0]);
+      const end = parseIso(parts[1]);
+
+      return start && end && Temporal.PlainDate.compare(start, end) <= 0 ? [start, end] : null;
+    });
     const selectedDate = computed(() =>
-      localSelection.value !== undefined ? localSelection.value : parseIso(props.value.value),
+      props.range.value ? (rangeDates.value?.[0] ?? null) : parseIso(rawValue.value),
     );
+
+    watch(props.value, () => {
+      localValue.value = undefined;
+      draftStart.value = null;
+    });
+
+    // Ore does not emit a prop change when an attribute is written with the same value.
+    // That write still resets the live value, just like a write with a different value.
+    const valueObserver = new MutationObserver((records) => {
+      if (records.some((record) => record.oldValue === el.getAttribute('value'))) {
+        localValue.value = undefined;
+        draftStart.value = null;
+      }
+    });
+
+    valueObserver.observe(el, { attributeFilter: ['value'], attributeOldValue: true });
+    onCleanup(() => valueObserver.disconnect());
 
     defineFieldValue(
       el,
-      () => toIsoString(selectedDate.value) ?? '',
+      () => (props.range.value ? rawValue.value : (toIsoString(selectedDate.value) ?? '')),
       (value) => {
-        localSelection.value = parseIso(value);
+        valueObserver.takeRecords();
+        localValue.value = value;
+        draftStart.value = null;
       },
     );
 
@@ -211,15 +269,30 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
         return parseIso(props.min.value);
       },
       onChange(date) {
-        localSelection.value = date;
-        isOpen.value = false;
-        ctrl.setView('day');
-        currentView.value = 'day';
+        if (props.range.value && date) {
+          if (!draftStart.value) {
+            draftStart.value = date;
+            displayYear.value = ctrl.displayYear();
+            displayMonth.value = ctrl.displayMonth();
+            focusCalendarDay();
+
+            return;
+          }
+
+          const first = draftStart.value;
+          const ordered = Temporal.PlainDate.compare(first, date) <= 0 ? [first, date] : [date, first];
+
+          setFieldValue(el, `${ordered[0].toString()}/${ordered[1].toString()}`);
+        } else {
+          setFieldValue(el, toIsoString(date) ?? '');
+        }
+
+        closePicker();
         displayYear.value = ctrl.displayYear();
         displayMonth.value = ctrl.displayMonth();
-        setFieldValue(el, toIsoString(date) ?? '');
         dispatchNativeFieldEvent(el, 'input');
         dispatchNativeFieldEvent(el, 'change');
+        triggerRef.value?.focus();
       },
       get value() {
         return selectedDate.value;
@@ -238,10 +311,63 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
 
     // ── Form value (host is formAssociated) ──────────────────────────────────
 
-    useField<string>({
+    const rangeValid = computed(() => {
+      const dates = rangeDates.value;
+
+      if (!dates) return false;
+
+      const min = parseIso(props.min.value);
+      const max = parseIso(props.max.value);
+      const disabledDays = props['weekend-days'].value ?? [];
+
+      return dates.every(
+        (date) =>
+          (!min || Temporal.PlainDate.compare(date, min) >= 0) &&
+          (!max || Temporal.PlainDate.compare(date, max) <= 0) &&
+          !disabledDays.includes(date.dayOfWeek % 7),
+      );
+    });
+    const validity = computed(() => {
+      if (customMessage.value) return { flags: { customError: true }, message: customMessage.value };
+      if (!props.range.value) return null;
+      if (draftStart.value)
+        return { flags: { customError: true }, message: props['range-end-label'].value || 'Choose an end date' };
+      if (!rawValue.value) {
+        return props.required.value
+          ? { flags: { valueMissing: true }, message: props['range-required-message'].value || 'Choose a date range.' }
+          : null;
+      }
+
+      return rangeValid.value
+        ? null
+        : {
+            flags: { customError: true },
+            message: props['range-invalid-message'].value || 'Enter a valid date range.',
+          };
+    });
+    const formField = useField<string>({
       disabled: isDisabled,
+      onReset: () => {
+        localValue.value = undefined;
+        draftStart.value = null;
+        closePicker();
+      },
       toFormValue: (v) => v || null,
-      value: computed(() => toIsoString(selectedDate.value) ?? ''),
+      validity,
+      value: computed(() =>
+        props.range.value ? (rangeValid.value ? rawValue.value : '') : (toIsoString(selectedDate.value) ?? ''),
+      ),
+    });
+
+    Object.defineProperties(el, {
+      checkValidity: { configurable: true, value: formField.checkValidity },
+      reportValidity: { configurable: true, value: formField.reportValidity },
+      setCustomValidity: {
+        configurable: true,
+        value: (message: string) => {
+          customMessage.value = message;
+        },
+      },
     });
 
     const dialogId = `date-picker-${Math.random().toString(36).slice(2, 9)}-calendar`;
@@ -273,6 +399,10 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
     // ── Derived display values ───────────────────────────────────────────────
 
     const triggerText = computed(() => {
+      if (props.range.value && rangeDates.value) {
+        return rangeDates.value.map((date) => formatDisplayDate(date, locale.value)).join(' – ');
+      }
+
       if (selectedDate.value) return formatDisplayDate(selectedDate.value, locale.value);
 
       return props.placeholder.value || '';
@@ -290,19 +420,56 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
     const dayCells = computed(() => {
       void displayYear.value;
       void displayMonth.value;
-      void selectedDate.value; // re-run when selection changes to refresh isSelected flags
 
-      return ctrl.dayCells();
+      const selected = toIsoString(selectedDate.value);
+      const range = props.range.value ? rangeDates.value : null;
+      const draft = toIsoString(draftStart.value);
+
+      const cells = ctrl.dayCells().map((cell) => {
+        const start = draft ?? (range ? range[0].toString() : null);
+        const end = draft ? null : (range?.[1].toString() ?? null);
+
+        return {
+          ...cell,
+          isEnd: end === cell.iso,
+          isInside: !!start && !!end && cell.iso > start && cell.iso < end,
+          isSelected: props.range.value
+            ? cell.iso === start || cell.iso === end || (!!start && !!end && cell.iso > start && cell.iso < end)
+            : cell.iso === selected,
+          isStart: start === cell.iso,
+        };
+      });
+      const focusable =
+        cells.find((cell) => cell.isSelected && !cell.isDisabled) ??
+        cells.find((cell) => cell.isToday && !cell.isDisabled) ??
+        cells.find((cell) => !cell.isDisabled);
+
+      return cells.map((cell) => ({ ...cell, isFocusable: cell.iso === focusable?.iso }));
     });
     const monthCells = computed(() => {
       void displayYear.value;
 
-      return ctrl.monthCells();
+      const selected = selectedDate.value;
+      const cells = ctrl.monthCells().map((cell) => ({
+        ...cell,
+        isSelected: selected !== null && selected.year === displayYear.value && selected.month === cell.month,
+      }));
+      const focusable =
+        cells.find((cell) => cell.isSelected && !cell.isDisabled) ?? cells.find((cell) => !cell.isDisabled);
+
+      return cells.map((cell) => ({ ...cell, isFocusable: cell.month === focusable?.month }));
     });
     const yearCells = computed(() => {
       void displayYear.value;
 
-      return ctrl.yearCells();
+      const selected = selectedDate.value;
+      const cells = ctrl
+        .yearCells()
+        .map((cell) => ({ ...cell, isSelected: selected !== null && selected.year === cell.year }));
+      const focusable =
+        cells.find((cell) => cell.isSelected && !cell.isDisabled) ?? cells.find((cell) => !cell.isDisabled);
+
+      return cells.map((cell) => ({ ...cell, isFocusable: cell.year === focusable?.year }));
     });
     const weekdayLabels = computed(() => ctrl.weekdayLabels());
     const tabIndex = () => (isDisabled.value ? '-1' : '0');
@@ -363,6 +530,12 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
 
     // ── Open / close ─────────────────────────────────────────────────────────
 
+    function focusCalendarDay(): void {
+      requestAnimationFrame(() => {
+        if (isOpen.value) calendarRef.value?.querySelector<HTMLElement>('.cal-cell-day[tabindex="0"]')?.focus();
+      });
+    }
+
     function openPicker(): void {
       if (isDisabled.value) return;
 
@@ -380,15 +553,21 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
 
       positioner.update();
       stopAutoUpdate = positioner.startAutoUpdate?.() ?? null;
+      focusCalendarDay();
     }
 
     function closePicker(): void {
       isOpen.value = false;
+      draftStart.value = null;
       ctrl.setView('day');
       currentView.value = 'day';
       stopAutoUpdate?.();
       stopAutoUpdate = null;
     }
+
+    watch(isDisabled, (disabled) => {
+      if (disabled) closePicker();
+    });
 
     function handleTriggerClick(): void {
       if (isOpen.value) closePicker();
@@ -406,6 +585,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
       } else if (e.key === 'Escape' && isOpen.value) {
         e.preventDefault();
         closePicker();
+        triggerRef.value?.focus();
       }
     }
 
@@ -413,6 +593,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
       if (e.key === 'Escape') {
         e.preventDefault();
         closePicker();
+        triggerRef.value?.focus();
       }
     }
 
@@ -452,7 +633,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
     const inputVariant = () => props.variant?.value ?? undefined;
     const inputRounded = () => props.rounded?.value ?? undefined;
     const inputHelper = () => props.helper.value ?? '';
-    const inputError = () => props.error.value ?? '';
+    const inputError = () => props.error.value || validity.value?.message || '';
     const inputDisabled = () => (isDisabled.value ? true : undefined);
     const inputRequired = () => (props.required.value ? true : undefined);
     const inputFullwidth = () => (props.fullwidth.value ? true : undefined);
@@ -494,10 +675,13 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
         ref="${calendarRef}"
         id="${dialogId}"
         role="dialog"
-        aria-modal="true"
         aria-label="${() => `Choose date: ${displayLabel.value}`}"
+        ?hidden="${() => !isOpen.value}"
         ?data-open="${isOpen}"
         @keydown="${handleCalendarKeydown}">
+        <p class="range-instruction" ?hidden="${() => !props.range.value}" aria-live="polite">
+          ${() => (draftStart.value ? props['range-end-label'].value : props['range-start-label'].value)}
+        </p>
         <!-- Calendar header -->
         <div class="cal-header" part="header">
           <button class="nav-btn" type="button" aria-label="Previous" @click="${handlePrev}">
@@ -524,6 +708,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
           role="grid"
           part="grid"
           aria-label="${() => displayLabel.value}"
+          aria-multiselectable="${() => (props.range.value ? 'true' : null)}"
           ?hidden="${() => currentView.value !== 'day'}">
           <div role="row" class="cal-grid-row">
             ${() =>
@@ -551,12 +736,23 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
                         aria-selected="${() => String(cell.isSelected)}"
                         aria-disabled="${() => String(cell.isDisabled)}"
                         aria-current="${() => (cell.isToday ? 'date' : null)}"
-                        ?data-selected="${() => cell.isSelected}"
+                        ?data-selected="${() => cell.isSelected && (!props.range.value || cell.isStart || cell.isEnd)}"
+                        ?data-range-start="${() => props.range.value && cell.isStart}"
+                        ?data-range-end="${() => props.range.value && cell.isEnd}"
+                        ?data-range-inside="${() => props.range.value && cell.isInside}"
+                        aria-label="${() =>
+                          [
+                            formatDisplayDate(cell.plain, locale.value),
+                            props.range.value && cell.isStart ? props['range-start-selected-label'].value : '',
+                            props.range.value && cell.isEnd ? props['range-end-selected-label'].value : '',
+                          ]
+                            .filter(Boolean)
+                            .join(', ')}"
                         ?data-today="${() => cell.isToday}"
                         ?data-outside="${() => cell.isOutsideMonth}"
                         ?data-disabled="${() => cell.isDisabled}"
                         data-iso="${cell.iso}"
-                        tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
+                        tabindex="${() => (cell.isFocusable ? '0' : '-1')}"
                         @click="${() => handleSelectDay(cell.iso)}"
                         @keydown="${handleDayKeydown}">
                         ${String(cell.day)}
@@ -593,7 +789,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
                         aria-disabled="${() => String(cell.isDisabled)}"
                         ?data-selected="${() => cell.isSelected}"
                         ?data-disabled="${() => cell.isDisabled}"
-                        tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
+                        tabindex="${() => (cell.isFocusable ? '0' : '-1')}"
                         @click="${() => {
                           if (!cell.isDisabled) handleSelectMonth(cell.month);
                         }}"
@@ -635,7 +831,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
                         aria-disabled="${() => String(cell.isDisabled)}"
                         ?data-selected="${() => cell.isSelected}"
                         ?data-disabled="${() => cell.isDisabled}"
-                        tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
+                        tabindex="${() => (cell.isFocusable ? '0' : '-1')}"
                         @click="${() => {
                           if (!cell.isDisabled) handleSelectYear(cell.year);
                         }}"

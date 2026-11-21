@@ -54,6 +54,27 @@ describe('ore-sidebar', () => {
     expect(fixture.element.hasAttribute('data-collapsed')).toBe(true);
   });
 
+  it('supports an explicitly expanded controlled state', async () => {
+    fixture = await mount('ore-sidebar', { attrs: { collapsed: 'false', collapsible: '' } });
+    const handler = vi.fn();
+
+    fixture.element.addEventListener('collapsed-change', handler);
+    expect(fixture.element.hasAttribute('data-collapsed')).toBe(false);
+
+    fixture.query<HTMLButtonElement>('[part="toggle-btn"]')?.click();
+    await fixture.flush();
+
+    expect(fixture.element.hasAttribute('data-collapsed')).toBe(false);
+    expect(handler.mock.calls[0][0].detail).toEqual({ collapsed: true, source: 'toggle' });
+
+    fixture.element.removeAttribute('collapsed');
+    await fixture.flush();
+    fixture.query<HTMLButtonElement>('[part="toggle-btn"]')?.click();
+    await fixture.flush();
+
+    expect(fixture.element.hasAttribute('data-collapsed')).toBe(true);
+  });
+
   it('toggles in uncontrolled mode and emits collapsed-change', async () => {
     fixture = await mount('ore-sidebar', { attrs: { collapsible: '' } });
 
@@ -317,6 +338,60 @@ describe('ore-sidebar', () => {
     }
   });
 
+  it('forwards bottom-tab activation through the source item', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-sidebar', {
+        attrs: { 'bottom-nav-at': '(max-width: 768px)' },
+        html: `
+          <ore-sidebar-item href="/route" target="_blank" rel="nofollow" bottom-nav>Route</ore-sidebar-item>
+          <ore-sidebar-item bottom-nav>Action</ore-sidebar-item>
+        `,
+      });
+      const [linkItem, actionItem] = fixture.element.querySelectorAll('ore-sidebar-item');
+      const linkHandler = vi.fn((event: Event) => event.preventDefault());
+      const actionHandler = vi.fn();
+
+      linkItem.addEventListener('click', linkHandler);
+      actionItem.addEventListener('click', actionHandler);
+
+      const tabs = fixture.queryAll<HTMLElement>('[part="bottom-bar"] .bottom-tab');
+      const bottomLink = tabs[0] as HTMLAnchorElement;
+
+      expect(bottomLink.target).toBe('_blank');
+      expect(bottomLink.rel).toContain('nofollow');
+      expect(bottomLink.rel).toContain('noopener');
+      expect(bottomLink.rel).toContain('noreferrer');
+
+      const sidebar = fixture.element as HTMLElement & { openDrawer(): void };
+
+      sidebar.openDrawer();
+      await fixture.flush();
+      bottomLink.click();
+      await fixture.flush();
+
+      expect(linkHandler).toHaveBeenCalledTimes(1);
+      expect(sidebar.hasAttribute('data-drawer-open')).toBe(false);
+
+      sidebar.openDrawer();
+      await fixture.flush();
+      tabs[1].click();
+      await fixture.flush();
+
+      expect(actionHandler).toHaveBeenCalledTimes(1);
+      expect(sidebar.hasAttribute('data-drawer-open')).toBe(false);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('uses custom labels for collapse and drawer close controls', async () => {
     const originalMatchMedia = window.matchMedia;
 
@@ -386,7 +461,7 @@ describe('ore-sidebar', () => {
     }
   });
 
-  it('hides the drawer close button when the sidebar has no header content', async () => {
+  it('hides the empty header and close button in a headerless drawer', async () => {
     const originalMatchMedia = window.matchMedia;
 
     window.matchMedia = vi.fn().mockImplementation(() => ({
@@ -408,12 +483,23 @@ describe('ore-sidebar', () => {
       await fixture.flush();
 
       expect(sidebar.hasAttribute('data-drawer-open')).toBe(true);
+      expect(fixture.query('[part="header"]')?.hasAttribute('hidden')).toBe(true);
       expect(fixture.query<HTMLButtonElement>('[part="drawer-close-btn"]')?.hidden).toBe(true);
+      expect(fixture.query('[role="dialog"]')?.getAttribute('aria-modal')).toBe('true');
+      expect(fixture.query('[role="dialog"]')?.getAttribute('aria-label')).toBe('Sidebar navigation');
+      expect(fixture.query('[part="nav"]')?.hasAttribute('role')).toBe(false);
 
-      // Escape still dismisses a headerless drawer.
-      sidebar.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+      const handledEscape = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Escape' });
+      handledEscape.preventDefault();
+      sidebar.dispatchEvent(handledEscape);
+      await fixture.flush();
+      expect(sidebar.hasAttribute('data-drawer-open')).toBe(true);
+
+      // An unhandled Escape dismisses the drawer.
+      sidebar.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Escape' }));
       await fixture.flush();
       expect(sidebar.hasAttribute('data-drawer-open')).toBe(false);
+      expect(fixture.query('[role="dialog"]')).toBeNull();
     } finally {
       window.matchMedia = originalMatchMedia;
     }

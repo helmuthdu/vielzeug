@@ -491,6 +491,35 @@ describe('ore-calendar', () => {
       expect(fixture.shadow?.activeElement).toBe(cells[4]);
     });
 
+    it('keeps one tab stop in each calendar grid', async () => {
+      fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
+
+      const getTabStops = (selector: string) =>
+        [...fixture.queryAll<HTMLElement>(selector)].filter((cell) => cell.tabIndex === 0);
+
+      expect(getTabStops('.cal-cell-day')).toHaveLength(1);
+
+      fireClick(fixture.query('.cal-label-btn')!);
+      await fixture.flush();
+      expect(getTabStops('.cal-cell-month')).toHaveLength(1);
+
+      fireClick(fixture.query('.cal-label-btn')!);
+      await fixture.flush();
+      expect(getTabStops('.cal-cell-year')).toHaveLength(1);
+    });
+
+    it('skips disabled dates vertically without changing weekday', async () => {
+      fixture = await mount('ore-calendar', { props: { value: '2023-06-06' } });
+
+      const tuesday = fixture.query<HTMLElement>('[data-iso="2023-06-06"]')!;
+      fixture.query<HTMLElement>('[data-iso="2023-06-13"]')!.setAttribute('aria-disabled', 'true');
+
+      fireKeyDown(tuesday, { key: 'ArrowDown' });
+      await fixture.flush();
+
+      expect(fixture.shadow?.activeElement).toBe(fixture.query('[data-iso="2023-06-20"]'));
+    });
+
     it('Home/End move focus to the first/last cell in the same month-view row', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
 

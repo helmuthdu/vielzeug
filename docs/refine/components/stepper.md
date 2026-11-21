@@ -46,7 +46,9 @@ By default, the stepper is display-only: steps before the current `value` are ma
 
 ## Linear Navigation
 
-Add `linear` alongside `clickable` to restrict navigation to completed steps and the current step: steps ahead of the current one render but cannot be clicked or keyboard-focused until the user reaches them.
+Add `linear` alongside `clickable` to restrict navigation to reached steps. Returning to an earlier step does not make later reached steps inaccessible. Advance the stepper by setting `value` after the application validates the current step; the component does not validate or advance a workflow itself.
+
+The current step and the steps preceding it become reached when a selection is made. Reordering or removing steps does not make an unreached step navigable; a newly inserted step becomes reached when it precedes a later selection. Removing a step discards its reached state.
 
 <ComponentPreview center>
 
@@ -63,7 +65,7 @@ Add `linear` alongside `clickable` to restrict navigation to completed steps and
 
 ## Descriptions, Optional Steps, and Custom Icons
 
-Use the `description` slot for supporting text, the `optional` attribute to flag a skippable step, and the `icon` slot to replace the number/check indicator with a custom icon.
+Use `description` for supporting text, `optional` to flag a skippable step, and `icon` to replace the number/check indicator. Use the `optional` slot to localize the hint, and supply status text when the visual indicator conveys information that is otherwise unavailable.
 
 <ComponentPreview center>
 
@@ -79,6 +81,7 @@ Use the `description` slot for supporting text, the `optional` attribute to flag
   </ore-step>
   <ore-step value="gift" optional>
     Gift wrap
+    <span slot="optional">Optional</span>
     <span slot="description">Optional add-on</span>
   </ore-step>
   <ore-step value="payment">
@@ -99,7 +102,7 @@ Mark a step `error` to flag a problem that needs attention, or `disabled` to rem
 ```html
 <ore-stepper value="payment" clickable color="primary">
   <ore-step value="cart">Cart</ore-step>
-  <ore-step value="shipping" error>Shipping</ore-step>
+  <ore-step value="shipping" error>Shipping <span slot="status">Address needs attention</span></ore-step>
   <ore-step value="payment">Payment</ore-step>
   <ore-step value="review" disabled>Review</ore-step>
 </ore-stepper>
@@ -191,34 +194,9 @@ mobileQuery.addEventListener('change', applyOrientation);
 applyOrientation();
 ```
 
-## Feedback After a Step Completes
-
-`ore-stepper` only handles step navigation: for a transient status message after an async action (e.g. "Shipping details saved"), compose it with `ore-alert` or `ore-toast` alongside the stepper rather than looking for a stepper-owned message prop:
-
-```html
-<ore-stepper id="wizard" value="shipping" clickable>
-  <ore-step value="cart">Cart</ore-step>
-  <ore-step value="shipping">Shipping</ore-step>
-  <ore-step value="payment">Payment</ore-step>
-</ore-stepper>
-<ore-alert id="saved-alert" hidden color="success" role="status" aria-live="polite">Shipping details saved</ore-alert>
-
-<script type="module">
-  import '@vielzeug/refine/alert';
-  import '@vielzeug/refine/stepper';
-  import '@vielzeug/refine/step';
-
-  async function saveShipping() {
-    await api.saveShippingDetails();
-    savedAlert.hidden = false;
-    setTimeout(() => (savedAlert.hidden = true), 4000);
-  }
-</script>
-```
-
 ## Step Counter
 
-The accessible “Step X of Y” text is per-step and screen-reader-only. A visible counter is a one-line composition; drive it from the same state that sets `value`.
+A visible counter can be composed alongside the stepper; drive it from the same state that sets `value`.
 
 <ComponentPreview vertical>
 
@@ -250,7 +228,7 @@ The accessible “Step X of Y” text is per-step and screen-reader-only. A visi
 | ------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
 | `value`       | `string`                                                                  | N/A            | The `value` of the currently active step                                          |
 | `clickable`   | `boolean`                                                                 | `false`        | Allow clicking/focusing steps to navigate. Off by default (pure progress display) |
-| `linear`      | `boolean`                                                                 | `false`        | Restrict navigation to completed steps and the current step                       |
+| `linear`      | `boolean`                                                                 | `false`        | Restrict navigation to reached steps                                              |
 | `disabled`    | `boolean`                                                                 | `false`        | Disables the whole stepper: no step is navigable regardless of `clickable`        |
 | `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Layout direction: vertical suits mobile/narrow layouts                            |
 | `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A            | Theme color for the current/completed step indicators                             |
@@ -279,12 +257,12 @@ The accessible “Step X of Y” text is per-step and screen-reader-only. A visi
 
 **`ore-step`** Attributes
 
-| Attribute  | Type      | Default | Description                                                                        |
-| ---------- | --------- | ------- | ---------------------------------------------------------------------------------- |
-| `value`    | `string`  | N/A     | Unique identifier, matches the parent `ore-stepper`'s `value` attribute (required) |
-| `disabled` | `boolean` | `false` | Removes this step from navigation entirely                                         |
-| `error`    | `boolean` | `false` | Marks the step as failed/invalid                                                   |
-| `optional` | `boolean` | `false` | Renders an "(optional)" hint next to the label                                     |
+| Attribute  | Type      | Default | Description                                                            |
+| ---------- | --------- | ------- | ---------------------------------------------------------------------- |
+| `value`    | `string`  | N/A     | Non-empty, unique identifier, matching the parent's `value` (required) |
+| `disabled` | `boolean` | `false` | Removes this step from navigation entirely                             |
+| `error`    | `boolean` | `false` | Marks the step as failed/invalid                                       |
+| `optional` | `boolean` | `false` | Renders an "(optional)" hint next to the label                         |
 
 `current`, `completed`, `navigable`, `index`, and `total` are read-only: derived from this step's position relative to the parent `ore-stepper`'s `value`, `clickable`, and `linear`, and reflected onto this element for CSS/inspection only. `color`, `size`, and `orientation` are also inherited from the parent when nested inside one (overriding any value set directly), but remain independently settable for a standalone `ore-step`.
 
@@ -295,6 +273,8 @@ The accessible “Step X of Y” text is per-step and screen-reader-only. A visi
 | (default)     | Step label                                                       |
 | `description` | Optional supporting text shown below the label                   |
 | `icon`        | Custom icon replacing the automatic number/check/error indicator |
+| `optional`    | Localized hint shown when `optional` is set                      |
+| `status`      | Caller-supplied status text                                      |
 
 **`ore-step`** CSS Custom Properties
 
@@ -310,6 +290,8 @@ Set them on `ore-step` (inline style or a document selector); outer declarations
 
 The stepper renders a `<nav>` landmark (labeled via `label`, default `"Progress"`) containing an `<ol>` of `ore-step` items, conveying sequence to screen readers. The step matching the current `value` receives `aria-current="step"`.
 
-When `clickable` is set, each navigable step renders as a real `<button>` with roving `tabindex`: arrow keys (Left/Right for horizontal, Up/Down for vertical) move focus and immediately activate the target step, `Home`/`End` jump to the first/last navigable step, and `Enter`/`Space` re-activates the focused step. Disabled steps, and, when `linear` is set: steps beyond the current one, are skipped entirely by keyboard navigation and are not clickable. When `clickable` is not set, steps render as static (non-interactive) content for pure progress display.
+When `clickable` is set, navigable steps render as native buttons. Tab moves between them without changing the selection; Enter or Space selects the focused step. Disabled steps and steps beyond the linear boundary are not clickable or tabbable. When `clickable` is not set, steps render as static content.
 
-Each step's accessible name includes its position ("Step 2 of 4") and state ("completed", "current step", or "error") via visually-hidden text, in addition to its visible label and description.
+The ordered list conveys the sequence. Supply localized text in the `status` slot for completion or error information when it matters; do not rely on indicator color or icons alone. Use the `optional` slot to replace the default English hint.
+
+Each direct child step needs a unique, non-empty `value`. Invalid values disable navigation and produce a development warning. When the current step is removed, the first enabled step becomes current; if no steps remain, the value is cleared.

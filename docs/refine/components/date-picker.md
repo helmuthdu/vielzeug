@@ -62,6 +62,7 @@ Override the display locale with any BCP 47 tag. Day and month names update auto
 ## Pre-selected Value
 
 Set `value` to an ISO 8601 date string to initialise the selection.
+Changing the `value` attribute or JavaScript property also updates the selection after a user has picked a date. Programmatic updates do not emit `input` or `change`.
 
 <ComponentPreview align="start" justify="start" vertical height="400px;">
 
@@ -71,9 +72,25 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 </ComponentPreview>
 
+## Date Ranges
+
+Set `range` to select an inclusive interval. The first date starts a draft; the second commits both endpoints in chronological order. Escape or closing the calendar cancels a draft. While a draft is open, the field is invalid so a form cannot submit it.
+
+<ComponentPreview align="start" justify="start" vertical height="400px">
+
+```html
+<ore-date-picker range name="stay" label="Stay dates" value="2025-06-10/2025-06-15"></ore-date-picker>
+```
+
+</ComponentPreview>
+
+The value is `YYYY-MM-DD/YYYY-MM-DD` in one form field. `min`, `max`, and `weekend-days` constrain the endpoints only. An invalid external value is retained in the property, marks the field invalid, and is omitted from `FormData`. An empty value is also omitted. Reset restores the `value` attribute.
+
+Use `range-start-label`, `range-end-label`, `range-start-selected-label`, `range-end-selected-label`, `range-invalid-message`, and `range-required-message` to localize range instructions, selection labels, and validation.
+
 ## Form Integration
 
-`ore-date-picker` is form-associated. The submitted value is the ISO 8601 string or empty string when no date is selected.
+`ore-date-picker` is form-associated. The submitted value is the ISO 8601 string; an empty selection is omitted from `FormData`.
 
 <ComponentPreview align="start" justify="start" vertical height="400px;">
 
@@ -161,32 +178,40 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 ### Props
 
-| Prop              | Type                   | Default        | Description                                                                 |
-| ----------------- | ---------------------- | -------------- | --------------------------------------------------------------------------- |
-| `value`           | `string`               | N/A            | Selected date in ISO 8601 format (`yyyy-MM-dd`)                             |
-| `min`             | `string`               | N/A            | Minimum selectable date (`yyyy-MM-dd`, inclusive)                           |
-| `max`             | `string`               | N/A            | Maximum selectable date (`yyyy-MM-dd`, inclusive)                           |
-| `label`           | `string`               | N/A            | Visible label                                                               |
-| `label-placement` | `'inset' \| 'outside'` | `'inset'`      | Label position                                                              |
-| `placeholder`     | `string`               | N/A            | Trigger placeholder when no date selected                                   |
-| `name`            | `string`               | N/A            | Form field name                                                             |
-| `disabled`        | `boolean`              | `false`        | Disable the picker                                                          |
-| `required`        | `boolean`              | `false`        | Mark as required                                                            |
-| `error`           | `string`               | N/A            | Error message (shown below trigger in error color)                          |
-| `helper`          | `string`               | N/A            | Helper text (shown below trigger)                                           |
-| `locale`          | `string`               | browser locale | BCP 47 locale for day/month names                                           |
-| `weekend-days`    | `string`               | N/A            | JSON array of day indices to disable (e.g. `"[0,6]"`)                       |
-| `color`           | `string`               | N/A            | Theme color (`primary`, `secondary`, `info`, `success`, `warning`, `error`) |
-| `size`            | `string`               | `'md'`         | Size variant: `sm`, `md`, `lg`                                              |
-| `variant`         | `string`               | N/A            | Visual variant: `flat`, `solid`, `bordered`, `outline`, `ghost`             |
-| `rounded`         | `string`               | N/A            | Border radius override                                                      |
-| `fullwidth`       | `boolean`              | `false`        | Expand to full container width                                              |
+| Prop                         | Type                   | Default                     | Description                                                                   |
+| ---------------------------- | ---------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| `value`                      | `string`               | N/A                         | Selected date (`yyyy-MM-dd`), or an inclusive range (`yyyy-MM-dd/yyyy-MM-dd`) |
+| `min`                        | `string`               | N/A                         | Minimum selectable date (`yyyy-MM-dd`, inclusive)                             |
+| `max`                        | `string`               | N/A                         | Maximum selectable date (`yyyy-MM-dd`, inclusive)                             |
+| `label`                      | `string`               | N/A                         | Visible label                                                                 |
+| `label-placement`            | `'inset' \| 'outside'` | `'inset'`                   | Label position                                                                |
+| `placeholder`                | `string`               | N/A                         | Trigger placeholder when no date selected                                     |
+| `name`                       | `string`               | N/A                         | Form field name                                                               |
+| `disabled`                   | `boolean`              | `false`                     | Disable the picker                                                            |
+| `required`                   | `boolean`              | `false`                     | Mark as required                                                              |
+| `range`                      | `boolean`              | `false`                     | Select an inclusive date range                                                |
+| `range-start-label`          | `string`               | `Choose a start date`       | Instruction for the first endpoint                                            |
+| `range-end-label`            | `string`               | `Choose an end date`        | Instruction for the second endpoint                                           |
+| `range-start-selected-label` | `string`               | `Start date`                | Accessible label for the selected start                                       |
+| `range-end-selected-label`   | `string`               | `End date`                  | Accessible label for the selected end                                         |
+| `range-invalid-message`      | `string`               | `Enter a valid date range.` | Invalid range message                                                         |
+| `range-required-message`     | `string`               | `Choose a date range.`      | Required range message                                                        |
+| `error`                      | `string`               | N/A                         | Error message (shown below trigger in error color)                            |
+| `helper`                     | `string`               | N/A                         | Helper text (shown below trigger)                                             |
+| `locale`                     | `string`               | browser locale              | BCP 47 locale for day/month names                                             |
+| `weekend-days`               | `string`               | N/A                         | JSON array of day indices to disable (e.g. `"[0,6]"`)                         |
+| `color`                      | `string`               | N/A                         | Theme color (`primary`, `secondary`, `info`, `success`, `warning`, `error`)   |
+| `size`                       | `string`               | `'md'`                      | Size variant: `sm`, `md`, `lg`                                                |
+| `variant`                    | `string`               | N/A                         | Visual variant: `flat`, `solid`, `bordered`, `outline`, `ghost`               |
+| `rounded`                    | `string`               | N/A                         | Border radius override                                                        |
+| `fullwidth`                  | `boolean`              | `false`                     | Expand to full container width                                                |
 
 ### Events
 
-| Event    | Detail                         | Description                                                                                  |
-| -------- | ------------------------------ | -------------------------------------------------------------------------------------------- |
-| `change` | `{ isoValue: string \| null }` | Fired when a date is selected. `isoValue` is the ISO 8601 date string or `null` when cleared |
+| Event    | Detail | Description                                                                |
+| -------- | ------ | -------------------------------------------------------------------------- |
+| `input`  | None   | Native event fired when a selection is committed. Read the host's `value`. |
+| `change` | None   | Native event fired after `input` when a selection is committed.            |
 
 ### CSS Custom Properties
 
@@ -212,9 +237,7 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 ## Accessibility
 
-`ore-date-picker` follows the [ARIA Date Picker Dialog Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/examples/datepicker-dialog/).
-
-The trigger has `role="combobox"` and `aria-haspopup="dialog"`, with `aria-expanded` reflecting the open/closed state. The calendar panel has `role="dialog"` and `aria-modal="true"`. Each view (day/month/year) uses `role="grid"` with cells grouped into `role="row"` elements; the day view additionally renders `role="columnheader"` weekday labels, and every cell is a `role="gridcell"` carrying `aria-selected`/`aria-disabled`. Today's date receives `aria-current="date"`. Disabled days have `tabindex="-1"` and `pointer-events: none`.
+The trigger has `role="combobox"` and `aria-haspopup="dialog"`, with `aria-expanded` reflecting the open/closed state. The non-modal calendar panel has `role="dialog"`. Each view (day/month/year) uses `role="grid"` with cells grouped into `role="row"` elements; the day view additionally renders `role="columnheader"` weekday labels, and every cell is a `role="gridcell"` carrying `aria-selected`/`aria-disabled`. Today's date receives `aria-current="date"`. Disabled days have `tabindex="-1"` and `pointer-events: none`.
 
 Keyboard navigation is fully supported: `Escape` closes the calendar from any focused element inside it. In the day grid, `ArrowRight`/`ArrowLeft` move by one day, `ArrowDown`/`ArrowUp` move by one week, and `Home`/`End` move to the first or last day of the current row. The month and year grids support the same arrow-key/`Home`/`End` roving navigation over their 4-column layout.
 

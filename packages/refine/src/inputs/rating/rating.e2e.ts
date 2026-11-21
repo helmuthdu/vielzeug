@@ -9,6 +9,27 @@
 import { expect, test, touchSwipe } from '../../testing/fixtures';
 
 test.describe('Pointer interaction', () => {
+  test('keeps the rating cleared while the pointer remains over the re-pressed star', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-rating id="r" value="3"></ore-rating>');
+    const rating = page.locator('#r');
+    const star = rating.locator('[data-star="3"]');
+    const nextStar = rating.locator('[data-star="4"]');
+    const box = (await star.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await expect(rating).toHaveAttribute('value', '0');
+    await page.mouse.move(x, y);
+    await expect(star.locator('.star-fill')).toHaveCSS('width', '0px');
+    const nextBox = (await nextStar.boundingBox())!;
+    await page.mouse.move(nextBox.x + nextBox.width / 2, nextBox.y + nextBox.height / 2);
+    await expect(rating).toHaveAttribute('value', '4');
+    await page.mouse.up();
+    await expect(nextStar.locator('.star-fill')).toHaveCSS('width', '28px');
+  });
+
   for (const reason of ['blur', 'second-touch']) {
     test(`uses the owner document for ${reason} cancellation`, async ({ page, refinePage }) => {
       await refinePage.mountComponent('<iframe title="Rating owner"></iframe>');
@@ -161,18 +182,33 @@ test.describe('Layout', () => {
     expect(parseFloat(ring.width)).toBeGreaterThan(0);
   });
 
-  test('the committed star pops (animation applied, not dropped by layers)', async ({ page, refinePage }) => {
-    await refinePage.mountComponent(`<ore-rating id="r" value="3" color="warning"></ore-rating>`);
+  test('the committed star feedback is subtle and brief', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`<ore-rating id="r" color="warning"></ore-rating>`);
+    await page.locator('#r [data-star="3"]').click();
 
     const animation = await page.evaluate(() => {
       const inner = (document.getElementById('r') as HTMLElement & { shadowRoot: ShadowRoot }).shadowRoot.querySelector(
         '.star[data-current] .star-fill-inner',
-      ) as HTMLElement | null;
+      ) as HTMLElement;
+      const effect = inner.getAnimations()[0]?.effect;
+      const keyframes = effect instanceof KeyframeEffect ? effect.getKeyframes() : [];
+      const peakScale = Math.max(
+        1,
+        ...keyframes.map(({ transform }) =>
+          typeof transform === 'string' && transform !== 'none' ? new DOMMatrixReadOnly(transform).a : 1,
+        ),
+      );
 
-      return inner ? getComputedStyle(inner).animationName : 'missing';
+      return {
+        durationMs: Number.parseFloat(getComputedStyle(inner).animationDuration) * 1000,
+        name: getComputedStyle(inner).animationName,
+        peakScale,
+      };
     });
 
-    expect(animation).toBe('rating-pop');
+    expect(animation.name).toBe('rating-pop');
+    expect(animation.durationMs).toBeLessThanOrEqual(150);
+    expect(animation.peakScale).toBeLessThanOrEqual(1.06);
   });
 
   test('visible label sits above the stars', async ({ page, refinePage }) => {

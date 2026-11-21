@@ -2,7 +2,6 @@ import { bind, define, getHost, html, inject, prop, useSlots, watchEffect } from
 import { disablableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsFocusMixin, touchTargetMixin } from '../../styles';
 import { COMPONENT_SIZES, type ComponentSize, THEME_COLORS, type ThemeColor } from '../../types';
-import { isStepNavigable } from './_is-step-navigable';
 import stepStyles from './step.css?inline';
 import { STEPPER_CTX } from './stepper';
 
@@ -53,6 +52,8 @@ export type OreStepProps = {
  * @slot - Step label
  * @slot description - Optional supporting text shown below the label
  * @slot icon - Custom icon replacing the step number/check/error indicator
+ * @slot optional - Localized optional hint
+ * @slot status - Caller-supplied status text
  *
  * @part control - Clickable (or static) root element for the step
  * @part indicator - Circular indicator holding the number/icon
@@ -87,71 +88,39 @@ define<OreStepProps>(STEP_TAG, {
     const slots = useSlots();
     const stepperCtx = inject(STEPPER_CTX);
 
-    // ────────────────────────────────────────────────────────────────
-    // State derived from the parent ore-stepper's context: see stepper.ts's
-    // module doc comment for why this replaced parent-side attribute fan-out.
-    // ────────────────────────────────────────────────────────────────
-
-    // Plain functions, not `computed()`: every one of these ultimately reads
-    // `stepperCtx.stepValues`/`stepperCtx.currentValue`, which are themselves `computed()`s
-    // owned by the parent `ore-stepper`. Wrapping a *child* `computed()` around a *parent*
-    // `computed()` (a computed-to-computed dependency crossing a `provide()`/`inject()`
-    // boundary) is exactly the shape that surfaced two related bugs: a step's `completed`/
-    // `current` attributes going permanently stale after a few rapid selections, and: worse :
-    // a step's entire clickable/static control silently failing to render at all when its
-    // `ore-step` tag upgrades before its siblings exist in the light DOM yet (true whenever
-    // `ore-step`/`ore-stepper` are already `customElements.define()`d before this markup is
-    // parsed, e.g. every sandboxed live-preview iframe). Reading straight through to the
-    // parent's computeds on every call: no intermediate computed layer of our own to go
-    // stale: made both disappear. Cheap enough to not need memoizing (a couple of `indexOf`/
-    // comparisons over an already-memoized parent computed).
     const stepIndex = (): number => (stepperCtx ? stepperCtx.stepValues.value.indexOf(props.value.value) : -1);
     const totalSteps = (): number => stepperCtx?.stepValues.value.length ?? 0;
     const currentIndex = (): number =>
       stepperCtx ? stepperCtx.stepValues.value.indexOf(stepperCtx.currentValue.value ?? '') : -1;
-    // 1-based, always-sane values for on-screen text (the step number badge, the sr-only
-    // "Step X of Y" label): falls back to "1 of 1" when rendered standalone with no parent
-    // `ore-stepper` to derive a real position from. Kept separate from the `index`/`total`
-    // *attributes* below, which correctly reflect nothing at all in that same standalone case.
+    // Standalone steps display 1; derived attributes remain absent without a parent.
     const displayIndex = (): number => {
       const index = stepIndex();
 
       return index >= 0 ? index + 1 : 1;
     };
-    const displayTotal = (): number => totalSteps() || 1;
-
     const isCurrent = (): boolean => {
       const index = stepIndex();
       const current = currentIndex();
 
-      return index >= 0 && index === current;
+      return !!stepperCtx?.valid.value && index >= 0 && index === current;
     };
-    // Purely positional: intentionally NOT gated on `props.error.value`. This also drives the
-    // `completed` *attribute* below, which `step.css` uses to color both connector segments
-    // either side of the indicator (`:host([completed]) .connector`); every *consumer* of this
-    // (the icon choice, the sr-only state label) already checks `error` first and short-circuits
-    // before it matters, so folding `!error` in here too would only end up suppressing
-    // `[completed]` on an error step that's before the current one: breaking the connector
-    // color chain right at that step instead of just swapping its icon.
+    // Completion remains positional even when an error overrides the indicator.
     const isCompleted = (): boolean => {
       const index = stepIndex();
       const current = currentIndex();
 
-      return index >= 0 && current >= 0 && index < current;
+      return !!stepperCtx?.valid.value && index >= 0 && current >= 0 && index < current;
     };
     const isNavigable = (): boolean => {
       const index = stepIndex();
-      const current = currentIndex();
-
-      return (
-        !!stepperCtx &&
-        isStepNavigable({
-          disabled: props.disabled.value === true,
-          index,
-          linear: stepperCtx.linear.value,
-          stepperClickable: stepperCtx.clickable.value,
-          stepperCurrentIndex: current,
-        })
+      return Boolean(
+        stepperCtx &&
+          stepperCtx.valid.value &&
+          stepperCtx.clickable.value &&
+          !props.disabled.value &&
+          index >= 0 &&
+          stepperCtx.isReached(el) &&
+          props.value.value,
       );
     };
     const isDisabled = () => Boolean(props.disabled.value);
@@ -192,34 +161,7 @@ define<OreStepProps>(STEP_TAG, {
       });
     }
 
-    const stateLabel = (): string | undefined => {
-      if (props.error.value) return 'error';
-
-      if (isCompleted()) return 'completed';
-
-      if (isCurrent()) return 'current step';
-
-      return undefined;
-    };
-
-    const positionLabel = () => `Step ${displayIndex()} of ${displayTotal()}`;
-    const srLabel = () => {
-      const state = stateLabel();
-
-      return state ? `${positionLabel()}, ${state}` : positionLabel();
-    };
-
-    const handleClick = (event: MouseEvent) => {
-      event.stopPropagation();
-
-      if (!isNavigable()) {
-        event.preventDefault();
-
-        return;
-      }
-
-      el.dispatchEvent(new CustomEvent('click', { bubbles: true, detail: { value: props.value.value } }));
-    };
+    const handleClick = () => stepperCtx?.select(props.value.value);
 
     const indicatorTemplate = () => html`
       <span class="indicator" part="indicator" aria-hidden="true">
@@ -243,16 +185,16 @@ define<OreStepProps>(STEP_TAG, {
 
     const contentTemplate = () => html`
       <span class="content" part="content">
-        <span class="sr-only">${srLabel}</span>
         <span class="label" part="label">
           <span class="label-text"><slot></slot></span>
           ${() =>
             props.optional.value
               ? html`
-                  <span class="optional-hint">(optional)</span>
+                  <span class="optional-hint"><slot name="optional">(optional)</slot></span>
                 `
               : ''}
         </span>
+        <slot name="status"></slot>
         <span class="description" part="description" ?hidden="${() => !slots.has('description').value}">
           <slot name="description"></slot>
         </span>
@@ -272,7 +214,6 @@ define<OreStepProps>(STEP_TAG, {
                   part="control"
                   aria-current="${() => (isCurrent() ? 'step' : null)}"
                   aria-disabled="${isDisabled}"
-                  tabindex="${() => (isCurrent() ? '0' : '-1')}"
                   @click="${handleClick}">
                   ${indicatorTemplate()}${contentTemplate()}
                 </button>

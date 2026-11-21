@@ -57,11 +57,9 @@ calculation.
 | `/admin`        | Sales/admin only: revenue chart, all-orders table, CSV export                                                                   |
 | `/settings`     | Locale, theme + accent color, currency, user switcher, debug log                                                                |
 
-Compare (up to 3 models) is deliberately not a route: the navbar's "Compare" item (and the
-command palette) open `ui/components/compare-drawer.ts`, a single bottom `ore-drawer` mounted
-globally in `app-shell.ts`. Its body lays the full spec comparison out with `ore-grid`'s
-`responsive` auto-fit mode, so it collapses to one column on mobile instead of a horizontally
-scrolling table, without ever leaving the page the shopper was already on.
+Model comparison is a dedicated `/compare` route and supports up to three selected models. The
+page renders a semantic comparison table inside a scrollable region; the matrix keeps its
+columns at narrow widths rather than collapsing into cards.
 
 ## Package map
 

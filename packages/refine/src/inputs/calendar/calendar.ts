@@ -330,17 +330,31 @@ define<OreCalendarProps>(CALENDAR_TAG, {
       void displayMonth.value;
       void selectedDate.value; // re-run when selection changes to refresh isSelected flags
 
-      return ctrl.dayCells();
+      const cells = ctrl.dayCells();
+      const focusable =
+        cells.find((cell) => cell.isSelected && !cell.isDisabled) ??
+        cells.find((cell) => cell.isToday && !cell.isDisabled) ??
+        cells.find((cell) => !cell.isDisabled);
+
+      return cells.map((cell) => ({ ...cell, isFocusable: cell.iso === focusable?.iso }));
     });
     const monthCells = computed(() => {
       void displayYear.value;
 
-      return ctrl.monthCells();
+      const cells = ctrl.monthCells();
+      const focusable =
+        cells.find((cell) => cell.isSelected && !cell.isDisabled) ?? cells.find((cell) => !cell.isDisabled);
+
+      return cells.map((cell) => ({ ...cell, isFocusable: cell.month === focusable?.month }));
     });
     const yearCells = computed(() => {
       void displayYear.value;
 
-      return ctrl.yearCells();
+      const cells = ctrl.yearCells();
+      const focusable =
+        cells.find((cell) => cell.isSelected && !cell.isDisabled) ?? cells.find((cell) => !cell.isDisabled);
+
+      return cells.map((cell) => ({ ...cell, isFocusable: cell.year === focusable?.year }));
     });
     const weekdayLabels = computed(() => ctrl.weekdayLabels());
 
@@ -520,7 +534,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                         ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
                         data-iso="${cell.iso}"
                         data-day="${String(cell.day)}"
-                        tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
+                        tabindex="${() => (cell.isFocusable && !isDisabled.value ? '0' : '-1')}"
                         @click="${() => handleSelectDay(cell.iso)}"
                         @keydown="${handleDayKeydown}">
                         ${String(cell.day)}
@@ -629,7 +643,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                         aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
                         ?data-selected="${() => cell.isSelected}"
                         ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
-                        tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
+                        tabindex="${() => (cell.isFocusable && !isDisabled.value ? '0' : '-1')}"
                         @click="${() => handleSelectMonth(cell.month)}"
                         @keydown="${(e: KeyboardEvent) =>
                           handleCalendarGridKeydown(e, '.cal-cell-month', 4, () => handleSelectMonth(cell.month))}">
@@ -667,7 +681,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                         aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
                         ?data-selected="${() => cell.isSelected}"
                         ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
-                        tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
+                        tabindex="${() => (cell.isFocusable && !isDisabled.value ? '0' : '-1')}"
                         @click="${() => handleSelectYear(cell.year)}"
                         @keydown="${(e: KeyboardEvent) =>
                           handleCalendarGridKeydown(e, '.cal-cell-year', 4, () => handleSelectYear(cell.year))}">

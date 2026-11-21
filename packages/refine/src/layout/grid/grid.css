@@ -7,6 +7,7 @@
     --_col-gap: var(--grid-col-gap, var(--_gap));
 
     display: grid;
+    grid-template-areas: var(--_areas, none);
     grid-template-rows: var(--_rows);
     grid-template-columns: var(--_cols);
     grid-auto-flow: row;

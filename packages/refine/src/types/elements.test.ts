@@ -44,6 +44,7 @@ describe('HTMLElementTagNameMap: form-associated element type coverage', () => {
     expectTypeOf<RefineElementMap['ore-media-navigation']['active-index']>().toEqualTypeOf<number | undefined>();
     expectTypeOf<RefineElementMap['ore-media-navigation']['labels']>().toEqualTypeOf<readonly string[] | undefined>();
     expectTypeOf<RefineElementMap['ore-media-navigation']['max-indicators']>().toEqualTypeOf<number | undefined>();
+    expectTypeOf<RefineElementMap['ore-lightbox']['max-thumbnails']>().toEqualTypeOf<number | undefined>();
     expectTypeOf<RefineElementMap['ore-card-picker']['max-indicators']>().toEqualTypeOf<number | undefined>();
     expectTypeOf<RefineElementMap['ore-carousel']['max-indicators']>().toEqualTypeOf<number | undefined>();
     expectTypeOf<RefineElementMap['ore-keyboard-key']['size']>().toEqualTypeOf<'lg' | 'sm' | undefined>();

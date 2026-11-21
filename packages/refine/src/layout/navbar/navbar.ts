@@ -13,6 +13,8 @@ import {
 } from '@vielzeug/ore';
 import type { Readable } from '@vielzeug/ripple';
 import { computed, signal, watch } from '@vielzeug/ripple';
+import { warn } from '../../_dev';
+import { setAriaReflection } from '../../core/aria-reflection';
 import {
   colorThemeMixin,
   elevationMixin,
@@ -41,8 +43,6 @@ import { NAVBAR_CTX } from './_navbar-context';
 import navbarStyles from './navbar.css?inline';
 
 export { ICON_TAG } from '../../content/icon/icon';
-export type { NavbarContext } from './_navbar-context';
-export { NAVBAR_CTX } from './_navbar-context';
 
 /** One animation frame beyond the CSS mode-transition duration. */
 const MODE_TRANSITION_MS = 220;
@@ -92,10 +92,19 @@ export type NavbarElement = HTMLElement &
   };
 
 type MobileSidebarElement = HTMLElement & {
-  closeDrawer?: () => void;
-  openDrawer?: () => void;
-  toggleDrawer?: () => void;
+  closeDrawer: () => void;
+  openDrawer: () => void;
+  toggleDrawer: () => void;
 };
+
+const isMobileSidebarElement = (target: Element | null): target is MobileSidebarElement =>
+  target instanceof HTMLElement &&
+  'closeDrawer' in target &&
+  typeof target.closeDrawer === 'function' &&
+  'openDrawer' in target &&
+  typeof target.openDrawer === 'function' &&
+  'toggleDrawer' in target &&
+  typeof target.toggleDrawer === 'function';
 
 /** Navbar component properties */
 export type OreNavbarProps = {
@@ -125,7 +134,7 @@ export type OreNavbarProps = {
   /** Icon shown while the mobile menu is closed */
   'menu-icon'?: string;
   'menu-open-label'?: string;
-  /** CSS selector for an external sidebar toggled by the mobile button */
+  /** CSS selector for an `ore-sidebar` controlled by the navbar toggle. */
   'mobile-sidebar'?: string;
   /** Border radius size */
   rounded?: RoundedSize;
@@ -172,6 +181,7 @@ export type OreNavbarItemProps = {
  * @attr {string} label - Accessible nav landmark label
  * @attr {string} menu-icon - Icon shown while the mobile menu is closed
  * @attr {string} menu-close-icon - Icon shown while the mobile menu is open
+ * @attr {string} mobile-sidebar - CSS selector for an <ore-sidebar> controlled by the navbar toggle
  * @attr {boolean} sticky - Makes navbar sticky at top
  * @attr {boolean} floating - Makes navbar detached and floating
  * @attr {number} scroll-threshold - Scroll threshold for floating+sticky transition
@@ -255,6 +265,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const el = getHost();
     const emit = useEmit<OreNavbarEvents>();
     const slots = useSlots();
+    const warnedSidebarTargets = new WeakSet<Element>();
 
     const hasLogo = slots.has('logo');
     const hasStart = slots.has('start');
@@ -264,7 +275,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const hasSubnav = slots.has('subnav');
     const mobileMenuElements = slots.elements('mobile-menu');
     const hasMobileMenu = signal(false);
-    const mobileSidebarTarget = signal<MobileSidebarElement | null>(null);
+    const mobileSidebarTarget = signal<HTMLElement | null>(null);
     const isExternalMobileMode = signal(false);
     const isExternalMobileOpen = signal(false);
     const isMobile = signal(false);
@@ -289,12 +300,24 @@ define<OreNavbarProps>(NAVBAR_TAG, {
       if (!selector) return null;
 
       const root = el.getRootNode();
-      const scopedTarget =
-        root instanceof ShadowRoot || root instanceof Document
-          ? (root.querySelector(selector) as MobileSidebarElement | null)
-          : null;
+      const scopedTarget = root instanceof ShadowRoot || root instanceof Document ? root.querySelector(selector) : null;
 
-      return scopedTarget ?? (document.querySelector(selector) as MobileSidebarElement | null);
+      const target = scopedTarget ?? document.querySelector(selector);
+
+      if (!target) return null;
+      if (target instanceof HTMLElement && target.localName === 'ore-sidebar') return target;
+
+      warnInvalidSidebarTarget(target);
+      return null;
+    };
+
+    const warnInvalidSidebarTarget = (target: Element) => {
+      if (warnedSidebarTargets.has(target)) return;
+
+      warnedSidebarTargets.add(target);
+      warn(
+        'ore-navbar: mobile-sidebar target must be an <ore-sidebar> exposing openDrawer, closeDrawer, and toggleDrawer.',
+      );
     };
 
     provide(NAVBAR_CTX, {
@@ -333,21 +356,18 @@ define<OreNavbarProps>(NAVBAR_TAG, {
       const target = mobileSidebarTarget.value ?? getExternalSidebar();
 
       if (!target) return false;
+      if (action === 'close' && !isExternalMobileOpen.value && !target.hasAttribute('data-drawer-open')) return true;
+      if (!isMobileSidebarElement(target)) {
+        warnInvalidSidebarTarget(target);
+        return false;
+      }
 
       if (action === 'open') {
-        target.openDrawer?.();
+        target.openDrawer();
       } else if (action === 'close') {
-        target.closeDrawer?.();
-      } else if (typeof target.toggleDrawer === 'function') {
+        target.closeDrawer();
+      } else {
         target.toggleDrawer();
-      } else if (typeof target.openDrawer === 'function' && typeof target.closeDrawer === 'function') {
-        // No dedicated toggle: derive open-ness the same way the state sync does
-        // (event-resolved signal first, attribute as the pre-event fallback).
-        if (isExternalMobileOpen.value || target.hasAttribute('data-drawer-open')) {
-          target.closeDrawer();
-        } else {
-          target.openDrawer();
-        }
       }
 
       return true;
@@ -356,9 +376,11 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const setMobileMenu = (next: boolean) => {
       const open = Boolean(next);
 
+      if (open && hasMobileMenu.value && !isMobile.value) return;
+
       if (driveDrawer(open ? 'open' : 'close')) return;
 
-      if (open && !hasMobileMenu.value) return;
+      if (open && (!isMobile.value || !hasMobileMenu.value)) return;
 
       if (isMobileMenuOpen.value === open) return;
 
@@ -369,7 +391,11 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const closeMobileMenu = () => setMobileMenu(false);
     const openMobileMenu = () => setMobileMenu(true);
     const toggleMobileMenu = () => {
+      if (hasMobileMenu.value && !isMobile.value) return;
+
       if (driveDrawer('toggle')) return;
+
+      if (!isMobile.value) return;
 
       setMobileMenu(!isMobileMenuOpen.value);
     };
@@ -489,17 +515,21 @@ define<OreNavbarProps>(NAVBAR_TAG, {
 
         if (!String(props['mobile-sidebar'].value ?? '').trim()) return;
 
+        const root = el.getRootNode();
+        const discoveryRoots = root instanceof ShadowRoot ? [document, root] : [document];
+        const discoveryObserver = new MutationObserver(() => {
+          if (getExternalSidebar() !== mobileSidebarTarget.value) resolveMobileSidebarTarget();
+        });
+
+        for (const discoveryRoot of discoveryRoots) {
+          discoveryObserver.observe(discoveryRoot, { childList: true, subtree: true });
+        }
+
         const target = getExternalSidebar();
 
         if (!target) {
-          const root = el.getRootNode();
-          const discoveryRoot = root instanceof Document || root instanceof ShadowRoot ? root : document;
-          const discoveryObserver = new MutationObserver(() => {
-            if (getExternalSidebar()) resolveMobileSidebarTarget();
-          });
-
-          discoveryObserver.observe(discoveryRoot, { childList: true, subtree: true });
           mobileSidebarCleanup = () => discoveryObserver.disconnect();
+          syncMobileMode();
 
           return;
         }
@@ -525,6 +555,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
           syncTargetState();
         });
 
+        mobileSidebarTarget.value = target;
         syncTargetState();
         targetObserver.observe(target, {
           attributeFilter: ['data-bottom-nav', 'data-drawer-open'],
@@ -532,10 +563,10 @@ define<OreNavbarProps>(NAVBAR_TAG, {
         });
         target.addEventListener('drawer-change', syncTargetState as EventListener);
         mobileSidebarCleanup = () => {
+          discoveryObserver.disconnect();
           targetObserver.disconnect();
           target.removeEventListener('drawer-change', syncTargetState as EventListener);
         };
-        mobileSidebarTarget.value = target;
       };
 
       const triggerModeTransition = () => {
@@ -620,6 +651,18 @@ define<OreNavbarProps>(NAVBAR_TAG, {
         hasMobileMenu.value = mobileMenuElements.value.some(hasElementContent);
       };
       const stopMobileMenuElementsWatch = watch(mobileMenuElements, syncMobileMenuContent, { immediate: true });
+      const stopMobileToggleControlsWatch = watch(
+        computed(() => [hasMobileMenu.value, mobileSidebarTarget.value] as const),
+        () => {
+          const toggle = el.shadowRoot?.querySelector<HTMLButtonElement>('[part="mobile-toggle"]');
+          const panel = hasMobileMenu.value ? el.shadowRoot?.querySelector<HTMLElement>('#mobile-menu-panel') : null;
+          const target = mobileSidebarTarget.value;
+          const controlledElement = panel ?? target;
+
+          if (toggle) setAriaReflection(toggle, 'ariaControlsElements', controlledElement ? [controlledElement] : []);
+        },
+        { immediate: true },
+      );
       const mobileMenuContentObserver = new MutationObserver(() => {
         syncMobileMenuContent();
       });
@@ -641,6 +684,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
         stopModeTransitionWatch?.dispose();
         stopMobileMenuSlotWatch?.dispose();
         stopMobileMenuElementsWatch?.dispose();
+        stopMobileToggleControlsWatch?.dispose();
         stopMobileSidebarWatch?.dispose();
         mobileMenuContentObserver.disconnect();
         mobileSidebarCleanup?.();
@@ -680,7 +724,6 @@ define<OreNavbarProps>(NAVBAR_TAG, {
             part="mobile-toggle"
             type="button"
             aria-label="${() => (menuOpen.value ? props['menu-close-label'].value : props['menu-open-label'].value)}"
-            aria-controls="mobile-menu-panel"
             aria-expanded="${() => String(menuOpen.value)}"
             ?hidden=${() => !isMobile.value || (!hasMobileMenu.value && !mobileSidebarTarget.value)}
             @click="${toggleMobileMenu}">
@@ -705,8 +748,6 @@ define<OreNavbarProps>(NAVBAR_TAG, {
           id="mobile-menu-panel"
           class="mobile-menu-panel"
           part="mobile-menu"
-          role="navigation"
-          aria-label="${() => `${props.label.value} mobile menu`}"
           ?hidden=${() => !isMobile.value || !isMobileMenuOpen.value || !hasMobileMenu.value}>
           <slot name="mobile-menu"></slot>
         </div>

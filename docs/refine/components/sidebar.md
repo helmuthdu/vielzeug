@@ -1,10 +1,10 @@
 # Sidebar
 
-A collapsible navigation sidebar with labelled groups and individual items. It uses the same frosted panel surface treatment as the drawer, while still supporting icon-only collapse mode, keyboard navigation, and full ARIA compliance. On small screens it switches to a bottom tab bar plus an overlay drawer with tap-to-dismiss, a close button, and swipe-to-dismiss.
+A collapsible navigation sidebar with labelled groups and individual items. It supports icon-only collapse mode, keyboard navigation, and navigation landmark semantics. On small screens it switches to a bottom tab bar plus an overlay drawer with tap-to-dismiss, a close button, and swipe-to-dismiss.
 
 ## Collapsible Sidebar
 
-Add the `collapsible` attribute to show the collapse control. Sidebars with a logo anchor it to the panel edge; text-only sidebars keep it inside the header so collapsed mode has no empty logo space. It uses `panel-left-close` when expanded and `panel-left-open` when collapsed. Header height and padding remain fixed across both states. Items animate to icon-only mode while their labels remain in the accessibility tree and keyboard reachable. Pair collapsed items with `ore-tooltip` to surface labels for sighted keyboard and pointer users.
+Add the `collapsible` attribute to show the collapse control. Sidebars with a logo anchor it to the panel edge; text-only sidebars keep it inside the header so collapsed mode has no empty logo space. It uses `panel-left-close` when expanded and `panel-left-open` when collapsed. Header height and padding remain fixed across both states. Items animate to icon-only mode while their labels remain in the accessibility tree and keyboard reachable. When collapsed, each item's built-in label bubble appears on hover or keyboard focus.
 
 <ComponentPreview>
 
@@ -44,7 +44,7 @@ Use two breakpoints to get the full three-state behavior:
 
 - Desktop: full sidebar, collapsed from a navbar button (`toggle()`)
 - Tablet: compact/collapsed sidebar (`responsive`)
-- Mobile: bottom navigation + drawer (`bottom-nav-at`), opened from the same navbar control (`menu-icon="panel-left-open"`) and closed by backdrop tap, swipe, `Escape`, or the control again
+- Mobile: bottom navigation + drawer (`bottom-nav-at`), opened from the navbar control (`menu-icon="panel-left-open"`) and closed by that control (`menu-close-icon="panel-left-close"`), backdrop tap, swipe, or `Escape`
 
 The navbar owns the chrome in an app shell: the sidebar keeps no header of its own (branding lives in the navbar) and no built-in toggle (drop `collapsible`; the navbar button calls `sidebar.toggle()` instead).
 
@@ -88,7 +88,7 @@ The navbar owns the chrome in an app shell: the sidebar keeps no header of its o
       overflow: auto;
     }
 
-    /* The navbar hamburger drives the drawer on mobile; the collapse toggle is desktop/tablet chrome. */
+    /* The navbar toggle drives the drawer on mobile; the collapse toggle is desktop/tablet chrome. */
     .sidebar-shell-preview ore-navbar[data-mobile] #docs-shell-toggle {
       display: none;
     }
@@ -105,6 +105,7 @@ The navbar owns the chrome in an app shell: the sidebar keeps no header of its o
     sticky
     breakpoint="(max-width: 640px)"
     menu-icon="panel-left-open"
+    menu-close-icon="panel-left-close"
     mobile-sidebar="#docs-shell-sidebar"
     label="Workspace navigation">
     <span slot="logo" style="display: inline-flex; align-items: center; gap: var(--size-2);">
@@ -159,7 +160,7 @@ The navbar owns the chrome in an app shell: the sidebar keeps no header of its o
         <ore-text>
           Resize preview width: desktop uses the full sidebar, tablet collapses it, and mobile turns navigation into
           bottom tabs with a drawer. The navbar button collapses the sidebar on desktop and tablet; the navbar
-          hamburger opens the drawer on mobile.
+          toggle opens and closes the drawer on mobile.
         </ore-text>
       </ore-grid-item>
     </ore-grid>
@@ -187,28 +188,29 @@ The navbar owns the chrome in an app shell: the sidebar keeps no header of its o
 
 ### Integration Notes
 
-- By default, bottom navigation tabs are derived from direct `ore-sidebar-item` children.
+- By default, bottom navigation tabs are derived from direct `ore-sidebar-item` children. Activating a tab runs the source item’s link or button, preserving its click handlers and navigation behavior; link tabs retain `target` and `rel`.
 - For grouped sidebars, mark any descendant item with `bottom-nav` to promote it. Once one item is marked, only marked items appear in the bottom bar.
 - Use `bottom-nav-label` when the mobile tab needs a shorter label than the desktop item.
 - Use `label` to give an item's internal link or button an explicit accessible name, especially in collapsed icon-only navigation.
 - `ore-sidebar-group` content remains available in the drawer opened by `openDrawer()` or a linked `ore-navbar mobile-sidebar` trigger.
-- In an app shell with a navbar, omit `collapsible` and the sidebar `header`/`logo` slots: the navbar carries branding and its own button drives `toggle()`, so the sidebar shows navigation only. Give the navbar `menu-icon="panel-left-open"` and the mobile drawer control reads as the same control as the desktop one; the headerless drawer opens straight into the navigation, matching the desktop and tablet layout.
+- In an app shell with a navbar, omit `collapsible` and the sidebar `header`/`logo` slots: the navbar owns the branding and toggle. An empty sidebar header and its drawer close button are hidden automatically; backdrop tap, swipe, and `Escape` still dismiss the drawer. Set `menu-icon="panel-left-open"` and `menu-close-icon="panel-left-close"` so the navbar icon matches the drawer state.
 - Use `responsive` for tablet compact mode and `bottom-nav-at` for mobile bottom-nav mode.
+- Set `container-breakpoints` to evaluate parseable `responsive` and `bottom-nav-at` queries against the sidebar container instead of the viewport. The setting can be toggled at runtime.
 - The bottom bar is an overlay: give scrollable page content bottom clearance (`--sidebar-bottom-nav-height`) in the mobile breakpoint so the last items are reachable.
 
 ## Drawer Behavior
 
-When the sidebar enters bottom-nav mode (or you call `openDrawer()`), the panel becomes an overlay: background content becomes `inert` and focus is trapped inside the drawer until it closes. The page behind it is left undimmed by default — a navigation drawer slides in from the edge you just tapped and is meant to be read against its content, and the panel's own elevation carries the separation. Opt into a dimming scrim with `backdrop` (below) when you want the modal treatment.
+When the sidebar enters bottom-nav mode (or you call `openDrawer()`), the panel becomes a modal dialog containing the navigation landmark. The dialog uses the sidebar's `label` as its accessible name; background content and the hidden bottom bar become `inert`, and focus stays inside until it closes. The page behind it is left undimmed by default — a navigation drawer slides in from the edge you just tapped and is meant to be read against its content, and the panel's own elevation carries the separation. Opt into a dimming scrim with `backdrop` (below) when you want the modal treatment.
 
-The drawer offers three ways to dismiss it, covering touch, pointer, and keyboard:
+By default, the drawer offers three ways to dismiss it, covering touch, pointer, and keyboard:
 
 - **Backdrop tap** — clicking outside the panel closes the drawer.
-- **Close button** — when the sidebar has header content, an `×` button appears in the drawer header, in the same row position the collapse toggle holds on desktop, labelled by `drawer-close-label`. A sidebar without header content (the app-shell pattern above) keeps the drawer headerless so the panel matches its desktop and tablet layout; it closes through the other routes.
+- **Close button** — an open drawer with a logo, header content, or collapse control shows a visible `×` button labelled by `drawer-close-label` in the header row. When all are absent, the empty header and close button are hidden; backdrop tap, swipe, and `Escape` remain available.
 - **Swipe** — dragging the grabber nub on the panel's trailing edge past a threshold closes the drawer; releasing early snaps back.
 
 Closing or reopening cancels an in-progress swipe and clears its visual offset. A second touch also cancels the swipe, and pinch zoom remains available over the handle. The sidebar does not claim swipes from the navigation content.
 
-`Escape` also closes the drawer, and focus returns to the element that opened it. Selecting a navigation item closes the drawer by default; set `close-on-select="false"` to keep it open.
+`Escape` also closes the drawer unless a control inside has already handled the key, and focus returns to the element that opened it. Selecting a navigation item closes the drawer by default; set `close-on-select="false"` to keep it open.
 
 The backdrop is click-to-close only by default. `backdrop="opaque"` dims the page with the theme scrim and `backdrop="blur"` adds a blur behind the panel; both are built from the theme's darkening veil, so they dim in either light or dark scheme rather than inverting into a bright fog. `backdrop="transparent"` is the same as the default. The values match `ore-drawer`, whose backdrop dims by default because a dialog replaces the page rather than sliding in beside it.
 
@@ -588,22 +590,22 @@ ore-sidebar-item {
 
 **`ore-sidebar` Attributes**
 
-| Attribute               | Type      | Default                | Description                                                                                             |
-| ----------------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
-| `collapsed`             | `boolean` | N/A                    | Controlled collapsed state                                                                              |
-| `default-collapsed`     | `boolean` | `false`                | Initial collapsed state in uncontrolled mode                                                            |
-| `collapsible`           | `boolean` | `false`                | Shows the collapse/expand toggle button in the header                                                   |
-| `responsive`            | `string`  | N/A                    | Media query that enables compact (collapsed) sidebar mode                                               |
-| `bottom-nav-at`         | `string`  | N/A                    | Media query that switches to mobile bottom-nav + drawer mode                                            |
-| `container-breakpoints` | `boolean` | `false`                | Evaluates parseable `max-width` breakpoints against the sidebar container width instead of the viewport |
-| `backdrop`              | `string`  | N/A                    | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` (unset = click-to-close, no dim)       |
-| `close-on-select`       | `boolean` | `true`                 | Closes the drawer after primary item activation                                                         |
-| `collapse-label`        | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                                                               |
-| `expand-label`          | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                                                                 |
-| `drawer`                | `boolean` | `false`                | Drawer-only mode: the sidebar exists solely as the overlay drawer                                       |
-| `drawer-close-label`    | `string`  | `'Close sidebar'`      | Accessible label for the drawer close button                                                            |
-| `variant`               | `string`  | N/A                    | Visual variant: `'floating'` \| `'inset'`                                                               |
-| `label`                 | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                                                                   |
+| Attribute               | Type      | Default                | Description                                                                                                         |
+| ----------------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `collapsed`             | `boolean` | `undefined`            | Optional controlled state; `collapsed` or `collapsed="true"` collapses, `collapsed="false"` controls expanded state |
+| `default-collapsed`     | `boolean` | `false`                | Initial collapsed state in uncontrolled mode                                                                        |
+| `collapsible`           | `boolean` | `false`                | Shows the collapse/expand toggle button in the header                                                               |
+| `responsive`            | `string`  | N/A                    | Media query that enables compact (collapsed) sidebar mode                                                           |
+| `bottom-nav-at`         | `string`  | N/A                    | Media query that switches to mobile bottom-nav + drawer mode                                                        |
+| `container-breakpoints` | `boolean` | `false`                | Evaluates parseable `max-width` breakpoints against the sidebar container width instead of the viewport             |
+| `backdrop`              | `string`  | N/A                    | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` (unset = click-to-close, no dim)                   |
+| `close-on-select`       | `boolean` | `true`                 | Closes the drawer after primary item activation                                                                     |
+| `collapse-label`        | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                                                                           |
+| `expand-label`          | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                                                                             |
+| `drawer`                | `boolean` | `false`                | Drawer-only mode: the sidebar exists solely as the overlay drawer                                                   |
+| `drawer-close-label`    | `string`  | `'Close sidebar'`      | Accessible label for the drawer close button                                                                        |
+| `variant`               | `string`  | N/A                    | Visual variant: `'floating'` \| `'inset'`                                                                           |
+| `label`                 | `string`  | `'Sidebar navigation'` | Accessible name for the navigation landmark and open drawer dialog                                                  |
 
 **`ore-sidebar` Slots**
 
@@ -658,11 +660,11 @@ ore-sidebar-item {
 | Part               | Description                                                                  |
 | ------------------ | ---------------------------------------------------------------------------- |
 | `nav`              | The navigation panel (inline and drawer)                                     |
-| `header`           | Header container (logo, branding, controls)                                  |
+| `header`           | Header container (logo, branding, controls); hidden when empty               |
 | `content`          | Scrollable navigation content                                                |
 | `footer`           | Footer container                                                             |
 | `toggle-btn`       | Collapse/expand toggle                                                       |
-| `drawer-close-btn` | Close button shown while the drawer is open                                  |
+| `drawer-close-btn` | Close button shown while the drawer is open when the header has content      |
 | `drawer-backdrop`  | Backdrop behind the open drawer (click closes it; dims only with `backdrop`) |
 | `swipe-handle`     | Grabber nub that drag-closes the open drawer                                 |
 | `bottom-bar`       | Mobile bottom tab bar                                                        |
@@ -703,8 +705,9 @@ ore-sidebar-item {
 | `bottom-nav`       | `boolean` | `false` | Promotes the item into an explicit mobile bottom-nav set   |
 | `bottom-nav-label` | `string`  | N/A     | Overrides the item text in its promoted mobile tab         |
 | `disabled`         | `boolean` | `false` | Disables the item and forces button rendering              |
-| `rel`              | `string`  | N/A     | `rel` attribute on the inner `<a>` (link items only)       |
-| `target`           | `string`  | N/A     | `target` attribute on the inner `<a>` (link items only)    |
+| `label`            | `string`  | N/A     | Accessible name for the inner link or button               |
+| `rel`              | `string`  | N/A     | `rel` attribute on the inner link and its bottom tab       |
+| `target`           | `string`  | N/A     | `target` attribute on the inner link and its bottom tab    |
 
 **`ore-sidebar-item` Slots**
 
@@ -742,7 +745,7 @@ ore-sidebar-item {
 
 The sidebar follows WAI-ARIA navigation patterns and WCAG 2.2 guidelines.
 
-The `ore-sidebar` element renders a `<nav>` landmark with an `aria-label`. When a page has multiple navigation regions, ensure each has a unique descriptive label:
+The `ore-sidebar` element renders a named `<nav>` landmark while inline. When its drawer opens, a containing dialog receives the same accessible name and `aria-modal="true"` while the child remains a navigation landmark. When a page has multiple navigation regions, ensure each has a unique descriptive label:
 
 ```html
 <ore-sidebar label="Main navigation">…</ore-sidebar> <ore-sidebar label="Documentation sidebar">…</ore-sidebar>
@@ -754,11 +757,11 @@ When the sidebar is collapsed to icon-only mode, the toggle button updates `aria
 
 ### Keyboard Navigation
 
-| Key      | Behavior                                                 |
-| -------- | -------------------------------------------------------- |
-| `Tab`    | Moves focus to the next focusable item in DOM order      |
-| `Enter`  | Activates a focused item or toggles a collapsible header |
-| `Space`  | Same as `Enter` on collapsible group headers             |
-| `Escape` | Closes the open drawer and returns focus to the opener   |
+| Key      | Behavior                                                                                        |
+| -------- | ----------------------------------------------------------------------------------------------- |
+| `Tab`    | Moves focus to the next focusable item in DOM order                                             |
+| `Enter`  | Activates a focused item or toggles a collapsible header                                        |
+| `Space`  | Same as `Enter` on collapsible group headers                                                    |
+| `Escape` | Closes the open drawer and returns focus to the opener, unless a nested control handled the key |
 
 While the drawer is open, the rest of the page is `inert`: Tab cannot leave the drawer, and focus is pulled back to the panel if it escapes.

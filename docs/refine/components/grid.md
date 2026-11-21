@@ -408,14 +408,14 @@ Provide different area templates at each breakpoint. The grid switches between t
 
 </ComponentPreview>
 
-## Responsive Auto-fit Mode
+## Auto-fit Columns
 
-Use `responsive` to let the grid fit as many columns as possible based on a minimum column width. Set `min-col-width` to control the threshold (default: `var(--grid-min-item-width)`, 250px). Do not mix `responsive` with a fixed `cols` attribute; they target different layout modes.
+Set `cols="auto"` to fit as many columns as possible. Set `min-col-width` to control the minimum track width; it defaults to `var(--grid-min-item-width)`. You can combine auto-fit with breakpoint-specific column counts when the layout should switch from fluid columns to an explicit count.
 
 <ComponentPreview center vertical>
 
 ```html
-<ore-grid responsive min-col-width="180px" gap="md" style="width: 100%;">
+<ore-grid cols="auto" min-col-width="180px" gap="md" style="width: 100%;">
   <ore-card padding="md"><ore-text>Item 1</ore-text></ore-card>
   <ore-card padding="md"><ore-text>Item 2</ore-text></ore-card>
   <ore-card padding="md"><ore-text>Item 3</ore-text></ore-card>
@@ -427,36 +427,35 @@ Use `responsive` to let the grid fit as many columns as possible based on a mini
 
 </ComponentPreview>
 
-::: tip Auto-fit vs Fixed Columns
-Use `responsive` for fluid layouts where column count depends on available space. Use `cols` with optional breakpoint attributes (`cols-sm`, `cols-md`, etc.) for explicit control.
+::: tip Auto-fit with Breakpoints
+Use `cols="auto"` for fluid columns, then set a breakpoint attribute such as `cols-lg="4"` to switch to an explicit count in wider containers. The `min-col-width` value applies while the active column count is `auto`.
 :::
 
 ## API Reference
 
 **`ore-grid`**
 
-| Attribute       | Type                                                      | Default                 | Description                                       |
-| --------------- | --------------------------------------------------------- | ----------------------- | ------------------------------------------------- |
-| `cols`          | `'1'–'12' \| 'auto'`                                      | -                       | Number of columns                                 |
-| `cols-sm`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 640px                |
-| `cols-md`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 768px                |
-| `cols-lg`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1024px               |
-| `cols-xl`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1280px               |
-| `cols-2xl`      | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1536px               |
-| `rows`          | `'1'–'12' \| 'auto'`                                      | -                       | Number of explicit rows                           |
-| `gap`           | `'none' \| 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`                  | Gap between items                                 |
-| `align`         | `'start' \| 'center' \| 'end' \| 'stretch' \| 'baseline'` | -                       | `align-items` for all cells                       |
-| `justify`       | `'start' \| 'center' \| 'end' \| 'stretch'`               | -                       | `justify-items` for all cells                     |
-| `flow`          | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`      | `'row'`                 | `grid-auto-flow` direction                        |
-| `responsive`    | `boolean`                                                 | `false`                 | Enable `auto-fit` mode                            |
-| `min-col-width` | `string`                                                  | `--grid-min-item-width` | Minimum column width in `responsive` mode         |
-| `fullwidth`     | `boolean`                                                 | `false`                 | Stretch the grid to fill its container's width    |
-| `areas`         | `string`                                                  | -                       | CSS `grid-template-areas` value                   |
-| `areas-sm`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 640px  |
-| `areas-md`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 768px  |
-| `areas-lg`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1024px |
-| `areas-xl`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1280px |
-| `areas-2xl`     | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1536px |
+| Attribute       | Type                                                      | Default                 | Description                                                |
+| --------------- | --------------------------------------------------------- | ----------------------- | ---------------------------------------------------------- |
+| `cols`          | `'1'–'12' \| 'auto'`                                      | -                       | Number of columns                                          |
+| `cols-sm`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 640px                         |
+| `cols-md`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 768px                         |
+| `cols-lg`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1024px                        |
+| `cols-xl`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1280px                        |
+| `cols-2xl`      | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1536px                        |
+| `rows`          | `'1'–'12' \| 'auto'`                                      | -                       | Number of explicit rows                                    |
+| `gap`           | `'none' \| 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`                  | Gap between items                                          |
+| `align`         | `'start' \| 'center' \| 'end' \| 'stretch' \| 'baseline'` | -                       | `align-items` for all cells                                |
+| `justify`       | `'start' \| 'center' \| 'end' \| 'stretch'`               | -                       | `justify-items` for all cells                              |
+| `flow`          | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`      | `'row'`                 | `grid-auto-flow` direction                                 |
+| `min-col-width` | `string`                                                  | `--grid-min-item-width` | Minimum track width when the active column count is `auto` |
+| `fullwidth`     | `boolean`                                                 | `false`                 | Stretch the grid to fill its container's width             |
+| `areas`         | `string`                                                  | -                       | CSS `grid-template-areas` value                            |
+| `areas-sm`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 640px           |
+| `areas-md`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 768px           |
+| `areas-lg`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1024px          |
+| `areas-xl`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1280px          |
+| `areas-2xl`     | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1536px          |
 
 **`ore-grid-item`**
 

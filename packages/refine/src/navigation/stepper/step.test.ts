@@ -118,10 +118,23 @@ describe('ore-step', () => {
       expect(fixture.element.hasAttribute('total')).toBe(false);
     });
 
-    it('falls back to "Step 1 of 1" for the sr-only position label', async () => {
-      fixture = await mount('ore-step', { attrs: { value: 'cart' }, html: 'Cart' });
+    it('renders caller-provided status text', async () => {
+      fixture = await mount('ore-step', {
+        attrs: { value: 'cart' },
+        html: 'Cart<span slot="status">Completed</span>',
+      });
 
-      expect(fixture.query('.sr-only')?.textContent).toBe('Step 1 of 1');
+      expect(fixture.element.querySelector('[slot="status"]')?.textContent).toBe('Completed');
+    });
+
+    it('allows the optional hint to be localized', async () => {
+      fixture = await mount('ore-step', {
+        attrs: { optional: '', value: 'cart' },
+        html: 'Cart<span slot="optional">Facultatif</span>',
+      });
+
+      expect(fixture.query('slot[name="optional"]')).toBeTruthy();
+      expect(fixture.element.querySelector('[slot="optional"]')?.textContent).toBe('Facultatif');
     });
   });
 });

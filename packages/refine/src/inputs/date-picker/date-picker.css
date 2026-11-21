@@ -72,6 +72,16 @@
     }
   }
 
+  .calendar[hidden] {
+    display: none;
+  }
+
+  .range-instruction {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-contrast-700);
+  }
+
   /* ── Calendar header ─────────────────────────────────────────────────────── */
 
   .cal-header {
@@ -222,6 +232,10 @@
     font-weight: var(--font-semibold);
     color: var(--_theme-content);
     background: var(--_day-selected-bg);
+  }
+
+  .cal-cell-day[data-range-inside] {
+    background: color-mix(in oklch, var(--_day-selected-bg) 15%, transparent);
   }
 
   /* A dimmed ink step, not opacity: opacity also fades the cell's dots and

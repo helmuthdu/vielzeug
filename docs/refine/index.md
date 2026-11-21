@@ -242,11 +242,11 @@ Each entry below is a component with its own documentation page and registration
 
 **Inputs:** `ore-app-store-button`, `ore-button`, `ore-calendar`, `ore-checkbox`, `ore-color-picker`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-query-bar`, `ore-radio`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
 
-**Layout:** `ore-box`, `ore-dock`, `ore-grid`, `ore-navbar`, `ore-separator`, `ore-sidebar`
+**Layout:** `ore-box`, `ore-dock`, `ore-grid`, `ore-navbar`, `ore-separator`, `ore-sidebar`, `ore-splitter`
 
 **Navigation:** `ore-breadcrumb`, `ore-media-navigation`, `ore-navigation-menu`, `ore-pagination`, `ore-stepper`, `ore-tabs`
 
-**Overlay:** `ore-command-palette`, `ore-dialog`, `ore-drawer`, `ore-menu`, `ore-popover`, `ore-spotlight`, `ore-tooltip`, `ore-tour`
+**Overlay:** `ore-command-palette`, `ore-dialog`, `ore-drawer`, `ore-lightbox`, `ore-menu`, `ore-popover`, `ore-spotlight`, `ore-tooltip`, `ore-tour`
 
 ## Component portfolio
 

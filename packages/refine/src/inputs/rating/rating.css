@@ -112,9 +112,9 @@
     fill: none;
   }
 
-  /* The committed star pops in place of the old JS sparkle burst. */
+  /* A small scale cue confirms the rating without the old JS sparkle burst. */
   .star[data-current] .star-fill-inner {
-    animation: var(--_motion-animation, rating-pop var(--duration-300) var(--ease-spring));
+    animation: var(--_motion-animation, rating-pop var(--duration-150) var(--ease-out));
   }
 
   @keyframes rating-pop {
@@ -122,8 +122,8 @@
       transform: scale(1);
     }
 
-    40% {
-      transform: scale(1.25);
+    50% {
+      transform: scale(1.05);
     }
 
     100% {

@@ -134,6 +134,71 @@ test.describe('Layout', () => {
 });
 
 test.describe('Interaction', () => {
+  test('bottom tabs preserve source item activation', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="width:360px;height:460px;">
+        <ore-sidebar id="sidebar" container-breakpoints bottom-nav-at="(max-width: 640px)">
+          <ore-sidebar-item id="route" href="/route" target="_blank" rel="nofollow" bottom-nav>Route</ore-sidebar-item>
+          <ore-sidebar-item id="action" bottom-nav>Action</ore-sidebar-item>
+        </ore-sidebar>
+      </div>
+    `);
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-bottom-nav'));
+    await page.evaluate(() => {
+      for (const id of ['route', 'action']) {
+        document.getElementById(id)?.addEventListener('click', (event) => {
+          event.preventDefault();
+          document.body.dataset[id] = String(Number(document.body.dataset[id] ?? 0) + 1);
+        });
+      }
+    });
+
+    const tabs = page.locator('#sidebar').locator('[part="bottom-bar"] .bottom-tab');
+    const routeTab = tabs.nth(0);
+
+    await expect(routeTab).toHaveAttribute('target', '_blank');
+    await expect(routeTab).toHaveAttribute('rel', /nofollow.*noopener.*noreferrer/);
+    await routeTab.click();
+    await tabs.nth(1).click();
+
+    await expect(page.locator('body')).toHaveAttribute('data-route', '1');
+    await expect(page.locator('body')).toHaveAttribute('data-action', '1');
+  });
+
+  test('open drawer exposes modal semantics and a visible close action', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="width:360px;height:460px;">
+        <ore-sidebar id="sidebar" container-breakpoints bottom-nav-at="(max-width: 640px)">
+          <span slot="header">Workspace</span>
+          <ore-sidebar-item href="/" bottom-nav>Home</ore-sidebar-item>
+        </ore-sidebar>
+      </div>
+    `);
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-bottom-nav'));
+
+    const sidebar = page.locator('#sidebar');
+    const nav = sidebar.locator('[part="nav"]');
+    const dialog = sidebar.locator('[role="dialog"]');
+
+    await sidebar.evaluate((el) => (el as HTMLElement & { openDrawer(): void }).openDrawer());
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
+
+    await expect(dialog).toHaveAttribute('aria-modal', 'true');
+    await expect(dialog).toHaveAttribute('aria-label', 'Sidebar navigation');
+    await expect(nav).not.toHaveAttribute('role');
+    await expect(nav).toHaveAttribute('aria-label', 'Sidebar navigation');
+    await expect(sidebar.locator('[part="bottom-bar"]')).toHaveAttribute('inert', '');
+    await expect(sidebar.locator('[part="drawer-close-btn"]')).toBeVisible();
+    await expect(sidebar.locator('[part="header"]')).toBeVisible();
+
+    const results = await axeCheck(page);
+    expect(results.violations).toEqual([]);
+
+    await sidebar.locator('[part="drawer-close-btn"]').click();
+    await expect(dialog).toHaveCount(0);
+    await expect(sidebar.locator('[part="bottom-bar"]')).not.toHaveAttribute('inert', '');
+  });
+
   test('mobile drawer manages focus, Escape, and close-on-select', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`
       <div style="position:relative;width:360px;height:460px;overflow:hidden;">
@@ -410,7 +475,7 @@ test.describe('Collapsed label reveal', () => {
 });
 
 test.describe('Header visibility', () => {
-  test('keeps a headerless sidebar headerless in the drawer', async ({ page, refinePage }) => {
+  test('hides the empty header and close control in a headerless drawer', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`
       <div style="width:320px;height:400px;">
         <ore-sidebar id="sidebar" bottom-nav-at="(max-width: 2000px)">
@@ -422,22 +487,15 @@ test.describe('Header visibility', () => {
 
     const sidebar = page.locator('#sidebar');
 
-    expect((await sidebar.locator('[part="header"]').boundingBox())?.height ?? 0).toBe(0);
+    await expect(sidebar.locator('[part="header"]')).toBeHidden();
 
     await sidebar.evaluate((el) => (el as HTMLElement & { openDrawer(): void }).openDrawer());
     await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
 
-    // Same chrome as desktop/tablet: no header strip in the drawer either.
-    expect((await sidebar.locator('[part="header"]').boundingBox())?.height ?? 0).toBe(0);
+    await expect(sidebar.locator('[part="header"]')).toBeHidden();
     await expect(sidebar.locator('[part="drawer-close-btn"]')).toBeHidden();
 
-    const firstItem = await sidebar.locator('ore-sidebar-item').boundingBox();
-    const nav = await sidebar.locator('[part="nav"]').boundingBox();
-
-    // Navigation starts at the panel top (just the content padding), not below a header row.
-    expect(firstItem!.y - nav!.y).toBeLessThan(40);
-
-    // The drawer still dismisses: backdrop tap.
+    // The drawer remains dismissible without its empty header controls.
     await sidebar.locator('[part="drawer-backdrop"]').click({ position: { x: 300, y: 200 } });
     await expect(sidebar).not.toHaveAttribute('data-drawer-open');
   });

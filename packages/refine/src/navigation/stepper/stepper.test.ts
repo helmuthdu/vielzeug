@@ -1,4 +1,3 @@
-import { fireKeyDown } from '@vielzeug/assay';
 import { type Fixture, flush, mount } from '@vielzeug/ore/testing';
 
 describe('ore-stepper', () => {
@@ -192,6 +191,156 @@ describe('ore-stepper', () => {
   // ─── Navigation ──────────────────────────────────────────────────────────────
 
   describe('Navigation', () => {
+    it('allows returning to a reached step after navigating backward in linear mode', async () => {
+      fixture = await mount('ore-stepper', {
+        attrs: { clickable: '', linear: '', value: 'shipping' },
+        html: htmlSteps,
+      });
+      await fixture.flush();
+      const cart = fixture.element.querySelector<HTMLElement>('ore-step[value="cart"]')!;
+      cart.shadowRoot?.querySelector<HTMLButtonElement>('button')?.click();
+      await fixture.flush();
+      const shipping = fixture.element.querySelector<HTMLElement>('ore-step[value="shipping"]')!;
+      expect(shipping.shadowRoot?.querySelector('button')).toBeTruthy();
+      shipping.shadowRoot?.querySelector<HTMLButtonElement>('button')?.click();
+      expect(fixture.element.getAttribute('value')).toBe('shipping');
+      expect(
+        fixture.element.querySelector('ore-step[value="payment"]')?.shadowRoot?.querySelector('button'),
+      ).toBeNull();
+    });
+
+    it('does not make unreached steps navigable when earlier steps are removed or reordered', async () => {
+      fixture = await mount('ore-stepper', {
+        attrs: { clickable: '', linear: '', value: 'shipping' },
+        html: htmlSteps,
+      });
+      await fixture.flush();
+      const stepper = fixture.element;
+      const cart = stepper.querySelector<HTMLElement>('ore-step[value="cart"]')!;
+      const shipping = stepper.querySelector<HTMLElement>('ore-step[value="shipping"]')!;
+      const payment = stepper.querySelector<HTMLElement>('ore-step[value="payment"]')!;
+
+      cart.shadowRoot?.querySelector<HTMLButtonElement>('button')?.click();
+      cart.remove();
+      await fixture.flush();
+      expect(shipping.hasAttribute('navigable')).toBe(true);
+      expect(payment.hasAttribute('navigable')).toBe(false);
+
+      stepper.insertBefore(payment, shipping);
+      await fixture.flush();
+      expect(shipping.hasAttribute('navigable')).toBe(true);
+      expect(payment.hasAttribute('navigable')).toBe(false);
+    });
+
+    it('reaches newly inserted steps only after selecting a later step', async () => {
+      fixture = await mount('ore-stepper', {
+        attrs: { clickable: '', linear: '', value: 'shipping' },
+        html: htmlSteps,
+      });
+      await fixture.flush();
+      const stepper = fixture.element;
+      const shipping = stepper.querySelector<HTMLElement>('ore-step[value="shipping"]')!;
+      const inserted = document.createElement('ore-step');
+
+      inserted.setAttribute('value', 'new');
+      inserted.textContent = 'New';
+      stepper.insertBefore(inserted, shipping);
+      await fixture.flush();
+      expect(inserted.hasAttribute('navigable')).toBe(false);
+
+      stepper.setAttribute('value', 'payment');
+      await fixture.flush();
+      expect(inserted.hasAttribute('navigable')).toBe(true);
+
+      const replacement = document.createElement('ore-step');
+      replacement.setAttribute('value', 'new');
+      replacement.textContent = 'Replacement';
+      inserted.replaceWith(replacement);
+      await fixture.flush();
+      expect(replacement.hasAttribute('navigable')).toBe(false);
+    });
+
+    it('keeps a reached step navigable when its value changes', async () => {
+      fixture = await mount('ore-stepper', {
+        attrs: { clickable: '', linear: '', value: 'shipping' },
+        html: htmlSteps,
+      });
+      await fixture.flush();
+      const cart = fixture.element.querySelector<HTMLElement>('ore-step[value="cart"]')!;
+      cart.setAttribute('value', 'basket');
+      await fixture.flush();
+      expect(cart.hasAttribute('navigable')).toBe(true);
+      expect(fixture.element.getAttribute('value')).toBe('shipping');
+    });
+
+    it('selects an available step when the current step is removed', async () => {
+      fixture = await mount('ore-stepper', { attrs: { value: 'shipping' }, html: htmlSteps });
+      await fixture.flush();
+      fixture.element.querySelector('ore-step[value="shipping"]')?.remove();
+      await fixture.flush();
+      expect(fixture.element.getAttribute('value')).toBe('cart');
+    });
+
+    it('keeps available steps in the tab order when the current step is disabled', async () => {
+      fixture = await mount('ore-stepper', {
+        attrs: { clickable: '', value: 'shipping' },
+        html: htmlSteps,
+      });
+      await fixture.flush();
+      fixture.element.querySelector('ore-step[value="shipping"]')?.setAttribute('disabled', '');
+      await fixture.flush();
+      const cart = fixture.element.querySelector<HTMLElement>('ore-step[value="cart"]')!;
+      expect(cart.shadowRoot?.querySelector<HTMLButtonElement>('button')?.tabIndex).toBe(0);
+    });
+
+    it('disables navigation for duplicate step values and recovers when fixed', async () => {
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      fixture = await mount('ore-stepper', {
+        attrs: { clickable: '' },
+        html: '<ore-step value="cart">Cart</ore-step><ore-step value="cart">Other</ore-step>',
+      });
+      await fixture.flush();
+      expect(warning).toHaveBeenCalled();
+      expect(fixture.element.querySelector('ore-step')?.shadowRoot?.querySelector('button')).toBeNull();
+      fixture.element.querySelectorAll('ore-step')[1].setAttribute('value', 'shipping');
+      await fixture.flush();
+      expect(fixture.element.querySelector('ore-step')?.shadowRoot?.querySelector('button')).toBeTruthy();
+      warning.mockRestore();
+    });
+
+    it('disables navigation for missing values and recovers when a value is supplied', async () => {
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      fixture = await mount('ore-stepper', {
+        attrs: { clickable: '' },
+        html: '<ore-step value="cart">Cart</ore-step><ore-step>Shipping</ore-step>',
+      });
+      await fixture.flush();
+      expect(warning).toHaveBeenCalled();
+      expect(fixture.element.querySelector('ore-step')?.hasAttribute('navigable')).toBe(false);
+      fixture.element.querySelectorAll('ore-step')[1].setAttribute('value', 'shipping');
+      await fixture.flush();
+      expect(fixture.element.querySelector('ore-step')?.hasAttribute('navigable')).toBe(true);
+      warning.mockRestore();
+    });
+
+    it('selects a step when an all-disabled list gains an enabled step and clears on removal', async () => {
+      fixture = await mount('ore-stepper', {
+        attrs: { clickable: '' },
+        html: '<ore-step value="cart" disabled>Cart</ore-step>',
+      });
+      await fixture.flush();
+      expect(fixture.element.hasAttribute('value')).toBe(false);
+
+      const step = fixture.element.querySelector('ore-step')!;
+      step.removeAttribute('disabled');
+      await fixture.flush();
+      expect(fixture.element.getAttribute('value')).toBe('cart');
+
+      step.remove();
+      await fixture.flush();
+      expect(fixture.element.hasAttribute('value')).toBe(false);
+    });
+
     it('clicking a navigable step updates the value and fires change', async () => {
       fixture = await mount('ore-stepper', { attrs: { clickable: 'true', value: 'cart' }, html: htmlSteps });
       await fixture.flush();
@@ -202,7 +351,7 @@ describe('ore-stepper', () => {
 
       const shippingStep = fixture.element.querySelector('ore-step[value="shipping"]')!;
 
-      shippingStep.dispatchEvent(new CustomEvent('click', { bubbles: true, composed: true }));
+      shippingStep.shadowRoot?.querySelector<HTMLButtonElement>('button')?.click();
 
       expect(fixture.element.getAttribute('value')).toBe('shipping');
       expect(onChange).toHaveBeenCalledTimes(1);
@@ -239,14 +388,13 @@ describe('ore-stepper', () => {
       expect(fixture.element.getAttribute('value')).toBe('cart');
     });
 
-    it('supports arrow-key navigation between navigable steps', async () => {
+    it('keeps navigable buttons in the native tab order', async () => {
       fixture = await mount('ore-stepper', { attrs: { clickable: 'true', value: 'cart' }, html: htmlSteps });
       await fixture.flush();
 
       const steps = fixture.element.querySelectorAll<HTMLElement>('ore-step');
 
-      fireKeyDown(steps[0], { key: 'ArrowRight' });
-      expect(fixture.element.getAttribute('value')).toBe('shipping');
+      expect(Array.from(steps, (step) => step.shadowRoot?.querySelector('button')?.tabIndex)).toEqual([0, 0, 0]);
     });
 
     it('does not include disabled steps in keyboard navigation order', async () => {
@@ -262,8 +410,8 @@ describe('ore-stepper', () => {
 
       const steps = fixture.element.querySelectorAll<HTMLElement>('ore-step');
 
-      fireKeyDown(steps[0], { key: 'ArrowRight' });
-      expect(fixture.element.getAttribute('value')).toBe('payment');
+      expect(steps[1].shadowRoot?.querySelector('button')).toBeNull();
+      expect(steps[2].shadowRoot?.querySelector('button')?.tabIndex).toBe(0);
     });
 
     // Regression: the first step's `completed` attribute (and the connector styling that
@@ -276,9 +424,7 @@ describe('ore-stepper', () => {
       await fixture.flush();
 
       const click = (value: string) => {
-        fixture.element
-          .querySelector(`ore-step[value="${value}"]`)
-          ?.dispatchEvent(new CustomEvent('click', { bubbles: true, composed: true }));
+        fixture.element.querySelector(`ore-step[value="${value}"]`)?.shadowRoot?.querySelector('button')?.click();
       };
       const cart = () => fixture.element.querySelector('ore-step[value="cart"]')!;
 

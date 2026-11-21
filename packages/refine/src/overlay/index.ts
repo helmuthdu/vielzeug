@@ -11,6 +11,8 @@ export type { OreDialogEvents, OreDialogProps } from './dialog/dialog';
 export { DIALOG_TAG } from './dialog/dialog';
 export type { DrawerElement, OreDrawerEvents, OreDrawerProps } from './drawer/drawer';
 export { DRAWER_TAG } from './drawer/drawer';
+export type { OreLightboxEvents, OreLightboxProps } from './lightbox/lightbox';
+export { LIGHTBOX_TAG } from './lightbox/lightbox';
 export type {
   MenuSelectDetail,
   OreMenuEvents,

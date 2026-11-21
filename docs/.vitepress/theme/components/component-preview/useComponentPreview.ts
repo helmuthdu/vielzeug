@@ -27,20 +27,14 @@ export const VIEWPORT_WIDTHS: Record<ViewportSize, string> = {
 
 export const SHOW_CODE_STORAGE_KEY = 'vielzeug:component-preview:show-code';
 
-const sharedShowCode = ref(false);
-let showCodePreferenceLoaded = false;
+function loadShowCodePreference(): boolean {
+  if (typeof window === 'undefined') return false;
 
-function loadShowCodePreference(): void {
-  if (showCodePreferenceLoaded || typeof window === 'undefined') return;
-
-  sharedShowCode.value = window.sessionStorage.getItem(SHOW_CODE_STORAGE_KEY) === 'true';
-  showCodePreferenceLoaded = true;
+  return window.sessionStorage.getItem(SHOW_CODE_STORAGE_KEY) === 'true';
 }
 
 function persistShowCodePreference(value: boolean): void {
   if (typeof window !== 'undefined') window.sessionStorage.setItem(SHOW_CODE_STORAGE_KEY, String(value));
-
-  sharedShowCode.value = value;
 }
 
 interface PreviewSurface {
@@ -68,7 +62,7 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
   const isCopied = ref(false);
   const copyStatus = ref('');
   const isRtl = ref(false);
-  const showCode = sharedShowCode;
+  const showCode = ref(false);
   const codeBlock = ref<{ html: string; vnode: VNode } | null>(null);
 
   const inlineCanvasRef = ref<HTMLDivElement | null>(null);
@@ -122,7 +116,10 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
   };
 
   const toggleShowCode = (): void => {
-    persistShowCodePreference(!showCode.value);
+    const next = !showCode.value;
+
+    persistShowCodePreference(next);
+    showCode.value = next;
   };
 
   const toggleDirection = (): void => {
@@ -266,7 +263,7 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
   });
 
   onMounted(() => {
-    loadShowCodePreference();
+    showCode.value = loadShowCodePreference();
     useRefineHmr(patchCss);
 
     if (expandedStageRef.value && typeof ResizeObserver !== 'undefined') {

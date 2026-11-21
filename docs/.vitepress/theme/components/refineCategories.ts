@@ -105,7 +105,7 @@ export const REFINE_CATEGORIES: RefineCategory[] = [
     name: 'Inputs',
   },
   {
-    components: ['box', 'dock', 'grid', 'navbar', 'separator', 'sidebar'],
+    components: ['box', 'dock', 'grid', 'navbar', 'separator', 'sidebar', 'splitter'],
     name: 'Layout',
   },
   {
@@ -113,7 +113,7 @@ export const REFINE_CATEGORIES: RefineCategory[] = [
     name: 'Navigation',
   },
   {
-    components: ['command-palette', 'dialog', 'drawer', 'menu', 'popover', 'spotlight', 'tooltip', 'tour'],
+    components: ['command-palette', 'dialog', 'drawer', 'lightbox', 'menu', 'popover', 'spotlight', 'tooltip', 'tour'],
     name: 'Overlay',
   },
 ];
