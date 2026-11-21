@@ -41,6 +41,7 @@ import type { OreSpeedReadingEvents, SpeedReadingElement } from '../content/spee
 import type { OreStatsProps } from '../content/stats/stats';
 import type { OreTableProps } from '../content/table/table';
 import type { OreTextProps } from '../content/text/text';
+import type { OreTimelineItemProps, OreTimelineProps } from '../content/timeline/timeline';
 import type { OreAlertEvents, OreAlertProps } from '../feedback/alert/alert';
 import type { OreBadgeProps } from '../feedback/badge/badge';
 import type { OreChipEvents, OreChipProps } from '../feedback/chip/chip';
@@ -254,6 +255,8 @@ export interface RefineElementMap {
     scope?: 'col' | 'colgroup' | 'row' | 'rowgroup' | string;
   };
   'ore-time-picker': HTMLElement & OreTimePickerProps & AddEventListeners<OreTimePickerEvents>;
+  'ore-timeline': HTMLElement & OreTimelineProps;
+  'ore-timeline-item': HTMLElement & OreTimelineItemProps;
   'ore-toast': HTMLElement & OreToastProps & AddEventListeners<OreToastEvents>;
   'ore-tooltip': HTMLElement & OreTooltipProps & AddEventListeners<OreTooltipEvents>;
   'ore-tour': OreTourElement & AddEventListeners<OreTourEvents>;

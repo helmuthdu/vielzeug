@@ -225,7 +225,7 @@
     height: auto;
   }
 
-  [hidden]:where(:not([hidden='until-found'])) {
+  [hidden]:where(:not([hidden='until-found' i])) {
     display: none;
   }
 }

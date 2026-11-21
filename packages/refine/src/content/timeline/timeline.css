@@ -1,0 +1,11 @@
+@layer refine.base {
+  :host {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    row-gap: var(--timeline-gap, var(--size-2));
+  }
+
+  :host([hidden]:not([hidden='until-found' i])) {
+    display: none;
+  }
+}

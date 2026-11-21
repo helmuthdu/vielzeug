@@ -56,6 +56,7 @@ export const REFINE_CATEGORIES: RefineCategory[] = [
       'stats',
       'table',
       'text',
+      'timeline',
     ],
     name: 'Content',
   },

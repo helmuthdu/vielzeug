@@ -536,6 +536,11 @@
       "require": "./dist/time-picker.cjs",
       "types": "./dist/inputs/time-picker/time-picker.d.ts"
     },
+    "./timeline": {
+      "import": "./dist/timeline.js",
+      "require": "./dist/timeline.cjs",
+      "types": "./dist/content/timeline/timeline.d.ts"
+    },
     "./toast": {
       "import": "./dist/toast.js",
       "require": "./dist/toast.cjs",
@@ -846,6 +851,9 @@
       ],
       "time-picker": [
         "dist/inputs/time-picker/time-picker.d.ts"
+      ],
+      "timeline": [
+        "dist/content/timeline/timeline.d.ts"
       ],
       "toast": [
         "dist/feedback/toast/toast.d.ts"

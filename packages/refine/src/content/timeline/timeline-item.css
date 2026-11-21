@@ -1,0 +1,86 @@
+@layer refine.base {
+  :host {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    grid-column: 1 / -1;
+    column-gap: var(--size-3);
+    color: var(--color-contrast-900);
+  }
+
+  @supports (grid-template-columns: subgrid) {
+    :host {
+      grid-template-columns: subgrid;
+    }
+  }
+
+  :host([hidden]:not([hidden='until-found' i])) {
+    display: none;
+  }
+
+  .rail {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    min-width: var(--size-6);
+  }
+
+  .marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--size-6);
+    min-height: var(--size-6);
+    color: var(--timeline-marker-color, var(--_theme-base));
+  }
+
+  .dot {
+    width: var(--size-2);
+    height: var(--size-2);
+    background: currentColor;
+    border-radius: var(--rounded-full);
+  }
+
+  .line {
+    flex: 1;
+    width: var(--border);
+    min-height: var(--size-4);
+    margin-block-end: calc(-1 * var(--timeline-gap, var(--size-2)));
+    background: var(--timeline-line-color, var(--color-contrast-300));
+  }
+
+  :host([data-ore-timeline-end]) .line {
+    visibility: hidden;
+  }
+
+  .content {
+    flex: 1;
+    min-width: 0;
+    padding-block-end: var(--size-3);
+    overflow-wrap: anywhere;
+  }
+
+  .title {
+    font-weight: var(--font-semibold);
+  }
+
+  .meta,
+  .description {
+    margin-block-start: var(--size-1);
+    font-size: var(--text-sm);
+    color: var(--color-contrast-700);
+  }
+
+  .meta[hidden],
+  .description[hidden] {
+    display: none;
+  }
+
+  @media (forced-colors: active) {
+    .dot,
+    .line {
+      forced-color-adjust: none;
+      background: CanvasText;
+    }
+  }
+}
