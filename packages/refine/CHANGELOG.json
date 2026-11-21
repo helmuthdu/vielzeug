@@ -2,6 +2,54 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Unify grid auto-fit mode",
+            "commit": "520f44cd7071bc4b34228a3a43279ae1b2ddeb80"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Remove navbar context exports from the public API",
+            "commit": "520f44cd7071bc4b34228a3a43279ae1b2ddeb80"
+          }
+        ],
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat(refine): add accessible timeline components",
+            "commit": "520f44cd7071bc4b34228a3a43279ae1b2ddeb80"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Improve sidebar drawer accessibility, activation, and controlled collapse",
+            "commit": "520f44cd7071bc4b34228a3a43279ae1b2ddeb80"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Fix ore-navbar and ore-sidebar responsive state edge cases",
+            "commit": "520f44cd7071bc4b34228a3a43279ae1b2ddeb80"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Improve ore-lightbox loading skeleton geometry and cached image handling",
+            "commit": "520f44cd7071bc4b34228a3a43279ae1b2ddeb80"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Hide empty sidebar header",
+            "commit": "520f44cd7071bc4b34228a3a43279ae1b2ddeb80"
+          }
+        ]
+      },
+      "date": "Sat, 21 Nov 2026 18:46:32 GMT",
+      "tag": "@vielzeug/refine_v26.11.29",
+      "version": "26.11.29"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "agent@vielzeug",

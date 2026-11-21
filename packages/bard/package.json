@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/bard",
-  "version": "26.11.28",
+  "version": "26.11.29",
   "description": "Lifecycle-owned Web Audio mixing: buses with ducking, buffered SFX and sprites, procedural synth, streamed tracks, and crossfading music decks",
   "repository": {
     "type": "git",

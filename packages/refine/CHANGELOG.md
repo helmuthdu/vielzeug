@@ -1,7 +1,26 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Fri, 20 Nov 2026 09:18:31 GMT and should not be manually modified.
+This log was last generated on Sat, 21 Nov 2026 18:46:32 GMT and should not be manually modified.
 
+## 26.11.29
+
+Sat, 21 Nov 2026 18:46:32 GMT
+
+### Major changes
+
+- Unify grid auto-fit mode
+- Remove navbar context exports from the public API
+
+### Minor changes
+
+- feat(refine): add accessible timeline components
+
+### Patches
+
+- Improve sidebar drawer accessibility, activation, and controlled collapse
+- Fix ore-navbar and ore-sidebar responsive state edge cases
+- Improve ore-lightbox loading skeleton geometry and cached image handling
+- Hide empty sidebar header
 ## 26.11.28
 
 Fri, 20 Nov 2026 09:18:31 GMT

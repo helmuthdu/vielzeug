@@ -6,6 +6,25 @@
           {
             "author": "agent@vielzeug",
             "comment": "chore(codex): refresh bundled docs data",
+            "commit": "520f44cd7071bc4b34228a3a43279ae1b2ddeb80"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "chore(codex): refresh bundled docs data",
+            "commit": "520f44cd7071bc4b34228a3a43279ae1b2ddeb80"
+          }
+        ]
+      },
+      "date": "Sat, 21 Nov 2026 18:46:32 GMT",
+      "tag": "@vielzeug/codex_v26.11.29",
+      "version": "26.11.29"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "chore(codex): refresh bundled docs data",
             "commit": "bde502bab5986f216d3048b93feed0514685bd16"
           },
           {
