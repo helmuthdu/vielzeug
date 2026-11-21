@@ -641,6 +641,21 @@ test.describe('Filter drawer', () => {
     }
   }
 
+  test('uses a neutral background for selected drawer options', async ({ page, refinePage }) => {
+    await mountBar(page, refinePage);
+    await page.getByRole('button', { exact: true, name: 'Filters' }).click();
+    const alice = page.getByRole('radio', { exact: true, name: 'Alice' });
+    const bob = page.getByRole('radio', { exact: true, name: 'Bob' });
+    await alice.click();
+    await page.locator('.drawer-heading').hover();
+    const selectedBackground = await alice.evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished));
+      return getComputedStyle(element).backgroundColor;
+    });
+    await bob.hover();
+    await expect(bob).toHaveCSS('background-color', selectedBackground);
+  });
+
   test('stages selections without emitting query changes and applies them once', async ({ page, refinePage }) => {
     await mountBar(page, refinePage);
     await input(page).fill('regression');
@@ -1015,6 +1030,14 @@ test.describe('Icon card gallery', () => {
     // Checking reveals the corner badge; the Any row keeps its radio dot.
     await page.getByRole('checkbox', { name: 'Fire' }).click();
     expect(await tick('Fire', 'checkbox')).not.toBe('none');
+    await page.locator('.drawer-heading').hover();
+    const selectedBackground = await page.getByRole('checkbox', { name: 'Fire' }).evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished));
+      return getComputedStyle(element).backgroundColor;
+    });
+    const ice = page.getByRole('checkbox', { name: 'Ice' });
+    await ice.hover();
+    await expect(ice).toHaveCSS('background-color', selectedBackground);
     const anyVisible = await page.locator('ore-radio-group[data-cards]').evaluate((group) => {
       const any = group.querySelector('ore-radio[value="any"]');
       const part = any?.shadowRoot?.querySelector('[part="radio"]');

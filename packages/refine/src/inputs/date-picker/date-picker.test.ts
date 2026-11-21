@@ -59,6 +59,18 @@ describe('ore-date-picker', () => {
       expect(getCalendar(fixture)).toBeTruthy();
     });
 
+    it('closes the calendar and cancels a draft when disabled', async () => {
+      fixture = await mount('ore-date-picker', { attrs: { range: true, value: '2025-06-10/2025-06-20' } });
+      await open(fixture);
+      fireClick(fixture.query('[data-iso="2025-06-12"]')!);
+      await fixture.flush();
+
+      await fixture.attr('disabled', '');
+
+      expect(getCalendar(fixture)).toBeNull();
+      expect((fixture.element as HTMLElement & { value: string }).value).toBe('2025-06-10/2025-06-20');
+    });
+
     it('passes label to trigger', async () => {
       fixture = await mount('ore-date-picker', { props: { label: 'Birthday' } });
 
@@ -75,6 +87,23 @@ describe('ore-date-picker', () => {
   // ─── Value / display ─────────────────────────────────────────────────────
 
   describe('Value handling', () => {
+    it('reapplies the value attribute after a user selection even when the attribute is unchanged', async () => {
+      fixture = await mount('ore-date-picker', { attrs: { value: '2025-06-10' } });
+      const picker = fixture.element as HTMLElement & { value: string };
+
+      await open(fixture);
+      fireClick(fixture.query('[data-iso="2025-06-12"]')!);
+      await fixture.flush();
+      expect(picker.value).toBe('2025-06-12');
+      await fixture.act(() => picker.setAttribute('value', '2025-06-10'));
+      expect(picker.value).toBe('2025-06-10');
+      await fixture.act(() => {
+        picker.setAttribute('value', '2025-06-10');
+        picker.value = '2025-06-15';
+      });
+      expect(picker.value).toBe('2025-06-15');
+    });
+
     it('displays formatted date in trigger when value is set', async () => {
       fixture = await mount('ore-date-picker', { props: { value: '2025-06-15' } });
 
@@ -82,6 +111,109 @@ describe('ore-date-picker', () => {
 
       expect(trigger?.getAttribute('value')).toBeTruthy();
       expect(trigger?.getAttribute('value')).not.toBe('');
+    });
+
+    describe('Range selection', () => {
+      it('commits only after two endpoints and orders a reversed selection', async () => {
+        fixture = await mount('ore-date-picker', {
+          attrs: { range: true, value: '2025-06-10/2025-06-20' },
+        });
+        const picker = fixture.element as HTMLElement & { value: string; checkValidity(): boolean };
+        const events: string[] = [];
+
+        picker.addEventListener('input', () => events.push('input'));
+        picker.addEventListener('change', () => events.push('change'));
+        await open(fixture);
+        fireClick(fixture.query('[data-iso="2025-06-18"]')!);
+        await fixture.flush();
+
+        expect(picker.value).toBe('2025-06-10/2025-06-20');
+        expect(events).toEqual([]);
+        expect(picker.checkValidity()).toBe(false);
+        expect(getCalendar(fixture)).toBeTruthy();
+
+        fireClick(fixture.query('[data-iso="2025-06-12"]')!);
+        await fixture.flush();
+
+        expect(picker.value).toBe('2025-06-12/2025-06-18');
+        expect(events).toEqual(['input', 'change']);
+        expect(picker.checkValidity()).toBe(true);
+        expect(getCalendar(fixture)).toBeNull();
+      });
+
+      it('allows a same-day range and discards a new draft on Escape', async () => {
+        fixture = await mount('ore-date-picker', { attrs: { range: true, value: '2025-06-10/2025-06-20' } });
+        const picker = fixture.element as HTMLElement & { value: string };
+
+        await open(fixture);
+        fireClick(fixture.query('[data-iso="2025-06-15"]')!);
+        await fixture.flush();
+        fireClick(fixture.query('[data-iso="2025-06-15"]')!);
+        await fixture.flush();
+        expect(picker.value).toBe('2025-06-15/2025-06-15');
+
+        await open(fixture);
+        fireClick(fixture.query('[data-iso="2025-06-16"]')!);
+        await fixture.flush();
+        fireKeyDown(getCalendar(fixture)!, { key: 'Escape' });
+        await fixture.flush();
+        expect(picker.value).toBe('2025-06-15/2025-06-15');
+      });
+
+      it('retains invalid external values and rejects invalid endpoints and required emptiness', async () => {
+        fixture = await mount('ore-date-picker', {
+          attrs: { min: '2025-06-10', range: true, required: true, value: '2025-06-01/2025-06-15' },
+        });
+        const picker = fixture.element as HTMLElement & { value: string; checkValidity(): boolean };
+
+        expect(picker.value).toBe('2025-06-01/2025-06-15');
+        expect(picker.checkValidity()).toBe(false);
+        await fixture.act(() => {
+          picker.value = '2025-06-10/2025-06-15';
+        });
+        expect(picker.checkValidity()).toBe(true);
+        await fixture.act(() => {
+          picker.value = '2025-06-15/';
+        });
+        expect(picker.value).toBe('2025-06-15/');
+        expect(picker.checkValidity()).toBe(false);
+        await fixture.act(() => {
+          picker.value = '';
+        });
+        expect(picker.checkValidity()).toBe(false);
+      });
+
+      it('validates endpoints rather than interior days and responds to changed bounds', async () => {
+        fixture = await mount('ore-date-picker', {
+          attrs: { range: true, value: '2025-06-13/2025-06-16', 'weekend-days': '[0,6]' },
+        });
+        const picker = fixture.element as HTMLElement & { checkValidity(): boolean };
+
+        expect(picker.checkValidity()).toBe(true);
+        await fixture.attr('min', '2025-06-14');
+        expect(picker.checkValidity()).toBe(false);
+        await fixture.attr('min', '2025-06-13');
+        expect(picker.checkValidity()).toBe(true);
+      });
+
+      it('resets to the current value attribute', async () => {
+        const form = document.createElement('form');
+
+        document.body.append(form);
+        fixture = await mount('ore-date-picker', {
+          attrs: { range: true, value: '2025-06-10/2025-06-20' },
+          container: form,
+        });
+        const picker = fixture.element as HTMLElement & { value: string };
+
+        await fixture.act(() => {
+          picker.value = '2025-06-12/2025-06-14';
+        });
+        form.reset();
+        await fixture.flush();
+        expect(picker.value).toBe('2025-06-10/2025-06-20');
+        form.remove();
+      });
     });
 
     it('shows placeholder when no value is set', async () => {
@@ -100,6 +232,34 @@ describe('ore-date-picker', () => {
       await open(fixture);
 
       expect(getSelectedDay(fixture)).toBeTruthy();
+    });
+
+    it('updates the displayed selection when the value attribute changes after a pick', async () => {
+      fixture = await mount('ore-date-picker', { props: { value: '2025-06-15' } });
+      await open(fixture);
+      fireClick(fixture.query('[data-iso="2025-06-16"]')!);
+      await fixture.flush();
+
+      await fixture.act(() => {
+        fixture.element.setAttribute('value', '2025-06-20');
+      });
+      expect((fixture.element as HTMLElement & { value: string }).value).toBe('2025-06-20');
+
+      await open(fixture);
+      expect(fixture.query('[data-iso="2025-06-20"]')?.getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('updates the selected grid cell when the value property changes', async () => {
+      fixture = await mount('ore-date-picker', { props: { value: '2025-06-15' } });
+      const picker = fixture.element as HTMLElement & { value: string };
+
+      await fixture.act(() => {
+        picker.value = '2025-06-20';
+      });
+      await open(fixture);
+
+      expect(fixture.query('[data-iso="2025-06-20"]')?.getAttribute('aria-selected')).toBe('true');
+      expect(fixture.query('[data-iso="2025-06-15"]')?.getAttribute('aria-selected')).toBe('false');
     });
 
     it('emits change event when a day cell is clicked', async () => {
@@ -216,6 +376,69 @@ describe('ore-date-picker', () => {
   // ─── Keyboard navigation ─────────────────────────────────────────────────
 
   describe('Keyboard navigation', () => {
+    it('keeps one tab stop in the month and year grids', async () => {
+      fixture = await mount('ore-date-picker', { attrs: { value: '2025-06-15' } });
+      await open(fixture);
+
+      const getTabStops = (selector: string) =>
+        Array.from(fixture.shadow!.querySelectorAll<HTMLElement>(selector)).filter((cell) => cell.tabIndex === 0);
+
+      fireClick(fixture.query('[class="cal-label-btn"]')!);
+      await fixture.flush();
+      expect(getTabStops('.cal-cell-month')).toHaveLength(1);
+
+      const selectedMonth = fixture.query<HTMLElement>('.cal-cell-month[data-selected]')!;
+      fireKeyDown(selectedMonth, { key: 'ArrowRight' });
+      await fixture.flush();
+      expect(getTabStops('.cal-cell-month')).toHaveLength(1);
+
+      fireClick(fixture.query('[class="cal-label-btn"]')!);
+      await fixture.flush();
+      expect(getTabStops('.cal-cell-year')).toHaveLength(1);
+    });
+
+    it('does not consume an arrow key when the day grid has no destination', async () => {
+      fixture = await mount('ore-date-picker', { attrs: { value: '2025-06-01' } });
+      await open(fixture);
+      const firstDay = fixture.query<HTMLElement>('[data-iso="2025-06-01"]')!;
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'ArrowLeft' });
+
+      firstDay.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('does not consume modified arrow keys', async () => {
+      fixture = await mount('ore-date-picker', { attrs: { value: '2025-06-03' } });
+      await open(fixture);
+      const day = fixture.query<HTMLElement>('[data-iso="2025-06-03"]')!;
+      const event = new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        ctrlKey: true,
+        key: 'ArrowRight',
+      });
+
+      day.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('keeps vertical navigation in the same weekday when skipping disabled days', async () => {
+      fixture = await mount('ore-date-picker', {
+        attrs: { value: '2025-06-03' },
+      });
+      await open(fixture);
+
+      const tuesday = fixture.query<HTMLElement>('[data-iso="2025-06-03"]')!;
+      fixture.query<HTMLElement>('[data-iso="2025-06-10"]')!.setAttribute('aria-disabled', 'true');
+
+      fireKeyDown(tuesday, { key: 'ArrowDown' });
+      await fixture.flush();
+
+      expect(fixture.shadow?.activeElement).toBe(fixture.query('[data-iso="2025-06-17"]'));
+    });
+
     it('closes calendar on Escape', async () => {
       fixture = await mount('ore-date-picker');
       await open(fixture);

@@ -1,9 +1,41 @@
 ---
 title: Migration
-description: Migrate the viewport-only responsive breakpoints in Refine's sidebar, the async state container to ore-state, command palette categories and the item type, the mobile input font-size floor, the standardized overlay backdrop, the sidebar drawer backdrop default, the drawer drag handle default placement, toast statuses, the human-interface-guideline adoption, surface variants, tabs density, the tabs active pill, the sidebar drawer overlay, DataGrid sources, and framework type declarations to Refine.
+description: Migrate the viewport-only responsive breakpoints in Refine's sidebar, the async state container to ore-state, command palette categories and the item type, the mobile input font-size floor, the standardized overlay backdrop, the sidebar drawer backdrop default, the drawer drag handle default placement, toast statuses, the human-interface-guideline adoption, surface variants, tabs density, the tabs active pill, the sidebar drawer overlay, DataGrid sources, framework type declarations, ore-grid auto-fit columns, and navbar context exports.
 ---
 
 # Migration
+
+## Stepper keyboard navigation and status
+
+Clickable steps now use native button navigation: Tab moves between available steps, and Enter or Space selects one. Arrow keys no longer move or select steps. In linear mode, previously reached steps remain available after navigating backward.
+
+The component no longer inserts English screen-reader-only position and status text. The ordered list and `aria-current` expose sequence and the current step. Provide localized status text when needed, and replace the optional hint through its slot:
+
+```html
+<ore-step value="delivery" optional>
+  Delivery
+  <span slot="optional">Facultatif</span>
+  <span slot="status">Adresse à vérifier</span>
+</ore-step>
+```
+
+## Navbar context exports are private
+
+`NavbarContext` and `NAVBAR_CTX` are no longer exported from `@vielzeug/refine/navbar`. They are implementation details shared by Refine's navbar and navigation-menu components. Use the components' documented attributes, events, and slots instead of injecting this context from application code.
+
+## ore-grid auto-fit columns
+
+The `responsive` attribute was removed because `cols="auto"` already selects auto-fit columns. Use `min-col-width` with `cols="auto"` to set the minimum track width.
+
+```html
+<!-- Before -->
+<ore-grid responsive min-col-width="180px">...</ore-grid>
+
+<!-- After -->
+<ore-grid cols="auto" min-col-width="180px">...</ore-grid>
+```
+
+The default layout remains auto-fit when `cols` is omitted. `min-col-width` applies only when the active column count is `auto`.
 
 ## Mobile editor and hover behavior
 
@@ -11,8 +43,6 @@ description: Migrate the viewport-only responsive breakpoints in Refine's sideba
 - Native input, textarea, composer, OTP, and command-palette text now has a 16 CSS pixel minimum on coarse pointers, even when root-relative theme fonts are smaller. Public input, textarea, and OTP font overrides take precedence over size presets before the mobile minimum is applied. Larger configured fonts are preserved and desktop typography is unchanged.
 - OTP code insertion and paste fill from the receiving cell and preserve all allowed characters that fit. Complete-code replacement no longer collapses to its final character, and one native edit no longer produces duplicate bubbling `input` events.
 - `ore-input`, `ore-textarea`, and `ore-message-composer` accept a typed [`enterkeyhint`](./api.md#enterkeyhint). The composer defaults its return-key label to match `send-shortcut`; explicit hints override only the label, not the shortcut.
-
-No public props or events were removed.
 
 ## Interaction timing and filename captions
 
@@ -349,6 +379,22 @@ The backdrop color moved from the text-contrast ramp (which inverted to a bright
 theme's scrim veil (`--overlay-veil`), exposed as `--sidebar-drawer-backdrop-bg`, with `backdrop="opaque | blur |
 transparent"` matching `ore-drawer`. The documented-but-dead `--sidebar-item-indicator` property was removed;
 `--sidebar-drawer-width` now actually controls the drawer panel width.
+
+## Sidebar supports a controlled expanded state
+
+`ore-sidebar` now parses the value of `collapsed` instead of treating every present attribute as `true`.
+`collapsed="false"` therefore controls the expanded state; use a bare `collapsed` attribute (or
+`collapsed="true"`) to control the collapsed state:
+
+```html
+<!-- Before: any present collapsed attribute collapsed the sidebar -->
+<ore-sidebar collapsed="false">…</ore-sidebar>
+
+<!-- Now: false explicitly controls the expanded state -->
+<ore-sidebar collapsed="false">…</ore-sidebar>
+```
+
+Remove `collapsed` to return to uncontrolled state; use `default-collapsed` to choose its initial state.
 
 ## Toast statuses replace color and variant
 

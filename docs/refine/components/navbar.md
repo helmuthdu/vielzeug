@@ -180,7 +180,9 @@ The mobile layout resolves in one order:
 2. A `mobile-sidebar` target: the toggle drives that sidebar's drawer.
 3. Neither: the bar's live navigation wraps onto its own scrollable row(s) under the logo. No duplication, no clone that drifts out of sync, and nothing to maintain twice.
 
-The `end` region still collapses in the wrapped layout: `persistent` exists precisely to stay visible through the collapse, `end` to collapse.
+The `end` region still collapses in the wrapped layout: `persistent` exists precisely to stay visible through the collapse, `end` to collapse. The mobile panel stays inside the navbar's named navigation landmark; it does not create another nested navigation landmark.
+
+Set `breakpoint` to control the viewport media query, or add `container-breakpoints` to evaluate a parseable `max-width` query against the navbar's own container width instead. The opt-in can be added or removed at runtime.
 
 <ComponentPreview>
 
@@ -204,6 +206,7 @@ Recommended app-shell pattern:
 - Desktop: keep `ore-sidebar` visible and use the navbar for top-level context/actions.
 - Mobile: switch sidebar to bottom-nav mode and toggle its drawer from the navbar control, with `menu-icon="panel-left-open"` and `menu-close-icon="panel-left-close"` so it reads as the same control as the desktop collapse toggle.
 - Use `mobile-sidebar` on `ore-navbar` and `bottom-nav-at="(max-width: ... )"` on `ore-sidebar`.
+- `mobile-sidebar` must select an `<ore-sidebar>` and must remain in the document or the navbar's own shadow root. Give the sidebar an `id`: the navbar toggle reports the drawer's open state with `aria-expanded` and uses an element-reference `aria-controls` relationship where supported, then falls back to that ID in older browsers. With a linked sidebar, the navbar toggle drives its drawer when the sidebar is in bottom-nav mode, including when the navbar itself starts at the desktop breakpoint.
 
 <ComponentPreview>
 
@@ -415,6 +418,16 @@ navbar.closeMobileMenu();
 navbar.toggleMobileMenu();
 ```
 
+`openMobileMenu()` and `toggleMobileMenu()` do nothing outside mobile mode when controlling the navbar's own panel. When `mobile-sidebar` is set, the methods drive the linked `ore-sidebar` drawer instead.
+
+**`ore-navbar` Methods**
+
+| Method             | Description                                                      |
+| ------------------ | ---------------------------------------------------------------- |
+| `openMobileMenu()` | Open the own mobile panel or linked sidebar drawer               |
+| `closeMobileMenu()`| Close the own mobile panel or linked sidebar drawer              |
+| `toggleMobileMenu()`| Toggle the own mobile panel or linked sidebar drawer            |
+
 ## Events
 
 ```js
@@ -434,6 +447,7 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `active-url`            | `string`                                                  | N/A                       | Current page URL; items whose `href` match it (exact, or nested paths keep the parent) become active automatically; explicit `active` wins |
 | `centered`              | `boolean`                                                 | `false`                   | Pin the default-slot content to the bar's true center                                                                                      |
 | `label`                 | `string`                                                  | `'Main navigation'`       | Accessible nav landmark label                                                                                                              |
+| `mobile-sidebar`        | `string`                                                  | N/A                       | CSS selector for an `ore-sidebar` controlled by the navbar toggle                                                                          |
 | `menu-icon`             | `string`                                                  | `'menu'`                  | Icon shown while the mobile menu is closed                                                                                                 |
 | `menu-open-label`       | `string`                                                  | `'Open navigation menu'`  | Accessible label for the closed mobile menu toggle                                                                                         |
 | `menu-close-icon`       | `string`                                                  | `'x'`                     | Icon shown while the mobile menu or the external `mobile-sidebar` drawer is open                                                           |
@@ -509,6 +523,8 @@ When `variant="frost"` has an explicit elevation, that elevation replaces the de
 | `href`     | `string`  | N/A     | Link URL (renders anchor when set)                                                            |
 | `active`   | `boolean` | `false` | Marks item as current page (`aria-current="page"`); wins over the navbar's `active-url` match |
 | `disabled` | `boolean` | `false` | Disables interaction                                                                          |
+| `aria-label` | `string` | N/A     | Accessible name forwarded to the internal anchor or button for icon-only or unnamed items |
+| `icon-only` | `boolean` | `false` | Hides the empty label region and uses compact, symmetric icon padding |
 | `rel`      | `string`  | N/A     | Link relationship when `href` is set                                                          |
 | `target`   | `string`  | N/A     | Link target when `href` is set                                                                |
 

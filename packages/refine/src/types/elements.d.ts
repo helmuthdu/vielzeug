@@ -41,6 +41,7 @@ import type { OreSpeedReadingEvents, SpeedReadingElement } from '../content/spee
 import type { OreStatsProps } from '../content/stats/stats';
 import type { OreTableProps } from '../content/table/table';
 import type { OreTextProps } from '../content/text/text';
+import type { OreTimelineItemProps, OreTimelineProps } from '../content/timeline/timeline';
 import type { OreAlertEvents, OreAlertProps } from '../feedback/alert/alert';
 import type { OreBadgeProps } from '../feedback/badge/badge';
 import type { OreChipEvents, OreChipProps } from '../feedback/chip/chip';
@@ -99,6 +100,7 @@ import type {
   OreSidebarItemProps,
   SidebarElement,
 } from '../layout/sidebar/sidebar';
+import type { OreSplitterEvents, OreSplitterProps } from '../layout/splitter/splitter';
 import type { OreBreadcrumbItemProps, OreBreadcrumbProps } from '../navigation/breadcrumb/breadcrumb';
 import type {
   OreMediaNavigationEvents,
@@ -123,6 +125,7 @@ import type {
 } from '../overlay/command-palette/command-palette.types';
 import type { OreDialogEvents, OreDialogProps } from '../overlay/dialog/dialog';
 import type { DrawerElement, OreDrawerEvents } from '../overlay/drawer/drawer';
+import type { OreLightboxEvents, OreLightboxProps } from '../overlay/lightbox/lightbox';
 import type { OreMenuEvents, OreMenuItemProps, OreMenuProps } from '../overlay/menu/menu';
 import type { OrePopoverEvents, OrePopoverProps } from '../overlay/popover/popover';
 import type { OreSpotlightProps } from '../overlay/spotlight/spotlight';
@@ -173,7 +176,7 @@ export interface RefineElementMap {
   'ore-copy-command': HTMLElement & OreCopyCommandProps & AddEventListeners<OreCopyCommandEvents>;
   'ore-counter': HTMLElement & OreCounterProps & AddEventListeners<OreCounterEvents>;
   'ore-datagrid': HTMLElement & OreDataGridProps & AddEventListeners<OreDataGridEvents>;
-  'ore-date-picker': HTMLElement & OreDatePickerProps & AddEventListeners<OreDatePickerEvents>;
+  'ore-date-picker': HTMLElement & OreDatePickerProps & FormValidityMethods & AddEventListeners<OreDatePickerEvents>;
   // overlay
   'ore-dialog': HTMLElement & OreDialogProps & AddEventListeners<OreDialogEvents>;
   'ore-dock': HTMLElement & OreDockProps;
@@ -185,6 +188,7 @@ export interface RefineElementMap {
   'ore-input': HTMLElement & OreInputProps & FormValidityMethods & AddEventListeners<OreInputEvents>;
   'ore-keyboard-key': HTMLElement & OreKeyboardKeyProps;
   'ore-keyboard-shortcut': HTMLElement & OreKeyboardShortcutProps;
+  'ore-lightbox': HTMLElement & OreLightboxProps & AddEventListeners<OreLightboxEvents>;
   'ore-list': HTMLElement & OreListProps & AddEventListeners<OreListEvents>;
   'ore-list-item': HTMLElement & OreListItemProps & AddEventListeners<OreListItemEvents>;
   'ore-marquee': HTMLElement & OreMarqueeProps;
@@ -228,6 +232,7 @@ export interface RefineElementMap {
   'ore-slider': HTMLElement & OreSliderProps & FormValidityMethods & AddEventListeners<OreSliderEvents>;
   'ore-speech-player': SpeechPlayerElement & AddEventListeners<OreSpeechPlayerEvents>;
   'ore-speed-reading': SpeedReadingElement & AddEventListeners<OreSpeedReadingEvents>;
+  'ore-splitter': HTMLElement & OreSplitterProps & AddEventListeners<OreSplitterEvents>;
   'ore-spotlight': HTMLElement & OreSpotlightProps;
   'ore-state': HTMLElement & OreStateProps & AddEventListeners<OreStateEvents>;
   'ore-stats': HTMLElement & OreStatsProps;
@@ -254,6 +259,8 @@ export interface RefineElementMap {
     scope?: 'col' | 'colgroup' | 'row' | 'rowgroup' | string;
   };
   'ore-time-picker': HTMLElement & OreTimePickerProps & AddEventListeners<OreTimePickerEvents>;
+  'ore-timeline': HTMLElement & OreTimelineProps;
+  'ore-timeline-item': HTMLElement & OreTimelineItemProps;
   'ore-toast': HTMLElement & OreToastProps & AddEventListeners<OreToastEvents>;
   'ore-tooltip': HTMLElement & OreTooltipProps & AddEventListeners<OreTooltipEvents>;
   'ore-tour': OreTourElement & AddEventListeners<OreTourEvents>;

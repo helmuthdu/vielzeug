@@ -236,17 +236,17 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 
 Each entry below is a component with its own documentation page and registration subpath. Sub-element tags (`ore-accordion-item`, `ore-card-picker-item`, `ore-navigation-menu-link`, `ore-tab-item`, `ore-avatar-group`, and the rest) are documented on their parent's page and registered with it.
 
-**Content:** `ore-accordion`, `ore-avatar`, `ore-card`, `ore-card-picker`, `ore-carousel`, `ore-chat-message`, `ore-chat-panel`, `ore-code-window`, `ore-copy-command`, `ore-icon`, `ore-keyboard-key`, `ore-list`, `ore-marquee`, `ore-prose`, `ore-qr-code`, `ore-rank-list`, `ore-speech-player`, `ore-speed-reading`, `ore-stats`, `ore-table`, `ore-text`
+**Content:** `ore-accordion`, `ore-avatar`, `ore-card`, `ore-card-picker`, `ore-carousel`, `ore-chat-message`, `ore-chat-panel`, `ore-code-window`, `ore-copy-command`, `ore-icon`, `ore-keyboard-key`, `ore-list`, `ore-marquee`, `ore-prose`, `ore-qr-code`, `ore-rank-list`, `ore-speech-player`, `ore-speed-reading`, `ore-stats`, `ore-table`, `ore-text`, `ore-timeline`
 
 **Feedback:** `ore-alert`, `ore-badge`, `ore-chip`, `ore-cookie-banner`, `ore-password-strength`, `ore-progress`, `ore-pull-to-refresh`, `ore-skeleton`, `ore-state`, `ore-toast`, `ore-typing-indicator`
 
 **Inputs:** `ore-app-store-button`, `ore-button`, `ore-calendar`, `ore-checkbox`, `ore-color-picker`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-query-bar`, `ore-radio`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
 
-**Layout:** `ore-box`, `ore-dock`, `ore-grid`, `ore-navbar`, `ore-separator`, `ore-sidebar`
+**Layout:** `ore-box`, `ore-dock`, `ore-grid`, `ore-navbar`, `ore-separator`, `ore-sidebar`, `ore-splitter`
 
 **Navigation:** `ore-breadcrumb`, `ore-media-navigation`, `ore-navigation-menu`, `ore-pagination`, `ore-stepper`, `ore-tabs`
 
-**Overlay:** `ore-command-palette`, `ore-dialog`, `ore-drawer`, `ore-menu`, `ore-popover`, `ore-spotlight`, `ore-tooltip`, `ore-tour`
+**Overlay:** `ore-command-palette`, `ore-dialog`, `ore-drawer`, `ore-lightbox`, `ore-menu`, `ore-popover`, `ore-spotlight`, `ore-tooltip`, `ore-tour`
 
 ## Component portfolio
 

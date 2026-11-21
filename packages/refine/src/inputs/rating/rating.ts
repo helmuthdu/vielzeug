@@ -170,6 +170,7 @@ define<OreRatingProps>(RATING_TAG, {
     let starsEl: HTMLDivElement | null = null;
     let activePointer: number | null = null;
     let activePointerType: string | null = null;
+    let clearedPointerValue: number | null = null;
     const ownerDocument = el.ownerDocument;
 
     defineFieldValue(
@@ -249,6 +250,7 @@ define<OreRatingProps>(RATING_TAG, {
 
       activePointer = null;
       activePointerType = null;
+      clearedPointerValue = null;
       hovered.value = null;
       if (id !== null && starsEl?.hasPointerCapture?.(id)) starsEl.releasePointerCapture(id);
     }
@@ -258,6 +260,7 @@ define<OreRatingProps>(RATING_TAG, {
 
       activePointer = e.pointerId;
       activePointerType = e.pointerType;
+      clearedPointerValue = null;
 
       if (starsEl && 'setPointerCapture' in starsEl) {
         try {
@@ -269,7 +272,15 @@ define<OreRatingProps>(RATING_TAG, {
 
       const next = pointerValue(e);
 
-      if (next !== null) commit(next, true);
+      if (next !== null) {
+        const clearsRating = next === normalizedValue.value && next > 0 && props.clearable.value;
+
+        commit(next, true);
+        if (clearsRating) {
+          clearedPointerValue = next;
+          hovered.value = null;
+        }
+      }
     }
 
     function handlePointerMove(e: PointerEvent): void {
@@ -279,6 +290,10 @@ define<OreRatingProps>(RATING_TAG, {
       const next = pointerValue(e);
 
       if (next === null) return;
+      if (activePointer !== null && clearedPointerValue !== null) {
+        if (next === clearedPointerValue) return;
+        clearedPointerValue = null;
+      }
 
       hovered.value = next;
       if (activePointer !== null) commit(next, false);

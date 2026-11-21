@@ -41,7 +41,7 @@
     will-change: max-width;
   }
 
-  :host > nav {
+  :host .drawer-layer > nav {
     position: relative;
     box-sizing: border-box;
     display: flex;
@@ -61,7 +61,26 @@
     backdrop-filter: blur(var(--_panel-blur));
   }
 
-  :host(:not([data-bottom-nav])) > nav {
+  .drawer-layer {
+    display: contents;
+  }
+
+  :host([data-bottom-nav][data-drawer-open]) .drawer-layer {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-sticky) + 2);
+    display: block;
+    pointer-events: none;
+  }
+
+  :host([data-preview-mode][data-bottom-nav][data-drawer-open]) .drawer-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  :host(:not([data-bottom-nav])) .drawer-layer > nav {
     overflow: visible;
   }
 
@@ -110,7 +129,7 @@
   }
 
   :host([data-no-transition]),
-  :host([data-no-transition]) > nav {
+  :host([data-no-transition]) .drawer-layer > nav {
     transition: none;
   }
 
@@ -138,7 +157,7 @@
     pointer-events: none;
   }
 
-  :host([drawer][data-bottom-nav]) > nav {
+  :host([drawer][data-bottom-nav]) .drawer-layer > nav {
     pointer-events: auto;
   }
 
@@ -151,7 +170,7 @@
     pointer-events: none;
   }
 
-  :host([data-bottom-nav]) > nav {
+  :host([data-bottom-nav]) .drawer-layer > nav {
     position: fixed;
     inset-block: 0;
     inset-inline-start: 0;
@@ -167,7 +186,7 @@
   }
 
   /* Preview mode: use absolute positioning so drawer stays within container */
-  :host([data-preview-mode][data-bottom-nav]) > nav {
+  :host([data-preview-mode][data-bottom-nav]) .drawer-layer > nav {
     position: absolute;
     inset-block: 0;
     inset-inline-start: 0;
@@ -176,11 +195,11 @@
     pointer-events: auto;
   }
 
-  :host(:dir(rtl)[data-bottom-nav]) > nav {
+  :host(:dir(rtl)[data-bottom-nav]) .drawer-layer > nav {
     transform: translateX(104%);
   }
 
-  :host([data-bottom-nav][data-drawer-open]) > nav {
+  :host([data-bottom-nav][data-drawer-open]) .drawer-layer > nav {
     transform: translateX(0);
   }
 
@@ -536,7 +555,7 @@
     margin: var(--size-3);
   }
 
-  :host([variant='floating']) > nav {
+  :host([variant='floating']) .drawer-layer > nav {
     border: var(--border) solid var(--_panel-border-color);
     border-radius: var(--_panel-radius);
   }
@@ -558,7 +577,7 @@
     box-shadow: var(--_panel-shadow);
   }
 
-  :host([variant='floating'][data-bottom-nav]) > nav {
+  :host([variant='floating'][data-bottom-nav]) .drawer-layer > nav {
     inset-block-start: var(--size-2);
     inset-inline-start: var(--size-2);
   }
@@ -569,7 +588,7 @@
     width: auto;
   }
 
-  :host([variant='floating'][data-preview-mode][data-bottom-nav]) > nav {
+  :host([variant='floating'][data-preview-mode][data-bottom-nav]) .drawer-layer > nav {
     inset-block-start: var(--size-1);
     inset-inline-start: var(--size-1);
   }

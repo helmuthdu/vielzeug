@@ -15,7 +15,7 @@ import {
   useSlots,
 } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
-import { truncationRevealRef } from '../../core';
+import { parseOptionalBool, truncationRevealRef } from '../../core';
 import { createBackgroundLock } from '../../overlay/shared/background-lock';
 import { projectFling } from '../../shared/fling';
 import { touchTargetMixin } from '../../styles';
@@ -43,7 +43,9 @@ type BottomNavItem = {
   href?: string;
   iconName?: string;
   label: string;
+  rel?: string;
   source: HTMLElement;
+  target?: string;
 };
 
 /** Context provided by `ore-sidebar` to its `ore-sidebar-group` and `ore-sidebar-item` children. */
@@ -131,7 +133,7 @@ export type OreSidebarProps = {
  * @element ore-sidebar-group - Labelled group of navigation items
  * @element ore-sidebar-item - Individual navigation link or button
  *
- * @attr {boolean} collapsed - Controlled collapsed state
+ * @attr {boolean} collapsed - Controlled collapsed state; use `collapsed="false"` to control the expanded state
  * @attr {boolean} default-collapsed - Initial collapsed state for uncontrolled sidebars
  * @attr {boolean} collapsible - Show the collapse toggle button
  * @attr {boolean} drawer - Drawer-only mode: the sidebar exists solely as the overlay drawer
@@ -156,7 +158,7 @@ export type OreSidebarProps = {
  * @cssprop --sidebar-border-color - Border color
  *
  * @part drawer-backdrop - Backdrop behind the open drawer (click closes it; dimming is opt-in via `backdrop`).
- * @part drawer-close-btn - Close button shown in the header while the drawer is open (sidebars without header content keep the drawer headerless and close via backdrop, swipe, Escape, or the navbar toggle).
+ * @part drawer-close-btn - Close button shown while the drawer is open when the sidebar has header content or a collapse control.
  * @part swipe-handle - Grabber nub on the drawer edge that drag-closes it (touch/mouse pan).
  * @part nav - Navigation container.
  * @part header - Header container.
@@ -194,7 +196,11 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     'bottom-nav-at': prop.string(),
     'close-on-select': prop.bool(true),
     'collapse-label': prop.string('Collapse sidebar'),
-    collapsed: prop.bool(false),
+    collapsed: {
+      default: undefined as boolean | undefined,
+      parse: parseOptionalBool,
+      reflect: false,
+    },
     collapsible: prop.bool(false),
     'container-breakpoints': prop.bool(false),
     'default-collapsed': prop.bool(false),
@@ -213,9 +219,9 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     const hasHeader = () => slots.has('header').value;
     const hasFooter = () => slots.has('footer').value;
     const hasLogo = () => slots.has('logo').value;
+    const hasHeaderContent = () => hasHeader() || hasLogo() || props.collapsible.value;
 
-    const isControlled = signal(el.hasAttribute('collapsed'));
-    const collapsedState = signal(isControlled.value ? el.hasAttribute('collapsed') : props['default-collapsed'].value);
+    const collapsedState = signal(props['default-collapsed'].value);
     const isBottomNav = signal(false);
     const isDrawerOpen = signal(false);
     const bottomNavItems = signal<BottomNavItem[]>([]);
@@ -229,11 +235,11 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     const bgLock = createBackgroundLock();
     let restoreDrawerFocus: FocusRestorer | null = null;
 
-    const isCollapsed = () => collapsedState.value;
+    const isCollapsed = () => props.collapsed.value ?? collapsedState.value;
     const mode = computed<SidebarMode>(() => {
       if (isBottomNav.value) return 'bottom-nav';
 
-      return collapsedState.value ? 'collapsed' : 'default';
+      return isCollapsed() ? 'collapsed' : 'default';
     });
 
     const applyResponsiveState = () => {
@@ -289,7 +295,9 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
           href: el.getAttribute('href') ?? undefined,
           iconName: directIconName ?? nestedIconName ?? undefined,
           label: el.getAttribute('bottom-nav-label')?.trim() || rawLabel || `Item ${index + 1}`,
+          rel: computeSafeRel(el.getAttribute('rel') ?? undefined, el.getAttribute('target') ?? undefined) ?? undefined,
           source: el,
+          target: el.getAttribute('target') ?? undefined,
         } satisfies BottomNavItem;
       });
 
@@ -299,18 +307,20 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     provide(SIDEBAR_CTX, {
       closeDrawer: () => setDrawerOpen(false, 'toggle'),
       closeOnSelect: props['close-on-select'],
-      collapsed: computed(() => !isBottomNav.value && collapsedState.value) as Readable<boolean>,
+      collapsed: computed(() => !isBottomNav.value && isCollapsed()) as Readable<boolean>,
       drawerOpen: computed(() => isDrawerOpen.value) as Readable<boolean>,
       mode: mode as Readable<SidebarMode>,
       variant: props.variant,
     });
 
+    watch(props.collapsed, (next) => {
+      if (next !== undefined) collapsedState.value = next;
+    });
+
     const setCollapsed = (next: boolean, source: SidebarCollapseSource) => {
       if (isCollapsed() === next) return;
 
-      if (!isControlled.value) {
-        collapsedState.value = next;
-      }
+      if (props.collapsed.value === undefined) collapsedState.value = next;
 
       emit('collapsed-change', { collapsed: next, source });
     };
@@ -354,6 +364,23 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
 
     const doToggle = () => {
       setCollapsed(!isCollapsed(), 'toggle');
+    };
+
+    const activateBottomNavItem = (event: MouseEvent, item: BottomNavItem) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      item.source.shadowRoot?.querySelector<HTMLElement>('a.item, button.item')?.click();
     };
 
     const sidebarEl = el as SidebarElement;
@@ -415,21 +442,11 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       bottomNavMode?.remeasure();
       applyResponsiveState();
       const itemObservers = new Map<HTMLElement, MutationObserver>();
-      const observer = new MutationObserver(() => {
-        if (!el.hasAttribute('collapsed') && !isControlled.value) return;
-
-        isControlled.value = true;
-        collapsedState.value = el.hasAttribute('collapsed');
-      });
-
-      observer.observe(el, {
-        attributeFilter: ['collapsed'],
-        attributes: true,
-      });
       const closeOnEscape = (event: KeyboardEvent) => {
-        if (event.key !== 'Escape' || !isDrawerOpen.value) return;
+        if (event.key !== 'Escape' || !isDrawerOpen.value || event.defaultPrevented) return;
 
         event.preventDefault();
+        event.stopPropagation();
         setDrawerOpen(false, 'toggle');
       };
       el.addEventListener('keydown', closeOnEscape);
@@ -548,7 +565,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
 
           // Watch attributes and content that affect bottom-nav rendering.
           itemObserver.observe(item, {
-            attributeFilter: ['active', 'bottom-nav', 'bottom-nav-label', 'disabled', 'href'],
+            attributeFilter: ['active', 'bottom-nav', 'bottom-nav-label', 'disabled', 'href', 'rel', 'target'],
             attributes: true,
             characterData: true,
             childList: true,
@@ -570,7 +587,6 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         swipeState.dispose();
         swipe?.dispose();
         swipe = undefined;
-        observer.disconnect();
         nestedItemsObserver.disconnect();
         el.removeEventListener('keydown', closeOnEscape);
         document.removeEventListener('focusin', keepFocusInDrawer);
@@ -586,61 +602,72 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
 
     return html`
       <div
-        class="drawer-backdrop"
-        part="drawer-backdrop"
-        aria-hidden="true"
-        @click=${() => setDrawerOpen(false, 'toggle')}></div>
-      <nav
-        aria-label="${props.label}"
-        aria-hidden=${() => ((isBottomNav.value || props.drawer.value) && !isDrawerOpen.value ? 'true' : null)}
-        part="nav"
-        tabindex="-1"
-        ?inert=${() => (isBottomNav.value || props.drawer.value) && !isDrawerOpen.value}>
-        <div class="swipe-handle" part="swipe-handle" aria-hidden="true"></div>
+        class="drawer-layer"
+        aria-label=${() => (isDrawerOpen.value ? props.label.value : null)}
+        aria-modal=${() => (isDrawerOpen.value ? 'true' : null)}
+        role=${() => (isDrawerOpen.value ? 'dialog' : null)}>
         <div
-          class="sidebar-header"
-          part="header"
-          ?hidden=${() => !hasHeader() && !props.collapsible.value}>
-          <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
-            <slot name="logo"></slot>
-          </span>
-          <span class="sidebar-header-content">
-            <slot name="header"></slot>
-          </span>
-          <button
-            class="drawer-close-btn"
-            part="drawer-close-btn"
-            type="button"
-            aria-label="${props['drawer-close-label']}"
-            ?hidden=${() => !isDrawerOpen.value || (!hasHeader() && !props.collapsible.value)}
-            @click=${() => setDrawerOpen(false, 'toggle')}>
-            <ore-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></ore-icon>
-          </button>
-          <button
-            class="toggle-btn"
-            part="toggle-btn"
-            type="button"
-            ?hidden=${() => !props.collapsible.value}
-            aria-label="${() => (isCollapsed() ? props['expand-label'].value : props['collapse-label'].value)}"
-            aria-expanded="${() => !isCollapsed()}"
-            @click="${doToggle}">
-            <ore-icon
-              class="toggle-icon"
-              name=${() => (isCollapsed() ? 'panel-left-open' : 'panel-left-close')}
-              size="18"
-              stroke-width="2"
-              aria-hidden="true"></ore-icon>
-          </button>
-        </div>
-        <div class="sidebar-content" part="content">
-          <slot></slot>
-        </div>
-        <div class="sidebar-footer" part="footer" ?hidden=${() => !hasFooter()}>
-          <slot name="footer"></slot>
-        </div>
-      </nav>
+          class="drawer-backdrop"
+          part="drawer-backdrop"
+          aria-hidden="true"
+          @click=${() => setDrawerOpen(false, 'toggle')}></div>
+        <nav
+          aria-label="${props.label}"
+          aria-hidden=${() => ((isBottomNav.value || props.drawer.value) && !isDrawerOpen.value ? 'true' : null)}
+          part="nav"
+          tabindex="-1"
+          ?inert=${() => (isBottomNav.value || props.drawer.value) && !isDrawerOpen.value}>
+          <div class="swipe-handle" part="swipe-handle" aria-hidden="true"></div>
+          <div
+            class="sidebar-header"
+            part="header"
+            ?hidden=${() => !hasHeaderContent()}>
+            <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
+              <slot name="logo"></slot>
+            </span>
+            <span class="sidebar-header-content">
+              <slot name="header"></slot>
+            </span>
+            <button
+              class="drawer-close-btn"
+              part="drawer-close-btn"
+              type="button"
+              aria-label="${props['drawer-close-label']}"
+              ?hidden=${() => !isDrawerOpen.value || !hasHeaderContent()}
+              @click=${() => setDrawerOpen(false, 'toggle')}>
+              <ore-icon name="x" size="16" stroke-width="2.5" aria-hidden="true"></ore-icon>
+            </button>
+            <button
+              class="toggle-btn"
+              part="toggle-btn"
+              type="button"
+              ?hidden=${() => !props.collapsible.value}
+              aria-label="${() => (isCollapsed() ? props['expand-label'].value : props['collapse-label'].value)}"
+              aria-expanded="${() => !isCollapsed()}"
+              @click="${doToggle}">
+              <ore-icon
+                class="toggle-icon"
+                name=${() => (isCollapsed() ? 'panel-left-open' : 'panel-left-close')}
+                size="18"
+                stroke-width="2"
+                aria-hidden="true"></ore-icon>
+            </button>
+          </div>
+          <div class="sidebar-content" part="content">
+            <slot></slot>
+          </div>
+          <div class="sidebar-footer" part="footer" ?hidden=${() => !hasFooter()}>
+            <slot name="footer"></slot>
+          </div>
+        </nav>
+      </div>
 
-      <div class="bottom-bar" part="bottom-bar" ?hidden=${() => !isBottomNav.value || props.drawer.value}>
+      <div
+        class="bottom-bar"
+        part="bottom-bar"
+        aria-hidden=${() => (isDrawerOpen.value ? 'true' : null)}
+        ?hidden=${() => !isBottomNav.value || props.drawer.value}
+        ?inert=${() => isDrawerOpen.value}>
         ${() =>
           bottomNavItems.value.map((item) => {
             const className = `bottom-tab${item.active ? ' bottom-tab-active' : ''}`;
@@ -650,7 +677,10 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
                 <a
                   class="${className}"
                   href="${item.href}"
+                  rel="${item.rel}"
                   aria-current="${item.active ? 'page' : null}"
+                  target="${item.target}"
+                  @click=${(event: MouseEvent) => activateBottomNavItem(event, item)}
                   data-active="${item.active ? 'true' : null}">
                   <span class="bottom-tab-icon" aria-hidden="true" ?hidden=${() => !item.iconName}>
                     <ore-icon name="${item.iconName}" size="18" stroke-width="2"></ore-icon>
@@ -667,7 +697,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
                 ?disabled=${item.disabled}
                 aria-current="${item.active ? 'page' : null}"
                 data-active="${item.active ? 'true' : null}"
-                @click=${() => item.source.click()}>
+                @click=${(event: MouseEvent) => activateBottomNavItem(event, item)}>
                 <span class="bottom-tab-icon" aria-hidden="true" ?hidden=${() => !item.iconName}>
                   <ore-icon name="${item.iconName}" size="18" stroke-width="2"></ore-icon>
                 </span>

@@ -1,0 +1,157 @@
+@layer refine.base {
+  :host {
+    display: inline-block;
+  }
+
+  dialog {
+    box-sizing: border-box;
+    width: min(100% - var(--size-8), var(--size-screen-lg));
+    max-width: none;
+    max-height: calc(100dvh - var(--size-8));
+    padding: var(--size-3);
+    overscroll-behavior: contain;
+    color: var(--color-contrast-900);
+    background: var(--lightbox-bg, color-mix(in oklch, var(--surface-overlay) 92%, transparent));
+    border: var(--border) solid var(--color-divider);
+    border-radius: var(--rounded-lg);
+    box-shadow: var(--shadow-xl);
+    backdrop-filter: blur(var(--blur-md));
+  }
+
+  dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+    background: var(--lightbox-backdrop, var(--overlay-veil));
+  }
+
+  .toolbar,
+  .controls {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+  }
+
+  .toolbar {
+    margin-block-end: var(--size-2);
+  }
+
+  .status {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--text-sm);
+  }
+
+  .stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: min(calc(100dvh - var(--size-40) - var(--size-2)), var(--size-96));
+    min-height: var(--size-24);
+  }
+
+  .stage img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .stage ore-skeleton {
+    --skeleton-width: 100%;
+    --skeleton-height: 100%;
+    position: absolute;
+    inset: 0;
+  }
+
+  .stage ore-skeleton[hidden],
+  .stage img[hidden],
+  .controls[hidden] {
+    display: none;
+  }
+
+  .controls {
+    gap: var(--size-3);
+    justify-content: center;
+    margin-block-start: var(--size-2);
+  }
+
+  .controls > button {
+    flex: none;
+  }
+
+  .thumbnails {
+    display: flex;
+    flex: 0 1 auto;
+    gap: var(--size-2);
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  button.thumbnail {
+    flex: none;
+    width: var(--size-14);
+    height: var(--size-12);
+    padding: var(--size-0-5);
+    overflow: hidden;
+    background: var(--color-contrast-100);
+    border: var(--border-2) solid var(--color-divider);
+  }
+
+  button.thumbnail[aria-current='true'] {
+    border-color: var(--color-primary-focus);
+  }
+
+  .thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--rounded-sm);
+  }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--size-11);
+    min-height: var(--size-11);
+    padding: 0;
+    color: var(--color-contrast-900);
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+    border-radius: var(--rounded-md);
+    transition:
+      background-color var(--transition-fast),
+      border-color var(--transition-fast);
+  }
+
+  button:not(.thumbnail) {
+    background: var(--color-contrast-200);
+    border-radius: var(--rounded-full);
+  }
+
+  button:not(.thumbnail):not([aria-disabled='true']):hover {
+    background: var(--color-contrast-300);
+  }
+
+  button:not(.thumbnail):not([aria-disabled='true']):active {
+    background: var(--color-contrast-400);
+  }
+
+  button.thumbnail:not([aria-current='true']):hover {
+    border-color: var(--color-contrast-500);
+  }
+
+  button[aria-disabled='true'] {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  button:focus-visible {
+    outline: var(--border-2) solid var(--color-primary-focus);
+    outline-offset: calc(-1 * var(--border-2));
+  }
+}

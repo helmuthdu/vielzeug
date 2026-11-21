@@ -50,41 +50,15 @@ describe('ore-grid', () => {
       expect(fixture.element.getAttribute('justify')).toBe('center');
     });
 
-    it('applies responsive', async () => {
-      fixture = await mount('ore-grid', { attrs: { responsive: '' } });
-
-      expect(fixture.element.hasAttribute('responsive')).toBe(true);
-    });
-
     it('applies flow attribute', async () => {
       fixture = await mount('ore-grid', { attrs: { flow: 'column' } });
 
       expect(fixture.element.getAttribute('flow')).toBe('column');
     });
-
-    it('resolves fixed column counts through the --grid-N tokens', async () => {
-      fixture = await mount('ore-grid', { attrs: { cols: '3' } });
-
-      expect(fixture.element.style.getPropertyValue('--_cols')).toBe('var(--grid-3, repeat(3, 1fr))');
-    });
-
-    it('floors responsive columns at the --grid-min-item-width token', async () => {
-      fixture = await mount('ore-grid', { attrs: { responsive: '' } });
-
-      expect(fixture.element.style.getPropertyValue('--_cols')).toBe(
-        'repeat(auto-fit, minmax(var(--grid-min-item-width), 1fr))',
-      );
-    });
-
-    it('honours an explicit min-col-width over the token', async () => {
-      fixture = await mount('ore-grid', { attrs: { 'min-col-width': '200px', responsive: '' } });
-
-      expect(fixture.element.style.getPropertyValue('--_cols')).toBe('repeat(auto-fit, minmax(200px, 1fr))');
-    });
   });
 
   describe('Column Counts', () => {
-    for (const cols of ['1', '2', '3', '4', '6', '12']) {
+    for (const cols of ['1', '2', '3', '4', '6', '12', 'auto']) {
       it(`applies cols=${cols}`, async () => {
         fixture = await mount('ore-grid', { attrs: { cols } });
 

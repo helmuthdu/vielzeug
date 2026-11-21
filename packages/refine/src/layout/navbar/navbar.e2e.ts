@@ -226,6 +226,24 @@ test.describe('Layout', () => {
       return navbar?.hasAttribute('data-mobile') && sidebar?.hasAttribute('data-bottom-nav');
     });
 
+    const controls = await page.locator('#navbar').evaluate((navbar) => {
+      const toggle = navbar.shadowRoot?.querySelector<HTMLButtonElement>('[part="mobile-toggle"]');
+      const ariaControlsElements = (
+        toggle as (HTMLButtonElement & { ariaControlsElements?: readonly Element[] | null }) | null
+      )?.ariaControlsElements;
+
+      return {
+        elementIds: ariaControlsElements?.map((element) => element.id) ?? [],
+        idReference: toggle?.getAttribute('aria-controls'),
+      };
+    });
+
+    if (controls.elementIds.length > 0) {
+      expect(controls.elementIds).toEqual(['sidebar']);
+    } else {
+      expect(controls.idReference).toBe('sidebar');
+    }
+
     await page.locator('#navbar').evaluate((navbar) => {
       (navbar as HTMLElement & { toggleMobileMenu(): void }).toggleMobileMenu();
     });

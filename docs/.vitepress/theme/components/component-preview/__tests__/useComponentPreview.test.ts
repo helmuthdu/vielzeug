@@ -39,7 +39,7 @@ describe('useComponentPreview()', () => {
     vi.restoreAllMocks();
   });
 
-  it('shares and persists the show-code preference across previews', () => {
+  it('keeps code visibility independent across previews while persisting the preference', () => {
     sessionStorage.setItem(SHOW_CODE_STORAGE_KEY, 'true');
 
     const first = mountPreview();
@@ -52,8 +52,12 @@ describe('useComponentPreview()', () => {
       first.preview.toggleShowCode();
 
       expect(first.preview.showCode.value).toBe(false);
-      expect(second.preview.showCode.value).toBe(false);
+      expect(second.preview.showCode.value).toBe(true);
       expect(sessionStorage.getItem(SHOW_CODE_STORAGE_KEY)).toBe('false');
+
+      const later = mountPreview();
+      expect(later.preview.showCode.value).toBe(false);
+      later.dispose();
     } finally {
       second.dispose();
       first.dispose();

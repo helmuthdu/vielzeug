@@ -443,9 +443,9 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
 /**
  * Roving-arrow keyboard navigation for a calendar grid, implementing the ARIA `grid` cell pattern:
  * Arrow keys move by one cell / one row (`columns` wide), Home/End jump to the row's first/last
- * cell, and Enter/Space activate the focused cell. Every calendar grid: days (7 columns) and
- * months/years (4 columns): carries the base `.cal-grid` class, so `closest('.cal-grid')` scopes
- * the movement to the grid the event fired in regardless of view.
+ * enabled cell, and Enter/Space activate the focused cell. Every calendar grid: days (7 columns)
+ * and months/years (4 columns): carries the base `.cal-grid` class, so `closest('.cal-grid')`
+ * scopes the movement to the grid the event fired in regardless of view.
  *
  * `onSelect` receives the activated cell element so the day view can read its `data-iso` while the
  * month/year views ignore the argument and use their own closure value.
@@ -456,6 +456,8 @@ export function handleCalendarGridKeydown(
   columns: number,
   onSelect: (cell: HTMLElement) => void,
 ): void {
+  if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
   const cell = event.currentTarget as HTMLElement;
   const grid = cell.closest('.cal-grid');
 
@@ -466,29 +468,81 @@ export function handleCalendarGridKeydown(
 
   if (idx === -1) return;
 
-  let target: HTMLElement | undefined;
-
   if (event.key === 'Enter' || event.key === ' ') {
+    if (cell.getAttribute('aria-disabled') === 'true') return;
+
     event.preventDefault();
+    setCalendarGridTabStop(allCells, cell);
     onSelect(cell);
 
     return;
-  } else if (event.key === 'ArrowRight') {
-    target = allCells[idx + 1];
-  } else if (event.key === 'ArrowLeft') {
-    target = allCells[idx - 1];
-  } else if (event.key === 'ArrowDown') {
-    target = allCells[idx + columns];
-  } else if (event.key === 'ArrowUp') {
-    target = allCells[idx - columns];
-  } else if (event.key === 'Home') {
-    target = allCells[Math.floor(idx / columns) * columns];
-  } else if (event.key === 'End') {
-    target = allCells[Math.min(Math.floor(idx / columns) * columns + columns - 1, allCells.length - 1)];
-  } else {
-    return;
   }
 
+  const rowStart = Math.floor(idx / columns) * columns;
+  const rowEnd = Math.min(rowStart + columns - 1, allCells.length - 1);
+  let targetIndex: number;
+  let step: number;
+  let minIndex = 0;
+  let maxIndex = allCells.length - 1;
+
+  switch (event.key) {
+    case 'ArrowRight':
+      targetIndex = idx + 1;
+      step = 1;
+      minIndex = rowStart;
+      maxIndex = rowEnd;
+      break;
+    case 'ArrowLeft':
+      targetIndex = idx - 1;
+      step = -1;
+      minIndex = rowStart;
+      maxIndex = rowEnd;
+      break;
+    case 'ArrowDown':
+      targetIndex = idx + columns;
+      step = columns;
+      break;
+    case 'ArrowUp':
+      targetIndex = idx - columns;
+      step = -columns;
+      break;
+    case 'Home':
+      targetIndex = rowStart;
+      step = 1;
+      minIndex = rowStart;
+      maxIndex = rowEnd;
+      break;
+    case 'End':
+      targetIndex = rowEnd;
+      step = -1;
+      minIndex = rowStart;
+      maxIndex = rowEnd;
+      break;
+    default:
+      return;
+  }
+
+  while (
+    targetIndex >= minIndex &&
+    targetIndex <= maxIndex &&
+    allCells[targetIndex]?.getAttribute('aria-disabled') === 'true'
+  ) {
+    targetIndex += step;
+  }
+
+  if (targetIndex < minIndex || targetIndex > maxIndex) return;
+
+  const target = allCells[targetIndex];
+
+  if (!target || target.getAttribute('aria-disabled') === 'true') return;
+
   event.preventDefault();
-  target?.focus();
+  setCalendarGridTabStop(allCells, target);
+  target.focus();
+}
+
+function setCalendarGridTabStop(cells: HTMLElement[], activeCell: HTMLElement): void {
+  for (const cell of cells) {
+    cell.tabIndex = cell === activeCell ? 0 : -1;
+  }
 }

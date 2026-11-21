@@ -4,35 +4,48 @@ import { createElementSize } from '@vielzeug/sentinel';
 
 import styles from './grid.css?inline';
 
-const BREAKPOINTS: ['cols2xl' | 'colsXl' | 'colsLg' | 'colsMd' | 'colsSm', string][] = [
-  ['cols2xl', '--size-screen-2xl'],
-  ['colsXl', '--size-screen-xl'],
-  ['colsLg', '--size-screen-lg'],
-  ['colsMd', '--size-screen-md'],
-  ['colsSm', '--size-screen-sm'],
-];
+const BREAKPOINTS = [
+  { area: 'areas2xl', cols: 'cols2xl', fallback: 1536, token: '--size-screen-2xl' },
+  { area: 'areasXl', cols: 'colsXl', fallback: 1280, token: '--size-screen-xl' },
+  { area: 'areasLg', cols: 'colsLg', fallback: 1024, token: '--size-screen-lg' },
+  { area: 'areasMd', cols: 'colsMd', fallback: 768, token: '--size-screen-md' },
+  { area: 'areasSm', cols: 'colsSm', fallback: 640, token: '--size-screen-sm' },
+] as const;
 
-const AREAS_BREAKPOINTS: ['areas2xl' | 'areasXl' | 'areasLg' | 'areasMd' | 'areasSm', string][] = [
-  ['areas2xl', '--size-screen-2xl'],
-  ['areasXl', '--size-screen-xl'],
-  ['areasLg', '--size-screen-lg'],
-  ['areasMd', '--size-screen-md'],
-  ['areasSm', '--size-screen-sm'],
-];
+type ResolvedBreakpoint = (typeof BREAKPOINTS)[number] & { minWidth: number };
 
-const resolveBp = (host: HTMLElement, varName: string, fallback: number): number => {
-  const raw = getComputedStyle(host).getPropertyValue(varName).trim();
-  const parsed = Number.parseFloat(raw);
+const resolveCssLength = (host: HTMLElement, value: string, fallback: number): number => {
+  const probe = host.ownerDocument.createElement('span');
 
-  return Number.isFinite(parsed) ? parsed : fallback;
+  probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;height:0';
+  probe.style.width = value;
+
+  if (!probe.style.width) return fallback;
+
+  host.append(probe);
+
+  try {
+    const resolved = Number.parseFloat(host.ownerDocument.defaultView?.getComputedStyle(probe).width ?? '');
+
+    return Number.isFinite(resolved) ? resolved : fallback;
+  } finally {
+    probe.remove();
+  }
 };
 
-const BP_FALLBACKS: Record<string, number> = {
-  '--size-screen-2xl': 1536,
-  '--size-screen-lg': 1024,
-  '--size-screen-md': 768,
-  '--size-screen-sm': 640,
-  '--size-screen-xl': 1280,
+const resolveBreakpointValue = <T extends string>(
+  width: number,
+  breakpoints: ResolvedBreakpoint[],
+  readValue: (breakpoint: ResolvedBreakpoint) => T | undefined,
+): T | undefined => {
+  for (const breakpoint of breakpoints) {
+    if (width >= breakpoint.minWidth) {
+      const value = readValue(breakpoint);
+      if (value) return value;
+    }
+  }
+
+  return undefined;
 };
 
 const COL_COUNTS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'auto'] as const;
@@ -79,10 +92,8 @@ export type OreGridProps = {
   gap?: (typeof GRID_GAPS)[number];
   /** Justify items horizontally */
   justify?: (typeof GRID_JUSTIFICATIONS)[number];
-  /** Minimum column width for responsive mode (default: var(--grid-min-item-width)) */
+  /** Minimum width of auto-fit columns (default: var(--grid-min-item-width)) */
   minColWidth?: string;
-  /** Use auto-fit responsive columns */
-  responsive?: boolean;
   /** Number of rows: '1'-'12' | 'auto' */
   rows?: ColCount;
 };
@@ -94,8 +105,8 @@ export type OreGridProps = {
  * element's own width (measured with a ResizeObserver), not the viewport, so a
  * narrow grid in a sidebar gets its mobile layout even on a wide screen.
  * Breakpoint thresholds come from the `--size-screen-*` tokens. Fixed counts
- * resolve through the `--grid-1`–`--grid-12` tokens; the responsive floor uses
- * `--grid-min-item-width`. CSS custom properties `--grid-cols`, `--grid-rows`,
+ * resolve through the `--grid-1`–`--grid-12` tokens; auto-fit columns use
+ * `--grid-min-item-width` as their default floor. CSS custom properties `--grid-cols`, `--grid-rows`,
  * `--grid-gap`, `--grid-row-gap`, `--grid-col-gap` are honoured as fallbacks
  * when no attribute is set.
  *
@@ -112,8 +123,7 @@ export type OreGridProps = {
  * @attr {string} align - align-items: 'start' | 'center' | 'end' | 'stretch' | 'baseline'
  * @attr {string} justify - justify-items: 'start' | 'center' | 'end' | 'stretch'
  * @attr {string} flow - grid-auto-flow: 'row' | 'column' | 'row-dense' | 'column-dense'
- * @attr {boolean} responsive - Enables auto-fit columns without a fixed count
- * @attr {string} min-col-width - Min column width for responsive mode (default: var(--grid-min-item-width))
+ * @attr {string} min-col-width - Min column width when cols="auto" (default: var(--grid-min-item-width))
  * @attr {boolean} fullwidth - Stretch the grid to fill its container's full width
  * @attr {string} areas - CSS grid-template-areas value (e.g. "'header header' 'nav main'")
  * @attr {string} areas-sm - grid-template-areas when width ≥ 640px
@@ -125,7 +135,7 @@ export type OreGridProps = {
  * @slot - Grid items
  *
  * @cssprop --grid-cols - Fallback column template (used when no cols attr is set)
- * @cssprop --grid-min-item-width - Floor for auto-fit column width (default: 250px)
+ * @cssprop --grid-min-item-width - Floor for auto-fit columns (default: 250px)
  * @cssprop --grid-rows - Fallback row template
  * @cssprop --grid-gap - Fallback gap
  * @cssprop --grid-row-gap - Fallback row gap
@@ -138,7 +148,7 @@ export type OreGridProps = {
  *
  * @example
  * <!-- Responsive auto-fit -->
- * <ore-grid responsive min-col-width="200px" gap="sm">
+ * <ore-grid cols="auto" min-col-width="200px" gap="sm">
  *   <div>Card</div>
  * </ore-grid>
  *
@@ -171,83 +181,43 @@ define<OreGridProps>(GRID_TAG, {
     gap: prop.oneOf(GRID_GAPS),
     justify: prop.oneOf(GRID_JUSTIFICATIONS),
     minColWidth: prop.string(),
-    responsive: prop.bool(false),
     rows: prop.oneOf(COL_COUNTS),
   },
 
   setup(props) {
     const el = getHost();
-    const watch = watchEffect;
-
-    const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
-      if (activeCols === 'auto' || (!activeCols && responsive)) {
-        const min = minW || 'var(--grid-min-item-width)';
-        return `repeat(auto-fit, minmax(${min}, 1fr))`;
-      }
-
-      // Fixed counts resolve through the --grid-N theme tokens so a theme can
-      // redefine the track sizing (e.g. bleed-aware fractions) globally.
-      return activeCols ? `var(--grid-${activeCols}, repeat(${activeCols}, 1fr))` : null;
-    };
-    const updateCols = () => {
-      const w = el.offsetWidth;
-      const responsive = Boolean(props.responsive.value);
-      const minW = props.minColWidth.value ?? '';
-      let activeCols: string | undefined;
-
-      for (const [key, cssVar] of BREAKPOINTS) {
-        if (w >= resolveBp(el, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
-          activeCols = props[key].value!;
-          break;
-        }
-      }
-      activeCols ||= props.cols.value || undefined;
-
-      const colsValue = computeCols(activeCols, responsive, minW);
-
-      if (colsValue) {
-        el.style.setProperty('--_cols', colsValue);
+    const updateResponsiveStyles = () => {
+      const width = el.offsetWidth;
+      const styles = getComputedStyle(el);
+      const breakpoints: ResolvedBreakpoint[] = BREAKPOINTS.map((breakpoint) => ({
+        ...breakpoint,
+        minWidth: resolveCssLength(el, styles.getPropertyValue(breakpoint.token).trim(), breakpoint.fallback),
+      }));
+      const columns =
+        resolveBreakpointValue(width, breakpoints, (breakpoint) => props[breakpoint.cols].value) ?? props.cols.value;
+      if (columns === 'auto') {
+        const minWidth = props.minColWidth.value || 'var(--grid-min-item-width)';
+        el.style.setProperty('--_cols', `repeat(auto-fit, minmax(${minWidth}, 1fr))`);
+      } else if (columns) {
+        // Fixed counts resolve through theme tokens so themes can redefine track sizing.
+        el.style.setProperty('--_cols', `var(--grid-${columns}, repeat(${columns}, 1fr))`);
       } else {
         el.style.removeProperty('--_cols');
       }
-    };
 
-    // Re-run cols whenever any responsive prop changes
-    watch(() => {
-      void [
-        props.cols.value,
-        props.colsSm.value,
-        props.colsMd.value,
-        props.colsLg.value,
-        props.colsXl.value,
-        props.cols2xl.value,
-        props.responsive.value,
-        props.minColWidth.value,
-      ];
-      updateCols();
-    });
+      const areas =
+        resolveBreakpointValue(width, breakpoints, (breakpoint) => props[breakpoint.area].value) ?? props.areas.value;
 
-    const updateAreas = () => {
-      const w = el.offsetWidth;
-      let active = '';
-
-      for (const [key, cssVar] of AREAS_BREAKPOINTS) {
-        if (w >= resolveBp(el, cssVar, BP_FALLBACKS[cssVar]) && props[key].value) {
-          active = props[key].value!;
-          break;
-        }
-      }
-      active ||= props.areas.value || '';
-
-      if (active) {
-        el.style.setProperty('grid-template-areas', active);
+      if (areas) {
+        el.style.setProperty('--_areas', areas);
       } else {
-        el.style.removeProperty('grid-template-areas');
+        el.style.removeProperty('--_areas');
       }
     };
 
-    // Rows
-    watch(() => {
+    watchEffect(() => {
+      updateResponsiveStyles();
+
       const rows = props.rows.value;
 
       if (rows && rows !== 'auto') {
@@ -255,18 +225,6 @@ define<OreGridProps>(GRID_TAG, {
       } else {
         el.style.removeProperty('--_rows');
       }
-    });
-    // Grid template areas (responsive)
-    watch(() => {
-      void [
-        props.areas.value,
-        props.areasSm.value,
-        props.areasMd.value,
-        props.areasLg.value,
-        props.areasXl.value,
-        props.areas2xl.value,
-      ];
-      updateAreas();
     });
 
     // Also, update on element resize (drives breakpoint switching)
@@ -277,11 +235,10 @@ define<OreGridProps>(GRID_TAG, {
 
       const sizeSignal = fromSubscribable(size, { signal: size.disposalSignal });
 
-      watch(() => {
+      watchEffect(() => {
         const dims = sizeSignal.value;
         if (dims) {
-          updateCols();
-          updateAreas();
+          updateResponsiveStyles();
         }
       });
     });

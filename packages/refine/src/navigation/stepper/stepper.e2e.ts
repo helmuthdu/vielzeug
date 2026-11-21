@@ -39,6 +39,30 @@ test.describe('Accessibility', () => {
 });
 
 test.describe('Interaction', () => {
+  test('preserves the requested selection when registered elements are parsed', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('');
+    await page.evaluate((markup) => {
+      document.open();
+      document.write(markup);
+      document.close();
+    }, `<ore-stepper value="shipping">${steps}</ore-stepper>`);
+
+    await expect(page.locator('ore-stepper')).toHaveAttribute('value', 'shipping');
+    await expect(page.locator('ore-step[value="shipping"] [aria-current="step"]')).toBeVisible();
+    await expect(page.locator('ore-step[value="payment"]')).toHaveAttribute('index', '3');
+  });
+
+  test('localized optional and status text are included in accessible button names', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-stepper value="cart" clickable>' +
+        '<ore-step value="cart" optional error>Panier<span slot="optional">Facultatif</span>' +
+        '<span slot="status">Adresse invalide</span></ore-step>' +
+        '</ore-stepper>',
+    );
+
+    await expect(page.getByRole('button', { name: /Panier.*Facultatif.*Adresse invalide/ })).toBeVisible();
+  });
+
   test('clicking a navigable step makes it current and updates value', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       `<ore-stepper id="stepper" value="cart" clickable color="primary">${steps}</ore-stepper>`,
@@ -79,35 +103,21 @@ test.describe('Interaction', () => {
     expect(value).toBe('cart');
   });
 
-  test('arrow keys move focus and activate the next navigable step', async ({ page, refinePage }) => {
+  test('Tab moves focus without changing selection and Enter activates a step', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       `<ore-stepper id="stepper" value="cart" clickable color="primary">${steps}</ore-stepper>`,
     );
 
-    await page.locator('ore-step[value="cart"]').evaluate((el) => {
-      const shadow = (el as HTMLElement & { shadowRoot: ShadowRoot }).shadowRoot;
-
-      (shadow.querySelector('button') as HTMLElement)?.focus();
-    });
-    await page.keyboard.press('ArrowRight');
-    await page.waitForTimeout(50);
-
-    const value = await page.locator('#stepper').getAttribute('value');
-
-    expect(value).toBe('shipping');
-
-    const shippingHasFocus = await page.evaluate(() => {
-      const shipping = document.querySelector('ore-step[value="shipping"]');
-
-      return (
-        document.activeElement === shipping || document.activeElement?.shadowRoot?.activeElement?.tagName === 'BUTTON'
-      );
-    });
-
-    expect(shippingHasFocus).toBe(true);
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: /Shipping/ })).toBeFocused();
+    await expect(page.locator('#stepper')).toHaveAttribute('value', 'cart');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#stepper')).toHaveAttribute('value', 'shipping');
+    await expect(page.getByRole('button', { name: /Shipping/ })).toBeFocused();
   });
 
-  test('disabled steps are skipped by arrow-key navigation', async ({ page, refinePage }) => {
+  test('disabled steps are skipped by Tab navigation', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-stepper id="stepper" value="cart" clickable color="primary">' +
         '<ore-step value="cart">Cart</ore-step>' +
@@ -116,17 +126,39 @@ test.describe('Interaction', () => {
         '</ore-stepper>',
     );
 
-    await page.locator('ore-step[value="cart"]').evaluate((el) => {
-      const shadow = (el as HTMLElement & { shadowRoot: ShadowRoot }).shadowRoot;
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: /Payment/ })).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(page.locator('#stepper')).toHaveAttribute('value', 'payment');
+  });
 
-      (shadow.querySelector('button') as HTMLElement)?.focus();
-    });
-    await page.keyboard.press('ArrowRight');
-    await page.waitForTimeout(50);
+  test('keyboard navigation remains available when a focused step is disabled or removed', async ({
+    page,
+    refinePage,
+  }) => {
+    await refinePage.mountComponent(`<ore-stepper value="cart" clickable>${steps}</ore-stepper>`);
+    const cart = page.getByRole('button', { name: 'Cart' });
+    const shipping = page.getByRole('button', { name: 'Shipping' });
 
-    const value = await page.locator('#stepper').getAttribute('value');
+    await page.keyboard.press('Tab');
+    await expect(cart).toBeFocused();
+    await page.locator('ore-step[value="cart"]').evaluate((step) => step.setAttribute('disabled', ''));
+    await page.keyboard.press('Tab');
+    await expect(shipping).toBeFocused();
+    await page.locator('ore-step[value="shipping"]').evaluate((step) => step.remove());
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Payment' })).toBeFocused();
+  });
 
-    expect(value).toBe('payment');
+  test('native keyboard navigation works in right-to-left layout', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`<div dir="rtl"><ore-stepper value="cart" clickable>${steps}</ore-stepper></div>`);
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Shipping' })).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(page.locator('ore-stepper')).toHaveAttribute('value', 'shipping');
   });
 });
 

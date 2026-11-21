@@ -276,13 +276,13 @@
 
     ore-radio[checked]:not([disabled]):hover,
     ore-checkbox[checked]:not([disabled]):hover {
-      background: color-mix(in oklch, var(--color-primary) 12%, var(--color-canvas));
+      background: var(--color-contrast-150);
     }
   }
 
   ore-radio[checked],
   ore-checkbox[checked] {
-    background: color-mix(in oklch, var(--color-primary) 8%, var(--color-canvas));
+    background: var(--color-contrast-100);
   }
 
   ore-radio:not([disabled]):active,
@@ -393,7 +393,7 @@
   }
 
   ore-radio-group[data-cards] ore-radio[value='any'][checked] {
-    background: color-mix(in oklch, var(--color-primary) 8%, var(--color-canvas));
+    background: var(--color-contrast-100);
   }
 
   .filter-choices[data-cards] ore-checkbox::part(checkbox),
@@ -459,13 +459,13 @@
 
     .filter-choices[data-cards] ore-checkbox[checked]:not([disabled]):hover,
     ore-radio-group[data-cards] ore-radio[checked]:not([disabled]):hover {
-      background: color-mix(in oklch, var(--color-primary) 12%, var(--color-canvas));
+      background: var(--color-contrast-150);
     }
   }
 
   .filter-choices[data-cards] ore-checkbox[checked],
   ore-radio-group[data-cards] ore-radio[checked] {
-    background: color-mix(in oklch, var(--color-primary) 8%, var(--color-canvas));
+    background: var(--color-contrast-100);
     border-color: var(--color-primary);
   }
 

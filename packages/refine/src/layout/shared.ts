@@ -185,6 +185,7 @@ export const createResponsiveMode = (
     containerDriven,
     () =>
       untrack(() => {
+        remeasure();
         resubscribe();
         onChange(matches.value);
       }),

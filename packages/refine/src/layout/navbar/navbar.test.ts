@@ -163,6 +163,67 @@ describe('ore-navbar', () => {
     }
   });
 
+  it('does not open a mobile menu while the navbar is in desktop mode', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: false,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-navbar', {
+        html: '<div slot="mobile-menu">Menu</div>',
+      });
+      const onMenuChange = vi.fn();
+
+      fixture.element.addEventListener('mobile-menu-change', onMenuChange);
+
+      (fixture.element as HTMLElement & { openMobileMenu(): void }).openMobileMenu();
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-mobile-open')).toBe(false);
+      expect(onMenuChange).not.toHaveBeenCalled();
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('does not show a toggle for a selector that is not a drawer', async () => {
+    const originalMatchMedia = window.matchMedia;
+    const target = document.createElement('div');
+
+    target.id = 'not-a-drawer';
+    Object.assign(target, {
+      closeDrawer: vi.fn(),
+      openDrawer: vi.fn(),
+      toggleDrawer: vi.fn(),
+    });
+    document.body.append(target);
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      fixture = await mount('ore-navbar', {
+        attrs: { 'mobile-sidebar': '#not-a-drawer' },
+      });
+      await fixture.flush();
+
+      expect(fixture.query('[part="mobile-toggle"]')?.hasAttribute('hidden')).toBe(true);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('mobile-sidebar target must be an <ore-sidebar>'));
+    } finally {
+      target.remove();
+      window.matchMedia = originalMatchMedia;
+      warnSpy.mockRestore();
+    }
+  });
+
   it('shows the mobile toggle when mobile-menu content arrives after connection', async () => {
     const originalMatchMedia = window.matchMedia;
 
@@ -235,12 +296,81 @@ describe('ore-navbar', () => {
       const sidebar = document.createElement('ore-sidebar');
 
       sidebar.id = 'late-sidebar';
+      Object.assign(sidebar, {
+        closeDrawer: vi.fn(),
+        openDrawer: vi.fn(),
+        toggleDrawer: vi.fn(),
+      });
       document.body.append(sidebar);
       await fixture.flush();
 
       expect(fixture.query('[part="mobile-toggle"]')?.hasAttribute('hidden')).toBe(false);
 
       sidebar.remove();
+      await fixture.flush();
+
+      expect(fixture.query('[part="mobile-toggle"]')?.hasAttribute('hidden')).toBe(true);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('tracks a linked sidebar that arrives after connection even when the navbar breakpoint is off', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: false,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-navbar', {
+        attrs: { breakpoint: '(max-width: 768px)', 'mobile-sidebar': '#late-sidebar' },
+      });
+
+      const sidebar = document.createElement('ore-sidebar');
+
+      sidebar.id = 'late-sidebar';
+      sidebar.setAttribute('data-bottom-nav', '');
+      document.body.append(sidebar);
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-mobile')).toBe(true);
+      expect(fixture.query('[part="mobile-toggle"]')?.hasAttribute('hidden')).toBe(false);
+
+      sidebar.remove();
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-mobile')).toBe(false);
+      expect(fixture.query('[part="mobile-toggle"]')?.hasAttribute('hidden')).toBe(true);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('remeasures container breakpoints when container-breakpoints is enabled at runtime', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: false,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-navbar', {
+        attrs: { breakpoint: '(max-width: 768px)' },
+      });
+      Object.defineProperty(fixture.element, 'offsetWidth', { configurable: true, value: 500 });
+
+      await fixture.flush();
+      expect(fixture.element.hasAttribute('data-mobile')).toBe(false);
+
+      fixture.element.setAttribute('container-breakpoints', '');
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-mobile')).toBe(true);
     } finally {
       window.matchMedia = originalMatchMedia;
     }
@@ -249,10 +379,14 @@ describe('ore-navbar', () => {
   it('shows mobile toggle and controls external sidebar when mobile-sidebar is set', async () => {
     const originalMatchMedia = window.matchMedia;
     const sidebar = document.createElement('ore-sidebar') as HTMLElement & {
-      toggleDrawer?: () => void;
+      closeDrawer(): void;
+      openDrawer(): void;
+      toggleDrawer(): void;
     };
 
     sidebar.id = 'external-sidebar';
+    sidebar.closeDrawer = vi.fn();
+    sidebar.openDrawer = vi.fn();
     sidebar.toggleDrawer = vi.fn(() => {
       sidebar.toggleAttribute('data-drawer-open');
       sidebar.dispatchEvent(new CustomEvent('drawer-change'));
@@ -272,8 +406,15 @@ describe('ore-navbar', () => {
       await fixture.flush();
 
       const btn = fixture.query<HTMLButtonElement>('[part="mobile-toggle"]');
+      const controls = btn as (HTMLButtonElement & { ariaControlsElements?: readonly Element[] | null }) | null;
 
       expect(btn?.hasAttribute('hidden')).toBe(false);
+      if (controls?.ariaControlsElements) {
+        expect(Array.from(controls.ariaControlsElements)).toEqual([sidebar]);
+      } else {
+        expect(btn?.getAttribute('aria-controls')).toBe('external-sidebar');
+      }
+      expect(fixture.query('[part="mobile-menu"]')?.getAttribute('role')).toBeNull();
 
       fireClick(btn!);
       await fixture.flush();
@@ -292,10 +433,14 @@ describe('ore-navbar', () => {
     // than staying on the open-glyph like a stale control.
     const originalMatchMedia = window.matchMedia;
     const sidebar = document.createElement('ore-sidebar') as HTMLElement & {
-      toggleDrawer?: () => void;
+      closeDrawer(): void;
+      openDrawer(): void;
+      toggleDrawer(): void;
     };
 
     sidebar.id = 'external-sidebar-icon';
+    sidebar.closeDrawer = vi.fn();
+    sidebar.openDrawer = vi.fn();
     sidebar.toggleDrawer = vi.fn(() => {
       sidebar.toggleAttribute('data-drawer-open');
       sidebar.dispatchEvent(new CustomEvent('drawer-change', { detail: { open: true } }));
@@ -333,9 +478,16 @@ describe('ore-navbar', () => {
 
   it('follows external sidebar mobile mode changes', async () => {
     const originalMatchMedia = window.matchMedia;
-    const sidebar = document.createElement('ore-sidebar');
+    const sidebar = document.createElement('ore-sidebar') as HTMLElement & {
+      closeDrawer(): void;
+      openDrawer(): void;
+      toggleDrawer(): void;
+    };
 
     sidebar.id = 'external-sidebar-mode';
+    sidebar.closeDrawer = vi.fn();
+    sidebar.openDrawer = vi.fn();
+    sidebar.toggleDrawer = vi.fn();
     sidebar.setAttribute('data-bottom-nav', '');
     document.body.append(sidebar);
 
@@ -369,9 +521,16 @@ describe('ore-navbar', () => {
     // bottom-nav state must not force the navbar narrow: the navbar's own
     // breakpoint decides.
     const originalMatchMedia = window.matchMedia;
-    const sidebar = document.createElement('ore-sidebar');
+    const sidebar = document.createElement('ore-sidebar') as HTMLElement & {
+      closeDrawer(): void;
+      openDrawer(): void;
+      toggleDrawer(): void;
+    };
 
     sidebar.id = 'external-sidebar-precedence';
+    sidebar.closeDrawer = vi.fn();
+    sidebar.openDrawer = vi.fn();
+    sidebar.toggleDrawer = vi.fn();
     sidebar.setAttribute('data-bottom-nav', '');
     document.body.append(sidebar);
 
@@ -454,6 +613,13 @@ describe('ore-navbar', () => {
       const icon = toggle?.querySelector('ore-icon');
 
       expect(toggle?.getAttribute('aria-label')).toBe('Open workspace');
+      const controls = toggle as (HTMLButtonElement & { ariaControlsElements?: readonly Element[] | null }) | null;
+
+      if (controls?.ariaControlsElements) {
+        expect(Array.from(controls.ariaControlsElements)).toEqual([fixture.query('[part="mobile-menu"]')]);
+      } else {
+        expect(toggle?.getAttribute('aria-controls')).toBe('mobile-menu-panel');
+      }
       expect(icon?.getAttribute('name')).toBe('search');
       toggle?.click();
       await fixture.flush();
@@ -554,18 +720,30 @@ describe('ore-navbar', () => {
   });
 
   it('emits mobile-menu-change when menu state changes', async () => {
-    fixture = await mount('ore-navbar', {
-      html: '<div slot="mobile-menu">Menu</div>',
-    });
+    const originalMatchMedia = window.matchMedia;
 
-    const handler = vi.fn();
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
 
-    fixture.element.addEventListener('mobile-menu-change', handler);
-    (fixture.element as HTMLElement & { openMobileMenu(): void }).openMobileMenu();
-    await fixture.flush();
+    try {
+      fixture = await mount('ore-navbar', {
+        html: '<div slot="mobile-menu">Menu</div>',
+      });
 
-    expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler.mock.calls[0][0].detail).toEqual({ open: true });
+      const handler = vi.fn();
+
+      fixture.element.addEventListener('mobile-menu-change', handler);
+      (fixture.element as HTMLElement & { openMobileMenu(): void }).openMobileMenu();
+      await fixture.flush();
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0].detail).toEqual({ open: true });
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
   });
 
   it('toggles menu button in mobile mode', async () => {

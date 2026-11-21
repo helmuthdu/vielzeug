@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Improve ore-lightbox loading skeleton geometry and cached image handling",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

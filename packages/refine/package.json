@@ -311,6 +311,11 @@
       "require": "./dist/keyboard-key.cjs",
       "types": "./dist/content/keyboard-key/keyboard-key.d.ts"
     },
+    "./lightbox": {
+      "import": "./dist/lightbox.js",
+      "require": "./dist/lightbox.cjs",
+      "types": "./dist/overlay/lightbox/lightbox.d.ts"
+    },
     "./list": {
       "import": "./dist/list.js",
       "require": "./dist/list.cjs",
@@ -471,6 +476,11 @@
       "require": "./dist/speed-reading.cjs",
       "types": "./dist/content/speed-reading/speed-reading.d.ts"
     },
+    "./splitter": {
+      "import": "./dist/splitter.js",
+      "require": "./dist/splitter.cjs",
+      "types": "./dist/layout/splitter/splitter.d.ts"
+    },
     "./spotlight": {
       "import": "./dist/spotlight.js",
       "require": "./dist/spotlight.cjs",
@@ -535,6 +545,11 @@
       "import": "./dist/time-picker.js",
       "require": "./dist/time-picker.cjs",
       "types": "./dist/inputs/time-picker/time-picker.d.ts"
+    },
+    "./timeline": {
+      "import": "./dist/timeline.js",
+      "require": "./dist/timeline.cjs",
+      "types": "./dist/content/timeline/timeline.d.ts"
     },
     "./toast": {
       "import": "./dist/toast.js",
@@ -712,6 +727,9 @@
       "keyboard-key": [
         "dist/content/keyboard-key/keyboard-key.d.ts"
       ],
+      "lightbox": [
+        "dist/overlay/lightbox/lightbox.d.ts"
+      ],
       "list": [
         "dist/content/list/list.d.ts"
       ],
@@ -808,6 +826,9 @@
       "speed-reading": [
         "dist/content/speed-reading/speed-reading.d.ts"
       ],
+      "splitter": [
+        "dist/layout/splitter/splitter.d.ts"
+      ],
       "spotlight": [
         "dist/overlay/spotlight/spotlight.d.ts"
       ],
@@ -846,6 +867,9 @@
       ],
       "time-picker": [
         "dist/inputs/time-picker/time-picker.d.ts"
+      ],
+      "timeline": [
+        "dist/content/timeline/timeline.d.ts"
       ],
       "toast": [
         "dist/feedback/toast/toast.d.ts"
