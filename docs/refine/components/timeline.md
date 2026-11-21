@@ -57,18 +57,18 @@ When using the icon outside the preview, also import `@vielzeug/refine/icon`.
 
 ### Timeline Item Props
 
-| Prop | Type | Default | Description |
-| ---- | ---- | ------- | ----------- |
+| Prop    | Type                                                          | Default | Description  |
+| ------- | ------------------------------------------------------------- | ------- | ------------ |
 | `color` | `primary`, `secondary`, `info`, `success`, `warning`, `error` | Neutral | Marker color |
 
 ### Slots
 
-| Slot | Description |
-| ---- | ----------- |
-| Default | Event title or content |
-| `meta` | Metadata such as a `<time>` element |
-| `description` | Additional event details |
-| `marker` | Custom marker; replaces the default dot |
+| Slot          | Description                             |
+| ------------- | --------------------------------------- |
+| Default       | Event title or content                  |
+| `meta`        | Metadata such as a `<time>` element     |
+| `description` | Additional event details                |
+| `marker`      | Custom marker; replaces the default dot |
 
 ### CSS Parts
 
@@ -76,11 +76,11 @@ When using the icon outside the preview, also import `@vielzeug/refine/icon`.
 
 ### CSS Custom Properties
 
-| Property | Default | Description |
-| -------- | ------- | ----------- |
-| `--timeline-gap` | `--size-2` | Gap between events |
-| `--timeline-marker-color` | Item theme color | Marker color; overrides `color` |
-| `--timeline-line-color` | `--color-contrast-300` | Connecting line color |
+| Property                  | Default                | Description                     |
+| ------------------------- | ---------------------- | ------------------------------- |
+| `--timeline-gap`          | `--size-2`             | Gap between events              |
+| `--timeline-marker-color` | Item theme color       | Marker color; overrides `color` |
+| `--timeline-line-color`   | `--color-contrast-300` | Connecting line color           |
 
 Set these properties on the timeline to apply them to all items, or set marker and line colors on an individual item. The connecting line spans the configured gap.
 
