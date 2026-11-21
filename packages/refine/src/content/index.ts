@@ -85,3 +85,5 @@ export type { OreTableProps } from './table/table';
 export { TABLE_TAG } from './table/table';
 export type { OreTextProps } from './text/text';
 export { TEXT_TAG } from './text/text';
+export type { OreTimelineItemProps, OreTimelineProps } from './timeline/timeline';
+export { TIMELINE_ITEM_TAG, TIMELINE_TAG } from './timeline/timeline';

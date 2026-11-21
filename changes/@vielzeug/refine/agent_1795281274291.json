@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(refine): add accessible timeline components",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}
