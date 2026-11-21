@@ -74,16 +74,16 @@ The close button or Escape closes the preview. Previous and next buttons and the
 
 ## Properties
 
-| Property | Default | Description |
-| --- | --- | --- |
-| `label` | `Image preview` | Dialog name |
-| `close-label` | `Close preview` | Close button name |
-| `previous-label` | `Previous image` | Previous button name |
-| `next-label` | `Next image` | Next button name |
-| `loading-label` | `Loading image` | Loading message |
-| `max-thumbnails` | `5` | Maximum thumbnail buttons in the moving window; a positive safe integer. Invalid values use the default and warn in development |
-| `error-label` | `Image could not be loaded.` | Failure message |
-| `position-label` | `{current} of {total}` | Position message; retain both placeholders when translating |
+| Property         | Default                      | Description                                                                                                                     |
+| ---------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `label`          | `Image preview`              | Dialog name                                                                                                                     |
+| `close-label`    | `Close preview`              | Close button name                                                                                                               |
+| `previous-label` | `Previous image`             | Previous button name                                                                                                            |
+| `next-label`     | `Next image`                 | Next button name                                                                                                                |
+| `loading-label`  | `Loading image`              | Loading message                                                                                                                 |
+| `max-thumbnails` | `5`                          | Maximum thumbnail buttons in the moving window; a positive safe integer. Invalid values use the default and warn in development |
+| `error-label`    | `Image could not be loaded.` | Failure message                                                                                                                 |
+| `position-label` | `{current} of {total}`       | Position message; retain both placeholders when translating                                                                     |
 
 ## Events and styling
 

@@ -422,11 +422,11 @@ navbar.toggleMobileMenu();
 
 **`ore-navbar` Methods**
 
-| Method             | Description                                                      |
-| ------------------ | ---------------------------------------------------------------- |
-| `openMobileMenu()` | Open the own mobile panel or linked sidebar drawer               |
-| `closeMobileMenu()`| Close the own mobile panel or linked sidebar drawer              |
-| `toggleMobileMenu()`| Toggle the own mobile panel or linked sidebar drawer            |
+| Method               | Description                                          |
+| -------------------- | ---------------------------------------------------- |
+| `openMobileMenu()`   | Open the own mobile panel or linked sidebar drawer   |
+| `closeMobileMenu()`  | Close the own mobile panel or linked sidebar drawer  |
+| `toggleMobileMenu()` | Toggle the own mobile panel or linked sidebar drawer |
 
 ## Events
 
@@ -518,15 +518,15 @@ When `variant="frost"` has an explicit elevation, that elevation replaces the de
 
 **`ore-navbar-item` Attributes**
 
-| Attribute  | Type      | Default | Description                                                                                   |
-| ---------- | --------- | ------- | --------------------------------------------------------------------------------------------- |
-| `href`     | `string`  | N/A     | Link URL (renders anchor when set)                                                            |
-| `active`   | `boolean` | `false` | Marks item as current page (`aria-current="page"`); wins over the navbar's `active-url` match |
-| `disabled` | `boolean` | `false` | Disables interaction                                                                          |
-| `aria-label` | `string` | N/A     | Accessible name forwarded to the internal anchor or button for icon-only or unnamed items |
-| `icon-only` | `boolean` | `false` | Hides the empty label region and uses compact, symmetric icon padding |
-| `rel`      | `string`  | N/A     | Link relationship when `href` is set                                                          |
-| `target`   | `string`  | N/A     | Link target when `href` is set                                                                |
+| Attribute    | Type      | Default | Description                                                                                   |
+| ------------ | --------- | ------- | --------------------------------------------------------------------------------------------- |
+| `href`       | `string`  | N/A     | Link URL (renders anchor when set)                                                            |
+| `active`     | `boolean` | `false` | Marks item as current page (`aria-current="page"`); wins over the navbar's `active-url` match |
+| `disabled`   | `boolean` | `false` | Disables interaction                                                                          |
+| `aria-label` | `string`  | N/A     | Accessible name forwarded to the internal anchor or button for icon-only or unnamed items     |
+| `icon-only`  | `boolean` | `false` | Hides the empty label region and uses compact, symmetric icon padding                         |
+| `rel`        | `string`  | N/A     | Link relationship when `href` is set                                                          |
+| `target`     | `string`  | N/A     | Link target when `href` is set                                                                |
 
 **`ore-navbar-item` Slots**
 

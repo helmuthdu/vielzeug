@@ -62,49 +62,49 @@ Button and keyboard changes emit `input` and then `change`; a drag can emit mult
 
 ### Attributes
 
-| Attribute | Type | Default | Description |
-| --- | --- | --- | --- |
-| `label` | `string` | `Primary pane` | Accessible name for the primary pane and separator |
-| `value` | `number` | `50` | Primary pane percentage, clamped to the bounds |
-| `min` | `number` | `10` | Minimum primary pane percentage |
-| `max` | `number` | `90` | Maximum primary pane percentage |
-| `step` | `number` | `5` | Percentage increment for buttons and arrow keys |
-| `orientation` | `'horizontal' \| 'vertical'` | `'horizontal'` | Side-by-side or stacked panes |
-| `show-buttons` | `boolean` | `false` | Show the non-drag resize buttons |
-| `disabled` | `boolean` | `false` | Disable user resizing |
-| `decrease-label` | `string` | `Decrease primary pane size` | Accessible name of the decrease button |
-| `increase-label` | `string` | `Increase primary pane size` | Accessible name of the increase button |
+| Attribute        | Type                         | Default                      | Description                                        |
+| ---------------- | ---------------------------- | ---------------------------- | -------------------------------------------------- |
+| `label`          | `string`                     | `Primary pane`               | Accessible name for the primary pane and separator |
+| `value`          | `number`                     | `50`                         | Primary pane percentage, clamped to the bounds     |
+| `min`            | `number`                     | `10`                         | Minimum primary pane percentage                    |
+| `max`            | `number`                     | `90`                         | Maximum primary pane percentage                    |
+| `step`           | `number`                     | `5`                          | Percentage increment for buttons and arrow keys    |
+| `orientation`    | `'horizontal' \| 'vertical'` | `'horizontal'`               | Side-by-side or stacked panes                      |
+| `show-buttons`   | `boolean`                    | `false`                      | Show the non-drag resize buttons                   |
+| `disabled`       | `boolean`                    | `false`                      | Disable user resizing                              |
+| `decrease-label` | `string`                     | `Decrease primary pane size` | Accessible name of the decrease button             |
+| `increase-label` | `string`                     | `Increase primary pane size` | Accessible name of the increase button             |
 
 All numeric values must be finite, `0 <= min <= max <= 100`, and `step` must be positive. An invalid configuration disables resizing and logs a development warning; the layout uses 50% until the configuration is valid.
 
 ### Slots
 
-| Slot | Description |
-| --- | --- |
-| `primary` | Content of the resized pane |
-| `secondary` | Content of the other pane |
+| Slot        | Description                 |
+| ----------- | --------------------------- |
+| `primary`   | Content of the resized pane |
+| `secondary` | Content of the other pane   |
 
 ### Events
 
-| Event | Detail | Description |
-| --- | --- | --- |
-| `input` | `{ value: number }` | The primary pane percentage changed through user interaction |
-| `change` | `{ value: number }` | A changed user interaction completed |
+| Event    | Detail              | Description                                                  |
+| -------- | ------------------- | ------------------------------------------------------------ |
+| `input`  | `{ value: number }` | The primary pane percentage changed through user interaction |
+| `change` | `{ value: number }` | A changed user interaction completed                         |
 
 ### CSS parts
 
-| Part | Description |
-| --- | --- |
-| `primary` | Primary pane wrapper |
-| `secondary` | Secondary pane wrapper |
+| Part        | Description                    |
+| ----------- | ------------------------------ |
+| `primary`   | Primary pane wrapper           |
+| `secondary` | Secondary pane wrapper         |
 | `separator` | Focusable, draggable separator |
-| `decrease` | Decrease button |
-| `increase` | Increase button |
+| `decrease`  | Decrease button                |
+| `increase`  | Increase button                |
 
 ### CSS custom properties
 
-| Property | Default | Description |
-| --- | --- | --- |
+| Property                  | Default                                                | Description                                                     |
+| ------------------------- | ------------------------------------------------------ | --------------------------------------------------------------- |
 | `--splitter-divider-size` | `var(--size-6)`; `var(--size-11)` for a coarse pointer | Divider width for horizontal panes or height for vertical panes |
 
 Keep a custom divider at least 24px thick, or 44px for touch, so its controls remain usable.

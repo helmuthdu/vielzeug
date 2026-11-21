@@ -257,12 +257,12 @@ A visible counter can be composed alongside the stepper; drive it from the same 
 
 **`ore-step`** Attributes
 
-| Attribute  | Type      | Default | Description                                                                        |
-| ---------- | --------- | ------- | ---------------------------------------------------------------------------------- |
+| Attribute  | Type      | Default | Description                                                            |
+| ---------- | --------- | ------- | ---------------------------------------------------------------------- |
 | `value`    | `string`  | N/A     | Non-empty, unique identifier, matching the parent's `value` (required) |
-| `disabled` | `boolean` | `false` | Removes this step from navigation entirely                                         |
-| `error`    | `boolean` | `false` | Marks the step as failed/invalid                                                   |
-| `optional` | `boolean` | `false` | Renders an "(optional)" hint next to the label                                     |
+| `disabled` | `boolean` | `false` | Removes this step from navigation entirely                             |
+| `error`    | `boolean` | `false` | Marks the step as failed/invalid                                       |
+| `optional` | `boolean` | `false` | Renders an "(optional)" hint next to the label                         |
 
 `current`, `completed`, `navigable`, `index`, and `total` are read-only: derived from this step's position relative to the parent `ore-stepper`'s `value`, `clickable`, and `linear`, and reflected onto this element for CSS/inspection only. `color`, `size`, and `orientation` are also inherited from the parent when nested inside one (overriding any value set directly), but remain independently settable for a standalone `ore-step`.
 

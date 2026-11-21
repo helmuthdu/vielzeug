@@ -435,27 +435,27 @@ Use `cols="auto"` for fluid columns, then set a breakpoint attribute such as `co
 
 **`ore-grid`**
 
-| Attribute       | Type                                                      | Default                 | Description                                       |
-| --------------- | --------------------------------------------------------- | ----------------------- | ------------------------------------------------- |
-| `cols`          | `'1'–'12' \| 'auto'`                                      | -                       | Number of columns                                 |
-| `cols-sm`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 640px                |
-| `cols-md`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 768px                |
-| `cols-lg`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1024px               |
-| `cols-xl`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1280px               |
-| `cols-2xl`      | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1536px               |
-| `rows`          | `'1'–'12' \| 'auto'`                                      | -                       | Number of explicit rows                           |
-| `gap`           | `'none' \| 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`                  | Gap between items                                 |
-| `align`         | `'start' \| 'center' \| 'end' \| 'stretch' \| 'baseline'` | -                       | `align-items` for all cells                       |
-| `justify`       | `'start' \| 'center' \| 'end' \| 'stretch'`               | -                       | `justify-items` for all cells                     |
-| `flow`          | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`      | `'row'`                 | `grid-auto-flow` direction                        |
+| Attribute       | Type                                                      | Default                 | Description                                                |
+| --------------- | --------------------------------------------------------- | ----------------------- | ---------------------------------------------------------- |
+| `cols`          | `'1'–'12' \| 'auto'`                                      | -                       | Number of columns                                          |
+| `cols-sm`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 640px                         |
+| `cols-md`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 768px                         |
+| `cols-lg`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1024px                        |
+| `cols-xl`       | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1280px                        |
+| `cols-2xl`      | `'1'–'12' \| 'auto'`                                      | -                       | Columns when element width ≥ 1536px                        |
+| `rows`          | `'1'–'12' \| 'auto'`                                      | -                       | Number of explicit rows                                    |
+| `gap`           | `'none' \| 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`                  | Gap between items                                          |
+| `align`         | `'start' \| 'center' \| 'end' \| 'stretch' \| 'baseline'` | -                       | `align-items` for all cells                                |
+| `justify`       | `'start' \| 'center' \| 'end' \| 'stretch'`               | -                       | `justify-items` for all cells                              |
+| `flow`          | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`      | `'row'`                 | `grid-auto-flow` direction                                 |
 | `min-col-width` | `string`                                                  | `--grid-min-item-width` | Minimum track width when the active column count is `auto` |
-| `fullwidth`     | `boolean`                                                 | `false`                 | Stretch the grid to fill its container's width    |
-| `areas`         | `string`                                                  | -                       | CSS `grid-template-areas` value                   |
-| `areas-sm`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 640px  |
-| `areas-md`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 768px  |
-| `areas-lg`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1024px |
-| `areas-xl`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1280px |
-| `areas-2xl`     | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1536px |
+| `fullwidth`     | `boolean`                                                 | `false`                 | Stretch the grid to fill its container's width             |
+| `areas`         | `string`                                                  | -                       | CSS `grid-template-areas` value                            |
+| `areas-sm`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 640px           |
+| `areas-md`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 768px           |
+| `areas-lg`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1024px          |
+| `areas-xl`      | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1280px          |
+| `areas-2xl`     | `string`                                                  | -                       | `grid-template-areas` when element width ≥ 1536px          |
 
 **`ore-grid-item`**
 

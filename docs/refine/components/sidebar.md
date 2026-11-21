@@ -590,22 +590,22 @@ ore-sidebar-item {
 
 **`ore-sidebar` Attributes**
 
-| Attribute               | Type      | Default                | Description                                                                                             |
-| ----------------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| Attribute               | Type      | Default                | Description                                                                                                         |
+| ----------------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `collapsed`             | `boolean` | `undefined`            | Optional controlled state; `collapsed` or `collapsed="true"` collapses, `collapsed="false"` controls expanded state |
-| `default-collapsed`     | `boolean` | `false`                | Initial collapsed state in uncontrolled mode                                                            |
-| `collapsible`           | `boolean` | `false`                | Shows the collapse/expand toggle button in the header                                                   |
-| `responsive`            | `string`  | N/A                    | Media query that enables compact (collapsed) sidebar mode                                               |
-| `bottom-nav-at`         | `string`  | N/A                    | Media query that switches to mobile bottom-nav + drawer mode                                            |
-| `container-breakpoints` | `boolean` | `false`                | Evaluates parseable `max-width` breakpoints against the sidebar container width instead of the viewport |
-| `backdrop`              | `string`  | N/A                    | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` (unset = click-to-close, no dim)       |
-| `close-on-select`       | `boolean` | `true`                 | Closes the drawer after primary item activation                                                         |
-| `collapse-label`        | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                                                               |
-| `expand-label`          | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                                                                 |
-| `drawer`                | `boolean` | `false`                | Drawer-only mode: the sidebar exists solely as the overlay drawer                                       |
-| `drawer-close-label`    | `string`  | `'Close sidebar'`      | Accessible label for the drawer close button                                                            |
-| `variant`               | `string`  | N/A                    | Visual variant: `'floating'` \| `'inset'`                                                               |
-| `label`                 | `string`  | `'Sidebar navigation'` | Accessible name for the navigation landmark and open drawer dialog                                       |
+| `default-collapsed`     | `boolean` | `false`                | Initial collapsed state in uncontrolled mode                                                                        |
+| `collapsible`           | `boolean` | `false`                | Shows the collapse/expand toggle button in the header                                                               |
+| `responsive`            | `string`  | N/A                    | Media query that enables compact (collapsed) sidebar mode                                                           |
+| `bottom-nav-at`         | `string`  | N/A                    | Media query that switches to mobile bottom-nav + drawer mode                                                        |
+| `container-breakpoints` | `boolean` | `false`                | Evaluates parseable `max-width` breakpoints against the sidebar container width instead of the viewport             |
+| `backdrop`              | `string`  | N/A                    | Drawer backdrop style: `'opaque'` \| `'blur'` \| `'transparent'` (unset = click-to-close, no dim)                   |
+| `close-on-select`       | `boolean` | `true`                 | Closes the drawer after primary item activation                                                                     |
+| `collapse-label`        | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                                                                           |
+| `expand-label`          | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                                                                             |
+| `drawer`                | `boolean` | `false`                | Drawer-only mode: the sidebar exists solely as the overlay drawer                                                   |
+| `drawer-close-label`    | `string`  | `'Close sidebar'`      | Accessible label for the drawer close button                                                                        |
+| `variant`               | `string`  | N/A                    | Visual variant: `'floating'` \| `'inset'`                                                                           |
+| `label`                 | `string`  | `'Sidebar navigation'` | Accessible name for the navigation landmark and open drawer dialog                                                  |
 
 **`ore-sidebar` Slots**
 
@@ -660,7 +660,7 @@ ore-sidebar-item {
 | Part               | Description                                                                  |
 | ------------------ | ---------------------------------------------------------------------------- |
 | `nav`              | The navigation panel (inline and drawer)                                     |
-| `header`           | Header container (logo, branding, controls); hidden when empty              |
+| `header`           | Header container (logo, branding, controls); hidden when empty               |
 | `content`          | Scrollable navigation content                                                |
 | `footer`           | Footer container                                                             |
 | `toggle-btn`       | Collapse/expand toggle                                                       |
@@ -705,7 +705,7 @@ ore-sidebar-item {
 | `bottom-nav`       | `boolean` | `false` | Promotes the item into an explicit mobile bottom-nav set   |
 | `bottom-nav-label` | `string`  | N/A     | Overrides the item text in its promoted mobile tab         |
 | `disabled`         | `boolean` | `false` | Disables the item and forces button rendering              |
-| `label`            | `string`  | N/A     | Accessible name for the inner link or button                   |
+| `label`            | `string`  | N/A     | Accessible name for the inner link or button               |
 | `rel`              | `string`  | N/A     | `rel` attribute on the inner link and its bottom tab       |
 | `target`           | `string`  | N/A     | `target` attribute on the inner link and its bottom tab    |
 
@@ -757,11 +757,11 @@ When the sidebar is collapsed to icon-only mode, the toggle button updates `aria
 
 ### Keyboard Navigation
 
-| Key      | Behavior                                                 |
-| -------- | -------------------------------------------------------- |
-| `Tab`    | Moves focus to the next focusable item in DOM order      |
-| `Enter`  | Activates a focused item or toggles a collapsible header |
-| `Space`  | Same as `Enter` on collapsible group headers             |
+| Key      | Behavior                                                                                        |
+| -------- | ----------------------------------------------------------------------------------------------- |
+| `Tab`    | Moves focus to the next focusable item in DOM order                                             |
+| `Enter`  | Activates a focused item or toggles a collapsible header                                        |
+| `Space`  | Same as `Enter` on collapsible group headers                                                    |
 | `Escape` | Closes the open drawer and returns focus to the opener, unless a nested control handled the key |
 
 While the drawer is open, the rest of the page is `inert`: Tab cannot leave the drawer, and focus is pulled back to the panel if it escapes.

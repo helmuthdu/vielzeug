@@ -22,13 +22,13 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 
 Reuse a responsive dev server for this checkout; do not restart it or run production builds after each edit. The preview surfaces have different inputs:
 
-| Surface | Refresh path during development |
-| ------- | ------------------------------- |
-| VitePress host page, Markdown, and theme | `docs:dev` uses workspace source aliases and Vite updates; no package or site build for ordinary edits. |
-| Component-preview global Refine CSS | The preview plugin watches `packages/refine/src/styles/` and hot-patches iframe styles without a build. |
+| Surface                                                   | Refresh path during development                                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VitePress host page, Markdown, and theme                  | `docs:dev` uses workspace source aliases and Vite updates; no package or site build for ordinary edits.                                                                                                                                                                                         |
+| Component-preview global Refine CSS                       | The preview plugin watches `packages/refine/src/styles/` and hot-patches iframe styles without a build.                                                                                                                                                                                         |
 | Component-preview Refine logic, local CSS, and CSS mixins | Use `bun run docs:dev:refine` when starting component development, or add `bun run --filter @vielzeug/refine build:bundle:watch` alongside an existing docs server if no writer already owns that output. Wait for a successful bundle update and the iframe reload before checking the change. |
-| Component-preview dependency runtime and Prism theme | These still come from dependency `dist/` files. Refresh changed dependency artifacts in dependency order; Refine's watcher does not rebuild externalized dependencies. |
-| REPL runtime and Monaco declarations | The generated registry embeds built IIFEs and declarations, not live source imports. Refresh the affected build outputs, then run `bun run gen:repl-registry` before checking changed REPL behavior or types. |
+| Component-preview dependency runtime and Prism theme      | These still come from dependency `dist/` files. Refresh changed dependency artifacts in dependency order; Refine's watcher does not rebuild externalized dependencies.                                                                                                                          |
+| REPL runtime and Monaco declarations                      | The generated registry embeds built IIFEs and declarations, not live source imports. Refresh the affected build outputs, then run `bun run gen:repl-registry` before checking changed REPL behavior or types.                                                                                   |
 
 `docs:dev` and `docs:build` generate the REPL registry at startup. The generator can auto-build packages with missing artifacts, but file existence does not establish freshness. A running Refine bundle watcher does not regenerate the registry or declarations. Do not repeatedly restart docs or rebuild every package to refresh one component.
 

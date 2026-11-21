@@ -178,40 +178,40 @@ Use `range-start-label`, `range-end-label`, `range-start-selected-label`, `range
 
 ### Props
 
-| Prop              | Type                   | Default        | Description                                                                 |
-| ----------------- | ---------------------- | -------------- | --------------------------------------------------------------------------- |
-| `value`           | `string`               | N/A            | Selected date (`yyyy-MM-dd`), or an inclusive range (`yyyy-MM-dd/yyyy-MM-dd`) |
-| `min`             | `string`               | N/A            | Minimum selectable date (`yyyy-MM-dd`, inclusive)                           |
-| `max`             | `string`               | N/A            | Maximum selectable date (`yyyy-MM-dd`, inclusive)                           |
-| `label`           | `string`               | N/A            | Visible label                                                               |
-| `label-placement` | `'inset' \| 'outside'` | `'inset'`      | Label position                                                              |
-| `placeholder`     | `string`               | N/A            | Trigger placeholder when no date selected                                   |
-| `name`            | `string`               | N/A            | Form field name                                                             |
-| `disabled`        | `boolean`              | `false`        | Disable the picker                                                          |
-| `required`        | `boolean`              | `false`        | Mark as required                                                            |
-| `range`           | `boolean`              | `false`        | Select an inclusive date range                                              |
-| `range-start-label` | `string`             | `Choose a start date` | Instruction for the first endpoint                                  |
-| `range-end-label` | `string`               | `Choose an end date` | Instruction for the second endpoint                                  |
-| `range-start-selected-label` | `string`     | `Start date` | Accessible label for the selected start                                      |
-| `range-end-selected-label` | `string`       | `End date` | Accessible label for the selected end                                            |
-| `range-invalid-message` | `string`          | `Enter a valid date range.` | Invalid range message                                            |
-| `range-required-message` | `string`         | `Choose a date range.` | Required range message                                                |
-| `error`           | `string`               | N/A            | Error message (shown below trigger in error color)                          |
-| `helper`          | `string`               | N/A            | Helper text (shown below trigger)                                           |
-| `locale`          | `string`               | browser locale | BCP 47 locale for day/month names                                           |
-| `weekend-days`    | `string`               | N/A            | JSON array of day indices to disable (e.g. `"[0,6]"`)                       |
-| `color`           | `string`               | N/A            | Theme color (`primary`, `secondary`, `info`, `success`, `warning`, `error`) |
-| `size`            | `string`               | `'md'`         | Size variant: `sm`, `md`, `lg`                                              |
-| `variant`         | `string`               | N/A            | Visual variant: `flat`, `solid`, `bordered`, `outline`, `ghost`             |
-| `rounded`         | `string`               | N/A            | Border radius override                                                      |
-| `fullwidth`       | `boolean`              | `false`        | Expand to full container width                                              |
+| Prop                         | Type                   | Default                     | Description                                                                   |
+| ---------------------------- | ---------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| `value`                      | `string`               | N/A                         | Selected date (`yyyy-MM-dd`), or an inclusive range (`yyyy-MM-dd/yyyy-MM-dd`) |
+| `min`                        | `string`               | N/A                         | Minimum selectable date (`yyyy-MM-dd`, inclusive)                             |
+| `max`                        | `string`               | N/A                         | Maximum selectable date (`yyyy-MM-dd`, inclusive)                             |
+| `label`                      | `string`               | N/A                         | Visible label                                                                 |
+| `label-placement`            | `'inset' \| 'outside'` | `'inset'`                   | Label position                                                                |
+| `placeholder`                | `string`               | N/A                         | Trigger placeholder when no date selected                                     |
+| `name`                       | `string`               | N/A                         | Form field name                                                               |
+| `disabled`                   | `boolean`              | `false`                     | Disable the picker                                                            |
+| `required`                   | `boolean`              | `false`                     | Mark as required                                                              |
+| `range`                      | `boolean`              | `false`                     | Select an inclusive date range                                                |
+| `range-start-label`          | `string`               | `Choose a start date`       | Instruction for the first endpoint                                            |
+| `range-end-label`            | `string`               | `Choose an end date`        | Instruction for the second endpoint                                           |
+| `range-start-selected-label` | `string`               | `Start date`                | Accessible label for the selected start                                       |
+| `range-end-selected-label`   | `string`               | `End date`                  | Accessible label for the selected end                                         |
+| `range-invalid-message`      | `string`               | `Enter a valid date range.` | Invalid range message                                                         |
+| `range-required-message`     | `string`               | `Choose a date range.`      | Required range message                                                        |
+| `error`                      | `string`               | N/A                         | Error message (shown below trigger in error color)                            |
+| `helper`                     | `string`               | N/A                         | Helper text (shown below trigger)                                             |
+| `locale`                     | `string`               | browser locale              | BCP 47 locale for day/month names                                             |
+| `weekend-days`               | `string`               | N/A                         | JSON array of day indices to disable (e.g. `"[0,6]"`)                         |
+| `color`                      | `string`               | N/A                         | Theme color (`primary`, `secondary`, `info`, `success`, `warning`, `error`)   |
+| `size`                       | `string`               | `'md'`                      | Size variant: `sm`, `md`, `lg`                                                |
+| `variant`                    | `string`               | N/A                         | Visual variant: `flat`, `solid`, `bordered`, `outline`, `ghost`               |
+| `rounded`                    | `string`               | N/A                         | Border radius override                                                        |
+| `fullwidth`                  | `boolean`              | `false`                     | Expand to full container width                                                |
 
 ### Events
 
-| Event    | Detail | Description |
-| -------- | ------ | ----------- |
+| Event    | Detail | Description                                                                |
+| -------- | ------ | -------------------------------------------------------------------------- |
 | `input`  | None   | Native event fired when a selection is committed. Read the host's `value`. |
-| `change` | None   | Native event fired after `input` when a selection is committed. |
+| `change` | None   | Native event fired after `input` when a selection is committed.            |
 
 ### CSS Custom Properties
 
