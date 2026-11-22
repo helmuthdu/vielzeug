@@ -5,6 +5,20 @@
         "patch": [
           {
             "author": "agent@vielzeug",
+            "comment": "Prevent modal dialogs and drawers from scrolling the page underneath.",
+            "commit": "166cc7991856df91d4bdd532703bfb19ae7f9295"
+          }
+        ]
+      },
+      "date": "Sun, 22 Nov 2026 21:23:30 GMT",
+      "tag": "@vielzeug/refine_v26.11.31",
+      "version": "26.11.31"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Improve mobile sidebar and drawer swipe handles, including RTL placement.",
             "commit": "b1589a9a107f87e798bbfb978b8d235c7c1a9ede"
           }
