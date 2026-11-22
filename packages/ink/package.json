@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/ink",
-  "version": "26.11.29",
+  "version": "26.11.30",
   "description": "Causal stroke stabilization, smoothing, speed-based width profiling, and SVG path output",
   "repository": {
     "type": "git",

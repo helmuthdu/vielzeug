@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Improve mobile sidebar and drawer swipe handles, including RTL placement.",
+            "commit": "b1589a9a107f87e798bbfb978b8d235c7c1a9ede"
+          }
+        ]
+      },
+      "date": "Sun, 22 Nov 2026 06:11:08 GMT",
+      "tag": "@vielzeug/refine_v26.11.30",
+      "version": "26.11.30"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "agent@vielzeug",
