@@ -200,6 +200,8 @@
   }
 
   :host([data-bottom-nav][data-drawer-open]) .drawer-layer > nav {
+    overflow: visible;
+    pointer-events: auto;
     transform: translateX(0);
   }
 
@@ -432,19 +434,14 @@
     outline: var(--focus-ring);
   }
 
-  /* Swipe-to-dismiss grabber: a small nub on the drawer's trailing edge, the
-     same affordance ore-drawer's drag handle uses. Inset (the panel clips
-     overflow) and deliberately small: a full-height strip would silently
-     swallow taps landing on the right edge of nav items. touch-action: pan-y
-     keeps native vertical scrolling intact while horizontal pans reach the
-     gesture. */
+  /* Extend the touch target into the backdrop, not over navigation items. */
   .swipe-handle {
     position: absolute;
     inset-block-start: 50%;
-    inset-inline-end: 0;
+    inset-inline-end: calc(var(--size-7) * -1);
     z-index: 2;
     display: none;
-    width: var(--size-4);
+    width: var(--size-11);
     height: var(--size-14);
     touch-action: pan-y pinch-zoom;
     cursor: grab;
@@ -454,14 +451,14 @@
   .swipe-handle::before {
     position: absolute;
     inset-block-start: 50%;
-    inset-inline-start: 50%;
+    inset-inline-end: calc(var(--size-7) + var(--size-1-5));
     width: 5px;
     height: var(--size-10);
     content: '';
     background: var(--color-contrast-400);
     border-radius: var(--rounded-full);
     opacity: 0.6;
-    transform: translate(-50%, -50%);
+    transform: translateY(-50%);
     transition:
       background var(--transition-fast),
       opacity var(--transition-fast);

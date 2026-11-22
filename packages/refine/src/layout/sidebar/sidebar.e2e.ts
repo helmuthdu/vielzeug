@@ -1,4 +1,69 @@
-import { axeCheck, expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test, touchSwipe } from '../../testing/fixtures';
+
+test.describe('Mobile swipe handle', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
+
+  for (const dir of ['ltr', 'rtl'] as const) {
+    test(`dismisses from the outer touch area without covering navigation in ${dir}`, async ({ page, refinePage }) => {
+      await refinePage.mountComponent(`
+        <ore-sidebar id="sidebar" dir="${dir}" bottom-nav-at="(max-width: 640px)" close-on-select="false">
+          <ore-sidebar-item id="item" style="margin-block-start: 360px">Navigation item</ore-sidebar-item>
+        </ore-sidebar>
+      `);
+      const sidebar = page.locator('#sidebar');
+      await expect(sidebar).toHaveAttribute('data-bottom-nav');
+      await sidebar.evaluate((el) => (el as HTMLElement & { openDrawer(): void }).openDrawer());
+      await expect(sidebar).toHaveAttribute('data-drawer-open');
+
+      const nav = sidebar.locator('[part="nav"]');
+      const handle = sidebar.locator('[part="swipe-handle"]');
+      const item = page.locator('#item').locator('[part="item"]');
+      await expect(nav).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+      const navBox = (await nav.boundingBox())!;
+      const handleBox = (await handle.boundingBox())!;
+      const itemBox = (await item.boundingBox())!;
+
+      expect(handleBox.width).toBeGreaterThanOrEqual(44);
+      expect(handleBox.height).toBeGreaterThanOrEqual(44);
+      expect(
+        Math.abs(dir === 'ltr' ? handleBox.x - navBox.x - navBox.width : handleBox.x + handleBox.width - navBox.x),
+      ).toBeLessThanOrEqual(17);
+      await page
+        .locator('#item')
+        .evaluate((el) => el.addEventListener('click', () => (document.body.dataset.itemClicked = 'true')));
+      const overlapY = Math.max(itemBox.y, handleBox.y) + 2;
+      expect(overlapY).toBeLessThan(Math.min(itemBox.y + itemBox.height, handleBox.y + handleBox.height));
+      await page.touchscreen.tap(dir === 'ltr' ? itemBox.x + itemBox.width - 2 : itemBox.x + 2, overlapY);
+      await expect(page.locator('body')).toHaveAttribute('data-item-clicked', 'true');
+      await expect(sidebar).toHaveAttribute('data-drawer-open');
+
+      const edge = dir === 'ltr' ? navBox.x + navBox.width : navBox.x;
+      const from = { x: edge + (dir === 'ltr' ? 20 : -20), y: handleBox.y + handleBox.height / 2 };
+      await touchSwipe(page, { from, to: { x: from.x + (dir === 'ltr' ? -100 : 100), y: from.y } });
+      await expect(sidebar).not.toHaveAttribute('data-drawer-open');
+    });
+  }
+
+  test('allows swiping the handle in a full-viewport sidebar', async ({ page, refinePage }) => {
+    await page.addStyleTag({ content: 'body { padding: 0 } .frame { width: 100vw; max-width: none }' });
+    await refinePage.mountComponent(`
+      <ore-sidebar id="sidebar" bottom-nav-at="(max-width: 640px)">
+        <ore-sidebar-item>Navigation item</ore-sidebar-item>
+      </ore-sidebar>
+    `);
+    const sidebar = page.locator('#sidebar');
+    await expect(sidebar).toHaveAttribute('data-bottom-nav');
+    await expect(sidebar).not.toHaveAttribute('data-preview-mode');
+    await sidebar.evaluate((el) => (el as HTMLElement & { openDrawer(): void }).openDrawer());
+    await expect(sidebar).toHaveAttribute('data-drawer-open');
+    const nav = sidebar.locator('[part="nav"]');
+    await expect(nav).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+    const panel = (await nav.boundingBox())!;
+    const from = { x: panel.x + panel.width + 20, y: panel.y + panel.height / 2 };
+    await touchSwipe(page, { from, to: { x: from.x - 100, y: from.y } });
+    await expect(sidebar).not.toHaveAttribute('data-drawer-open');
+  });
+});
 
 test.describe('Layout', () => {
   test('keeps the bottom bar out of desktop layout and accessibility', async ({ page, refinePage }) => {
