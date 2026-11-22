@@ -22,11 +22,11 @@ Repo-wide policy, commands, and validation gates: root `AGENTS.md` → **Project
 
 | Path | Role |
 | ---- | ---- |
-| `~/.agents/skills/{plan,build,test,review,docs,deliver,pipeline,onboard}/` | Task procedure skills. |
-| `~/.agents/klugzeug/contract.md` | Shared markers, findings format, plan structure, validation cadence, report. |
-| `~/.agents/klugzeug/browser-verification.md` | Optional post-gate UI check referenced from the profile and `build` skill. |
+| `~/.agents/skills/kz-{plan,build,test,review,docs,deliver,pipeline,onboard}/` | Task procedure skills. |
+| `~/.agents/skills/kz-<task>/references/contract.md` | Shared markers, findings format, plan structure, validation cadence, and report; each task skill carries its copy. |
+| `~/.agents/skills/kz-build/references/browser-verification.md` and `~/.agents/skills/kz-review/references/browser-verification.md` | Optional browser checks used by the build and review skills when applicable. |
 
-Do not add workflow skill files under `.agents/skills/` in this repo: `bun run check:ai-data` validates every `.agents/...` path mentioned in committed files and would fail on missing skill paths. Document workflow skills with `~/.agents/skills/<name>/` paths instead.
+Do not add workflow skill files under `.agents/skills/` in this repo: `bun run check:ai-data` validates every `.agents/...` path mentioned in committed files and would fail on missing skill paths. Document installed workflow skills with `~/.agents/skills/kz-<name>/` paths instead.
 
 ## Subtree `AGENTS.md`
 

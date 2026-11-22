@@ -52,7 +52,7 @@ Usually not applicable for these packages. If a package talks to HTTP APIs, auth
 
 ## Reporting
 
-Write security findings in the klugzeug contract one-line format (`~/.agents/klugzeug/contract.md`). Prefix a confirmed exploitable issue with `[VULN Critical|High|Medium|Low]`; a defence-in-depth gap without a verified exploit path uses `[CONCERN Medium|Low]`. Investigation prompts above are not findings until source supports impact and an attacker-controlled path where relevant.
+Write security findings in the Klugzeug review contract's one-line format (`~/.agents/skills/kz-review/references/contract.md`). Prefix a confirmed exploitable issue with `[VULN Critical|High|Medium|Low]`; a defence-in-depth gap without a verified exploit path uses `[CONCERN Medium|Low]`. Investigation prompts above are not findings until source supports impact and an attacker-controlled path where relevant.
 
 ## Escalation
 

@@ -29,4 +29,4 @@ Functional web-component authoring primitives built on `ripple`; the foundation 
 
 ## Verification
 
-Default gates: root `AGENTS.md` → **Project profile** (Package source). Addition: after API changes, also run `bun x vitest run packages/refine/src/` — refine is the downstream consumer whose tests catch cascading breaks.
+After API changes, also run `bun x vitest run packages/refine/src/`; Refine is the downstream consumer.

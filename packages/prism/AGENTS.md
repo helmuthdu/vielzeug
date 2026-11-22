@@ -19,7 +19,3 @@ Responsive SVG charting library with explicit data updates. Each chart factory m
 - Assert ARIA live regions used by interactive features (tooltips, crosshair) expose correct `role`, `aria-live`, and text content.
 - **Out of automated scope**: verify in a real browser or by manual/visual review: colour contrast of data series, focus-visible on interactive points, target size of hover targets, and anything requiring real layout or computed CSS.
 - Why: axe-core targets real browsers; jsdom has no CSS box model and a stubbed `getComputedStyle`, so layout/colour rules produce false positives/negatives. (If a browser test harness is added later, move the visual rules there.)
-
-## Verification
-
-Default gates: root `AGENTS.md` → **Project profile** (Package source). `bun run --filter @vielzeug/prism test` is the package's own alternative to the focused vitest path.
