@@ -3,6 +3,45 @@ import { axeCheck, expect, test, touchSwipe } from '../../testing/fixtures';
 test.describe('Content touch gestures', () => {
   test.use({ hasTouch: true, viewport: { height: 844, width: 390 } });
 
+  for (const dir of ['ltr', 'rtl'] as const) {
+    for (const placement of ['bottom', 'top', 'right', 'left'] as const) {
+      for (const handlePlacement of ['inset', 'outside'] as const) {
+        test(`drags the enlarged ${handlePlacement} handle on ${placement} in ${dir}`, async ({ page, refinePage }) => {
+          await page.emulateMedia({ reducedMotion: 'reduce' });
+          await refinePage.mountComponent(
+            `<ore-drawer default-open label="Drawer" placement="${placement}" dir="${dir}" size="sm" drag-handle-placement="${handlePlacement}" swipe-from-content="false"></ore-drawer>`,
+          );
+          const dialog = page.locator('ore-drawer dialog');
+          await expect(dialog).toBeVisible();
+          const panel = (await page.locator('ore-drawer [part="panel"]').boundingBox())!;
+          const horizontal = placement === 'left' || placement === 'right';
+          const closesPositive = horizontal ? (placement === 'right') !== (dir === 'rtl') : placement === 'bottom';
+          const edge = horizontal
+            ? closesPositive
+              ? panel.x
+              : panel.x + panel.width
+            : closesPositive
+              ? panel.y
+              : panel.y + panel.height;
+          const distance = handlePlacement === 'inset' ? 16 : 40;
+          const coordinate = edge + (closesPositive ? -distance : distance);
+          const from = horizontal
+            ? { x: coordinate, y: panel.y + panel.height / 2 }
+            : { x: panel.x + panel.width / 2, y: coordinate };
+          expect(
+            await page.locator('ore-drawer').evaluate((element, point) => {
+              return element.shadowRoot?.elementFromPoint(point.x, point.y)?.getAttribute('part');
+            }, from),
+          ).toBe('drag-handle');
+          const delta = closesPositive ? 140 : -140;
+          const to = horizontal ? { x: from.x + delta, y: from.y } : { x: from.x, y: from.y + delta };
+          await touchSwipe(page, { from, to });
+          await expect(dialog).toBeHidden();
+        });
+      }
+    }
+  }
+
   for (const dir of ['ltr', 'rtl']) {
     for (const placement of ['bottom', 'top', 'right', 'left']) {
       test(`dismisses ${placement} in ${dir} from its scroll boundary`, async ({ page, refinePage }) => {

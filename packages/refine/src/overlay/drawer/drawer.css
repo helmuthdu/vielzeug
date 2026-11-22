@@ -320,15 +320,14 @@
     translate: 0 -50%;
   }
 
-  /* Left drawer: handle on the right (opposite side), inset inside the panel */
+  /* Side handles follow the panel's logical edge in both text directions. */
   :host([placement='left']) .drag-handle {
-    right: var(--_drag-handle-inset);
+    inset-inline-end: var(--_drag-handle-inset);
   }
 
-  /* Right drawer (default): handle on the left (opposite side), inset inside the panel */
   :host([placement='right']) .drag-handle,
   :host(:not([placement])) .drag-handle {
-    left: var(--_drag-handle-inset);
+    inset-inline-start: var(--_drag-handle-inset);
   }
 
   /* Vertical drawers (top/bottom): drag handle on the opposite edge */
@@ -352,12 +351,12 @@
 
   /* Outside drag-handle placement hangs the handle off the panel edge. */
   :host([drag-handle-placement='outside'][placement='left']) .drag-handle {
-    right: calc(var(--_panel-bleed) * -1);
+    inset-inline-end: calc(var(--_panel-bleed) * -1);
   }
 
   :host([drag-handle-placement='outside'][placement='right']) .drag-handle,
   :host([drag-handle-placement='outside']:not([placement])) .drag-handle {
-    left: calc(var(--_panel-bleed) * -1);
+    inset-inline-start: calc(var(--_panel-bleed) * -1);
   }
 
   :host([drag-handle-placement='outside'][placement='top']) .drag-handle {
@@ -366,6 +365,30 @@
 
   :host([drag-handle-placement='outside'][placement='bottom']) .drag-handle {
     top: calc(var(--_panel-bleed) * -1);
+  }
+
+  /* Grow the hit area toward the backdrop without covering more content. */
+  .drag-handle::after {
+    position: absolute;
+    inset: 0;
+    content: '';
+  }
+
+  :host([placement='left']) .drag-handle::after {
+    inset-inline-end: calc(var(--size-3) * -1);
+  }
+
+  :host([placement='right']) .drag-handle::after,
+  :host(:not([placement])) .drag-handle::after {
+    inset-inline-start: calc(var(--size-3) * -1);
+  }
+
+  :host([placement='top']) .drag-handle::after {
+    bottom: calc(var(--size-3) * -1);
+  }
+
+  :host([placement='bottom']) .drag-handle::after {
+    top: calc(var(--size-3) * -1);
   }
 
   /* Visual indicator: subtle bar in the center */
