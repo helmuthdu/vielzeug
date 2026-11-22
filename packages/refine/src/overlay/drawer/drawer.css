@@ -41,6 +41,11 @@
     pointer-events: auto;
   }
 
+  dialog:modal {
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
   /*
    * Modeless drawer (`modal` attribute removed): the dialog is not in the top layer,
    * so no ::backdrop is painted and the page stays interactive. The full-viewport
@@ -58,6 +63,8 @@
   }
 
   dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
     background: var(--_backdrop-bg);
     opacity: 1;
     backdrop-filter: var(--_backdrop-filter);

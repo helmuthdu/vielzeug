@@ -564,6 +564,43 @@ test.describe('Drawer gesture ownership', () => {
     <ore-card-picker-item value="gamma"><p style="height:160px">Gamma content</p></ore-card-picker-item>
   </ore-card-picker>`;
 
+  test('does not scroll the page when swiping upward over cards in a modal drawer', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      `<div style="height:3000px">Background</div><ore-drawer default-open label="Cards" placement="bottom" size="lg">${deck}</ore-drawer>`,
+    );
+    await page.evaluate(() => window.scrollTo(0, 600));
+    await page.locator('ore-drawer dialog').evaluate((element) => {
+      element.style.overscrollBehavior = 'auto';
+      element.querySelector<HTMLElement>('[part="body"]')!.style.overscrollBehavior = 'auto';
+    });
+    const bounds = (await page.locator('[data-active] p').boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + 120 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y - 100 } });
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    await expect(page.locator('ore-card-picker')).toHaveAttribute('active-index', '0');
+  });
+
+  test('allows diagonal horizontal browsing inside a modal drawer', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      `<div style="height:3000px">Background</div><ore-drawer default-open label="Cards" placement="bottom" size="lg">${deck}</ore-drawer>`,
+    );
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const dialog = page.locator('ore-drawer dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.evaluate((element) => {
+      element.style.overscrollBehavior = 'auto';
+      element.querySelector<HTMLElement>('[part="body"]')!.style.overscrollBehavior = 'auto';
+    });
+    const bounds = (await page.locator('[data-active] p').boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + 120 };
+    await touchSwipe(page, { from, to: { x: from.x - 100, y: from.y - 30 } });
+    await expect(page.locator('ore-card-picker-item[data-active]')).toHaveAttribute('value', 'beta');
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+  });
+
   test('browses horizontally then dismisses downward without changing selection', async ({ page, refinePage }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await refinePage.mountComponent(

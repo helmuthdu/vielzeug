@@ -60,7 +60,13 @@
     pointer-events: auto;
   }
 
+  dialog:modal {
+    overscroll-behavior: contain;
+  }
+
   dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
     background: var(--_backdrop-bg);
     opacity: 1;
     backdrop-filter: var(--_backdrop-filter);

@@ -5,7 +5,197 @@
  *
  * Run with: bun run test:e2e (requires built dist: run bun run build first)
  */
-import { axeCheck, expect, test } from '../../testing/fixtures';
+import { axeCheck, expect, test, touchSwipe } from '../../testing/fixtures';
+
+test.describe('Touch scrolling', () => {
+  test.use({ hasTouch: true, viewport: { height: 844, width: 390 } });
+
+  test('contains touch scrolling without non-scrollable CSS containment support', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-dialog open persistent label="Reading"><p>Short content</p></ore-dialog>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const dialog = page.locator('ore-dialog dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.evaluate((element) => {
+      element.style.overscrollBehavior = 'auto';
+      element.querySelector<HTMLElement>('[part="body"]')!.style.overscrollBehavior = 'auto';
+    });
+    await touchSwipe(page, { from: { x: 30, y: 120 }, to: { x: 30, y: 20 } });
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+  });
+
+  test('contains swipes starting over a text field', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-dialog open label="Reading"><input type="text" value="Text"></ore-dialog>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const dialog = page.locator('ore-dialog dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.evaluate((element) => {
+      element.style.overscrollBehavior = 'auto';
+      element.querySelector<HTMLElement>('[part="body"]')!.style.overscrollBehavior = 'auto';
+    });
+    const bounds = (await page.locator('ore-dialog input').boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y - 100 } });
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+  });
+
+  test('contains swipes over a short textarea while keeping it editable', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-dialog open label="Reading"><textarea>Text</textarea></ore-dialog>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const dialog = page.locator('ore-dialog dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.evaluate((element) => {
+      element.style.overscrollBehavior = 'auto';
+      element.querySelector<HTMLElement>('[part="body"]')!.style.overscrollBehavior = 'auto';
+    });
+    const textarea = page.locator('ore-dialog textarea');
+    const bounds = (await textarea.boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y - 100 } });
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+    await textarea.fill('Changed');
+    await expect(textarea).toHaveValue('Changed');
+  });
+
+  test('preserves scrolling inside a long textarea', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      `<ore-dialog open label="Reading"><textarea rows="3">${'Line\n'.repeat(60)}</textarea></ore-dialog>`,
+    );
+    const textarea = page.locator('ore-dialog textarea');
+    const bounds = (await textarea.boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height - 10 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y - 60 } });
+    await expect.poll(() => textarea.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  });
+
+  test('contains diagonal swipes without CSS containment support', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-dialog open persistent label="Reading">Short content</ore-dialog>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const dialog = page.locator('ore-dialog dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.evaluate((element) => {
+      element.style.overscrollBehavior = 'auto';
+    });
+    await touchSwipe(page, { from: { x: 30, y: 200 }, to: { x: 114, y: 128 } });
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+  });
+
+  test('contains wheel scrolling without non-scrollable CSS containment support', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-dialog open persistent label="Reading"><p>Short content</p></ore-dialog>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const dialog = page.locator('ore-dialog dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.evaluate((element) => {
+      element.style.overscrollBehavior = 'auto';
+    });
+    await page.mouse.move(30, 120);
+    await page.mouse.wheel(0, 100);
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+  });
+
+  test('preserves the native number input wheel interaction', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-dialog open label="Number"><input type="number" value="5"></ore-dialog>');
+    const input = page.locator('ore-dialog input');
+    await input.focus();
+    await input.hover();
+    await page.mouse.wheel(0, -100);
+    await expect(input).toHaveValue('6');
+  });
+
+  test('preserves a tap with small touch movement', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-dialog open label="Action"><button>Action</button></ore-dialog>');
+    const button = page.getByRole('button', { name: 'Action' });
+    await button.evaluate((element) =>
+      element.addEventListener('click', () => element.setAttribute('data-clicked', '')),
+    );
+    const bounds = (await button.boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y + 2 } });
+    await expect(button).toHaveAttribute('data-clicked', '');
+  });
+
+  test('preserves vertical touch interaction with a native slider', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-dialog open label="Slider"><input type="range" min="0" max="100" value="0" style="writing-mode:vertical-lr;direction:rtl;height:200px"></ore-dialog>',
+    );
+    const slider = page.locator('ore-dialog input');
+    const bounds = (await slider.boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height - 15 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y - 150 } });
+    expect(Number(await slider.inputValue())).toBeGreaterThan(50);
+  });
+
+  test('keeps the page still while the modal is open and restores scrolling after close', async ({
+    page,
+    refinePage,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-dialog open persistent label="Reading"><p>Short content</p></ore-dialog>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const dialog = page.locator('ore-dialog dialog');
+    await expect(dialog).toBeVisible();
+    const body = (await page.locator('ore-dialog [part="body"]').boundingBox())!;
+    const points = [
+      { x: 30, y: 120 },
+      { x: body.x + body.width / 2, y: body.y + body.height / 2 },
+    ];
+    for (const from of points) {
+      await touchSwipe(page, { from, to: { x: from.x, y: from.y - 100 } });
+      expect(await page.evaluate(() => window.scrollY)).toBe(600);
+    }
+    await touchSwipe(page, { from: { x: 30, y: 120 }, to: { x: 30, y: 220 } });
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+    await page.locator('ore-dialog').evaluate((element) => element.removeAttribute('open'));
+    await expect(dialog).toBeHidden();
+    await touchSwipe(page, { from: { x: 30, y: 300 }, to: { x: 30, y: 200 } });
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(600);
+  });
+
+  test('allows scrolling long dialog content without moving the page', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-dialog open label="Reading"><div style="height:2000px">Long content</div></ore-dialog>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const body = page.locator('ore-dialog [part="body"]');
+    const bounds = (await body.boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y - 100 } });
+    await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+  });
+
+  test('allows wheel scrolling inside the dialog', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-dialog open label="Reading"><div style="height:2000px">Long content</div></ore-dialog>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const body = page.locator('ore-dialog [part="body"]');
+    await body.hover();
+    await page.mouse.wheel(0, 100);
+    await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+  });
+});
 
 test.describe('Accessibility', () => {
   test('open dialog passes a11y checks', async ({ page, refinePage }) => {
