@@ -3,6 +3,76 @@ import { axeCheck, expect, test, touchSwipe } from '../../testing/fixtures';
 test.describe('Content touch gestures', () => {
   test.use({ hasTouch: true, viewport: { height: 844, width: 390 } });
 
+  test('contains touch scrolling without non-scrollable CSS containment support', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-drawer default-open label="Reading" placement="bottom" size="lg"><p>Short content</p></ore-drawer>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const dialog = page.locator('ore-drawer dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.evaluate((element) => {
+      element.style.overscrollBehavior = 'auto';
+      element.querySelector<HTMLElement>('[part="body"]')!.style.overscrollBehavior = 'auto';
+    });
+    await touchSwipe(page, { from: { x: 30, y: 120 }, to: { x: 30, y: 20 } });
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+  });
+
+  test('contains wheel scrolling without non-scrollable CSS containment support', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-drawer default-open label="Reading" placement="bottom" size="lg"><p>Short content</p></ore-drawer>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const dialog = page.locator('ore-drawer dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.evaluate((element) => {
+      element.style.overscrollBehavior = 'auto';
+    });
+    await page.mouse.move(30, 120);
+    await page.mouse.wheel(0, 100);
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+  });
+
+  test('keeps the page still when swiping a modal drawer or its backdrop', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-drawer default-open label="Reading" placement="bottom" size="lg">
+        <p>Short content</p>
+      </ore-drawer>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const dialog = page.locator('ore-drawer dialog');
+    await expect(dialog).toBeVisible();
+    for (const from of [
+      { x: 30, y: 120 },
+      { x: 100, y: 650 },
+    ]) {
+      await touchSwipe(page, { from, to: { x: from.x, y: from.y - 100 } });
+      expect(await page.evaluate(() => window.scrollY)).toBe(600);
+    }
+    await touchSwipe(page, { from: { x: 30, y: 120 }, to: { x: 30, y: 220 } });
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+    await expect(dialog).toBeVisible();
+    await page.locator('ore-drawer').evaluate((element) => (element as HTMLElement & { hide(): void }).hide());
+    await expect(dialog).toBeHidden();
+    await touchSwipe(page, { from: { x: 30, y: 300 }, to: { x: 30, y: 200 } });
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(600);
+  });
+
+  test('allows page scrolling outside a modeless drawer', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-drawer default-open label="Reading" modal="false" placement="bottom" size="sm"></ore-drawer>
+    `);
+    await expect(page.locator('ore-drawer dialog')).toBeVisible();
+    await touchSwipe(page, { from: { x: 30, y: 200 }, to: { x: 30, y: 100 } });
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  });
+
   for (const dir of ['ltr', 'rtl'] as const) {
     for (const placement of ['bottom', 'top', 'right', 'left'] as const) {
       for (const handlePlacement of ['inset', 'outside'] as const) {

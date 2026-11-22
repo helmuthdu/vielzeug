@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Prevent modal dialogs and drawers from scrolling the page underneath.",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

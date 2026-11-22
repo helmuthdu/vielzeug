@@ -4,6 +4,7 @@ import { warnMultiplePrimaryActions } from '../../_dev';
 import { type OverlayOpenChangeDetail, parseOptionalBool } from '../../core';
 import { overlayMotionMixin, roundedVariantMixin, touchTargetMixin } from '../../styles';
 import { PADDING_SIZES, type PaddingSize, ROUNDED_SIZES } from '../../types';
+import { containModalScroll } from '../shared/modal-scroll';
 import { useDialogControl } from '../shared/use-dialog';
 
 import componentStyles from './dialog.css?inline';
@@ -181,6 +182,7 @@ define<OreDialogProps>(DIALOG_TAG, {
 
       mount();
       onEvent(dialog, 'click', handleBackdropClick);
+      containModalScroll(dialog, onEvent);
 
       return () => {
         overlay.dispose();

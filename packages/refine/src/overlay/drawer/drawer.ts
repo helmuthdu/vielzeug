@@ -21,6 +21,7 @@ import { projectFling } from '../../shared/fling';
 import { canScrollInDirection, SWIPE_EXCLUSIONS } from '../../shared/swipe';
 
 import { forcedColorsMixin, overlayMotionMixin, touchTargetMixin } from '../../styles';
+import { containModalScroll } from '../shared/modal-scroll';
 import { useDialogControl } from '../shared/use-dialog';
 import styles from './drawer.css?inline';
 
@@ -625,6 +626,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
       mount();
 
       onEvent(dialog, 'click', handleBackdropClick);
+      containModalScroll(dialog, onEvent);
 
       // Content-owned dismissal: any element inside the drawer — a nav row, a
       // save button, a menu item — closes it declaratively with
