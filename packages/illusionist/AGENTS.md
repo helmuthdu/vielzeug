@@ -12,4 +12,4 @@ Typed, deterministic, locale-aware fake data generator with a seeded PRNG. Sub-p
 
 ## Verification
 
-Default gates: root `AGENTS.md` → **Project profile** (Package source). Locale additions need the catalog entries for every locale the package ships and a test that generates from each.
+Locale additions need catalog entries for every shipped locale and a test that generates from each.

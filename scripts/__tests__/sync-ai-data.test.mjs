@@ -145,14 +145,14 @@ describe('extractAiReferences()', () => {
   it('ignores home-directory contracts while retaining repository references', () => {
     expect(
       extractAiReferences(
-        'Load `~/.agents/klugzeug/contract.md` and `.agents/conventions.md`.',
+        'Load `~/.agents/skills/kz-build/references/contract.md` and `.agents/conventions.md`.',
       ),
     ).toEqual(['.agents/conventions.md']);
   });
 
   it('does not treat home-directory workflow skill paths as repository references', () => {
     expect(
-      extractAiReferences('Procedure: `~/.agents/skills/build/SKILL.md`; conventions: `.agents/conventions.md`.'),
+      extractAiReferences('Procedure: `~/.agents/skills/kz-build/SKILL.md`; conventions: `.agents/conventions.md`.'),
     ).toEqual(['.agents/conventions.md']);
   });
 

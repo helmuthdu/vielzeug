@@ -23,7 +23,7 @@ Accessible, themeable web components built on `ore`. Largest package; one custom
 
 Two test layers cover different concerns.
 
-### Layer 1: jsdom (vitest, `bun run test`)
+### Layer 1: jsdom (Vitest)
 
 - Each component test calls the global `axeCheck(element)` helper (`vitest.setup.ts`) and asserts **zero violations**. It runs `wcag2a/2aa/best-practice` but **disables layout/style-dependent rules** (`color-contrast`, `target-size`, `scrollable-region-focusable`, …) that jsdom cannot compute: do **not** re-enable them in jsdom tests.
 - Assert roles, names, and ARIA state with `@vielzeug/assay` and keyboard/focus behaviour through the component's visible DOM contract.
@@ -31,11 +31,9 @@ Two test layers cover different concerns.
 
 ### Layer 2: real browser (Playwright, `bun run --filter @vielzeug/refine test:e2e`)
 
-**Co-located next to the component**, same convention as jsdom `*.test.ts` files: `src/<category>/<component>/<component>.e2e.ts`. No dev server needed: loads the built IIFE stack and `dist/styles` via `page.setContent()`. Reuse fresh output from `bun run --filter @vielzeug/refine build`, which supplies both Refine's IIFE and copied global styles. For an earlier browser regression check only, `bun run --filter @vielzeug/refine build:e2e` refreshes those artifacts without the full type, manifest, and per-entry build gates. Neither command rebuilds externalized dependency packages: refresh changed dependency artifacts first, in dependency order.
+**Co-located next to the component**: `src/<category>/<component>/<component>.e2e.ts`. E2E tests load the built IIFE stack and `dist/styles` via `page.setContent()`. The full Refine build supplies these artifacts; `build:e2e` refreshes them for an earlier browser check but skips the full build gates. Neither command rebuilds externalized dependencies.
 
-Follow root Build Scheduling: iterate with focused jsdom tests, lint/type checks, and the docs preview refresh paths in `docs/AGENTS.md`. Finish related implementation changes, coordinate output ownership, stop task-owned overlapping watchers, then build Refine once and batch the affected E2E files against that output. Do not build once per component or test file, or run `build:e2e` after an unchanged successful full build. Earlier artifact-backed checks remain appropriate when needed to reproduce or fix browser-only failures.
-
-Artifact freshness is per consumer: `build:bundle:watch` refreshes bundled component logic and local CSS, but does not copy `src/styles/*.css` into `dist/styles` or refresh externalized dependencies. A running watcher alone is not evidence that E2E inputs are current; wait for its successful completion and ensure all consumed styles and dependency bundles are fresh before starting tests. Fixtures read artifacts at module load, so complete refreshes before launching the test runner. E2E-test-only edits can reuse unchanged artifacts; changes to their consumed source, styles, configuration, or dependency artifacts invalidate the corresponding output.
+For browser tests, refresh changed dependency outputs first. `build:bundle:watch` updates component logic and local CSS, but not copied `src/styles/*.css` or external dependencies. E2E fixtures read artifacts at module load, so finish refreshing all consumed files before starting tests.
 
 ```bash
 cd packages/refine
@@ -62,11 +60,7 @@ Authoring guidance for component styles and behaviour (4-point grid, type scale,
 
 Create it under the right category folder, then run `sync:exports` so its sub-path export and types are wired.
 
-## Verification
+## Test commands
 
-Default gates: root `AGENTS.md` → **Project profile**. Refine-specific paths below.
-
-- **Unit/component tests** (jsdom): while iterating run the component's own test file (`bun x vitest run packages/refine/src/<category>/<component>/<component>.test.ts`); the full-suite final gate is `bun x vitest run packages/refine/src/` or `bun run --filter @vielzeug/refine test`. Tests are **co-located** next to components (`src/<category>/<component>/<component>.test.ts`) plus shared suites under `src/core/__tests__/` and `src/inputs/__tests__/`. The `.../src/__tests__/` path used by other packages misses most refine tests.
-- **E2E tests** (Playwright/Chromium): scope `bun run --filter @vielzeug/refine test:e2e` to the affected `src/<category>/<component>/<component>.e2e.ts` files. Reuse fresh output from the required final package build; use `build:e2e` only when an earlier browser check needs artifacts. Follow Layer 2 above for artifact freshness and dependency changes; shared harness lives in `src/testing/fixtures.ts`.
-- Lint: `bun run --filter @vielzeug/refine lint` (`biome ci src`). This checks TypeScript and CSS in Refine source.
-- Build (includes `sync:exports` + `check:manifest` + manifest analyze): `bun run --filter @vielzeug/refine build`
+- **Unit/component tests** (jsdom) are co-located with components, with shared suites under `src/core/__tests__/` and `src/inputs/__tests__/`; `packages/refine/src/__tests__/` misses them. The shared `src/testing/fixtures.ts` is Playwright-only infrastructure.
+- **E2E tests** (Playwright/Chromium): scope `bun run --filter @vielzeug/refine test:e2e` to affected `src/<category>/<component>/<component>.e2e.ts` files. The full package build refreshes the normal test artifacts; `build:e2e` is for earlier browser checks.

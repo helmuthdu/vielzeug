@@ -30,10 +30,3 @@ MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI
 ## Adding an MCP tool
 
 Add it to `src/tools/packages.ts` (generic) or `src/tools/refine.ts` (Refine-specific: use a `refine-` name prefix), define its local `ToolSchema` once with `satisfies ToolSchema`, return a domain value from `execute()`, use `Catalog` methods for expected failures, cover it in `src/__tests__/`, then run `bun run --filter @vielzeug/codex gen:tool-docs` to refresh the generated tool reference.
-
-## Verification
-
-- Tests (`test:integration` runs `prepare:data` first): `bun run --filter @vielzeug/codex test`
-- Fast unit-only loop: `bun run --filter @vielzeug/codex test:unit`
-- Lint: `bun run --filter @vielzeug/codex lint`
-- Build: `bun run --filter @vielzeug/codex build`; then `bun run --filter @vielzeug/codex gen:tool-docs` when tool descriptions or schemas changed

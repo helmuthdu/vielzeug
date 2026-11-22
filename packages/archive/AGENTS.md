@@ -192,7 +192,7 @@ server subpaths) and their browsers (the root contract).
 
 ## Verification
 
-Default gates: root `AGENTS.md` → **Project profile** (Package source). Archive-specific additions:
+Archive-specific checks:
 
 - Types: `bun run --filter @vielzeug/archive test:types`
 - Integration (real workerd + local D1): `bun run --filter @vielzeug/archive test:integration` — fixtures generate Wrangler configs into isolated run dirs; never start a second suite run until the previous one has fully exited.

@@ -1,10 +1,3 @@
-# Junie Project Guidelines
+# Junie
 
-Follow the root `AGENTS.md`; it is the canonical entrypoint for every AI client and is not restated here. Task procedure comes from the installed klugzeug skills (`~/.agents/skills/`) when available; the profile and validation gates are in root `AGENTS.md` → **Project profile**.
-
-## IDE-first workflow
-
-- Prefer Find Usages, symbol search, call hierarchy, type information, safe rename, and IDE inspections over broad text searches for code relationships.
-- Use project-aware refactoring for public symbol renames, then inspect every changed consumer.
-- Run the checked-in Bun, Vitest, Biome, and validation scripts from the terminal. If the IDE launches a command with the wrong Node runtime, rerun it with the version selected by `.tool-versions`.
-- Do not overwrite concurrent local edits or reformat unrelated files.
+Follow the root [`AGENTS.md`](../AGENTS.md), the canonical project contract. Repository-specific commands and validation gates are in its **Project profile**; task procedures come from installed Klugzeug skills.
