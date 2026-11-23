@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "close modal overlays immediately so the page is interactive during the exit",
+            "commit": "383880179d038df2c793377621ac124dbfc5db4c"
+          }
+        ]
+      },
+      "date": "Mon, 23 Nov 2026 09:37:21 GMT",
+      "tag": "@vielzeug/refine_v26.11.33",
+      "version": "26.11.33"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",

@@ -6,6 +6,20 @@
           {
             "author": "release-train",
             "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "383880179d038df2c793377621ac124dbfc5db4c"
+          }
+        ]
+      },
+      "date": "Mon, 23 Nov 2026 09:37:21 GMT",
+      "tag": "@vielzeug/clockwork_v26.11.33",
+      "version": "26.11.33"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "c445a8f8035247d2cea351e03aebc00e3d10435a"
           }
         ]

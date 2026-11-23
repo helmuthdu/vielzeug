@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/necromancer
 
-This log was last generated on Mon, 23 Nov 2026 06:45:32 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Nov 2026 09:37:21 GMT and should not be manually modified.
 
+## 26.11.33
+
+Mon, 23 Nov 2026 09:37:21 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.11.32
 
 Mon, 23 Nov 2026 06:45:32 GMT
