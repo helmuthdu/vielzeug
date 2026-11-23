@@ -100,15 +100,40 @@ describe('plan', () => {
 });
 
 describe('publish', () => {
-  it('skips publishing when the version already exists on npm', async () => {
+  it('repairs a missing tag when the version already exists on npm', async () => {
     versionExists.mockResolvedValue(true);
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     await main(['publish', '@vielzeug/ore', '1.0.4', 'packages/ore']);
 
-    expect(log).toHaveBeenCalledWith('⚠️  @vielzeug/ore@1.0.4 already on npm: skipping');
+    expect(log).toHaveBeenCalledWith('⚠️  @vielzeug/ore@1.0.4 already on npm: skipping publish');
     expect(publishPackage).not.toHaveBeenCalled();
-    expect(tagPackage).not.toHaveBeenCalled();
+    expect(tagPackage).toHaveBeenCalledWith({
+      allowExisting: true,
+      dryRun: false,
+      package: '@vielzeug/ore',
+      version: '1.0.4',
+    });
+  });
+
+  it('does not push an existing version during a dry run', async () => {
+    versionExists.mockResolvedValue(true);
+    const originalDryRun = process.env.DRY_RUN;
+    process.env.DRY_RUN = '1';
+
+    try {
+      await main(['publish', '@vielzeug/ore', '1.0.4', 'packages/ore']);
+      expect(publishPackage).not.toHaveBeenCalled();
+      expect(tagPackage).toHaveBeenCalledWith({
+        allowExisting: true,
+        dryRun: true,
+        package: '@vielzeug/ore',
+        version: '1.0.4',
+      });
+    } finally {
+      if (originalDryRun === undefined) delete process.env.DRY_RUN;
+      else process.env.DRY_RUN = originalDryRun;
+    }
   });
 
   it('publishes then tags when the version is new', async () => {

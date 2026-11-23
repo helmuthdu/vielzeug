@@ -7,9 +7,8 @@
  * the anchor the CHANGELOG deep-links point at), and the train gets exactly ONE GitHub release
  * named for the train number, whose notes call out only the packages that actually changed.
  *
- * Refuses to overwrite an existing tag rather than force-tagging over it: a tag that already
- * exists means this version was published without ever being tagged, or this release ran
- * twice, and either way that's a bug worth surfacing loudly instead of silently rewriting.
+ * Never overwrites an existing tag. A publish retry may reuse a tag only if it resolves to
+ * the current commit, and still pushes it in case the previous push failed.
  */
 
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -40,7 +39,7 @@ export function tagExists(tag, { run = defaultRun } = {}) {
 
 /** Tag one published package version and push the tag. No GitHub release: the train gets a
  *  single aggregate release (createTrainRelease), not one per package. */
-export function tagPackage({ dryRun = false, package: pkg, run = defaultRun, version }) {
+export function tagPackage({ allowExisting = false, dryRun = false, package: pkg, run = defaultRun, version }) {
   const tag = `${pkg}@${version}`;
 
   if (dryRun) {
@@ -49,13 +48,17 @@ export function tagPackage({ dryRun = false, package: pkg, run = defaultRun, ver
   }
 
   if (tagExists(tag, { run })) {
-    throw new Error(
-      `Tag ${tag} already exists: refusing to overwrite it. This means this version was published without ever ` +
-        `being tagged, or this release ran twice; investigate before retagging by hand.`,
-    );
+    if (
+      !allowExisting ||
+      run('git', ['rev-parse', `refs/tags/${tag}^{commit}`], { inherit: false }).trim() !==
+        run('git', ['rev-parse', 'HEAD^{commit}'], { inherit: false }).trim()
+    ) {
+      throw new Error(`Tag ${tag} already exists: refusing to overwrite it; investigate before retagging by hand.`);
+    }
+  } else {
+    run('git', ['tag', tag]);
   }
 
-  run('git', ['tag', tag]);
   run('git', ['push', 'origin', tag]);
 }
 

@@ -101,7 +101,8 @@ async function main(argv) {
     case 'publish': {
       const [pkg, version, folder] = args;
       if (await versionExists(pkg, version)) {
-        console.log(`⚠️  ${pkg}@${version} already on npm: skipping`);
+        console.log(`⚠️  ${pkg}@${version} already on npm: skipping publish`);
+        tagPackage({ allowExisting: true, dryRun, package: pkg, version });
         return;
       }
       await publishPackage(folder, { dryRun, interactive: Boolean(flags.interactive), otp: flags.otp });

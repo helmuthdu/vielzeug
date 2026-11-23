@@ -50,6 +50,42 @@ describe('tagPackage()', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  it('accepts an existing tag on the current commit when repairing a publish', () => {
+    const run = vi.fn((cmd, args) => {
+      if (args[0] === 'rev-parse') return 'abc123\n';
+      if (args[0] === 'push') return '';
+      throw new Error('must not recreate an existing tag');
+    });
+
+    tagPackage({ allowExisting: true, package: '@vielzeug/ore', run, version: '1.0.4' });
+    expect(run.mock.calls.map(([, args]) => args)).toEqual([
+      ['rev-parse', '@vielzeug/ore@1.0.4'],
+      ['rev-parse', 'refs/tags/@vielzeug/ore@1.0.4^{commit}'],
+      ['rev-parse', 'HEAD^{commit}'],
+      ['push', 'origin', '@vielzeug/ore@1.0.4'],
+    ]);
+  });
+
+  it('refuses an existing tag on a different commit even when repairing a publish', () => {
+    const run = vi.fn((cmd, args) => (args[1] === 'HEAD^{commit}' ? 'different\n' : 'abc123\n'));
+
+    expect(() => tagPackage({ allowExisting: true, package: '@vielzeug/ore', run, version: '1.0.4' })).toThrow(
+      'Tag @vielzeug/ore@1.0.4 already exists',
+    );
+    expect(run.mock.calls.every(([, args]) => args[0] === 'rev-parse')).toBe(true);
+  });
+
+  it('surfaces a failed tag push during a publish retry', () => {
+    const run = vi.fn((cmd, args) => {
+      if (args[0] === 'push') throw new Error('push rejected');
+      return 'abc123\n';
+    });
+
+    expect(() => tagPackage({ allowExisting: true, package: '@vielzeug/ore', run, version: '1.0.4' })).toThrow(
+      'push rejected',
+    );
+  });
+
   it('does nothing but log in dry-run mode', () => {
     const run = vi.fn();
 
