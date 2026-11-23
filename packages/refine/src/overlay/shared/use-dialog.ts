@@ -1,7 +1,6 @@
 import { type Readable, type Signal, signal, watch } from '@vielzeug/ripple';
 
 import { createFocusManager, type DialogCloseReason, lifecycleSignal, type OverlayOpenReason } from '../../core';
-import { awaitExit } from './await-exit';
 import { createBackgroundLock } from './background-lock';
 
 // Invoker Commands API: not yet in lib.dom.d.ts
@@ -19,7 +18,6 @@ export type UseDialogOptions = {
   /** Initial uncontrolled open state. Ignored when `openProp` is defined. */
   defaultOpen: Readable<boolean | undefined>;
   dialogRef: { value: HTMLDialogElement | null | undefined };
-  getPanelEl: () => HTMLElement | null | undefined;
   host: HTMLElement;
   initialFocus: Readable<string | undefined>;
   isPersistent: () => boolean;
@@ -111,7 +109,6 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
   // Internal close-reason: set atomically before dialog.close() fires.
   let pendingCloseReason: DialogCloseReason = 'programmatic';
   const bgLock = createBackgroundLock();
-  let isClosing = false;
 
   // ── Focus management ──────────────────────────────────────────────────────
   const focus = createFocusManager({
@@ -122,46 +119,26 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
   });
   // ─────────────────────────────────────────────────────────────────────────
 
-  /** Cancels a pending exit animation so a reopen can keep the dialog open. No-op otherwise. */
-  let cancelExit = (): void => {};
-
+  /**
+   * Starts the animated exit: the `closing` class drives the visible exit
+   * transitions (panel slide/fade and backdrop veil), while the native dialog
+   * closes on the same tick. Closing immediately is what frees the page: a
+   * modal dialog in the top layer blocks all page input while it is open, so
+   * waiting for the exit to finish before `close()` would freeze interaction
+   * for the whole exit duration. The dialog element's own
+   * `display/overlay allow-discrete` hold keeps the exit painted after the
+   * close, and the `closing` class persists until the next open cycle cleans
+   * it up (removing it during the hold would flash the backdrop back to full
+   * opacity). A reopen that arrives mid-hold therefore goes through the
+   * regular open path, which strips the class before `showModal()`.
+   */
   const closeWithAnimation = (): void => {
     const dialog = options.dialogRef.value;
 
-    if (!dialog?.open || isClosing) return;
+    if (!dialog?.open) return;
 
-    isClosing = true;
     dialog.classList.add('closing');
-
-    let settled = false;
-
-    cancelExit = (): void => {
-      if (settled) return;
-
-      settled = true;
-      dialog.classList.remove('closing');
-      isClosing = false;
-    };
-
-    const finish = () => {
-      if (settled) return;
-
-      settled = true;
-      dialog.close();
-      // Do NOT remove 'closing' here: removing it while the native ::backdrop is
-      // still held in the top layer by the 'overlay allow-discrete' transition
-      // would revert its opacity to 1 and cause a visible flash. The class is
-      // cleaned up at the start of the next open cycle (see setOpen below).
-      isClosing = false;
-    };
-
-    const panel = options.getPanelEl();
-
-    if (panel) {
-      awaitExit(panel, finish, 'transition');
-    } else {
-      finish();
-    }
+    dialog.close();
   };
 
   const dispatchCloseRequest = (reason: Exclude<DialogCloseReason, 'programmatic'>): boolean => {
@@ -194,15 +171,7 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     open(reason: OverlayOpenReason = 'programmatic'): void {
       const dialog = options.dialogRef.value;
 
-      if (dialog?.open) {
-        // A reopen that arrives while the exit animation is still running cancels
-        // the pending close and keeps the dialog open: the open prop is
-        // authoritative, so a quick close→reopen cycle must not end with the
-        // native dialog closed while the prop still says open.
-        cancelExit();
-
-        return;
-      }
+      if (dialog?.open) return;
 
       if (!dialog || isOpen.value) return;
 
@@ -315,11 +284,19 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     bgLock.unlock();
     options.host.removeAttribute('open');
     isOpen.value = false;
-    focus.restoreFocus();
 
     const reason = pendingCloseReason;
 
     pendingCloseReason = 'programmatic';
+
+    // A close during component teardown (the host is already disconnected) is
+    // not an observable state change: restoreFocus may read a reactive graph
+    // teardown has already disposed, a removed host has nowhere to restore
+    // focus to, and emitting the public `open-change` from a disconnected host
+    // leaks a phantom event into whatever outlives the component.
+    if (!options.host.isConnected) return;
+
+    focus.restoreFocus();
     options.onNativeClose?.(reason);
   };
 

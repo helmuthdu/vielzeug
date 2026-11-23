@@ -15,7 +15,7 @@ import {
 } from '@vielzeug/ore';
 import { signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
-import { type DialogCloseReason, type OverlayOpenChangeDetail, parseDetents, parseOptionalBool } from '../../core';
+import { type OverlayOpenChangeDetail, parseDetents, parseOptionalBool } from '../../core';
 import { getMotionMode } from '../../motion';
 import { projectFling } from '../../shared/fling';
 import { canScrollInDirection, SWIPE_EXCLUSIONS } from '../../shared/swipe';
@@ -350,71 +350,19 @@ define<OreDrawerProps>(DRAWER_TAG, {
       panel.style.opacity = String(1 - fade * 0.8);
     };
 
-    const finalizeDragClose = (panel: HTMLElement, reason: DialogCloseReason) => {
-      if (!isSwipeClosing.value) return;
-
-      const dialog = dialogRef.value;
-
-      if (!dialog) {
-        isSwipeClosing.value = false;
-
-        return;
-      }
-
-      dialog.style.transition = 'none';
-      panel.style.opacity = '0';
-      panel.style.visibility = 'hidden';
-      void dialog.offsetWidth;
-
-      if (reason === 'swipe') {
-        // The gesture itself never closes the dialog: it asks, so a consumer
-        // can preventDefault() the close-request and keep the drawer open.
-        requestClose(reason);
-      } else {
-        // Escape/backdrop/trigger: the close-request already fired and was
-        // allowed before performClose ran. Complete it directly; the close
-        // reason was already recorded by the overlay controller.
-        dialog.close();
-      }
-
-      if (dialog.open) {
-        // The close was prevented (a consumer cancelled the swipe close-request), so the drawer
-        // stays open: undo the exit state the settle spring applied. `settlePanel` added `.closing`
-        // to fade the backdrop in sync with the panel; leaving it here would keep the veil faded
-        // and hide the panel via `.closing .panel`. Drop it alongside the inline drag styles.
-        dialog.classList.remove('closing');
-        dialog.style.transition = '';
-        resetPanelDragStyles(panel);
-      }
-    };
-
     /**
      * Animate the panel from its dragged position to a rest position on a
      * physical spring seeded with the finger's release velocity: a fling
      * continues from the momentum, a slow release settles without overshoot.
      * Under reduced motion the spring jumps to the target in one step.
+     *
+     * Rest positions are only ever open or a detent: a committed close never
+     * springs here, it closes the dialog immediately (see `handleSwipeEnd`),
+     * because a modal dialog in the top layer blocks the whole page while it
+     * stays open.
      */
-    const settlePanel = (
-      panel: HTMLElement,
-      fromClosing: number,
-      toClosing: number,
-      velocityClosing: number,
-      closeReason: DialogCloseReason = 'swipe',
-    ) => {
+    const settlePanel = (panel: HTMLElement, fromClosing: number, toClosing: number, velocityClosing: number) => {
       const panelSize = getPanelSize(panel);
-      const closing = toClosing >= panelSize;
-
-      if (closing) {
-        isSwipeClosing.value = true;
-
-        // Drive the backdrop fade from the same moment the panel starts springing closed. The
-        // CSS exit (`dialog.closing::backdrop { opacity: 0 }`) is what the close-button path uses;
-        // without it here the veil would sit at full opacity for the whole spring and only vanish
-        // when `dialog.close()` runs, so the panel slides away leaving a lingering dark veil. The
-        // panel's own inline transform/opacity/`transition: none` from `applyDragPosition` still
-        // win over `.closing .panel`, so this only affects the backdrop.
-        dialogRef.value?.classList.add('closing');
-      }
 
       // Detaching the previous flight is what keeps a settle-to-detent spring from writing
       // panel.style.transform every frame alongside this one: the `springHandle !== handle` guard
@@ -434,9 +382,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
         springHandle = undefined;
 
-        if (closing) {
-          finalizeDragClose(panel, closeReason);
-        } else if (toClosing <= 0) {
+        if (toClosing <= 0) {
           // Fully open again: drop the inline styles so the panel returns to
           // its pure CSS state (and a later close animates from there).
           resetPanelDragStyles(panel);
@@ -478,7 +424,34 @@ define<OreDrawerProps>(DRAWER_TAG, {
       }
 
       const velocityClosing = swipeConfig.closingVelocity(velocity);
+      const panelSize = getPanelSize(panel);
       const rest = projectRestPosition(from, velocityClosing, getRestPositions(panel), getCommitLine(panel));
+
+      if (rest >= panelSize) {
+        // A committed close frees the page on this tick. A modal dialog in the
+        // top layer blocks all page input while it stays open, so the panel is
+        // handed back to the CSS exit (inline drag styles dropped, `.closing`
+        // added) and the dialog closes in the same tick; the exit keeps
+        // painting through the dialog's allow-discrete hold, and both run the
+        // same 200ms so they land together.
+        resetPanelDragStyles(panel);
+        isSwipeClosing.value = true;
+        dialogRef.value?.classList.add('closing');
+        requestClose('swipe');
+
+        if (dialogRef.value?.open) {
+          // A consumer prevented the close-request: the drawer stays open, so
+          // take the panel out of the exit and spring it back to where the
+          // drag began. Re-applying the inline position first keeps the panel
+          // from flashing at the fully-open origin before the spring's frame.
+          isSwipeClosing.value = false;
+          dialogRef.value?.classList.remove('closing');
+          applyDragPosition(panel, from, panelSize);
+          settlePanel(panel, from, dragBaseClosing, velocityClosing);
+        }
+
+        return;
+      }
 
       settlePanel(panel, from, rest, velocityClosing);
     };
@@ -512,7 +485,6 @@ define<OreDrawerProps>(DRAWER_TAG, {
       closeRequestDetail: (_reason) => ({ placement: props.placement.value ?? 'right' }),
       defaultOpen: props['default-open'],
       dialogRef,
-      getPanelEl: () => panelRef.value,
       host: el,
       initialFocus: props['initial-focus'],
       isPersistent: () => Boolean(props.persistent.value),
@@ -523,23 +495,18 @@ define<OreDrawerProps>(DRAWER_TAG, {
         swipe?.cancel();
         const panelEl = panelRef.value;
 
-        // For swipe-close, keep the panel hidden and off-screen until the next
-        // open cycle: resetting inline styles during native close can produce
-        // a visible frame at the rest position on some browsers.
-        if (panelEl && reason !== 'swipe') resetPanelDragStyles(panelEl);
-
-        const dialog = dialogRef.value;
-
-        if (dialog) dialog.style.transition = '';
+        // The exit is owned by the `.closing` class on the dialog (the panel's
+        // inline drag styles were already dropped when the close was
+        // committed); clear any drag state so the next open starts clean.
+        if (panelEl) resetPanelDragStyles(panelEl);
 
         emit('open-change', { open: false, reason });
       },
       onOpen: (reason) => emit('open-change', { open: true, reason }),
       openProp: props.open,
-      performClose: (dialog, reason) => {
-        // A committed spring close (swipe, or a detent panel closed by
-        // Escape/backdrop/programmatic hide) has already moved the panel
-        // off-screen: the native close completes it with no CSS exit.
+      performClose: (dialog, _reason) => {
+        // A committed swipe close already handed the panel to the CSS exit on
+        // the tick it asked: the native close simply completes it.
         if (isSwipeClosing.value) {
           dialog.close();
 
@@ -550,14 +517,11 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
         const panel = panelRef.value;
 
-        // A panel resting at a detent carries an inline transform the CSS exit
-        // cannot override: spring it the rest of the way closed first.
-        if (panel && panelClosing > 0) {
-          isSwipeClosing.value = true;
-          settlePanel(panel, panelClosing, getPanelSize(panel), 0, reason);
-
-          return;
-        }
+        // A panel that was dragged (fully open or resting at a detent) carries
+        // inline drag styles the CSS exit cannot override. Drop them, then let
+        // `.closing` animate the panel from wherever it is while the dialog
+        // closes in the same tick, so the page is interactive during the exit.
+        if (panel && panelClosing > 0) resetPanelDragStyles(panel);
 
         closeWithAnimation();
       },

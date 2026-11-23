@@ -156,7 +156,6 @@ define<OreLightboxProps>(LIGHTBOX_TAG, {
     const { isOpen, mount, overlay, requestClose } = useDialogControl({
       defaultOpen: signal(false),
       dialogRef: dialog,
-      getPanelEl: () => dialog.value,
       host,
       initialFocus: signal(undefined),
       isPersistent: () => false,

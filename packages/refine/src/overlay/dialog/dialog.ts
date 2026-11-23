@@ -156,7 +156,6 @@ define<OreDialogProps>(DIALOG_TAG, {
     const { closeWithAnimation, handleBackdropClick, overlay, requestClose, mount } = useDialogControl({
       defaultOpen: props['default-open'],
       dialogRef,
-      getPanelEl: () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
       host: el,
       initialFocus: props['initial-focus'],
       isPersistent: () => Boolean(props.persistent.value),

@@ -113,6 +113,11 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
     },
 
     restoreFocus() {
+      // A disposed manager can no longer restore (the restorer is gone), and
+      // consulting `getReturnFocus` would read component state that teardown
+      // may already have disposed.
+      if (disposed) return;
+
       if (options.getReturnFocus() !== false) restoreReturnFocus?.();
 
       restoreReturnFocus = null;

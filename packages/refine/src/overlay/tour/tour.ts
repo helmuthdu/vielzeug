@@ -579,7 +579,6 @@ define<OreTourProps>(TOUR_TAG, {
     const { closeWithAnimation, handleBackdropClick, overlay, requestClose, mount } = useDialogControl({
       defaultOpen: computed(() => false),
       dialogRef,
-      getPanelEl: () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
       host: el,
       initialFocus: props['initial-focus'],
       isPersistent: () => Boolean(props.persistent.value),
