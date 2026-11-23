@@ -8,6 +8,7 @@
     --_panel-border-color: var(--color-divider);
     --_panel-bleed: var(--size-8);
     --_drag-handle-inset: calc(var(--size-2) * -1);
+    --_drag-handle-bar-gap: var(--size-1);
 
     display: contents;
   }
@@ -376,6 +377,29 @@
 
   :host([drag-handle-placement='outside'][placement='bottom']) .drag-handle {
     top: calc(var(--_panel-bleed) * -1);
+  }
+
+  /* Outside handles: pin the visible bar next to the panel edge; the full
+     hanging box stays as the hit area. */
+  :host([drag-handle-placement='outside'][placement='left']) .drag-handle::before {
+    inset-inline: var(--_drag-handle-bar-gap) auto;
+    translate: 0 -50%;
+  }
+
+  :host([drag-handle-placement='outside'][placement='right']) .drag-handle::before,
+  :host([drag-handle-placement='outside']:not([placement])) .drag-handle::before {
+    inset-inline: auto var(--_drag-handle-bar-gap);
+    translate: 0 -50%;
+  }
+
+  :host([drag-handle-placement='outside'][placement='top']) .drag-handle::before {
+    inset-block: var(--_drag-handle-bar-gap) auto;
+    translate: -50% 0;
+  }
+
+  :host([drag-handle-placement='outside'][placement='bottom']) .drag-handle::before {
+    inset-block: auto var(--_drag-handle-bar-gap);
+    translate: -50% 0;
   }
 
   /* Grow the hit area toward the backdrop without covering more content. */
