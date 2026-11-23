@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Tighten the motion vocabulary: accelerating exits, accordion close choreography, reduced-motion hatches for custom timings, and marquee reveal without animation.",
+            "commit": "c445a8f8035247d2cea351e03aebc00e3d10435a"
+          }
+        ]
+      },
+      "date": "Mon, 23 Nov 2026 06:45:32 GMT",
+      "tag": "@vielzeug/refine_v26.11.32",
+      "version": "26.11.32"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "agent@vielzeug",

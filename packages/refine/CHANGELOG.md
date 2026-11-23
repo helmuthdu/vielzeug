@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Sun, 22 Nov 2026 21:23:30 GMT and should not be manually modified.
+This log was last generated on Mon, 23 Nov 2026 06:45:32 GMT and should not be manually modified.
 
+## 26.11.32
+
+Mon, 23 Nov 2026 06:45:32 GMT
+
+### Minor changes
+
+- Tighten the motion vocabulary: accelerating exits, accordion close choreography, reduced-motion hatches for custom timings, and marquee reveal without animation.
 ## 26.11.31
 
 Sun, 22 Nov 2026 21:23:30 GMT

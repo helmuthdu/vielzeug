@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/focus",
-  "version": "26.11.31",
+  "version": "26.11.32",
   "description": "Framework-neutral dismissal, live-region announcements, list navigation and focus restoration primitives",
   "repository": {
     "type": "git",
