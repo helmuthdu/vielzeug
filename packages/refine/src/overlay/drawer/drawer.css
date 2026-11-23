@@ -33,10 +33,6 @@
     display: none;
   }
 
-  dialog:not([open]) .panel {
-    display: none;
-  }
-
   dialog[open] {
     display: flex;
     pointer-events: auto;

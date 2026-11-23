@@ -384,7 +384,7 @@ describe('ore-drawer', () => {
       expect(fixture.query('dialog[open]')).toBeFalsy();
     });
 
-    it('springs the panel closed and closes the dialog when a swipe crosses the commit line', async () => {
+    it('closes the dialog on the release tick when a swipe crosses the commit line', async () => {
       fixture = await mount('ore-drawer', { attrs: { open: '' } });
       driveFrames();
 
@@ -407,11 +407,19 @@ describe('ore-drawer', () => {
 
       dragHandle?.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 120, pointerId: 1 }));
 
+      // The dialog closes on the release tick itself, before any animation
+      // frame runs: a modal dialog in the top layer blocks the whole page
+      // while open, so the page must be interactive during the CSS exit, not
+      // after a spring finishes.
+      expect(fixture.query('dialog[open]')).toBeFalsy();
+
       await fixture.flush();
 
-      expect(fixture.query('dialog[open]')).toBeFalsy();
-      // The closed panel stays parked off-screen until the next open cycle.
-      expect(panel?.style.visibility).toBe('hidden');
+      // The panel is handed back to the CSS exit: inline drag styles dropped,
+      // `.closing` drives `dialog.closing .panel`.
+      expect(fixture.query('dialog')?.classList.contains('closing')).toBe(true);
+      expect(panel?.style.transform).toBe('');
+      expect(panel?.style.visibility).toBe('');
     });
 
     it('keeps the drawer open when a swipe close is prevented', async () => {

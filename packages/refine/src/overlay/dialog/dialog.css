@@ -52,10 +52,6 @@
     display: none;
   }
 
-  dialog:not([open]) .panel {
-    display: none;
-  }
-
   dialog[open] {
     pointer-events: auto;
   }
