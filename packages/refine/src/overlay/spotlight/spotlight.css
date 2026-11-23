@@ -48,11 +48,13 @@
     height: var(--_cutout-h, 0);
     border-radius: var(--_cutout-radius, var(--spotlight-radius, var(--rounded-lg)));
     box-shadow: 0 0 0 100vmax var(--_dim);
-    transition:
+    transition: var(
+      --_motion-transition,
       top var(--_geometry-transition),
       left var(--_geometry-transition),
       width var(--_geometry-transition),
-      height var(--_geometry-transition);
+      height var(--_geometry-transition)
+    );
   }
 
   .cutout::after {

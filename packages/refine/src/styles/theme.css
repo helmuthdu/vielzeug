@@ -338,7 +338,7 @@
     --transition-slow: 300ms var(--ease-in-out);
     --transition-slower: 500ms var(--ease-in-out);
     --transition-spring: 300ms var(--ease-spring);
-    --transition-exit: 300ms var(--ease-out); /* Exit animations: overlay dismiss, alert collapse */
+    --transition-exit: 150ms var(--ease-in); /* Exit animations: exits accelerate, per the motion vocabulary */
     --transition-loader: 600ms linear; /* Spinner: constant rotation */
 
     /* Overlay entrance defaults: shared by @starting-style blocks */

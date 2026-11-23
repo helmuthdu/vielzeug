@@ -112,6 +112,25 @@ describe('animateReflow', () => {
     expect(mutate).toHaveBeenCalledTimes(1);
   });
 
+  it('skips reflow under reduced motion even when the duration is customized', () => {
+    const host = hostWithItems(2, true);
+    const animations = installFakeAnimations();
+    try {
+      vi.spyOn(window, 'getComputedStyle').mockReturnValue(
+        computedReturning({ '--_motion-transition': 'none', '--duration-200': '2000ms' }),
+      );
+      mockRects();
+      const mutate = vi.fn(() => {
+        for (const item of host.shadowRoot?.querySelectorAll<Moveable>('.item') ?? []) item.y += 40;
+      });
+      animateReflow(host, controller.signal, options(host)).run(mutate);
+      expect(mutate).toHaveBeenCalledTimes(1);
+      expect(animations.calls).toHaveLength(0);
+    } finally {
+      animations.restore();
+    }
+  });
+
   it('honors a custom duration token', () => {
     const host = hostWithItems(2, true);
     const getComputedStyle = vi.fn(() => computedReturning({ '--duration-500': '0ms' }));

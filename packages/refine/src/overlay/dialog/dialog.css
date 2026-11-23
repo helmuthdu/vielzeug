@@ -123,7 +123,7 @@
     transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
     transition:
       opacity var(--duration-150) var(--ease-spring),
-      transform var(--duration-150) var(--ease-spring);
+      transform var(--duration-150) var(--ease-in);
   }
 
   /* =====================

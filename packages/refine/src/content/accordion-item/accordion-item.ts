@@ -61,7 +61,7 @@ export type OreAccordionItemProps = {
  * @cssprop --accordion-item-row-duration - Expand/collapse row transition duration (default 200ms)
  * @cssprop --accordion-item-fade-duration - Content fade duration (default 200ms)
  * @cssprop --accordion-item-fade-delay - Content fade delay after the row starts (default 75ms)
- * @cssprop --accordion-item-collapse-delay - Delay before the row collapses after the close fade (default 100ms)
+ * @cssprop --accordion-item-collapse-delay - Delay before the row collapses after the close fade starts (default 75ms)
  *
  * @part item - Item root element.
  * @part summary - Summary trigger row.
@@ -126,8 +126,10 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
       return motionVersion;
     };
 
-    const finishAfterTransitions = (inner: HTMLElement, version: number, done: () => void): void => {
-      const transitions = inner.getAnimations?.().filter((animation) => animation instanceof CSSTransition) ?? [];
+    const finishAfterTransitions = (elements: HTMLElement[], version: number, done: () => void): void => {
+      const transitions = elements.flatMap(
+        (element) => element.getAnimations?.().filter((animation) => animation instanceof CSSTransition) ?? [],
+      );
 
       if (transitions.length === 0) {
         done();
@@ -167,7 +169,7 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
           return;
         }
 
-        finishAfterTransitions(inner, version, () => {
+        finishAfterTransitions([inner], version, () => {
           details.classList.remove('opening');
         });
       });
@@ -182,6 +184,7 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
       details.classList.add('closing');
 
       const inner = details.querySelector<HTMLElement>('.content-inner');
+      const wrapper = details.querySelector<HTMLElement>('.content-wrapper');
       const onDone = () => {
         details.classList.remove('closing');
         details.open = false;
@@ -189,8 +192,8 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
         emit('collapse', { expanded: false, item: el });
       };
 
-      if (inner) {
-        finishAfterTransitions(inner, version, onDone);
+      if (inner && wrapper) {
+        finishAfterTransitions([inner, wrapper], version, onDone);
       } else {
         onDone();
       }

@@ -52,7 +52,7 @@
   :host([dismissing]) {
     overflow: hidden;
     pointer-events: none;
-    animation: var(--_motion-animation, ore-alert-exit var(--transition-slow) var(--ease-in-out) forwards);
+    animation: var(--_motion-animation, ore-alert-exit var(--duration-150) var(--ease-in) forwards);
   }
 
   @keyframes ore-alert-exit {

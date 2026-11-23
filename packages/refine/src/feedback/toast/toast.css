@@ -9,7 +9,7 @@
     --_max-width: var(--toast-max-width, 400px);
     --_gap: var(--toast-gap, var(--size-2));
     --_enter-duration: var(--toast-enter-duration, var(--duration-200));
-    --_exit-duration: var(--toast-exit-duration, var(--duration-200));
+    --_exit-duration: var(--toast-exit-duration, var(--duration-150));
     --_offset: var(--size-3);
     --_progress-height: var(--toast-progress-height, 3px);
 
@@ -135,8 +135,8 @@
     transform: translateY(var(--_offset)) scale(0.96);
     transition: var(
       --_motion-transition,
-      opacity var(--_exit-duration) var(--ease-out),
-      transform var(--_exit-duration) var(--ease-out)
+      opacity var(--_exit-duration) var(--ease-in-out),
+      transform var(--_exit-duration) var(--ease-in)
     );
   }
 

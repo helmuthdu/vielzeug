@@ -12,9 +12,8 @@ import { captureLayout, type LayoutTransition } from '@vielzeug/necromancer';
  * - Timing comes from the design tokens, read through getComputedStyle: the
  *   Web Animations API takes resolved values only, so a `var(--duration-200)`
  *   passed as options would be ignored. Reading the computed value is also
- *   what makes motion mode work for free — the Reduced Motion block in
- *   theme.css zeroes `--duration-*` under either the OS preference or
- *   `data-motion='reduced'`, and a zero duration means "skip".
+ *   what makes token changes apply to each run. The inherited motion hatch
+ *   also skips reflow under reduction, even if a duration is customized locally.
  * - Motion is an enhancement: every path that cannot animate (no elements, no
  *   stable keys, zeroed tokens, a disposed lifecycle, a browser without the
  *   Web Animations API) still runs the mutation exactly once and never throws.
@@ -106,6 +105,12 @@ export function animateReflow(host: HTMLElement, signal: AbortSignal, options: R
       const keys = before.map(getKey);
       const keyable = before.length > 0 && keys.every((key) => key !== undefined);
       if (!keyable) {
+        mutate();
+
+        return;
+      }
+
+      if (getComputedStyle(host).getPropertyValue('--_motion-transition').trim() === 'none') {
         mutate();
 
         return;

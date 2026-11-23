@@ -14,6 +14,23 @@ const nestedHtml = `
 `;
 
 test.describe('Interaction', () => {
+  test('dismisses by keyboard with directional exit timing', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await refinePage.mountComponent(
+      `<ore-command-palette default-open label="Palette">${itemsHtml}</ore-command-palette>`,
+    );
+    const dialog = page.locator('ore-command-palette dialog');
+    await expect(dialog).toBeVisible();
+    await page.waitForTimeout(250);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveClass(/closing/);
+    await expect(dialog.locator('.panel')).toHaveCSS(
+      'transition-timing-function',
+      'cubic-bezier(0.22, 1, 0.36, 1), cubic-bezier(0.4, 0, 1, 1)',
+    );
+    await expect(dialog).toBeHidden();
+  });
+
   test('emits active-change as the focused row moves', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`<ore-command-palette open label="Palette">${itemsHtml}</ore-command-palette>`);
 

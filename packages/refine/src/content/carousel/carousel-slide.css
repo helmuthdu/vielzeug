@@ -9,9 +9,11 @@
   pointer-events: none;
   opacity: 0;
   transform: var(--_slide-translate-after, translateX(100%));
-  transition:
+  transition: var(
+    --_motion-transition,
     transform var(--carousel-transition-duration, var(--duration-350)) var(--ease-move),
-    opacity var(--carousel-transition-duration, var(--duration-350)) var(--ease-move);
+    opacity var(--carousel-transition-duration, var(--duration-350)) var(--ease-move)
+  );
 }
 
 :host([data-before]) {
@@ -41,7 +43,10 @@
 /* ── Fade variant ────────────────────────────────────────────────────────── */
 :host([data-variant='fade']) {
   transform: none;
-  transition: opacity var(--carousel-transition-duration, var(--duration-350)) var(--ease-move);
+  transition: var(
+    --_motion-transition,
+    opacity var(--carousel-transition-duration, var(--duration-350)) var(--ease-move)
+  );
 }
 
 /* ── Filmstrip variant: shared ──────────────────────────────────────────── */
@@ -54,9 +59,11 @@
   border-radius: var(--carousel-radius, var(--rounded-xl));
   opacity: 1;
   transform: none;
-  transition:
+  transition: var(
+    --_motion-transition,
     flex var(--carousel-transition-duration, var(--duration-350)) var(--ease-move),
-    opacity var(--carousel-transition-duration, var(--duration-350)) var(--ease-move);
+    opacity var(--carousel-transition-duration, var(--duration-350)) var(--ease-move)
+  );
 }
 
 /* ── Filmstrip variant (horizontal) ──────────────────────────────────────── */
@@ -98,9 +105,11 @@
   border-radius: var(--carousel-radius, var(--rounded-xl));
   opacity: 0.5;
   transform: none;
-  transition:
+  transition: var(
+    --_motion-transition,
     flex var(--carousel-transition-duration, var(--duration-350)) var(--ease-move),
-    opacity var(--carousel-transition-duration, var(--duration-350)) var(--ease-move);
+    opacity var(--carousel-transition-duration, var(--duration-350)) var(--ease-move)
+  );
 }
 
 :host([data-variant='gallery'][data-gallery-visible][data-active]) {

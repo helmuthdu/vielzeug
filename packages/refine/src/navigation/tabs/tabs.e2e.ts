@@ -494,6 +494,26 @@ test.describe('Touch layout', () => {
 });
 
 test.describe('Interaction', () => {
+  test('honors reduced motion with customized tab transitions', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(`
+      <ore-tabs value="one" style="--tabs-transition: 2s linear">
+        <ore-tab-item slot="tabs" value="one" style="--tab-item-transition: 2s linear">First</ore-tab-item>
+        <ore-tab-item slot="tabs" value="two">Second</ore-tab-item>
+      </ore-tabs>
+    `);
+    const indicator = page.locator('ore-tabs .indicator');
+    const button = page.locator('ore-tab-item').first().locator('button');
+    await expect(indicator).toHaveCSS('transition-property', 'none');
+    await expect(button).toHaveCSS('transition-property', 'none');
+    await page.getByRole('tab', { name: 'First' }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('tab', { name: 'Second' })).toHaveAttribute('aria-selected', 'true');
+    await page.locator('html').evaluate((root) => root.setAttribute('data-motion', 'full'));
+    await expect(indicator).toHaveCSS('transition-duration', '2s, 2s, 2s');
+    await expect(button).toHaveCSS('transition-duration', '2s, 2s, 2s');
+  });
+
   test('places keyboard selection immediately without animating the pill or panel', async ({ page, refinePage }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await refinePage.mountComponent(`

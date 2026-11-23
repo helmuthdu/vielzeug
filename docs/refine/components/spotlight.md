@@ -56,12 +56,12 @@ spotlight.rect = null; // dim the whole page
 
 ### CSS Custom Properties
 
-| Property                 | Description                                                             |
-| ------------------------ | ----------------------------------------------------------------------- |
-| `--spotlight-dim`        | Dim color (default `--color-scrim`)                                     |
-| `--spotlight-ring`       | Ring drawn around the cutout (default: `none`)                          |
-| `--spotlight-radius`     | Cutout corner radius                                                    |
-| `--spotlight-transition` | Geometry transition (default: `var(--duration-250) var(--ease-spring)`) |
+| Property                 | Description                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `--spotlight-dim`        | Dim color (default `--color-scrim`)                                                                    |
+| `--spotlight-ring`       | Ring drawn around the cutout (default: `none`)                                                         |
+| `--spotlight-radius`     | Cutout corner radius                                                                                   |
+| `--spotlight-transition` | Geometry transition (default: `var(--duration-250) var(--ease-spring)`); disabled under reduced motion |
 
 ### Parts
 

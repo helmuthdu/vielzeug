@@ -7,6 +7,20 @@
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
+test('animates its mobile menu only with full motion', async ({ page, refinePage }) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await refinePage.mountComponent(
+    '<ore-navbar><ore-navbar-item slot="mobile-menu" href="#games">Games</ore-navbar-item></ore-navbar>',
+  );
+  const navbar = page.locator('ore-navbar');
+  await navbar.locator('[part="mobile-toggle"]').click();
+  const panel = navbar.locator('.mobile-menu-panel');
+  await expect(panel).toHaveCSS('animation-name', 'navbar-mobile-in');
+  await page.locator('html').evaluate((root) => root.setAttribute('data-motion', 'reduced'));
+  await expect(panel).toHaveCSS('animation-name', 'none');
+});
+
 test.describe('Keyboard recovery', () => {
   test('Escape closes the mobile menu and restores focus to the toggle', async ({ page, refinePage }) => {
     await page.setViewportSize({ height: 844, width: 390 });

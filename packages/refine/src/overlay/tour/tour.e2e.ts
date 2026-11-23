@@ -13,6 +13,35 @@ const TOUR =
   '<button id="save">Save</button><ore-tour open spotlight presentation="popover" anchor="#save" title="Save your work" description="Hit save whenever you like." step-index="1" total-steps="4"></ore-tour>';
 
 test.describe('Tour', () => {
+  for (const presentation of ['auto', 'bottom-sheet']) {
+    test(`opens the ${presentation} tour from the bottom without scrolling its dialog`, async ({
+      page,
+      refinePage,
+    }) => {
+      await page.setViewportSize({ height: 844, width: 390 });
+      await refinePage.mountComponent(
+        `<ore-tour presentation="${presentation}" title="Welcome" description="Start here." total-steps="3" style="--duration-200: 2s"></ore-tour>`,
+      );
+
+      const opening = await page.locator('ore-tour').evaluate(async (tour) => {
+        const dialog = tour.shadowRoot!.querySelector('dialog')!;
+        const panel = tour.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+
+        tour.setAttribute('open', '');
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+        return {
+          panelTop: panel.getBoundingClientRect().top,
+          scrollTop: dialog.scrollTop,
+          viewportHeight: innerHeight,
+        };
+      });
+
+      expect(opening.scrollTop).toBe(0);
+      expect(opening.panelTop).toBeGreaterThan(opening.viewportHeight - 60);
+    });
+  }
+
   test('the focused popover panel shows no UA focus ring', async ({ page, refinePage }) => {
     await refinePage.mountComponent(TOUR);
 
