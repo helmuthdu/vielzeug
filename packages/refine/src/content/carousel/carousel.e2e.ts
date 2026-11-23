@@ -549,7 +549,7 @@ test.describe('Touch navigation', () => {
     test('uses static transforms under reduced motion', async ({ page, refinePage }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await refinePage.mountComponent(coverflow());
-      await expect(page.locator('[data-active]')).toHaveCSS('transition-duration', '0s, 0s');
+      await expect(page.locator('[data-active]')).toHaveCSS('transition-property', 'none');
       await expect(page.locator('[data-coverflow-visible]')).toHaveCount(3);
     });
 

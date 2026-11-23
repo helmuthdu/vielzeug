@@ -21,6 +21,7 @@
     gap: var(--marquee-gap, var(--size-4));
     align-items: stretch;
     width: max-content;
+    transform: translateX(var(--_marquee-position, 0px));
     /* The root-level --_motion-animation escape hatch (theme.css) stops the scroll
        for both the OS preference and data-motion='reduced', and honors
        data-motion='full'; a component-local media query would ignore the mode. */

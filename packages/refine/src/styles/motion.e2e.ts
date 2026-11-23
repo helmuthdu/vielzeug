@@ -1,6 +1,46 @@
 import { expect, test } from '../testing/fixtures';
 
 test.describe('Motion Mode', () => {
+  for (const [component, markup, duration] of [
+    ['drawer', '<ore-drawer default-open label="Drawer" placement="bottom"></ore-drawer>', '0.2s, 0.2s'],
+    ['dialog', '<ore-dialog open label="Dialog"></ore-dialog>', '0.15s, 0.15s'],
+    ['tour', '<ore-tour open presentation="bottom-sheet" title="Tour" total-steps="2"></ore-tour>', '0.15s, 0.2s'],
+  ] as const) {
+    test(`${component} exits on Escape with reduced and full motion`, async ({ page, refinePage }) => {
+      for (const reduced of [false, true]) {
+        await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
+        await refinePage.mountComponent(markup);
+        const dialog = page.locator(`ore-${component} dialog`);
+        await expect(dialog).toBeVisible();
+        await page.waitForTimeout(350);
+        await page.keyboard.press('Escape');
+        if (!reduced) {
+          await expect(dialog).toHaveClass(/closing/);
+          await expect(dialog.locator('.panel')).toHaveCSS('transition-duration', duration);
+        }
+        await expect(dialog).toBeHidden();
+      }
+    });
+  }
+
+  test('honors reduced motion even when carousel and spotlight timings are customized', async ({
+    page,
+    refinePage,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(`
+      <ore-carousel style="--carousel-transition-duration: 2s"><ore-carousel-slide>One</ore-carousel-slide><ore-carousel-slide>Two</ore-carousel-slide></ore-carousel>
+      <ore-spotlight style="--spotlight-transition: 2s linear"></ore-spotlight>
+    `);
+    const slide = page.locator('ore-carousel-slide').first();
+    const cutout = page.locator('ore-spotlight [part="cutout"]');
+    await expect(slide).toHaveCSS('transition-duration', '0s');
+    await expect(cutout).toHaveCSS('transition-duration', '0s');
+    await page.locator('html').evaluate((root) => root.setAttribute('data-motion', 'full'));
+    await expect(slide).toHaveCSS('transition-duration', '2s, 2s');
+    await expect(cutout).toHaveCSS('transition-duration', '2s, 2s, 2s, 2s');
+  });
+
   test('applies Motion Mode timing to shared dialog transitions', async ({ page, refinePage }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await refinePage.mountComponent('<ore-dialog open label="Motion preview"><p>Dialog content</p></ore-dialog>');
@@ -70,7 +110,7 @@ test.describe('Motion Mode', () => {
       });
 
     const fullMotion = { delay: '0.075s, 0.075s', duration: '0.2s, 0.2s' };
-    const reducedMotion = { delay: '0s, 0s', duration: '0s, 0s' };
+    const reducedMotion = { delay: '0s', duration: '0s' };
 
     await expect.poll(timing).toEqual(fullMotion);
 

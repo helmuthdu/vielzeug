@@ -1,5 +1,19 @@
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
+test('dismisses with an exit animation unless motion is reduced', async ({ page, refinePage }) => {
+  for (const reduced of [false, true]) {
+    await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' });
+    await refinePage.mountComponent('<ore-alert dismissible>Notice</ore-alert>');
+    const alert = page.locator('ore-alert');
+    const running = await alert.evaluate((host) => {
+      host.shadowRoot!.querySelector<HTMLButtonElement>('button')!.click();
+      return host.getAnimations().some((animation) => animation instanceof CSSAnimation);
+    });
+    expect(running).toBe(!reduced);
+    await expect(alert).toHaveAttribute('dismissed', '');
+  }
+});
+
 test.describe('Accessibility', () => {
   test('light alert with auto icon passes axe checks', async ({ page, refinePage }) => {
     await refinePage.mountComponent(

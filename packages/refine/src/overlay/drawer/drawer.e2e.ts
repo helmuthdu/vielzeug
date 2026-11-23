@@ -36,6 +36,21 @@ test.describe('Content touch gestures', () => {
     expect(await page.evaluate(() => window.scrollY)).toBe(600);
   });
 
+  test('keeps the page still when swiping vertically over a slider', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="height:3000px">Background</div>
+      <ore-drawer default-open label="Reading" placement="bottom" size="lg">
+        <input type="range" aria-label="Volume" style="width:200px">
+      </ore-drawer>
+    `);
+    await page.evaluate(() => window.scrollTo(0, 600));
+    const slider = page.getByRole('slider', { name: 'Volume' });
+    const bounds = (await slider.boundingBox())!;
+    const from = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    await touchSwipe(page, { from, to: { x: from.x, y: from.y - 100 } });
+    expect(await page.evaluate(() => window.scrollY)).toBe(600);
+  });
+
   test('keeps the page still when swiping a modal drawer or its backdrop', async ({ page, refinePage }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await refinePage.mountComponent(`
@@ -315,6 +330,26 @@ test.describe('Content touch gestures', () => {
 });
 
 test.describe('Interaction', () => {
+  test('opens a bottom drawer from the viewport edge without scrolling its dialog', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await refinePage.mountComponent(
+      '<ore-drawer placement="bottom" size="lg" title="Reading" style="--duration-300: 2s"><p>Short content.</p></ore-drawer>',
+    );
+
+    const opening = await page.locator('ore-drawer').evaluate(async (element) => {
+      const dialog = element.shadowRoot!.querySelector('dialog')!;
+      const panel = element.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+
+      element.setAttribute('open', '');
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      return { panelTop: panel.getBoundingClientRect().top, scrollTop: dialog.scrollTop, viewportHeight: innerHeight };
+    });
+
+    expect(opening.scrollTop).toBe(0);
+    expect(opening.panelTop).toBeGreaterThan(opening.viewportHeight - 60);
+  });
+
   test('insets the drag handle by default for every placement', async ({ page, refinePage }) => {
     const placements = ['left', 'right', 'top', 'bottom'] as const;
     const drawers = placements

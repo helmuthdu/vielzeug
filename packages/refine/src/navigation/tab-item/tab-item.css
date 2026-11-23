@@ -28,10 +28,12 @@
     background: transparent;
     border: none;
     border-radius: var(--tab-item-radius);
-    transition:
+    transition: var(
+      --_motion-transition,
       background var(--tab-item-transition),
       color var(--tab-item-transition),
-      box-shadow var(--tab-item-transition);
+      box-shadow var(--tab-item-transition)
+    );
   }
 
   button:focus {

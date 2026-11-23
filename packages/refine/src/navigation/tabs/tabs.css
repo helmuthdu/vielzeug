@@ -44,10 +44,12 @@
     left: 0;
     pointer-events: none;
     border-radius: var(--_tabs-inner-radius);
-    transition:
+    transition: var(
+      --_motion-transition,
       transform var(--tabs-transition),
       width var(--tabs-transition),
-      height var(--tabs-transition);
+      height var(--tabs-transition)
+    );
   }
 
   /* The pill paints the active surface; slotted items are positioned so they paint

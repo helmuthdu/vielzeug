@@ -71,6 +71,32 @@ test.describe('Layout', () => {
 });
 
 test.describe('Accessibility', () => {
+  test('navigation reveals items without animation under reduced motion', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await refinePage.mountComponent(
+      '<ore-marquee style="width:200px"><div style="width:200px">Item A</div>' +
+        '<div style="width:200px">Item B</div></ore-marquee>',
+    );
+    const marquee = page.locator('ore-marquee');
+    const track = marquee.locator('[part="track"]');
+    await expect
+      .poll(() => track.evaluate((element) => element.style.getPropertyValue('--_marquee-translate')))
+      .not.toBe('');
+    const second = marquee.locator('div').nth(1);
+    const before = (await second.boundingBox())!.x;
+    await page.getByRole('button', { name: 'Next item' }).focus();
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await second.boundingBox())!.x).toBeLessThan(before - 100);
+    await expect(track).toHaveCSS('animation-name', 'none');
+    await page.getByRole('button', { name: 'Previous item' }).click();
+    await expect.poll(async () => (await second.boundingBox())!.x).toBeGreaterThan(before - 1);
+    await page.locator('html').evaluate((root) => root.setAttribute('data-motion', 'full'));
+    await expect(track).not.toHaveCSS('animation-name', 'none');
+    await page.locator('html').evaluate((root) => root.setAttribute('data-motion', 'reduced'));
+    await page.getByRole('button', { name: 'Next item' }).click();
+    await expect.poll(async () => (await second.boundingBox())!.x).toBeLessThan(before - 100);
+  });
+
   test('passes axe checks', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-marquee><div style="background:var(--color-contrast-100);width:200px">Free shipping</div>' +

@@ -14,7 +14,7 @@
     --accordion-item-row-duration: var(--duration-200);
     --accordion-item-fade-duration: var(--duration-200);
     --accordion-item-fade-delay: var(--duration-75);
-    --accordion-item-collapse-delay: var(--duration-100);
+    --accordion-item-collapse-delay: var(--duration-75);
     display: block;
     color: var(--accordion-item-body-color, var(--text-color-body));
   }
@@ -40,10 +40,12 @@
     background: var(--accordion-item-bg);
     border: var(--border) solid var(--accordion-item-border-color);
     border-radius: var(--accordion-details-radius);
-    transition:
+    transition: var(
+      --_motion-transition,
       background var(--accordion-item-transition),
       border-color var(--accordion-item-transition),
-      color var(--accordion-item-transition);
+      color var(--accordion-item-transition)
+    );
   }
 
   summary::-webkit-details-marker {
@@ -89,8 +91,10 @@
     border-inline: 1px solid var(--accordion-item-border-color);
     border-bottom: 1px solid var(--accordion-item-border-color);
     border-radius: var(--accordion-summary-radius);
-    transition: grid-template-rows var(--accordion-item-row-duration)
-      var(--accordion-item-expand-easing, var(--ease-spring));
+    transition: var(
+      --_motion-transition,
+      grid-template-rows var(--accordion-item-row-duration) var(--accordion-item-expand-easing, var(--ease-spring))
+    );
   }
 
   details[open] .content-wrapper {
@@ -102,9 +106,11 @@
     overflow: hidden;
     opacity: 1;
     transform: translateY(0);
-    transition:
+    transition: var(
+      --_motion-transition,
       opacity var(--accordion-item-fade-duration) var(--accordion-item-fade-delay) var(--ease-spring),
-      transform var(--accordion-item-fade-duration) var(--accordion-item-fade-delay) var(--ease-spring);
+      transform var(--accordion-item-fade-duration) var(--accordion-item-fade-delay) var(--ease-spring)
+    );
   }
 
   /* Opening: set from-state with no transition: transition fires on base rule when class is removed */
@@ -118,16 +124,21 @@
   details.closing .content-inner {
     opacity: 0;
     transform: translateY(-4px);
-    transition:
-      opacity var(--duration-150) var(--ease-spring),
-      transform var(--duration-150) var(--ease-spring);
+    transition: var(
+      --_motion-transition,
+      opacity var(--duration-150) var(--ease-in-out),
+      transform var(--duration-150) var(--ease-in)
+    );
   }
 
-  /* Keep row expanded while closing animation plays */
+  /* Collapse the row after the fade starts, before closing native details. */
   details.closing .content-wrapper {
-    grid-template-rows: 1fr;
-    transition: grid-template-rows var(--accordion-item-row-duration) var(--accordion-item-collapse-delay)
-      var(--accordion-item-expand-easing, var(--ease-spring));
+    grid-template-rows: 0fr;
+    transition: var(
+      --_motion-transition,
+      grid-template-rows var(--accordion-item-row-duration) var(--accordion-item-collapse-delay)
+        var(--accordion-item-expand-easing, var(--ease-spring))
+    );
   }
 }
 
@@ -292,7 +303,7 @@
 
     margin-inline-start: auto;
     transform: rotate(-90deg);
-    transition: transform var(--accordion-item-row-duration) var(--ease-spring);
+    transition: var(--_motion-transition, transform var(--accordion-item-row-duration) var(--ease-spring));
   }
 
   details[open] .chevron {

@@ -101,6 +101,7 @@ define<OreMarqueeProps>(MARQUEE_TAG, {
       const duration = props.duration.value ?? 20;
       const delay = -((item.offsetLeft / loopWidth) * duration);
 
+      track.style.setProperty('--_marquee-position', `${-item.offsetLeft}px`);
       track.style.setProperty('animation-delay', `${delay}s`);
     };
 
@@ -172,6 +173,7 @@ define<OreMarqueeProps>(MARQUEE_TAG, {
           for (let set = 2; set < requiredSets; set += 1) appendCloneSet();
 
           marqueeTrack.style.setProperty('--_marquee-translate', `-${loopWidth}px`);
+          marqueeTrack.style.setProperty('--_marquee-position', `${-(items[activeIndex]?.offsetLeft ?? 0)}px`);
         });
       };
 

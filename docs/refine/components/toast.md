@@ -409,7 +409,7 @@ service is disposed.
 | `--toast-snackbar-height`                                                                   | Snackbar message row height, action or not          | `var(--size-8)`                |
 | `--toast-snackbar-shadow`                                                                   | Snackbar elevation shadow                           | `var(--shadow-lg)`             |
 | `--toast-shadow`                                                                            | Elevation shadow                                    | `var(--shadow-xl)`             |
-| `--toast-enter-duration` / `--toast-exit-duration`                                          | Motion durations                                    | `var(--duration-200)`          |
+| `--toast-enter-duration` / `--toast-exit-duration`                                          | Motion durations                                    | `var(--duration-200)` / `var(--duration-150)` |
 | `--toast-progress-height`                                                                   | Height of the auto-dismiss progress bar             | `3px`                          |
 | `--toast-progress-color`                                                                    | Colour of the auto-dismiss progress bar             | Status accent colour           |
 | `--toast-inset-top` / `--toast-inset-bottom` / `--toast-inset-left` / `--toast-inset-right` | Viewport insets                                     | `var(--size-4)`                |

@@ -262,12 +262,13 @@
     transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
     transition:
       opacity var(--duration-150) var(--ease-spring),
-      transform var(--duration-150) var(--ease-spring);
+      transform var(--duration-150) var(--ease-in);
   }
 
   /* Bottom sheet: docked to the bottom edge, full width, square top corners. */
   .panel[data-presentation='bottom-sheet'] {
-    position: absolute;
+    /* Keep the off-screen entry transform out of the dialog's scrollable area. */
+    position: fixed;
     inset-block-end: 0;
     inset-inline: 0;
     width: auto;
@@ -286,7 +287,7 @@
     transform: translateY(100%);
     transition:
       opacity var(--duration-150) var(--ease-in-out),
-      transform var(--duration-200) var(--ease-in-out);
+      transform var(--duration-200) var(--ease-in);
   }
 
   .panel[data-presentation='bottom-sheet'] .card {

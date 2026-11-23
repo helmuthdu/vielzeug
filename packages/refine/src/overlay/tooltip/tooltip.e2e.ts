@@ -8,6 +8,24 @@
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Interaction', () => {
+  test('uses the shared accelerating exit and respects motion mode', async ({ page, refinePage }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await refinePage.mountComponent(
+      '<ore-tooltip content="Helpful hint" trigger="click"><ore-button>Info</ore-button></ore-tooltip>',
+    );
+    const button = page.locator('ore-button');
+    const panel = page.locator('ore-tooltip [part="tooltip"]');
+    await button.click();
+    await expect(panel).toHaveAttribute('aria-hidden', 'false');
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCSS(
+      'transition-timing-function',
+      'cubic-bezier(0.4, 0, 0.2, 1), cubic-bezier(0.4, 0, 1, 1), ease, ease',
+    );
+    await page.locator('html').evaluate((root) => root.setAttribute('data-motion', 'reduced'));
+    await expect(panel).toHaveCSS('transition-duration', '0s, 0s, 0s, 0s');
+  });
+
   test('updates trigger listeners without replacing the tooltip or its button', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`
       <ore-tooltip content="Helpful hint" trigger="focus">

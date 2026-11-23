@@ -56,7 +56,7 @@ Command palette, combobox, query-bar, and menu rows paint focus and selection co
 | `--transition-slow`   | `300ms var(--ease-in-out)` | Panels, accordions              |
 | `--transition-slower` | `500ms var(--ease-in-out)` |                                 |
 | `--transition-spring` | `300ms var(--ease-spring)` | Bouncy interactions             |
-| `--transition-exit`   | `300ms var(--ease-out)`    | Overlay dismiss, alert collapse |
+| `--transition-exit`   | `150ms var(--ease-in)`     | Exits accelerate (dismiss, collapse) |
 | `--transition-loader` | `600ms linear`             | Spinner constant rotation       |
 
 ::: warning
@@ -126,7 +126,7 @@ The mode drives the token layer: every `--duration-*`/`--transition-*` token zer
 
 CSS responds immediately when the mode changes. JavaScript motion resolves its settings when it starts: a spring receives the current mode when it is created, and `animateReflow` reads its duration token on each `run()`. Changing the mode does not retune an animation already in flight; subsequent springs and reflows use the new mode.
 
-The components that move their content programmatically — DataGrid row sorting, command-palette and combobox result filtering, and the toast stack — read their timing from the same tokens at animation time, so a zeroed `--duration-200` skips a new reflow rather than playing it instantly. Override `--duration-200` on one component to retune (or `0` to silence) just its reflow.
+The components that move their content programmatically — DataGrid row sorting, command-palette and combobox result filtering, and the toast stack — read their timing from the same tokens at animation time, so a zeroed `--duration-200` skips a new reflow rather than playing it instantly. Override `--duration-200` on one component to retune (or `0` to silence) just its reflow. Reduced motion still skips reflow when its duration is customized.
 
 Try the [interactive motion playground](/repl): choose **Refine → Motion mode** to compare the accordion and carousel under System, Reduced, and Full.
 

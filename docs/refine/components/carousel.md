@@ -546,7 +546,7 @@ The host carries `role="region"` and `aria-roledescription="carousel"`. Each `<o
 
 When `autoplay` is on, the timer stops on `focusin` or `pointerenter` so keyboard and pointer users can read slide content uninterrupted, and restarts on `focusout` or `pointerleave` unless autoplay was manually paused.
 
-Slide motion follows Motion Mode: `--carousel-transition-duration` defaults to `var(--duration-350)`, which zeroes under `prefers-reduced-motion` and under `data-motion="reduced"` (slides change instantly), and stays 350ms when the app opts back in with `data-motion="full"`.
+Slide motion follows Motion Mode: `--carousel-transition-duration` defaults to `var(--duration-350)`. Reduced motion makes slides change instantly even when the duration is customized; `data-motion="full"` restores the configured duration.
 
 ::: tip Always set `label`
 The `label` attribute becomes the `aria-label` of the `role="region"` landmark. Without it, the region is announced as `"Carousel"`: too generic when a page has multiple carousels.

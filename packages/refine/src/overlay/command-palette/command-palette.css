@@ -71,6 +71,10 @@
 
   dialog.closing::backdrop {
     opacity: 0;
+    transition:
+      opacity var(--duration-150) var(--ease-in-out),
+      overlay var(--duration-150) allow-discrete,
+      display var(--duration-150) allow-discrete;
   }
 
   /* =====================
@@ -108,7 +112,7 @@
     transform: scale(var(--overlay-enter-scale-dialog)) translateY(-4px);
     transition:
       opacity var(--duration-150) var(--ease-spring),
-      transform var(--duration-150) var(--ease-spring);
+      transform var(--duration-150) var(--ease-in);
   }
 
   @media (width <= 640px) {

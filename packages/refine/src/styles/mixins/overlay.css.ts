@@ -77,7 +77,7 @@ export const overlayMotionMixin = (tier: OverlayMotionTier = 'dropdown') => {
 
   return css`
     :host {
-      --_overlay-dismiss: opacity ${dismiss} var(--ease-in-out), transform ${dismiss} var(--ease-in-out),
+      --_overlay-dismiss: opacity ${dismiss} var(--ease-in-out), transform ${dismiss} var(--ease-in),
         display ${dismiss} allow-discrete, overlay ${dismiss} allow-discrete;
       --_overlay-present: opacity ${present} var(--ease-in-out), transform ${present} var(--ease-spring),
         display ${present} allow-discrete, overlay ${present} allow-discrete;
