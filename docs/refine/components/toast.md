@@ -394,26 +394,26 @@ service is disposed.
 
 ## CSS custom properties
 
-| Property                                                                                    | Description                                         | Default                        |
-| ------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------ |
-| `--toast-max-width`                                                                         | Notification width cap (full width on phones)       | `400px`                        |
-| `--toast-gap`                                                                               | Gap between notifications                           | `var(--size-2)`                |
-| `--toast-bg`                                                                                | Notification surface (neutral, light-dark adaptive) | `var(--color-contrast-100)`    |
-| `--toast-color`                                                                             | Notification text colour                            | `var(--color-contrast-800)`    |
-| `--toast-border-color`                                                                      | Notification border                                 | 8% `var(--color-contrast-900)` |
-| `--toast-icon-size`                                                                         | Status icon size                                    | `var(--size-5)`                |
-| `--toast-avatar-size`                                                                       | Leading avatar diameter                             | `var(--size-8)`                |
-| `--toast-snackbar-bg`                                                                       | Snackbar surface                                    | `var(--color-contrast-900)`    |
-| `--toast-snackbar-color`                                                                    | Snackbar text colour                                | `var(--color-contrast-100)`    |
-| `--toast-snackbar-padding`                                                                  | Snackbar padding                                    | `var(--size-2) var(--size-4)`  |
-| `--toast-snackbar-height`                                                                   | Snackbar message row height, action or not          | `var(--size-8)`                |
-| `--toast-snackbar-shadow`                                                                   | Snackbar elevation shadow                           | `var(--shadow-lg)`             |
-| `--toast-shadow`                                                                            | Elevation shadow                                    | `var(--shadow-xl)`             |
+| Property                                                                                    | Description                                         | Default                                       |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------- |
+| `--toast-max-width`                                                                         | Notification width cap (full width on phones)       | `400px`                                       |
+| `--toast-gap`                                                                               | Gap between notifications                           | `var(--size-2)`                               |
+| `--toast-bg`                                                                                | Notification surface (neutral, light-dark adaptive) | `var(--color-contrast-100)`                   |
+| `--toast-color`                                                                             | Notification text colour                            | `var(--color-contrast-800)`                   |
+| `--toast-border-color`                                                                      | Notification border                                 | 8% `var(--color-contrast-900)`                |
+| `--toast-icon-size`                                                                         | Status icon size                                    | `var(--size-5)`                               |
+| `--toast-avatar-size`                                                                       | Leading avatar diameter                             | `var(--size-8)`                               |
+| `--toast-snackbar-bg`                                                                       | Snackbar surface                                    | `var(--color-contrast-900)`                   |
+| `--toast-snackbar-color`                                                                    | Snackbar text colour                                | `var(--color-contrast-100)`                   |
+| `--toast-snackbar-padding`                                                                  | Snackbar padding                                    | `var(--size-2) var(--size-4)`                 |
+| `--toast-snackbar-height`                                                                   | Snackbar message row height, action or not          | `var(--size-8)`                               |
+| `--toast-snackbar-shadow`                                                                   | Snackbar elevation shadow                           | `var(--shadow-lg)`                            |
+| `--toast-shadow`                                                                            | Elevation shadow                                    | `var(--shadow-xl)`                            |
 | `--toast-enter-duration` / `--toast-exit-duration`                                          | Motion durations                                    | `var(--duration-200)` / `var(--duration-150)` |
-| `--toast-progress-height`                                                                   | Height of the auto-dismiss progress bar             | `3px`                          |
-| `--toast-progress-color`                                                                    | Colour of the auto-dismiss progress bar             | Status accent colour           |
-| `--toast-inset-top` / `--toast-inset-bottom` / `--toast-inset-left` / `--toast-inset-right` | Viewport insets                                     | `var(--size-4)`                |
-| `--toast-z-index`                                                                           | Stacking order                                      | `var(--z-toast)`               |
+| `--toast-progress-height`                                                                   | Height of the auto-dismiss progress bar             | `3px`                                         |
+| `--toast-progress-color`                                                                    | Colour of the auto-dismiss progress bar             | Status accent colour                          |
+| `--toast-inset-top` / `--toast-inset-bottom` / `--toast-inset-left` / `--toast-inset-right` | Viewport insets                                     | `var(--size-4)`                               |
+| `--toast-z-index`                                                                           | Stacking order                                      | `var(--z-toast)`                              |
 
 ## CSS parts
 

@@ -48,16 +48,16 @@ Command palette, combobox, query-bar, and menu rows paint focus and selection co
 
 **Pre-built transitions:**
 
-| Token                 | Value                      | Use                             |
-| --------------------- | -------------------------- | ------------------------------- |
-| `--transition-none`   | `none`                     |                                 |
-| `--transition-fast`   | `150ms var(--ease-in-out)` | Hover states, toggles           |
-| `--transition-normal` | `200ms var(--ease-in-out)` | Default                         |
-| `--transition-slow`   | `300ms var(--ease-in-out)` | Panels, accordions              |
-| `--transition-slower` | `500ms var(--ease-in-out)` |                                 |
-| `--transition-spring` | `300ms var(--ease-spring)` | Bouncy interactions             |
+| Token                 | Value                      | Use                                  |
+| --------------------- | -------------------------- | ------------------------------------ |
+| `--transition-none`   | `none`                     |                                      |
+| `--transition-fast`   | `150ms var(--ease-in-out)` | Hover states, toggles                |
+| `--transition-normal` | `200ms var(--ease-in-out)` | Default                              |
+| `--transition-slow`   | `300ms var(--ease-in-out)` | Panels, accordions                   |
+| `--transition-slower` | `500ms var(--ease-in-out)` |                                      |
+| `--transition-spring` | `300ms var(--ease-spring)` | Bouncy interactions                  |
 | `--transition-exit`   | `150ms var(--ease-in)`     | Exits accelerate (dismiss, collapse) |
-| `--transition-loader` | `600ms linear`             | Spinner constant rotation       |
+| `--transition-loader` | `600ms linear`             | Spinner constant rotation            |
 
 ::: warning
 `--transition-all` does not exist in Refine. Use explicit property transitions to avoid forcing layout recalculation on every style change:
